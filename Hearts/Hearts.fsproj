@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Seat.fs" />
+    <Compile Include="Trick.fs" />
+    <Compile Include="ClosedDeal.fs" />
+    <Compile Include="OpenDeal.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
+  </ItemGroup>
+
+</Project>

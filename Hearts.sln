@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PlayingCards", "PlayingCards\PlayingCards.fsproj", "{EE68B19B-FDFA-49D7-BE6F-19841DC552C9}"
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Hearts", "Hearts\Hearts.fsproj", "{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,14 @@ Global
 		{EE68B19B-FDFA-49D7-BE6F-19841DC552C9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EE68B19B-FDFA-49D7-BE6F-19841DC552C9}.Release|x64.ActiveCfg = Release|x64
 		{EE68B19B-FDFA-49D7-BE6F-19841DC552C9}.Release|x64.Build.0 = Release|x64
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Debug|x64.ActiveCfg = Debug|x64
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Debug|x64.Build.0 = Debug|x64
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Release|x64.ActiveCfg = Release|x64
+		{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
