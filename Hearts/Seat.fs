@@ -31,10 +31,14 @@ module Seat =
         | 'S' -> Seat.South
         | _ -> failwith "Unexpected seat"
 
+    /// Modulo operation that works for negative numbers.
+    /// https://stackoverflow.com/questions/35848489/f-integer-integer-is-calculated-how
+    let inline (%!) a b =
+        (a % b + b) % b
+
     /// Nth seat after the given seat.
     let incr n (seat : Seat) =
-        assert(n >= 0)
-        (int seat + n) % numSeats
+        (int seat + n) %! numSeats
             |> enum<Seat>
 
     /// Seat that plays after the given seat.

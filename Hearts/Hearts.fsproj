@@ -10,7 +10,9 @@
     <Compile Include="Trick.fs" />
     <Compile Include="Score.fs" />
     <Compile Include="ClosedDeal.fs" />
+    <Compile Include="Exchange.fs" />
     <Compile Include="OpenDeal.fs" />
+    <Compile Include="Game.fs" />
   </ItemGroup>
 
   <ItemGroup>
