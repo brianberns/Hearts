@@ -16,8 +16,17 @@ type Score =
 module Score =
 
     /// Initial score.
-    let zero =
+    let private zeroMap =
         Seat.allSeats
             |> Seq.map (fun seat -> seat, 0)
             |> Map.ofSeq
+
+    /// Initial score.
+    let zero =
+        ScoreMap zeroMap
+
+    /// Creates a score for the given seat.
+    let create seat points =
+        zeroMap
+            |> Map.add seat points
             |> ScoreMap

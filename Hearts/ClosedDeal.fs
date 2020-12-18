@@ -21,6 +21,9 @@ type ClosedDeal =
 
         /// Suits that players are known to be void in.
         Voids : Set<Seat * Suit>
+
+        /// Points taken so far by each player.
+        Score : Score
     }
 
 module ClosedDeal =
@@ -37,23 +40,8 @@ module ClosedDeal =
             CompletedTricks = List.empty
             HeartsBroken = false
             Voids = Set.empty
+            Score = Score.zero
         }
-
-    /// Current trick in the given deal.
-    let currentTrick deal =
-        match deal.CurrentTrickOpt with
-            | Some trick -> trick
-            | None -> failwith "Deal is complete"
-
-    /// Two of clubs.
-    let private card2C = Card.fromString "2♣"
-
-    /// Point value of the given card.
-    let pointValue (card : Card) =
-        match card.Rank, card.Suit with
-            | _, Suit.Hearts -> 1
-            | Rank.Queen, Suit.Spades -> 13
-            | _ -> 0
 
     /// Number of cards dealt to each player.
     let numCardsPerHand = Card.numCards / Seat.numSeats
@@ -66,6 +54,15 @@ module ClosedDeal =
         assert(deal.CompletedTricks.Length <= numCardsPerHand)
         assert((deal.CompletedTricks.Length = numCardsPerHand) = deal.CurrentTrickOpt.IsNone)
         assert(deal.CompletedTricks |> Seq.forall Trick.isComplete)
+
+    /// Current trick in the given deal.
+    let currentTrick deal =
+        match deal.CurrentTrickOpt with
+            | Some trick -> trick
+            | None -> failwith "Deal is complete"
+
+    /// Two of clubs.
+    let private card2C = Card.fromString "2♣"
 
     /// What cards can be played from the given hand?
     let legalPlays (hand : Hand) deal =
@@ -101,7 +98,7 @@ module ClosedDeal =
                 if iTrick = 0 then
                     cards
                         |> Seq.where (fun card ->
-                            pointValue card = 0)
+                            Card.pointValue card = 0)
                 else cards
 
     /// Is the given player known to be void in the given suit?
@@ -137,7 +134,7 @@ module ClosedDeal =
                 | None -> failwith "Unexpected"
 
             // complete trick?
-        let curTrickOpt, completedTricks =
+        let curTrickOpt, completedTricks, score =
             if updatedTrick |> Trick.isComplete then
                 let taker =
                     match updatedTrick.HighPlayOpt with
@@ -148,15 +145,22 @@ module ClosedDeal =
                     if tricks.Length < numCardsPerHand then
                         taker |> Trick.create |> Some
                     else None
-                curTrickOpt, tricks
+                let score =
+                    let trickScore =
+                        updatedTrick
+                            |> Trick.pointValue
+                            |> Score.create taker
+                    deal.Score + trickScore
+                curTrickOpt, tricks, score
             else
-                Some updatedTrick, deal.CompletedTricks
+                Some updatedTrick, deal.CompletedTricks, deal.Score
 
         {
             deal with
                 CurrentTrickOpt = curTrickOpt
                 CompletedTricks = completedTricks
                 Voids = voids
+                Score = score
         }
 
     /// Tricks in the given deal, in chronological order, including the

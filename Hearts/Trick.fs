@@ -2,6 +2,15 @@
 
 open PlayingCards
 
+module Card =
+
+    /// Point value of the given card.
+    let pointValue (card : Card) =
+        match card.Rank, card.Suit with
+            | _, Suit.Hearts -> 1
+            | Rank.Queen, Suit.Spades -> 13
+            | _ -> 0
+
 /// One card played by each player in turn during a deal.
 type Trick =
     {
@@ -58,6 +67,11 @@ module Trick =
                         Some (player, card)
                     else trick.HighPlayOpt
         }
+
+    /// Point value of the given trick.
+    let pointValue trick =
+        trick.Cards
+            |> Seq.sumBy Card.pointValue
 
     /// Indicates whether the given trick has finished.
     let isComplete trick =
