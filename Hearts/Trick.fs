@@ -29,7 +29,12 @@ module Trick =
             HighPlayOpt = None
         }
 
-    /// Plays the next player's card on the given trick.
+    /// Current player on the given trick.
+    let currentPlayer trick =
+        trick.Leader
+            |> Seat.incr trick.Cards.Length
+
+    /// Plays the given card on the given trick.
     let addPlay card trick =
         assert(trick.Cards.Length < Seat.numSeats)
         {
@@ -49,9 +54,8 @@ module Trick =
                                 else false
                             | None -> true
                     if isHigh then
-                        let seat =
-                            trick.Leader |> Seat.incr trick.Cards.Length
-                        Some (seat, card)
+                        let player = trick |> currentPlayer
+                        Some (player, card)
                     else trick.HighPlayOpt
         }
 

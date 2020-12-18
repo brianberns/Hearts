@@ -46,20 +46,34 @@ module ClosedDeal =
             | None -> failwith "Deal is complete"
 
     /// Two of clubs.
-    let private card2C = Card(Rank.Two, Suit.Clubs)
+    let private card2C = Card.fromString "2♣"
 
+    /// Point value of the given card.
     let pointValue (card : Card) =
         match card.Rank, card.Suit with
             | _, Suit.Hearts -> 1
             | Rank.Queen, Suit.Spades -> 13
             | _ -> 0
 
+    /// Number of cards dealt to each player.
+    let numCardsPerHand = Card.numCards / Seat.numSeats
+
+    /// Number of cards in a deal.
+    let numCardsPerDeal = numCardsPerHand * Seat.numSeats
+
+    /// Validates the structure of the given deal.
+    let private validate deal =
+        assert(deal.CompletedTricks.Length <= numCardsPerHand)
+        assert((deal.CompletedTricks.Length = numCardsPerHand) = deal.CurrentTrickOpt.IsNone)
+        assert(deal.CompletedTricks |> Seq.forall Trick.isComplete)
+
     /// What cards can be played from the given hand?
     let legalPlays (hand : Hand) deal =
+        validate deal
         let trick = currentTrick deal
         match deal.CompletedTricks.Length, trick.SuitLedOpt with
 
-                // must lead 2C on first trick
+                // must lead 2♣ on first trick
             | 0, None ->
                 assert(hand |> Seq.contains(card2C))
                 Seq.singleton card2C
@@ -67,123 +81,102 @@ module ClosedDeal =
                 // can't lead a heart until they're broken
             | _, None ->
                 if deal.HeartsBroken then hand
-                else hand |> Seq.where (fun card -> card.Suit <> Suit.Hearts)
+                else
+                    hand
+                        |> Seq.where (fun card ->
+                            card.Suit <> Suit.Hearts)
 
+                // following
             | iTrick, Some suitLed ->
 
-                let isSuitLed (card : Card) =
-                    card.Suit = suitLed
-
-                    // first trick; must follow suit, if possible, and no point cards
-                if iTrick = 0 then
-                    hand |> Seq.where (fun card ->
-                        isSuitLed card && pointValue card = 0)
-
                     // must follow suit, if possible
-                elif hand |> Seq.exists isSuitLed then
-                    hand |> Seq.where isSuitLed
+                let cards =
+                    let isSuitLed (card : Card) =
+                        card.Suit = suitLed
+                    if hand |> Seq.exists isSuitLed then
+                        hand |> Seq.where isSuitLed
+                    else hand
 
-                    // may play any card
-                else hand
-
-    /// Number of cards dealt to each player.
-    let numCardsPerHand = 6
-
-    /// Number of cards in a deal.
-    let numCardsPerDeal = numCardsPerHand * Seat.numSeats
+                    // no point cards on first trick
+                if iTrick = 0 then
+                    cards
+                        |> Seq.where (fun card ->
+                            pointValue card = 0)
+                else cards
 
     /// Is the given player known to be void in the given suit?
-    let isVoid seat suit playout =
-        playout.Voids.Contains(seat, suit)
+    let isVoid seat suit deal =
+        deal.Voids.Contains(seat, suit)
 
-    /// Validates the structure of the given playout.
-    let private validate playout =
-        assert(playout.NumCompletedTricks = playout.CompletedTricks.Length)
-        assert(playout.NumCompletedTricks <= numCardsPerHand)
-        assert((playout.NumCompletedTricks = numCardsPerHand) = playout.CurrentTrickOpt.IsNone)
-        assert(playout.CompletedTricks |> Seq.forall (fun trick -> trick.IsComplete))
+    /// Indicates whether the given deal has finished.
+    let isComplete deal =
+        validate deal
+        deal.CompletedTricks.Length = numCardsPerHand
 
-    /// Indicates whether the given playout has finished.
-    let isComplete playout =
-        validate playout
-        playout.NumCompletedTricks = numCardsPerHand
-
-    /// Plays the next player's card on the given playout.
-    let addPlay (card : Card) playout =
-        assert(isComplete playout |> not)
-
-            // determine trump suit
-        let trump =
-            playout.TrumpOpt
-                |> Option.defaultValue card.Suit
+    /// Plays the given card on the given deal.
+    let addPlay (card : Card) deal =
+        assert(isComplete deal |> not)
 
             // play card on current trick
         let updatedTrick, player =
-            let curTrick = playout |> currentTrick
-            let player = curTrick.NextPlayer
-            assert(playout |> isVoid player card.Suit |> not)
-            let updatedTrick =
-                curTrick |> Trick.addPlay trump card
+            let curTrick = deal |> currentTrick
+            let player = curTrick |> Trick.currentPlayer
+            assert(deal |> isVoid player card.Suit |> not)
+            let updatedTrick = curTrick |> Trick.addPlay card
             updatedTrick, player
 
             // player is void in suit led?
         let voids =
-            if card.Suit = trump then
-                playout.Voids
-            elif card.Suit = updatedTrick.SuitLed then
-                assert(playout |> isVoid player card.Suit |> not)
-                playout.Voids
-            else
-                playout.Voids.Add(player, updatedTrick.SuitLed)
+            match updatedTrick.SuitLedOpt with
+                | Some suitLed ->
+                    if card.Suit = suitLed then
+                        assert(deal |> isVoid player card.Suit |> not)
+                        deal.Voids
+                    else
+                        deal.Voids.Add(player, suitLed)
+                | None -> failwith "Unexpected"
 
             // complete trick?
-        validate playout
-        let curTrickOpt, completedTricks, numCompletedTricks =
-            if updatedTrick.IsComplete then
-                let winner = updatedTrick.Winner
-                let tricks = updatedTrick :: playout.CompletedTricks
-                let numCompletedTricks = playout.NumCompletedTricks + 1
+        let curTrickOpt, completedTricks =
+            if updatedTrick |> Trick.isComplete then
+                let taker =
+                    match updatedTrick.HighPlayOpt with
+                        | Some (seat, _) -> seat
+                        | None -> failwith "Unexpected"
+                let tricks = updatedTrick :: deal.CompletedTricks
                 let curTrickOpt =
-                    if numCompletedTricks < numCardsPerHand then
-                        Trick.create winner |> Some
+                    if tricks.Length < numCardsPerHand then
+                        taker |> Trick.create |> Some
                     else None
-                curTrickOpt, tricks, numCompletedTricks
+                curTrickOpt, tricks
             else
-                Some updatedTrick, playout.CompletedTricks, playout.NumCompletedTricks
+                Some updatedTrick, deal.CompletedTricks
 
         {
-            CurrentTrickOpt = curTrickOpt
-            CompletedTricks = completedTricks
-            NumCompletedTricks = numCompletedTricks
-            TrumpOpt = Some trump
-            Voids = voids
+            deal with
+                CurrentTrickOpt = curTrickOpt
+                CompletedTricks = completedTricks
+                Voids = voids
         }
 
-    /// Tricks in the given playout, in chronological order, including the
+    /// Tricks in the given deal, in chronological order, including the
     /// current trick (if any).
-    let tricks playout =
+    let tricks deal =
         seq {
-            yield! playout.CompletedTricks
+            yield! deal.CompletedTricks
                 |> List.rev
-            match playout.CurrentTrickOpt with
+            match deal.CurrentTrickOpt with
                 | Some trick -> yield trick
                 | None -> ()
         }
 
     /// Number of cards played so far.
-    let numCardsPlayed playout =
-        validate playout
+    let numCardsPlayed deal =
+        validate deal
         let nCompleted =
-            playout.NumCompletedTricks * Seat.numSeats
+            deal.CompletedTricks.Length * Seat.numSeats
         let nCurrent =
-            match playout.CurrentTrickOpt with
-                | Some trick -> trick.NumCards
+            match deal.CurrentTrickOpt with
+                | Some trick -> trick.Cards.Length
                 | None -> 0
         nCompleted + nCurrent
-
-    /// Plays in the given playout, in chronological order.
-    let plays playout =
-        seq {
-            for trick in tricks playout do
-                yield! trick.Plays
-        }
