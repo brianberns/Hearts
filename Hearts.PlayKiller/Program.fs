@@ -7,11 +7,27 @@ open System.Text
 open PlayingCards
 open Hearts
 
-type InitRecord =
+type ServerInitRecord =
     {
         ClientSeats : Set<Seat>
         HostDisplay : bool
         TwoOfClubsLeads : bool
+    }
+
+type ServerNewGameRecord =
+    {
+        Dealer : Seat
+        DealNum : int
+        NumGames : int
+    }
+
+type ClientRecordType =
+    | Initialization = 101
+    | NewGame = 102
+
+type ClientRecord =
+    {
+        RecordType : ClientRecordType
     }
 
 module SharedRecord =
@@ -23,11 +39,9 @@ module SharedRecord =
             FileAccess.ReadWrite,
             FileShare.ReadWrite)
 
-    let buffer =
-        Array.zeroCreate<byte> 55
-
     let private read () =
         sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+        let buffer = Array.zeroCreate<byte> 55
         let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
         assert(nBytes = buffer.Length)
         let str = Encoding.Default.GetString(buffer)
@@ -54,6 +68,37 @@ module SharedRecord =
             TwoOfClubsLeads =
                 Int32.Parse(fields.[5]) = 0
         }
+
+    let readNewGame () =
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> 2 then
+            failwith "Incorrect key"
+        {
+            Dealer = Int32.Parse(fields.[1]) |> enum<Seat>
+            DealNum = Int32.Parse(fields.[2])
+            NumGames = Int32.Parse(fields.[4])
+        }
+
+    let private write clientRecord =
+        let chunks =
+            [|
+                "CHs"
+                sprintf $"    {int clientRecord.RecordType}"
+                "0000000"
+                "0000000"
+                "0000000"
+                "0000000"
+                "0000000"
+                "CHe"
+            |]
+        let str = String.Join(',', chunks)
+        let buffer = Encoding.Default.GetBytes(str)
+        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+        sharedFile.Write(buffer, 0, buffer.Length)
+        sharedFile.Flush()
+
+    let writeGeneral recordType =
+        write { RecordType = recordType }
 
 module Program =
 
@@ -88,10 +133,15 @@ module Program =
         }
 
     let run () =
+
         let record = SharedRecord.readInit ()
-        printfn "%A" <| record
         assert(record.ClientSeats |> Seq.exactlyOne = Seat.South)
         assert(record.TwoOfClubsLeads)
+        SharedRecord.writeGeneral ClientRecordType.Initialization
+
+        let record = SharedRecord.readNewGame ()
+        printfn "%A" record
+        SharedRecord.writeGeneral ClientRecordType.NewGame
 
     [<EntryPoint>]
     let main argv =
