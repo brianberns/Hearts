@@ -61,6 +61,12 @@ module ClosedDeal =
             | Some trick -> trick
             | None -> failwith "Deal is complete"
 
+    /// Current player in the given deal.
+    let currentPlayer deal =
+        deal
+            |> currentTrick
+            |> Trick.currentPlayer
+
     /// Two of clubs.
     let private card2C = Card.fromString "2♣"
 
