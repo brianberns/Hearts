@@ -21,9 +21,16 @@ type ServerNewGameRecord =
         NumGames : int
     }
 
+type ServerNewDealRecord =
+    {
+        Score : Score
+        ExchangeDirection : ExchangeDirection
+    }
+
 type ClientRecordType =
     | Initialization = 101
     | NewGame = 102
+    | NewDeal = 103
 
 type ClientRecord =
     {
@@ -77,6 +84,27 @@ module SharedRecord =
             Dealer = Int32.Parse(fields.[1]) |> enum<Seat>
             DealNum = Int32.Parse(fields.[2])
             NumGames = Int32.Parse(fields.[4])
+        }
+
+    let readNewDeal () =
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> 3 then
+            failwith "Incorrect key"
+        {
+            Score =
+                Seat.allSeats
+                    |> Seq.map (fun seat ->
+                        let points = fields.[int seat + 1] |> Int32.Parse
+                        seat, points)
+                    |> Map
+                    |> ScoreMap
+            ExchangeDirection =
+                match Int32.Parse(fields.[5]) with
+                    | 0 -> ExchangeDirection.Left
+                    | 1 -> ExchangeDirection.Right
+                    | 2 -> ExchangeDirection.Across
+                    | 3 -> ExchangeDirection.Hold
+                    | _ -> failwith "Unexpected"
         }
 
     let private write clientRecord =
@@ -135,13 +163,15 @@ module Program =
     let run () =
 
         let record = SharedRecord.readInit ()
-        assert(record.ClientSeats |> Seq.exactlyOne = Seat.South)
         assert(record.TwoOfClubsLeads)
         SharedRecord.writeGeneral ClientRecordType.Initialization
 
         let record = SharedRecord.readNewGame ()
-        printfn "%A" record
         SharedRecord.writeGeneral ClientRecordType.NewGame
+
+        let record = SharedRecord.readNewDeal ()
+        SharedRecord.writeGeneral ClientRecordType.NewDeal
+        printfn "%A" record
 
     [<EntryPoint>]
     let main argv =
