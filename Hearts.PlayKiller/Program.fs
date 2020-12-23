@@ -3,6 +3,7 @@
 open System
 open System.IO
 open System.Text
+open System.Threading
 
 open PlayingCards
 open Hearts
@@ -27,10 +28,17 @@ type ServerNewDealRecord =
         ExchangeDirection : ExchangeDirection
     }
 
+type ServerHandRecord =
+    {
+        Seat : Seat
+        Hand : Card[]
+    }
+
 type ClientRecordType =
     | Initialization = 101
     | NewGame = 102
     | NewDeal = 103
+    | Hand = 104
 
 type ClientRecord =
     {
@@ -46,18 +54,22 @@ module SharedRecord =
             FileAccess.ReadWrite,
             FileShare.ReadWrite)
 
+    let buffer = Array.zeroCreate<byte> 55
+
     let private read () =
-        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
-        let buffer = Array.zeroCreate<byte> 55
-        let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
-        assert(nBytes = buffer.Length)
-        let str = Encoding.Default.GetString(buffer)
-        let chunks = str.Split(',')
-        if chunks.[0] <> "HCs" then
-            failwith "Incorrect header"
-        if chunks.[7] <> "HCe" then
-            failwith "Incorrect trailer"
-        chunks.[1..6]
+        let rec loop sleep =
+            Thread.Sleep(sleep : int)
+            sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+            let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
+            assert(nBytes = buffer.Length)
+            let str = Encoding.Default.GetString(buffer)
+            let chunks = str.Split(',')
+            if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
+                chunks.[1..6]
+            elif sleep > 1000 then
+                failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
+            else loop (2 * sleep)
+        loop 1
 
     let readInit () =
         let fields = read ()
@@ -65,10 +77,10 @@ module SharedRecord =
             failwith "Incorrect key"
         {
             ClientSeats =
-                let bitmap = Int32.Parse(fields.[1])
+                let field = fields.[1] |> Int32.Parse
                 Seat.allSeats
                     |> Seq.where (fun seat ->
-                        (1 <<< int seat) &&& bitmap <> 0)
+                        (field >>> int seat) &&& 1 = 1)
                     |> set
             HostDisplay =
                 Int32.Parse(fields.[4]) = 1
@@ -81,9 +93,12 @@ module SharedRecord =
         if Int32.Parse(fields.[0]) <> 2 then
             failwith "Incorrect key"
         {
-            Dealer = Int32.Parse(fields.[1]) |> enum<Seat>
-            DealNum = Int32.Parse(fields.[2])
-            NumGames = Int32.Parse(fields.[4])
+            Dealer =
+                fields.[1]
+                    |> Int32.Parse
+                    |> enum<Seat>
+            DealNum = fields.[2] |> Int32.Parse
+            NumGames = fields.[4] |> Int32.Parse
         }
 
     let readNewDeal () =
@@ -94,17 +109,51 @@ module SharedRecord =
             Score =
                 Seat.allSeats
                     |> Seq.map (fun seat ->
-                        let points = fields.[int seat + 1] |> Int32.Parse
+                        let points =
+                            fields.[int seat + 1] |> Int32.Parse
                         seat, points)
                     |> Map
                     |> ScoreMap
             ExchangeDirection =
-                match Int32.Parse(fields.[5]) with
+                match fields.[5] |> Int32.Parse with
                     | 0 -> ExchangeDirection.Left
                     | 1 -> ExchangeDirection.Right
                     | 2 -> ExchangeDirection.Across
                     | 3 -> ExchangeDirection.Hold
                     | _ -> failwith "Unexpected"
+        }
+
+    let readHand () =
+
+        let readRanks (field : int) =
+            [|
+                for rank in Enum.getValues<Rank> do
+                    if (field >>> int rank) &&& 1 = 1 then
+                        yield rank
+            |]
+
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> 4 then
+            failwith "Incorrect key"
+        {
+            Seat =
+                fields.[1]
+                    |> Int32.Parse
+                    |> enum<Seat>
+            Hand =
+                let suits = 
+                    [|
+                        Suit.Spades, 2
+                        Suit.Hearts, 3
+                        Suit.Clubs, 4
+                        Suit.Diamonds, 5
+                    |]
+                [|
+                    for (suit, iField) in suits do
+                        let field = fields.[iField] |> Int32.Parse
+                        for rank in readRanks field do
+                            yield Card(rank, suit)
+                |]
         }
 
     let private write clientRecord =
@@ -163,15 +212,24 @@ module Program =
     let run () =
 
         let record = SharedRecord.readInit ()
+        printfn "%A" record
+        assert(record.ClientSeats = set [| Seat.East; Seat.West |])
         assert(record.TwoOfClubsLeads)
         SharedRecord.writeGeneral ClientRecordType.Initialization
 
         let record = SharedRecord.readNewGame ()
+        printfn "%A" record
         SharedRecord.writeGeneral ClientRecordType.NewGame
 
         let record = SharedRecord.readNewDeal ()
-        SharedRecord.writeGeneral ClientRecordType.NewDeal
         printfn "%A" record
+        SharedRecord.writeGeneral ClientRecordType.NewDeal
+
+        for i = 0 to 3 do
+            let record = SharedRecord.readHand ()
+            printfn "%A" record
+            assert(record.Hand.Length = ClosedDeal.numCardsPerHand)
+            SharedRecord.writeGeneral ClientRecordType.Hand
 
     [<EntryPoint>]
     let main argv =
