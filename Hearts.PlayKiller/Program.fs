@@ -31,7 +31,7 @@ type ServerDealStartRecord =
 type ServerCardsRecord =
     {
         Seat : Seat
-        Cards : Card[]
+        Cards : Set<Card>
     }
 
 type ClientRecordType =
@@ -149,13 +149,27 @@ module SharedRecord =
                         Suit.Clubs, 4
                         Suit.Diamonds, 5
                     |]
-                [|
+                seq {
                     for (suit, iField) in suits do
                         let field = fields.[iField] |> Int32.Parse
                         for rank in readRanks field do
                             yield Card(rank, suit)
-                |]
+                } |> set
         }
+
+    module Card =
+
+        let fromInt value =
+            let rank =
+                (value / Suit.numSuits) + 2 |> enum<Rank>
+            let suit =
+                match value % Suit.numSuits with
+                    | 0 -> Suit.Spades
+                    | 1 -> Suit.Hearts
+                    | 2 -> Suit.Clubs
+                    | 3 -> Suit.Diamonds
+                    | _ -> failwith "Unexpected"
+            Card(rank, suit)
 
     let readExchangeOutgoing clientSeats =
         let fields = read ()
@@ -176,7 +190,9 @@ module SharedRecord =
                 Seat = seat
                 Cards =
                     fields.[3..5]
-                        |> Array.map Card.fromString
+                        |> Seq.map (fun field ->
+                            field |> Int32.Parse |> Card.fromInt)
+                        |> set
             }
 
     let private write clientRecord =
@@ -236,7 +252,7 @@ module Program =
 
         let sessionStartRec = SharedRecord.readSessionStart ()
         printfn "%A" sessionStartRec
-        assert(sessionStartRec.ClientSeats = set [| Seat.East; Seat.West |])
+        // assert(sessionStartRec.ClientSeats = set [| Seat.East; Seat.West |])
         assert(sessionStartRec.TwoOfClubsLeads)
         SharedRecord.writeGeneral ClientRecordType.SessionStart
 
@@ -248,11 +264,18 @@ module Program =
         printfn "%A" dealStartRec
         SharedRecord.writeGeneral ClientRecordType.DealStart
 
-        for i = 1 to 4 do
-            let cardsRec = SharedRecord.readHand ()
-            printfn "%A" cardsRec
-            assert(cardsRec.Cards.Length = ClosedDeal.numCardsPerHand)
-            SharedRecord.writeGeneral ClientRecordType.Hand
+        let handMap =
+            seq {
+                for i = 1 to 4 do
+                    let cardsRec = SharedRecord.readHand ()
+                    printfn "%A" cardsRec
+                    assert(cardsRec.Cards.Count = ClosedDeal.numCardsPerHand)
+                    yield cardsRec
+                    SharedRecord.writeGeneral ClientRecordType.Hand
+            }
+                |> Seq.map (fun cardsRec ->
+                    cardsRec.Seat, cardsRec.Cards)
+                |> Map
 
         if dealStartRec.ExchangeDirection <> ExchangeDirection.Hold then
 
@@ -260,6 +283,13 @@ module Program =
                 let exchOutRecOpt =
                     SharedRecord.readExchangeOutgoing sessionStartRec.ClientSeats
                 printfn "%A" exchOutRecOpt
+                exchOutRecOpt
+                    |> Option.iter (fun exchOutRec ->
+                        assert(exchOutRec.Cards.Count = Exchange.numCards)
+                        assert
+                            (exchOutRec.Cards
+                                |> Seq.forall (fun card ->
+                                    handMap.[exchOutRec.Seat].Contains(card))))
                 SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
 
     [<EntryPoint>]
