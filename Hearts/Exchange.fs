@@ -56,7 +56,7 @@ module Exchange =
         }
 
     /// Cards passed to the given player in the given exchange.
-    let cardsReceived seat exchange =
+    let cardsIncoming seat exchange =
         match exchange.Direction with
             | ExchangeDirection.Hold ->
                 assert(exchange.CardMap.IsEmpty)
@@ -64,8 +64,8 @@ module Exchange =
             | _ -> exchange.CardMap.[seat]
 
     /// Cards passed by the given player in the given exchange.
-    let cardsPassed seat exchange =
+    let cardsOutgoing seat exchange =
         let receiver =
             exchange.Direction
                 |> ExchangeDirection.apply seat
-        cardsReceived receiver exchange
+        cardsIncoming receiver exchange

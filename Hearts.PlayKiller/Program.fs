@@ -8,37 +8,38 @@ open System.Threading
 open PlayingCards
 open Hearts
 
-type ServerInitRecord =
+type ServerSessionStartRecord =
     {
         ClientSeats : Set<Seat>
         HostDisplay : bool
         TwoOfClubsLeads : bool
     }
 
-type ServerNewGameRecord =
+type ServerGameStartRecord =
     {
         Dealer : Seat
         DealNum : int
         NumGames : int
     }
 
-type ServerNewDealRecord =
+type ServerDealStartRecord =
     {
         Score : Score
         ExchangeDirection : ExchangeDirection
     }
 
-type ServerHandRecord =
+type ServerCardsRecord =
     {
         Seat : Seat
-        Hand : Card[]
+        Cards : Card[]
     }
 
 type ClientRecordType =
-    | Initialization = 101
-    | NewGame = 102
-    | NewDeal = 103
+    | SessionStart = 101
+    | GameStart = 102
+    | DealStart = 103
     | Hand = 104
+    | ExchangeOutgoing = 105
 
 type ClientRecord =
     {
@@ -71,7 +72,7 @@ module SharedRecord =
             else loop (2 * sleep)
         loop 1
 
-    let readInit () =
+    let readSessionStart () =
         let fields = read ()
         if Int32.Parse(fields.[0]) <> 1 then
             failwith "Incorrect key"
@@ -88,7 +89,7 @@ module SharedRecord =
                 Int32.Parse(fields.[5]) = 0
         }
 
-    let readNewGame () =
+    let readGameStart () =
         let fields = read ()
         if Int32.Parse(fields.[0]) <> 2 then
             failwith "Incorrect key"
@@ -140,7 +141,7 @@ module SharedRecord =
                 fields.[1]
                     |> Int32.Parse
                     |> enum<Seat>
-            Hand =
+            Cards =
                 let suits = 
                     [|
                         Suit.Spades, 2
@@ -155,6 +156,28 @@ module SharedRecord =
                             yield Card(rank, suit)
                 |]
         }
+
+    let readExchangeOutgoing clientSeats =
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> 5 then
+            failwith "Incorrect key"
+        let seat =
+            fields.[1]
+                |> Int32.Parse
+                |> enum<Seat>
+        if clientSeats |> Set.contains seat then
+            assert(
+                fields.[3..5]
+                    |> Array.forall (fun field ->
+                        Int32.Parse(field) = -1))
+            None
+        else
+            Some {
+                Seat = seat
+                Cards =
+                    fields.[3..5]
+                        |> Array.map Card.fromString
+            }
 
     let private write clientRecord =
         let chunks =
@@ -211,25 +234,33 @@ module Program =
 
     let run () =
 
-        let record = SharedRecord.readInit ()
-        printfn "%A" record
-        assert(record.ClientSeats = set [| Seat.East; Seat.West |])
-        assert(record.TwoOfClubsLeads)
-        SharedRecord.writeGeneral ClientRecordType.Initialization
+        let sessionStartRec = SharedRecord.readSessionStart ()
+        printfn "%A" sessionStartRec
+        assert(sessionStartRec.ClientSeats = set [| Seat.East; Seat.West |])
+        assert(sessionStartRec.TwoOfClubsLeads)
+        SharedRecord.writeGeneral ClientRecordType.SessionStart
 
-        let record = SharedRecord.readNewGame ()
-        printfn "%A" record
-        SharedRecord.writeGeneral ClientRecordType.NewGame
+        let gameStartRec = SharedRecord.readGameStart ()
+        printfn "%A" gameStartRec
+        SharedRecord.writeGeneral ClientRecordType.GameStart
 
-        let record = SharedRecord.readNewDeal ()
-        printfn "%A" record
-        SharedRecord.writeGeneral ClientRecordType.NewDeal
+        let dealStartRec = SharedRecord.readNewDeal ()
+        printfn "%A" dealStartRec
+        SharedRecord.writeGeneral ClientRecordType.DealStart
 
-        for i = 0 to 3 do
-            let record = SharedRecord.readHand ()
-            printfn "%A" record
-            assert(record.Hand.Length = ClosedDeal.numCardsPerHand)
+        for i = 1 to 4 do
+            let cardsRec = SharedRecord.readHand ()
+            printfn "%A" cardsRec
+            assert(cardsRec.Cards.Length = ClosedDeal.numCardsPerHand)
             SharedRecord.writeGeneral ClientRecordType.Hand
+
+        if dealStartRec.ExchangeDirection <> ExchangeDirection.Hold then
+
+            for i = 1 to 4 do
+                let exchOutRecOpt =
+                    SharedRecord.readExchangeOutgoing sessionStartRec.ClientSeats
+                printfn "%A" exchOutRecOpt
+                SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
 
     [<EntryPoint>]
     let main argv =
