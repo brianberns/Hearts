@@ -1,7 +1,5 @@
 ﻿namespace Hearts
 
-open PlayingCards
-
 /// Direction in which cards are passed prior to playout.
 type ExchangeDirection =
     | Left = -1
@@ -21,6 +19,7 @@ module ExchangeDirection =
 
     /// Applies the given exchange direction to the given seat.
     let apply seat (dir : ExchangeDirection) =
+        assert(dir <> ExchangeDirection.Hold)
         seat |> Seat.incr (int dir)
 
 module Exchange =
