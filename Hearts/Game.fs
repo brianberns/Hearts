@@ -16,8 +16,8 @@ type Game =
         /// Player that occupies each seat.
         PlayerMap : Map<Seat, Player>
 
-        /// Current deal.
-        CurrentDeal : OpenDeal
+        /// Current deal, if game has started.
+        CurrentDealOpt : Option<OpenDeal>
 
         /// Score of the game.
         Score : Score
@@ -25,42 +25,51 @@ type Game =
 
 module Game =
 
+    /// Creates a game.
+    let create playerMap =
+        {
+            PlayerMap = playerMap
+            CurrentDealOpt = None
+            Score = Score.zero
+        }
+
     /// Plays a deal in the given game.
     let playDeal game =
+        match game.CurrentDealOpt with
+            | Some deal ->
+                assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
 
-            // initial deal
-        let deal = game.CurrentDeal
-        assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
+                    // exchange
+                let deal =
+                    let dir = deal.ExchangeDirection
+                    if dir = ExchangeDirection.Hold then deal
+                    else
+                        let seatCards =
+                            Seat.allSeats
+                                |> Array.map (fun seat ->
+                                    let cards =
+                                        game.PlayerMap.[seat].MakePass deal game.Score
+                                    seat, cards)
+                        deal |> OpenDeal.exchange seatCards
 
-            // exchange
-        let deal =
-            let dir = deal.ExchangeDirection
-            if dir = ExchangeDirection.Hold then deal
-            else
-                let seatCards =
-                    Seat.allSeats
-                        |> Array.map (fun seat ->
-                            let cards =
-                                game.PlayerMap.[seat].MakePass deal game.Score
-                            seat, cards)
-                deal |> OpenDeal.exchange seatCards
+                    // playout
+                let deal =
+                    assert(deal.ClosedDeal.Score = Score.zero)
+                    (deal, seq { 1 .. ClosedDeal.numCardsPerDeal })
+                        ||> Seq.fold (fun deal _ ->
+                            let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
+                            let player = game.PlayerMap.[seat]
+                            let card = player.MakePlay deal game.Score
+                            deal |> OpenDeal.addPlay card)
+                assert(deal.ClosedDeal |> ClosedDeal.isComplete)
 
-            // playout
-        let deal =
-            assert(deal.ClosedDeal.Score = Score.zero)
-            (deal, seq { 1 .. ClosedDeal.numCardsPerDeal })
-                ||> Seq.fold (fun deal _ ->
-                    let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
-                    let player = game.PlayerMap.[seat]
-                    let card = player.MakePlay deal game.Score
-                    deal |> OpenDeal.addPlay card)
-        assert(deal.ClosedDeal |> ClosedDeal.isComplete)
+                {
+                    game with
+                        CurrentDealOpt = Some deal
+                        Score = game.Score + deal.ClosedDeal.Score   // to-do: shoot the moon
+                }
 
-        {
-            game with
-                CurrentDeal = deal
-                Score = game.Score + deal.ClosedDeal.Score   // to-do: shoot the moon
-        }
+            | None -> failwith "Game has not started"
 
     /// Number of points that ends the game.
     let gameOverThreshold = 100
@@ -99,9 +108,10 @@ module Game =
                 let game =
                     {
                         game with
-                            CurrentDeal =
+                            CurrentDealOpt =
                                 let deck = Deck.shuffle rng
                                 OpenDeal.fromDeck dealer dir deck
+                                    |> Some
                     }
                 let game = game |> playDeal
                 yield game

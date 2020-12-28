@@ -1,301 +1,165 @@
 ﻿namespace Hearts.PlayKiller
 
 open System
-open System.IO
-open System.Text
-open System.Threading
 
 open PlayingCards
 open Hearts
 
-type ServerSessionStartRecord =
-    {
-        ClientSeats : Set<Seat>
-        HostDisplay : bool
-        TwoOfClubsLeads : bool
-    }
+module Killer =
 
-type ServerGameStartRecord =
-    {
-        Dealer : Seat
-        DealNum : int
-        NumGames : int
-    }
+    /// Initializes communication with Killer Hearts.
+    let startSesssion () =
+        let record = SharedRecord.readSessionStart ()
+        SharedRecord.writeGeneral ClientRecordType.SessionStart
+        record
 
-type ServerDealStartRecord =
-    {
-        Score : Score
-        ExchangeDirection : ExchangeDirection
-    }
+    /// Starts a new game with KH.
+    let startGame () =
+        let record = SharedRecord.readGameStart ()
+        SharedRecord.writeGeneral ClientRecordType.GameStart
+        record
 
-type ServerCardsRecord =
-    {
-        Seat : Seat
-        Cards : Set<Card>
-    }
+    /// Starts a new deal with KH.
+    let startDeal () =
+        let record = SharedRecord.readNewDeal ()
+        SharedRecord.writeGeneral ClientRecordType.DealStart
+        record
 
-type ClientRecordType =
-    | SessionStart = 101
-    | GameStart = 102
-    | DealStart = 103
-    | Hand = 104
-    | ExchangeOutgoing = 105
+    /// Receives each player's hand from KH.
+    let receiveHands () =
 
-type ClientRecord =
-    {
-        RecordType : ClientRecordType
-    }
+        /// Gets a hand from KH.
+        let receiveHand _ =
+            let record = SharedRecord.readHand ()
+            assert(record.Cards.Count = ClosedDeal.numCardsPerHand)
+            SharedRecord.writeGeneral ClientRecordType.Hand
+            record
 
-module SharedRecord =
+            // arrange hands by seat
+        Seq.init Seat.numSeats receiveHand
+            |> Seq.map (fun record ->
+                record.Seat, record.Cards)
+            |> Map
 
-    let sharedFile =
-        File.Open(
-            "C:\Program Files\KHearts\KH_Host_Client.dat",
-            FileMode.Open,
-            FileAccess.ReadWrite,
-            FileShare.ReadWrite)
+    (*
+    let exchange clientSeats =
 
-    let buffer = Array.zeroCreate<byte> 55
+        for i = 1 to 4 do
+            let record =
+                SharedRecord.readExchangeOutgoing clientSeats
+            record
+                |> Option.iter (fun exchOutRec ->
+                    assert(exchOutRec.Cards.Count = Exchange.numCards)
+                    assert
+                        (exchOutRec.Cards
+                            |> Seq.forall (fun card ->
+                                handMap.[exchOutRec.Seat].Contains(card))))
+            SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
+    *)
 
-    let private read () =
-        let rec loop sleep =
-            Thread.Sleep(sleep : int)
-            sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
-            let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
-            assert(nBytes = buffer.Length)
-            let str = Encoding.Default.GetString(buffer)
-            let chunks = str.Split(',')
-            if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
-                chunks.[1..6]
-            elif sleep > 1000 then
-                failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
-            else loop (2 * sleep)
-        loop 1
+    (*
+    let receivePlay () =
+        let record = SharedRecord.readPlay ()
+        SharedRecord.writeGeneral ClientRecordType.Play
+        record
+    *)
 
-    let readSessionStart () =
-        let fields = read ()
-        if Int32.Parse(fields.[0]) <> 1 then
-            failwith "Incorrect key"
+    let serverPlayer =
+
+        let makePass deal score =
+            Set.empty // Killer.receivePass
+
+        let makePlay deal score =
+            Card.allCards.[0] // Killer.receivePlay
+
         {
-            ClientSeats =
-                let field = fields.[1] |> Int32.Parse
-                Seat.allSeats
-                    |> Seq.where (fun seat ->
-                        (field >>> int seat) &&& 1 = 1)
-                    |> set
-            HostDisplay =
-                Int32.Parse(fields.[4]) = 1
-            TwoOfClubsLeads =
-                Int32.Parse(fields.[5]) = 0
+            MakePass = makePass
+            MakePlay = makePlay
         }
 
-    let readGameStart () =
-        let fields = read ()
-        if Int32.Parse(fields.[0]) <> 2 then
-            failwith "Incorrect key"
+    let createClientPlayer player =
+
+        let makePass deal score =
+            Set.empty // Killer.sendPass score deal player
+
+        let makePlay deal score =
+            Card.allCards.[0] // Killer.sendPlay score deal player
+
         {
-            Dealer =
-                fields.[1]
-                    |> Int32.Parse
-                    |> enum<Seat>
-            DealNum = fields.[2] |> Int32.Parse
-            NumGames = fields.[4] |> Int32.Parse
+            MakePass = makePass
+            MakePlay = makePlay
         }
 
-    let readNewDeal () =
-        let fields = read ()
-        if Int32.Parse(fields.[0]) <> 3 then
-            failwith "Incorrect key"
-        {
-            Score =
-                Seat.allSeats
-                    |> Seq.map (fun seat ->
-                        let points =
-                            fields.[int seat + 1] |> Int32.Parse
-                        seat, points)
-                    |> Map
-                    |> ScoreMap
-            ExchangeDirection =
-                match fields.[5] |> Int32.Parse with
-                    | 0 -> ExchangeDirection.Left
-                    | 1 -> ExchangeDirection.Right
-                    | 2 -> ExchangeDirection.Across
-                    | 3 -> ExchangeDirection.Hold
-                    | _ -> failwith "Unexpected"
-        }
+    let validateScore (scoreA : Score) (scoreB : Score) =
+        assert(scoreA = scoreB)
 
-    let readHand () =
+    let playDeal (game : Game) dealer =
+        let dealRec = startDeal ()
+        validateScore game.Score dealRec.GameScore
+        let dir = dealRec.ExchangeDirection
+        let handMap = receiveHands ()
+        let deal = OpenDeal.fromHands dealer dir handMap
+        let game = { game with CurrentDealOpt = Some deal }
+        game |> Game.playDeal
 
-        let readRanks (field : int) =
-            [|
-                for rank in Enum.getValues<Rank> do
-                    if (field >>> int rank) &&& 1 = 1 then
-                        yield rank
-            |]
+    let playGame game =
+        let gameRec = startGame ()
+        playDeal game gameRec.Dealer
 
-        let fields = read ()
-        if Int32.Parse(fields.[0]) <> 4 then
-            failwith "Incorrect key"
-        {
-            Seat =
-                fields.[1]
-                    |> Int32.Parse
-                    |> enum<Seat>
-            Cards =
-                let suits = 
-                    [|
-                        Suit.Spades, 2
-                        Suit.Hearts, 3
-                        Suit.Clubs, 4
-                        Suit.Diamonds, 5
-                    |]
-                seq {
-                    for (suit, iField) in suits do
-                        let field = fields.[iField] |> Int32.Parse
-                        for rank in readRanks field do
-                            yield Card(rank, suit)
-                } |> set
-        }
-
-    module Card =
-
-        let fromInt value =
-            let rank =
-                (value / Suit.numSuits) + 2 |> enum<Rank>
-            let suit =
-                match value % Suit.numSuits with
-                    | 0 -> Suit.Spades
-                    | 1 -> Suit.Hearts
-                    | 2 -> Suit.Clubs
-                    | 3 -> Suit.Diamonds
-                    | _ -> failwith "Unexpected"
-            Card(rank, suit)
-
-    let readExchangeOutgoing clientSeats =
-        let fields = read ()
-        if Int32.Parse(fields.[0]) <> 5 then
-            failwith "Incorrect key"
-        let seat =
-            fields.[1]
-                |> Int32.Parse
-                |> enum<Seat>
-        if clientSeats |> Set.contains seat then
-            assert(
-                fields.[3..5]
-                    |> Array.forall (fun field ->
-                        Int32.Parse(field) = -1))
-            None
-        else
-            Some {
-                Seat = seat
-                Cards =
-                    fields.[3..5]
-                        |> Seq.map (fun field ->
-                            field |> Int32.Parse |> Card.fromInt)
-                        |> set
-            }
-
-    let private write clientRecord =
-        let chunks =
-            [|
-                "CHs"
-                sprintf $"    {int clientRecord.RecordType}"
-                "0000000"
-                "0000000"
-                "0000000"
-                "0000000"
-                "0000000"
-                "CHe"
-            |]
-        let str = String.Join(',', chunks)
-        let buffer = Encoding.Default.GetBytes(str)
-        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
-        sharedFile.Write(buffer, 0, buffer.Length)
-        sharedFile.Flush()
-
-    let writeGeneral recordType =
-        write { RecordType = recordType }
-
-module Program =
+module Random =
 
     let rng = Random(0)
 
-    let currentHand deal =
-        let seat =
-            deal.ClosedDeal
-                |> ClosedDeal.currentPlayer
-        deal.UnplayedCardMap.[seat]
-
     let makePass deal _ =
         deal
-            |> currentHand
+            |> OpenDeal.currentHand
             |> Seq.toArray
             |> Array.shuffle rng
             |> Seq.take Exchange.numCards
             |> set
 
     let makePlay deal _ =
-        let hand = currentHand deal
+        let hand = OpenDeal.currentHand deal
         deal.ClosedDeal
             |> ClosedDeal.legalPlays hand
             |> Seq.toArray
             |> Array.shuffle rng
             |> Seq.head
 
-    let randomPlayer =
+    let player =
         {
             MakePass = makePass
             MakePlay = makePlay
         }
 
-    let run () =
+module Program =
 
-        let sessionStartRec = SharedRecord.readSessionStart ()
-        printfn "%A" sessionStartRec
-        // assert(sessionStartRec.ClientSeats = set [| Seat.East; Seat.West |])
-        assert(sessionStartRec.TwoOfClubsLeads)
-        SharedRecord.writeGeneral ClientRecordType.SessionStart
+    let run player nGames =
 
-        let gameStartRec = SharedRecord.readGameStart ()
-        printfn "%A" gameStartRec
-        SharedRecord.writeGeneral ClientRecordType.GameStart
+        let sessionRec = Killer.startSesssion ()
 
-        let dealStartRec = SharedRecord.readNewDeal ()
-        printfn "%A" dealStartRec
-        SharedRecord.writeGeneral ClientRecordType.DealStart
-
-        let handMap =
-            seq {
-                for i = 1 to 4 do
-                    let cardsRec = SharedRecord.readHand ()
-                    printfn "%A" cardsRec
-                    assert(cardsRec.Cards.Count = ClosedDeal.numCardsPerHand)
-                    yield cardsRec
-                    SharedRecord.writeGeneral ClientRecordType.Hand
-            }
-                |> Seq.map (fun cardsRec ->
-                    cardsRec.Seat, cardsRec.Cards)
+        let playerMap =
+            let clientPlayer =
+                Killer.createClientPlayer player
+            Seat.allSeats
+                |> Seq.map (fun seat ->
+                    let protocolPlayer =
+                        if sessionRec.ClientSeats.Contains(seat) then
+                            clientPlayer
+                        else
+                            Killer.serverPlayer
+                    seat, protocolPlayer)
                 |> Map
 
-        if dealStartRec.ExchangeDirection <> ExchangeDirection.Hold then
-
-            for i = 1 to 4 do
-                let exchOutRecOpt =
-                    SharedRecord.readExchangeOutgoing sessionStartRec.ClientSeats
-                printfn "%A" exchOutRecOpt
-                exchOutRecOpt
-                    |> Option.iter (fun exchOutRec ->
-                        assert(exchOutRec.Cards.Count = Exchange.numCards)
-                        assert
-                            (exchOutRec.Cards
-                                |> Seq.forall (fun card ->
-                                    handMap.[exchOutRec.Seat].Contains(card))))
-                SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
+        for gameNum = 1 to nGames do
+            Game.create playerMap
+                |> Killer.playGame
+                |> ignore
 
     [<EntryPoint>]
     let main argv =
         try
-            run ()
+            run Random.player 1000
         with ex ->
             printfn "%s" ex.Message
         0

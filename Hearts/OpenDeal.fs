@@ -76,6 +76,13 @@ module OpenDeal =
 
         { deal with UnplayedCardMap = cardMap }
 
+    /// Answers the current player's unplayed cards.
+    let currentHand deal =
+        let seat =
+            deal.ClosedDeal
+                |> ClosedDeal.currentPlayer
+        deal.UnplayedCardMap.[seat]
+
     /// Plays the given card on the given deal.
     let addPlay card deal =
         {
