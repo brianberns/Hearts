@@ -41,23 +41,20 @@ module Game =
 
                     // exchange
                 let deal =
-                    let dir = deal.ExchangeDirection
-                    if dir = ExchangeDirection.Hold then deal
+                    if deal.Exchange.ExchangeDirection = ExchangeDirection.Hold then
+                        deal
                     else
-                        let seatCards =
-                            deal.ClosedDeal.Dealer.Next
-                                |> Seat.cycle
-                                |> Seq.map (fun seat ->
-                                    let cards =
-                                        game.PlayerMap.[seat].MakePass deal game.Score
-                                    seat, cards)
-                                |> Seq.toArray
-                        deal |> OpenDeal.exchange seatCards
+                        (deal, Seq.init Seat.numSeats id)
+                            ||> Seq.fold (fun deal _ ->
+                                let seat = deal.Exchange |> Exchange.currentPasser
+                                let player = game.PlayerMap.[seat]
+                                let cards = player.MakePass deal game.Score
+                                deal |> OpenDeal.addPass cards)
 
                     // playout
                 let deal =
                     assert(deal.ClosedDeal.Score = Score.zero)
-                    (deal, seq { 1 .. ClosedDeal.numCardsPerDeal })
+                    (deal, Seq.init ClosedDeal.numCardsPerDeal id)
                         ||> Seq.fold (fun deal _ ->
                             let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
                             let player = game.PlayerMap.[seat]

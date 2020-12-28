@@ -4,8 +4,8 @@ open PlayingCards
 
 type OpenDeal =
     {
-        /// Card exchange direction.
-        ExchangeDirection : ExchangeDirection
+        /// Cards passed by each player.
+        Exchange : Exchange
 
         /// Base deal.
         ClosedDeal : ClosedDeal
@@ -27,7 +27,7 @@ module OpenDeal =
                     |> Seq.length
             nCards = ClosedDeal.numCardsPerDeal)
         {
-            ExchangeDirection = dir
+            Exchange = Exchange.create dealer dir
             ClosedDeal = ClosedDeal.create dealer
             UnplayedCardMap = handMap
         }
@@ -48,33 +48,34 @@ module OpenDeal =
             |> Map
             |> fromHands dealer dir
 
-    /// Exchanges cards between players in the given deal.
-    let exchange seatCards deal =
-        assert(deal.ExchangeDirection <> ExchangeDirection.Hold)
+    /// Passes the given cards in the given deal.
+    let addPass cards deal =
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
 
-            // remove outgoing cards from each hand
-        let cardMap =
-            (deal.UnplayedCardMap, seatCards)
-                ||> Seq.fold (fun cardMap (seat, cards) ->
-                    let unplayedCards = cardMap.[seat]
-                    assert(Set.intersect unplayedCards cards = cards)
-                    let unplayedCards = Set.difference unplayedCards cards
-                    cardMap |> Map.add seat unplayedCards)
+            // remove outgoing cards from passer's hand
+        let cardMap = deal.UnplayedCardMap
+        let passer =
+            deal.Exchange |> Exchange.currentPasser
+        let unplayedCards = cardMap.[passer]
+        assert(Set.intersect unplayedCards cards = cards)
+        let unplayedCards = Set.difference unplayedCards cards
+        let cardMap = cardMap |> Map.add passer unplayedCards
 
-            // add incoming cards to each hand
-        let cardMap =
-            (cardMap, seatCards)
-                ||> Seq.fold (fun cardMap (seat, cards) ->
-                    let receiver =
-                        deal.ExchangeDirection
-                            |> ExchangeDirection.apply seat
-                    let unplayedCards = cardMap.[receiver]
-                    assert(Set.intersect unplayedCards cards |> Set.isEmpty)
-                    let unplayedCards = Set.union unplayedCards cards
-                    cardMap |> Map.add seat unplayedCards)
+            // add incoming cards to receiver's hand
+        let receiver =
+            deal.Exchange.ExchangeDirection
+                |> ExchangeDirection.apply passer
+        let unplayedCards = cardMap.[receiver]
+        assert(Set.intersect unplayedCards cards |> Set.isEmpty)
+        let unplayedCards = Set.union unplayedCards cards
+        let cardMap = cardMap |> Map.add receiver unplayedCards
 
-        { deal with UnplayedCardMap = cardMap }
+        {
+            deal with
+                Exchange =
+                    deal.Exchange |> Exchange.addPass cards
+                UnplayedCardMap = cardMap
+        }
 
     /// Answers the current player's unplayed cards.
     let currentHand deal =

@@ -7,9 +7,6 @@ open PlayingCards
 /// each player. Cards played during a deal are grouped into tricks.
 type ClosedDeal =
     {
-        /// Dealer of this deal's cards.
-        Dealer : Seat
-
         /// Current active trick, if the deal is not yet complete.
         CurrentTrickOpt : Option<Trick>
 
@@ -31,7 +28,6 @@ module ClosedDeal =
     /// Creates a closed deal.
     let create dealer =
         {
-            Dealer = dealer
             CurrentTrickOpt =
                 dealer
                     |> Seat.next
