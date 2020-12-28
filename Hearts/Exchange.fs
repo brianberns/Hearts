@@ -75,3 +75,8 @@ module Exchange =
         let seats = exchange.Dealer.Next |> Seat.cycle
         let passes = exchange.Passes |> List.rev
         Seq.zip seats passes
+
+    /// Have all players contributed cards to the given exchange?
+    let isComplete exchange =
+        assert(exchange.ExchangeDirection <> ExchangeDirection.Hold)
+        exchange.Passes.Length = Seat.numSeats

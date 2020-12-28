@@ -89,7 +89,7 @@ module OpenDeal =
 
     /// Completes the exchange phase of the given deal.
     let completeExchange deal =
-        assert(deal.Exchange.Passes.Length = Seat.numSeats)
+        assert(deal.Exchange |> Exchange.isComplete)
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
         assert(
             deal.UnplayedCardMap
@@ -103,12 +103,20 @@ module OpenDeal =
             ||> Seq.fold (fun deal (passer, cards) ->
                 receivePass passer cards deal)
 
+    /// Current player in the given deal.
+    let currentPlayer deal =
+        let exch = deal.Exchange
+        let isPlayout =
+            exch.ExchangeDirection = ExchangeDirection.Hold
+                || exch |> Exchange.isComplete
+        if isPlayout then
+            deal.ClosedDeal |> ClosedDeal.currentPlayer
+        else
+            exch |> Exchange.currentPasser
+
     /// Answers the current player's unplayed cards.
     let currentHand deal =
-        let seat =
-            deal.ClosedDeal
-                |> ClosedDeal.currentPlayer
-        deal.UnplayedCardMap.[seat]
+        deal.UnplayedCardMap.[currentPlayer deal]
 
     /// Plays the given card on the given deal.
     let addPlay card deal =
