@@ -171,61 +171,45 @@ module SharedRecord =
                     | _ -> failwith "Unexpected"
             Card(rank, suit)
 
-    (*
-    let readExchangeOutgoing clientSeats =
+        let toInt (card : Card) =
+            let rank =
+                (int card.Rank - 2) * Suit.numSuits
+            let suit =
+                match card.Suit with
+                    | Suit.Spades   -> 0
+                    | Suit.Hearts   -> 1
+                    | Suit.Clubs    -> 2
+                    | Suit.Diamonds -> 3
+                    | _ -> failwith "Unexpected"
+            rank + suit
+
+    let readExchangeOutgoing () =
         let fields = read ()
         if Int32.Parse(fields.[0]) <> 5 then
             failwith "Incorrect key"
-        let seat =
-            fields.[1]
-                |> Int32.Parse
-                |> enum<Seat>
-        if clientSeats |> Set.contains seat then
-            assert(
-                fields.[3..5]
-                    |> Array.forall (fun field ->
-                        Int32.Parse(field) = -1))
-            None
-        else
-            Some {
-                Seat = seat
-                Cards =
+        {
+            Seat =
+                fields.[1]
+                    |> Int32.Parse
+                    |> enum<Seat>
+            Cards =
+                let cardNums =
                     fields.[3..5]
-                        |> Seq.map (fun field ->
-                            field |> Int32.Parse |> Card.fromInt)
+                        |> Array.map Int32.Parse
+                if cardNums.[0] = -1 then
+                    assert(cardNums |> Array.forall ((=) -1))
+                    Set.empty
+                else
+                    cardNums
+                        |> Seq.map Card.fromInt
                         |> set
-            }
-    *)
-
-    let readPlay isClient =
-        let fields = read ()
-        if Int32.Parse(fields.[0]) <> 8 then
-            failwith "Incorrect key"
-        let seat =
-            fields.[1]
-                |> Int32.Parse
-                |> enum<Seat>
-        if isClient then
-            assert(
-                fields.[3..5]
-                    |> Array.forall (fun field ->
-                        Int32.Parse(field) = -1))
-            None
-        else
-            Some {
-                Seat = seat
-                Cards =
-                    fields.[3..5]
-                        |> Seq.map (fun field ->
-                            field |> Int32.Parse |> Card.fromInt)
-                        |> set
-            }
+        }
 
     let private write clientRecord =
         let chunks =
             [|
                 "CHs"
-                sprintf $"    {int clientRecord.RecordType}"
+                $"    {int clientRecord.RecordType}"
                 "0000000"
                 "0000000"
                 "0000000"
@@ -241,3 +225,22 @@ module SharedRecord =
 
     let writeGeneral recordType =
         write { RecordType = recordType }
+
+    let writeExchangeOutgoing cards =
+        let cards = cards |> Seq.toArray
+        let chunks =
+            [|
+                "CHs"
+                sprintf "%07d" <| 105
+                sprintf "%07d" <| Card.toInt cards.[0]
+                sprintf "%07d" <| Card.toInt cards.[1]
+                sprintf "%07d" <| Card.toInt cards.[2]
+                "0000000"
+                "0000000"
+                "CHe"
+            |]
+        let str = String.Join(',', chunks)
+        let buffer = Encoding.Default.GetBytes(str)
+        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+        sharedFile.Write(buffer, 0, buffer.Length)
+        sharedFile.Flush()

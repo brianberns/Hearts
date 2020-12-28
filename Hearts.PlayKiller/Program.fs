@@ -41,33 +41,25 @@ module Killer =
                 record.Seat, record.Cards)
             |> Map
 
-    (*
-    let exchange clientSeats =
+    let receivePass deal =
+        let record = SharedRecord.readExchangeOutgoing ()
+        if record.Seat <> (deal.ClosedDeal |> ClosedDeal.currentPlayer) then failwith "Unexpected"
+        if record.Cards.Count <> Exchange.numCards then failwith "Unexpected"
+        SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
+        record.Cards
 
-        for i = 1 to 4 do
-            let record =
-                SharedRecord.readExchangeOutgoing clientSeats
-            record
-                |> Option.iter (fun exchOutRec ->
-                    assert(exchOutRec.Cards.Count = Exchange.numCards)
-                    assert
-                        (exchOutRec.Cards
-                            |> Seq.forall (fun card ->
-                                handMap.[exchOutRec.Seat].Contains(card))))
-            SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
-    *)
-
-    (*
-    let receivePlay () =
-        let record = SharedRecord.readPlay ()
-        SharedRecord.writeGeneral ClientRecordType.Play
-        record
-    *)
+    let sendPass deal score player =
+        let cards = player.MakePass deal score
+        let record = SharedRecord.readExchangeOutgoing ()
+        if record.Seat <> (deal.ClosedDeal |> ClosedDeal.currentPlayer) then failwith "Unexpected"
+        if record.Cards.Count <> 0 then failwith "Unexpected"
+        SharedRecord.writeExchangeOutgoing cards
+        cards
 
     let serverPlayer =
 
         let makePass deal score =
-            Set.empty // Killer.receivePass
+            receivePass deal
 
         let makePlay deal score =
             Card.allCards.[0] // Killer.receivePlay
@@ -80,7 +72,7 @@ module Killer =
     let createClientPlayer player =
 
         let makePass deal score =
-            Set.empty // Killer.sendPass score deal player
+            sendPass deal score player
 
         let makePlay deal score =
             Card.allCards.[0] // Killer.sendPlay score deal player

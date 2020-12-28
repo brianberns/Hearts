@@ -45,11 +45,13 @@ module Game =
                     if dir = ExchangeDirection.Hold then deal
                     else
                         let seatCards =
-                            Seat.allSeats
-                                |> Array.map (fun seat ->
+                            deal.ClosedDeal.Dealer.Next
+                                |> Seat.cycle
+                                |> Seq.map (fun seat ->
                                     let cards =
                                         game.PlayerMap.[seat].MakePass deal game.Score
                                     seat, cards)
+                                |> Seq.toArray
                         deal |> OpenDeal.exchange seatCards
 
                     // playout
