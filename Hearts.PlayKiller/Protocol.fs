@@ -40,6 +40,7 @@ type ClientRecordType =
     | DealStart = 103
     | Hand = 104
     | ExchangeOutgoing = 105
+    | ExchangeIncoming = 106
 
 type ClientRecord =
     {
@@ -183,9 +184,9 @@ module SharedRecord =
                     | _ -> failwith "Unexpected"
             rank + suit
 
-    let readExchangeOutgoing () =
+    let private readExchange key =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> 5 then
+        if Int32.Parse(fields.[0]) <> key then
             failwith "Incorrect key"
         {
             Seat =
@@ -204,6 +205,12 @@ module SharedRecord =
                         |> Seq.map Card.fromInt
                         |> set
         }
+
+    let readExchangeOutgoing () =
+        readExchange 5
+
+    let readExchangeIncoming () =
+        readExchange 6
 
     let private write clientRecord =
         let chunks =

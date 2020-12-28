@@ -43,7 +43,7 @@ module Killer =
 
     let receivePass deal =
         let record = SharedRecord.readExchangeOutgoing ()
-        if record.Seat <> (deal.Exchange |> Exchange.currentPasser) then failwith "Unexpected"
+        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         if record.Cards.Count <> Exchange.numCards then failwith "Unexpected"
         SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
         record.Cards
@@ -51,10 +51,33 @@ module Killer =
     let sendPass deal score player =
         let cards = player.MakePass deal score
         let record = SharedRecord.readExchangeOutgoing ()
-        if record.Seat <> (deal.Exchange |> Exchange.currentPasser) then failwith "Unexpected"
+        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         if record.Cards.Count <> 0 then failwith "Unexpected"
         SharedRecord.writeExchangeOutgoing cards
         cards
+
+    let sync deal =
+
+        if deal.Exchange |> Exchange.isHold |> not
+            && deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0 then
+            for _ = 1 to Seat.numSeats do
+                SharedRecord.readExchangeIncoming () |> ignore
+                SharedRecord.writeGeneral ClientRecordType.ExchangeIncoming
+
+    let receivePlay deal =
+        sync deal
+
+        (*
+        let record = SharedRecord.readPlay ()
+        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
+        SharedRecord.writeGeneral ClientRecordType.Play
+        record.Card
+        *)
+        Card.allCards.[0]
+
+    let sendPlay deal score player =
+        sync deal
+        Card.allCards.[0]
 
     let serverPlayer =
 
@@ -62,7 +85,7 @@ module Killer =
             receivePass deal
 
         let makePlay deal score =
-            Card.allCards.[0] // Killer.receivePlay
+            receivePlay deal
 
         {
             MakePass = makePass
@@ -75,7 +98,7 @@ module Killer =
             sendPass deal score player
 
         let makePlay deal score =
-            Card.allCards.[0] // Killer.sendPlay score deal player
+            sendPlay deal score player
 
         {
             MakePass = makePass

@@ -48,19 +48,23 @@ module Exchange =
             Passes = List.empty
         }
 
+    /// No exchange?
+    let isHold exchange =
+        exchange.ExchangeDirection = ExchangeDirection.Hold
+
     /// Number of cards passed by each player.
     let numCards = 3
 
     /// Whose turn is it to pass cards in the given exchange?
     let currentPasser exchange =
-        assert(exchange.ExchangeDirection <> ExchangeDirection.Hold)
+        assert(exchange |> isHold |> not)
         assert(exchange.Passes.Length < Seat.numSeats)
         exchange.Dealer
             |> Seat.incr (exchange.Passes.Length + 1)
 
     /// Adds current passer's cards to the given exchange.
     let addPass cards exchange =
-        assert(exchange.ExchangeDirection <> ExchangeDirection.Hold)
+        assert(exchange |> isHold |> not)
         assert(exchange.Passes.Length < Seat.numSeats)
         assert(cards |> Set.count = numCards)
         {
@@ -71,12 +75,12 @@ module Exchange =
     /// Cards passed by each player in the given exchange, in
     /// chronological order.
     let seatPasses exchange =
-        assert(exchange.ExchangeDirection <> ExchangeDirection.Hold)
+        assert(exchange |> isHold |> not)
         let seats = exchange.Dealer.Next |> Seat.cycle
         let passes = exchange.Passes |> List.rev
         Seq.zip seats passes
 
     /// Have all players contributed cards to the given exchange?
     let isComplete exchange =
-        assert(exchange.ExchangeDirection <> ExchangeDirection.Hold)
+        assert(exchange |> isHold |> not)
         exchange.Passes.Length = Seat.numSeats

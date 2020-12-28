@@ -41,7 +41,7 @@ module Game =
 
                     // exchange
                 let deal =
-                    if deal.Exchange.ExchangeDirection = ExchangeDirection.Hold then
+                    if deal.Exchange |> Exchange.isHold then
                         deal
                     else
                         (deal, Seq.init Seat.numSeats id)
