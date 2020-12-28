@@ -4,8 +4,8 @@ open PlayingCards
 
 /// Direction in which cards are passed prior to playout.
 type ExchangeDirection =
-    | Left = -1
-    | Right = 1
+    | Left = 1
+    | Right = -1
     | Across = 2
     | Hold = 0
 

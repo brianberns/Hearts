@@ -50,6 +50,7 @@ module Game =
                                 let player = game.PlayerMap.[seat]
                                 let cards = player.MakePass deal game.Score
                                 deal |> OpenDeal.addPass cards)
+                            |> OpenDeal.completeExchange
 
                     // playout
                 let deal =

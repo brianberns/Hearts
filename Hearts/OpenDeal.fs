@@ -56,12 +56,24 @@ module OpenDeal =
         let cardMap = deal.UnplayedCardMap
         let passer =
             deal.Exchange |> Exchange.currentPasser
+        assert(cardMap.[passer].Count = ClosedDeal.numCardsPerHand)
         let unplayedCards = cardMap.[passer]
         assert(Set.intersect unplayedCards cards = cards)
         let unplayedCards = Set.difference unplayedCards cards
         let cardMap = cardMap |> Map.add passer unplayedCards
 
+        {
+            deal with
+                Exchange =
+                    deal.Exchange |> Exchange.addPass cards
+                UnplayedCardMap = cardMap
+        }
+
+    /// Receives cards from the given passer in the given deal.
+    let private receivePass passer cards deal =
+
             // add incoming cards to receiver's hand
+        let cardMap = deal.UnplayedCardMap
         let receiver =
             deal.Exchange.ExchangeDirection
                 |> ExchangeDirection.apply passer
@@ -72,10 +84,24 @@ module OpenDeal =
 
         {
             deal with
-                Exchange =
-                    deal.Exchange |> Exchange.addPass cards
                 UnplayedCardMap = cardMap
         }
+
+    /// Completes the exchange phase of the given deal.
+    let completeExchange deal =
+        assert(deal.Exchange.Passes.Length = Seat.numSeats)
+        assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
+        assert(
+            deal.UnplayedCardMap
+                |> Map.forall (fun _ cards ->
+                    cards.Count =
+                        ClosedDeal.numCardsPerHand - Exchange.numCards))
+        let seatPasses =
+            deal.Exchange
+                |> Exchange.seatPasses
+        (deal, seatPasses)
+            ||> Seq.fold (fun deal (passer, cards) ->
+                receivePass passer cards deal)
 
     /// Answers the current player's unplayed cards.
     let currentHand deal =

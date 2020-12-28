@@ -43,7 +43,7 @@ module Killer =
 
     let receivePass deal =
         let record = SharedRecord.readExchangeOutgoing ()
-        if record.Seat <> (deal.ClosedDeal |> ClosedDeal.currentPlayer) then failwith "Unexpected"
+        if record.Seat <> (deal.Exchange |> Exchange.currentPasser) then failwith "Unexpected"
         if record.Cards.Count <> Exchange.numCards then failwith "Unexpected"
         SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
         record.Cards
@@ -51,7 +51,7 @@ module Killer =
     let sendPass deal score player =
         let cards = player.MakePass deal score
         let record = SharedRecord.readExchangeOutgoing ()
-        if record.Seat <> (deal.ClosedDeal |> ClosedDeal.currentPlayer) then failwith "Unexpected"
+        if record.Seat <> (deal.Exchange |> Exchange.currentPasser) then failwith "Unexpected"
         if record.Cards.Count <> 0 then failwith "Unexpected"
         SharedRecord.writeExchangeOutgoing cards
         cards
