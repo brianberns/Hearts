@@ -30,3 +30,9 @@ module Score =
         zeroMap
             |> Map.add seat points
             |> ScoreMap
+
+    /// Sum of all points in the given score.
+    let sum (ScoreMap scoreMap) =
+        scoreMap
+            |> Map.toSeq
+            |> Seq.sumBy snd

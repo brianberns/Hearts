@@ -59,9 +59,18 @@ module Game =
             }
 
             // play another trick?
-        if deal.ClosedDeal |> ClosedDeal.isComplete then
-            deal, game
-        else playTricks deal game
+        match deal |> OpenDeal.tryFinalize with
+            | Some score ->
+                let game =
+                    {
+                        game with
+                            Score = game.Score + score
+                    }
+                assert
+                    (deal.ClosedDeal.Score + score |> Score.sum
+                        = OpenDeal.numPointsPerDeal)
+                deal, game
+            | None -> playTricks deal game
 
     /// Plays a deal in the given game.
     let playDeal game =

@@ -146,3 +146,65 @@ module OpenDeal =
                     let unplayedCards = unplayedCards.Remove(card)
                     deal.UnplayedCardMap |> Map.add seat unplayedCards
         }
+
+    /// Total number of points in a deal.
+    let numPointsPerDeal =
+        Card.allCards
+            |> Seq.sumBy Card.pointValue
+
+    /// Determines the final additional score of the given deal, if
+    /// possible.
+    let tryFinalize deal =
+
+            // applies only at trick boundaries
+        assert(
+            deal.ClosedDeal.CurrentTrickOpt
+                |> Option.map (fun trick -> trick.Cards.IsEmpty)
+                |> Option.defaultValue true)
+
+            // deal is actually complete?
+        if deal.ClosedDeal |> ClosedDeal.isComplete then
+            Some Score.zero
+
+            // all points have been taken?
+        elif deal.ClosedDeal.Score |> Score.sum = numPointsPerDeal then
+            Some Score.zero
+
+            // current player takes all remaining tricks?
+        else
+
+            let player = currentPlayer deal
+            let cardMap =
+                deal.UnplayedCardMap
+                    |> Map.toSeq
+                    |> Seq.where (fun (seat, _) -> seat <> player)
+                    |> Seq.collect snd
+                    |> Seq.groupBy (fun card -> card.Suit)
+                    |> Seq.map (fun (suit, cards) ->
+                        let ranks =
+                            cards
+                                |> Seq.map (fun card -> card.Rank)
+                                |> Seq.toArray
+                        suit, ranks)
+                    |> Map
+
+            /// Is the given card guaranteed to win any trick in which
+            /// it is led?
+            let isWinner (card : Card) =
+                cardMap
+                    |> Map.tryFind card.Suit
+                    |> Option.defaultValue Array.empty
+                    |> Array.forall (fun rank ->
+                        assert(rank <> card.Rank)
+                        rank < card.Rank)
+                
+            let hand = deal.UnplayedCardMap.[player]
+            if hand |> Seq.forall (fun card -> isWinner card) then
+                let points =
+                    deal.UnplayedCardMap
+                        |> Map.toSeq
+                        |> Seq.collect snd
+                        |> Seq.sumBy Card.pointValue
+                Score.create player points |> Some
+            else
+                None
