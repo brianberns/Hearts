@@ -21,7 +21,7 @@ module Killer =
 
     /// Starts a new deal with KH.
     let startDeal () =
-        let record = SharedRecord.readNewDeal ()
+        let record = SharedRecord.readDealStart ()
         SharedRecord.writeGeneral ClientRecordType.DealStart
         record
 
@@ -56,13 +56,21 @@ module Killer =
         SharedRecord.writeExchangeOutgoing cards
         cards
 
+    /// Ignores unused messages from KH.
     let sync deal =
 
-        if deal.Exchange |> Exchange.isHold |> not
+            // ignore incoming passes
+        if deal.Exchange |> Exchange.isComplete
             && deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0 then
             for _ = 1 to Seat.numSeats do
                 SharedRecord.readExchangeIncoming () |> ignore
                 SharedRecord.writeGeneral ClientRecordType.ExchangeIncoming
+
+            // ignore trick start
+        if deal.Exchange |> Exchange.isComplete
+            && deal.ClosedDeal.CurrentTrickOpt.Value.Cards.Length = 0 then
+            SharedRecord.readTrickStart () |> ignore
+            SharedRecord.writeGeneral ClientRecordType.TrickStart
 
     let receivePlay deal =
         sync deal

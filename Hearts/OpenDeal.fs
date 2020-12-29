@@ -105,14 +105,10 @@ module OpenDeal =
 
     /// Current player in the given deal.
     let currentPlayer deal =
-        let exchange = deal.Exchange
-        let isPlayout =
-            exchange |> Exchange.isHold
-                || exchange |> Exchange.isComplete
-        if isPlayout then
+        if deal.Exchange |> Exchange.isComplete then
             deal.ClosedDeal |> ClosedDeal.currentPlayer
         else
-            exchange |> Exchange.currentPasser
+            deal.Exchange |> Exchange.currentPasser
 
     /// Answers the current player's unplayed cards.
     let currentHand deal =

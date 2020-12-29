@@ -34,6 +34,12 @@ type ServerCardsRecord =
         Cards : Set<Card>
     }
 
+type ServerTrickStartRecord =
+    {
+        Leader : Seat
+        TrickNum : int
+    }
+
 type ClientRecordType =
     | SessionStart = 101
     | GameStart = 102
@@ -41,6 +47,7 @@ type ClientRecordType =
     | Hand = 104
     | ExchangeOutgoing = 105
     | ExchangeIncoming = 106
+    | TrickStart = 107
 
 type ClientRecord =
     {
@@ -103,7 +110,7 @@ module SharedRecord =
             NumGames = fields.[4] |> Int32.Parse
         }
 
-    let readNewDeal () =
+    let readDealStart () =
         let fields = read ()
         if Int32.Parse(fields.[0]) <> 3 then
             failwith "Incorrect key"
@@ -156,6 +163,20 @@ module SharedRecord =
                         for rank in readRanks field do
                             yield Card(rank, suit)
                 } |> set
+        }
+
+    let readTrickStart () =
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> 7 then
+            failwith "Incorrect key"
+        {
+            Leader =
+                fields.[1]
+                    |> Int32.Parse
+                    |> enum<Seat>
+            TrickNum =
+                fields.[2]
+                    |> Int32.Parse
         }
 
     module Card =

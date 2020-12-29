@@ -80,7 +80,8 @@ module Exchange =
         let passes = exchange.Passes |> List.rev
         Seq.zip seats passes
 
-    /// Have all players contributed cards to the given exchange?
+    /// An exchange is complete when it is a hold hand, or all
+    /// players have passed cards.
     let isComplete exchange =
-        assert(exchange |> isHold |> not)
-        exchange.Passes.Length = Seat.numSeats
+        isHold exchange
+            || exchange.Passes.Length = Seat.numSeats
