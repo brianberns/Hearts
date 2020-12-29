@@ -295,8 +295,7 @@ module Protocol =
             "-1     "
         |] |> write
 
-    /// Writes an outgoing exchange containing the given
-    /// cards.
+    /// Writes an outgoing exchange containing the given cards.
     let writeExchangeOutgoing cards =
         let cards = cards |> Seq.toArray
         [|
