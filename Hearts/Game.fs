@@ -33,6 +33,36 @@ module Game =
             Score = Score.zero
         }
 
+    /// Plays a trick in the given game's current deal.
+    let playTrick deal game =
+        assert(game.CurrentDealOpt = Some deal)
+        assert(deal.ClosedDeal.CurrentTrickOpt.Value.Cards.IsEmpty)
+        (deal, Seq.init Seat.numSeats id)
+            ||> Seq.fold (fun deal _ ->
+                let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
+                let player = game.PlayerMap.[seat]
+                let card = player.MakePlay deal game.Score
+                deal |> OpenDeal.addPlay card)
+
+    /// Plays tricks in the given game's current deal.
+    let rec playTricks deal game =
+
+            // play a trick
+        let deal = playTrick deal game
+
+            // update game status with result of trick
+        let game =
+            {
+                game with
+                    CurrentDealOpt = Some deal
+                    Score = game.Score + deal.ClosedDeal.Score
+            }
+
+            // play another trick?
+        if deal.ClosedDeal |> ClosedDeal.isComplete then
+            deal, game
+        else playTricks deal game
+
     /// Plays a deal in the given game.
     let playDeal game =
         match game.CurrentDealOpt with
@@ -51,23 +81,19 @@ module Game =
                                 let cards = player.MakePass deal game.Score
                                 deal |> OpenDeal.addPass cards)
                             |> OpenDeal.startPlay
+                let game =
+                    { game with CurrentDealOpt = Some deal }
 
                     // playout
-                let deal =
+                let _, game =
                     assert(deal.ClosedDeal.Score = Score.zero)
-                    (deal, Seq.init ClosedDeal.numCardsPerDeal id)
-                        ||> Seq.fold (fun deal _ ->
-                            let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
-                            let player = game.PlayerMap.[seat]
-                            let card = player.MakePlay deal game.Score
-                            deal |> OpenDeal.addPlay card)
+                    ((deal, game), Seq.init ClosedDeal.numCardsPerHand id)
+                        ||> Seq.fold (fun (deal, game) _ ->
+                            playTricks deal game)
                 assert(deal.ClosedDeal |> ClosedDeal.isComplete)
 
-                {
-                    game with
-                        CurrentDealOpt = Some deal
-                        Score = game.Score + deal.ClosedDeal.Score   // to-do: shoot the moon
-                }
+                // to-do: shoot the moon
+                game
 
             | None -> failwith "Game has not started"
 
