@@ -8,6 +8,17 @@ open System.Threading
 open PlayingCards
 open Hearts
 
+type ServerRecordType =
+    | SessionStart = 1
+    | GameStart = 2
+    | DealStart = 3
+    | Hand = 4
+    | ExchangeOutgoing = 5
+    | ExchangeIncoming = 6
+    | TrickStart = 7
+    | Play = 8
+    | TrickEnd = 9
+
 type ServerSessionStartRecord =
     {
         ClientSeats : Set<Seat>
@@ -49,6 +60,7 @@ type ClientRecordType =
     | ExchangeIncoming = 106
     | TrickStart = 107
     | Play = 108
+    | TrickEnd = 109
 
 type ClientRecord =
     {
@@ -81,9 +93,15 @@ module SharedRecord =
             else loop (2 * sleep)
         loop 1
 
+    let readGeneral (recordType : ServerRecordType) =
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> int recordType then
+            failwith "Incorrect key"
+        ()
+
     let readSessionStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> 1 then
+        if Int32.Parse(fields.[0]) <> int ServerRecordType.SessionStart then
             failwith "Incorrect key"
         {
             ClientSeats =
@@ -100,7 +118,7 @@ module SharedRecord =
 
     let readGameStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> 2 then
+        if Int32.Parse(fields.[0]) <> int ServerRecordType.GameStart then
             failwith "Incorrect key"
         {
             Dealer =
@@ -113,7 +131,7 @@ module SharedRecord =
 
     let readDealStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> 3 then
+        if Int32.Parse(fields.[0]) <> int ServerRecordType.DealStart then
             failwith "Incorrect key"
         {
             GameScore =
@@ -143,7 +161,7 @@ module SharedRecord =
             |]
 
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> 4 then
+        if Int32.Parse(fields.[0]) <> int ServerRecordType.Hand then
             failwith "Incorrect key"
         {
             Seat =
@@ -192,9 +210,9 @@ module SharedRecord =
                     | _ -> failwith "Unexpected"
             rank + suit
 
-    let private readExchange key =
+    let private readExchange (key : ServerRecordType)=
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> key then
+        if Int32.Parse(fields.[0]) <> int key then
             failwith "Incorrect key"
         {
             Seat =
@@ -215,14 +233,14 @@ module SharedRecord =
         }
 
     let readExchangeOutgoing () =
-        readExchange 5
+        readExchange ServerRecordType.ExchangeOutgoing
 
     let readExchangeIncoming () =
-        readExchange 6
+        readExchange ServerRecordType.ExchangeIncoming
 
     let readTrickStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> 7 then
+        if Int32.Parse(fields.[0]) <> int ServerRecordType.TrickStart then
             failwith "Incorrect key"
         {
             Leader =
@@ -236,7 +254,7 @@ module SharedRecord =
 
     let readPlay () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> 8 then
+        if Int32.Parse(fields.[0]) <> int ServerRecordType.Play then
             failwith "Incorrect key"
         {
             Seat =

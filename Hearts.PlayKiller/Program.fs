@@ -72,6 +72,12 @@ module Killer =
             SharedRecord.readTrickStart () |> ignore
             SharedRecord.writeGeneral ClientRecordType.TrickStart
 
+            // ignore trick end
+        if deal.Exchange |> Exchange.isComplete
+            && deal.ClosedDeal.CurrentTrickOpt.Value.Cards.Length = Seat.numSeats then
+            SharedRecord.readGeneral ServerRecordType.TrickEnd
+            SharedRecord.writeGeneral ClientRecordType.TrickEnd
+
     let receivePlay deal =
         sync deal
         let record = SharedRecord.readPlay ()
