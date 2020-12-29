@@ -62,11 +62,6 @@ type ClientRecordType =
     | Play = 108
     | TrickEnd = 109
 
-type ClientRecord =
-    {
-        RecordType : ClientRecordType
-    }
-
 module SharedRecord =
 
     let sharedFile =
@@ -87,22 +82,24 @@ module SharedRecord =
             let str = Encoding.Default.GetString(buffer)
             let chunks = str.Split(',')
             if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
+                printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
                 chunks.[1..6]
             elif sleep > 1000 then
                 failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
             else loop (2 * sleep)
         loop 1
 
+    let validateKey field (recordType : ServerRecordType) =
+        if Int32.Parse(field) <> int recordType then
+            failwith $"Incorrect key: expected {int recordType}, actual {field}"
+
     let readGeneral (recordType : ServerRecordType) =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int recordType then
-            failwith "Incorrect key"
-        ()
+        validateKey fields.[0] recordType
 
     let readSessionStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int ServerRecordType.SessionStart then
-            failwith "Incorrect key"
+        validateKey fields.[0] ServerRecordType.SessionStart
         {
             ClientSeats =
                 let field = fields.[1] |> Int32.Parse
@@ -118,8 +115,7 @@ module SharedRecord =
 
     let readGameStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int ServerRecordType.GameStart then
-            failwith "Incorrect key"
+        validateKey fields.[0] ServerRecordType.GameStart
         {
             Dealer =
                 fields.[1]
@@ -131,8 +127,7 @@ module SharedRecord =
 
     let readDealStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int ServerRecordType.DealStart then
-            failwith "Incorrect key"
+        validateKey fields.[0] ServerRecordType.DealStart
         {
             GameScore =
                 Seat.allSeats
@@ -161,8 +156,7 @@ module SharedRecord =
             |]
 
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int ServerRecordType.Hand then
-            failwith "Incorrect key"
+        validateKey fields.[0] ServerRecordType.Hand
         {
             Seat =
                 fields.[1]
@@ -210,10 +204,9 @@ module SharedRecord =
                     | _ -> failwith "Unexpected"
             rank + suit
 
-    let private readExchange (key : ServerRecordType)=
+    let private readExchange (recordType : ServerRecordType)=
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int key then
-            failwith "Incorrect key"
+        validateKey fields.[0] recordType
         {
             Seat =
                 fields.[1]
@@ -240,8 +233,7 @@ module SharedRecord =
 
     let readTrickStart () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int ServerRecordType.TrickStart then
-            failwith "Incorrect key"
+        validateKey fields.[0] ServerRecordType.TrickStart
         {
             Leader =
                 fields.[1]
@@ -254,8 +246,7 @@ module SharedRecord =
 
     let readPlay () =
         let fields = read ()
-        if Int32.Parse(fields.[0]) <> int ServerRecordType.Play then
-            failwith "Incorrect key"
+        validateKey fields.[0] ServerRecordType.Play
         {
             Seat =
                 fields.[1]
@@ -269,17 +260,13 @@ module SharedRecord =
                 else cardNum |> Card.fromInt |> Set.singleton
         }
 
-    let private write clientRecord =
+    let private write (chunks : string[]) =
+        printfn $"write: |{String.Join(',', chunks)}|"
         let chunks =
             [|
-                "CHs"
-                $"{int clientRecord.RecordType}    "
-                "-1     "
-                "-1     "
-                "-1     "
-                "-1     "
-                "-1     "
-                "CHe"
+                yield "CHs"
+                yield! chunks
+                yield "CHe"
             |]
         let str = String.Join(',', chunks)
         let buffer = Encoding.Default.GetBytes(str)
@@ -287,42 +274,33 @@ module SharedRecord =
         sharedFile.Write(buffer, 0, buffer.Length)
         sharedFile.Flush()
 
-    let writeGeneral recordType =
-        write { RecordType = recordType }
+    let writeGeneral (recordType : ClientRecordType) =
+        [|
+            $"{int recordType}    "
+            "-1     "
+            "-1     "
+            "-1     "
+            "-1     "
+            "-1     "
+        |] |> write
 
     let writeExchangeOutgoing cards =
         let cards = cards |> Seq.toArray
-        let chunks =
-            [|
-                "CHs"
-                sprintf "%7d" <| 105
-                sprintf "%7d" <| Card.toInt cards.[0]
-                sprintf "%7d" <| Card.toInt cards.[1]
-                sprintf "%7d" <| Card.toInt cards.[2]
-                "-1     "
-                "-1     "
-                "CHe"
-            |]
-        let str = String.Join(',', chunks)
-        let buffer = Encoding.Default.GetBytes(str)
-        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
-        sharedFile.Write(buffer, 0, buffer.Length)
-        sharedFile.Flush()
+        [|
+            sprintf "%-7d" <| 105
+            sprintf "%-7d" <| Card.toInt cards.[0]
+            sprintf "%-7d" <| Card.toInt cards.[1]
+            sprintf "%-7d" <| Card.toInt cards.[2]
+            "-1     "
+            "-1     "
+        |] |> write
 
     let writePlay card =
-        let chunks =
-            [|
-                "CHs"
-                sprintf "%7d" <| 108
-                sprintf "%7d" <| Card.toInt card
-                "-1     "
-                "-1     "
-                "-1     "
-                "-1     "
-                "CHe"
-            |]
-        let str = String.Join(',', chunks)
-        let buffer = Encoding.Default.GetBytes(str)
-        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
-        sharedFile.Write(buffer, 0, buffer.Length)
-        sharedFile.Flush()
+        [|
+            sprintf "%-7d" <| 108
+            sprintf "%-7d" <| Card.toInt card
+            "-1     "
+            "-1     "
+            "-1     "
+            "-1     "
+        |] |> write

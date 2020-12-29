@@ -45,32 +45,37 @@ module Game =
                 deal |> OpenDeal.addPlay card)
 
     /// Plays tricks in the given game's current deal.
-    let rec playTricks deal game =
+    let playTricks deal game =
 
-            // play a trick
-        let deal = playTrick deal game
+            // increment from initial game score
+        let gameScore = game.Score
 
-            // update game status with result of trick
-        let game =
-            {
-                game with
-                    CurrentDealOpt = Some deal
-                    Score = game.Score + deal.ClosedDeal.Score
-            }
+        let rec loop deal game =
 
-            // play another trick?
-        match deal |> OpenDeal.tryFinalize with
-            | Some score ->
-                let game =
-                    {
-                        game with
-                            Score = game.Score + score
-                    }
-                assert
-                    (deal.ClosedDeal.Score + score |> Score.sum
-                        = OpenDeal.numPointsPerDeal)
-                deal, game
-            | None -> playTricks deal game
+                // play a trick
+            let deal = playTrick deal game
+
+                // update game status with result of trick
+            let game =
+                {
+                    game with
+                        CurrentDealOpt = Some deal
+                        Score = gameScore + deal.ClosedDeal.Score
+                }
+
+                // play another trick?
+            match deal |> OpenDeal.tryFinalize with
+                | Some score ->
+                    let game =
+                        { game with Score = game.Score + score }
+                    assert
+                        (deal.ClosedDeal.Score + score |> Score.sum
+                            = OpenDeal.numPointsPerDeal)
+                    deal, game
+                | None -> loop deal game
+
+        loop deal game
+            |> snd
 
     /// Plays a deal in the given game.
     let playDeal game =
@@ -94,12 +99,9 @@ module Game =
                     { game with CurrentDealOpt = Some deal }
 
                     // playout
-                let _, game =
+                let game =
                     assert(deal.ClosedDeal.Score = Score.zero)
-                    ((deal, game), Seq.init ClosedDeal.numCardsPerHand id)
-                        ||> Seq.fold (fun (deal, game) _ ->
-                            playTricks deal game)
-                assert(deal.ClosedDeal |> ClosedDeal.isComplete)
+                    playTricks deal game
 
                 // to-do: shoot the moon
                 game
