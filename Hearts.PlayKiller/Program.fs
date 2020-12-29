@@ -134,8 +134,20 @@ module Killer =
         game |> Game.playDeal
 
     let playGame game =
-        let gameRec = startGame ()
-        playDeal game gameRec.Dealer
+
+        let rec loop game dealer =
+
+                // play a deal
+            let game = playDeal game dealer
+
+                // ignore final trick end
+            SharedRecord.readGeneral ServerRecordType.TrickEnd
+            SharedRecord.writeGeneral ClientRecordType.TrickEnd
+
+            loop game dealer.Next
+
+        let record = startGame ()
+        loop game record.Dealer
 
 module Random =
 
