@@ -113,11 +113,14 @@ module ClosedDeal =
                         hand |> Seq.where isSuitLed
                     else hand
 
-                    // no point cards on first trick
+                    // no point cards on first trick (unless it's unavoidable)
                 if iTrick = 0 then
-                    cards
-                        |> Seq.where (fun card ->
-                            Card.pointValue card = 0)
+                    let benignCards =
+                        cards
+                            |> Seq.where (fun card ->
+                                Card.pointValue card = 0)
+                    if benignCards |> Seq.isEmpty then cards   // !!!
+                    else benignCards
                 else cards
 
     /// Is the given player known to be void in the given suit?
@@ -152,6 +155,11 @@ module ClosedDeal =
                         deal.Voids.Add(player, suitLed)
                 | None -> failwith "Unexpected"
 
+            // hearts broken?
+        let heartsBroken =
+            if deal.HeartsBroken || Card.pointValue card > 0 then true
+            else false
+
             // complete trick?
         let curTrickOpt, completedTricks, score =
             if updatedTrick |> Trick.isComplete then
@@ -178,6 +186,7 @@ module ClosedDeal =
             deal with
                 CurrentTrickOpt = curTrickOpt
                 CompletedTricks = completedTricks
+                HeartsBroken = heartsBroken
                 Voids = voids
                 Score = score
         }
