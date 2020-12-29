@@ -19,33 +19,33 @@ type ServerRecordType =
     | Play = 8
     | TrickEnd = 9
 
-type ServerSessionStartRecord =
+type SessionStartRecord =
     {
         ClientSeats : Set<Seat>
         HostDisplay : bool
         TwoOfClubsLeads : bool
     }
 
-type ServerGameStartRecord =
+type GameStartRecord =
     {
         Dealer : Seat
         DealNum : int
         NumGames : int
     }
 
-type ServerDealStartRecord =
+type DealStartRecord =
     {
         GameScore : Score
         ExchangeDirection : ExchangeDirection
     }
 
-type ServerCardsRecord =
+type CardsRecord =
     {
         Seat : Seat
         Cards : Set<Card>
     }
 
-type ServerTrickStartRecord =
+type TrickStartRecord =
     {
         Leader : Seat
         TrickNum : int
@@ -62,8 +62,10 @@ type ClientRecordType =
     | Play = 108
     | TrickEnd = 109
 
-module SharedRecord =
+/// Low-level protocol for interacting with Killer Hearts.
+module Protocol =
 
+    /// File used to send messages in both directions.
     let sharedFile =
         File.Open(
             "C:\Program Files\KHearts\KH_Host_Client.dat",
@@ -71,9 +73,12 @@ module SharedRecord =
             FileAccess.ReadWrite,
             FileShare.ReadWrite)
 
+    /// Buffer used for reading messages.
     let buffer = Array.zeroCreate<byte> 55
 
-    let private read () =
+    /// Reads a message of the given type from KH.
+    let private read (recordType : ServerRecordType) =
+
         let rec loop sleep =
             Thread.Sleep(sleep : int)
             sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
@@ -87,19 +92,19 @@ module SharedRecord =
             elif sleep > 1000 then
                 failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
             else loop (2 * sleep)
-        loop 1
 
-    let validateKey field (recordType : ServerRecordType) =
-        if Int32.Parse(field) <> int recordType then
-            failwith $"Incorrect key: expected {int recordType}, actual {field}"
+        let fields = loop 1
+        if Int32.Parse(fields.[0]) <> int recordType then
+            failwith $"Incorrect key: expected {int recordType}, actual {fields.[0]}"
+        fields
 
-    let readGeneral (recordType : ServerRecordType) =
-        let fields = read ()
-        validateKey fields.[0] recordType
+    /// Reads and ignores a message of the given type from KH.
+    let readIgnore recordType =
+        read recordType |> ignore
 
+    /// Reads a session start record.
     let readSessionStart () =
-        let fields = read ()
-        validateKey fields.[0] ServerRecordType.SessionStart
+        let fields = read ServerRecordType.SessionStart
         {
             ClientSeats =
                 let field = fields.[1] |> Int32.Parse
@@ -113,9 +118,9 @@ module SharedRecord =
                 Int32.Parse(fields.[5]) = 0
         }
 
+    /// Reads a game start record.
     let readGameStart () =
-        let fields = read ()
-        validateKey fields.[0] ServerRecordType.GameStart
+        let fields = read ServerRecordType.GameStart
         {
             Dealer =
                 fields.[1]
@@ -125,9 +130,9 @@ module SharedRecord =
             NumGames = fields.[4] |> Int32.Parse
         }
 
+    /// Reads a deal start record.
     let readDealStart () =
-        let fields = read ()
-        validateKey fields.[0] ServerRecordType.DealStart
+        let fields = read ServerRecordType.DealStart
         {
             GameScore =
                 Seat.allSeats
@@ -146,6 +151,7 @@ module SharedRecord =
                     | _ -> failwith "Unexpected"
         }
 
+    /// Reads a hand.
     let readHand () =
 
         let readRanks (field : int) =
@@ -155,8 +161,7 @@ module SharedRecord =
                         yield rank
             |]
 
-        let fields = read ()
-        validateKey fields.[0] ServerRecordType.Hand
+        let fields = read ServerRecordType.Hand
         {
             Seat =
                 fields.[1]
@@ -178,13 +183,14 @@ module SharedRecord =
                 } |> set
         }
 
-    module Card =
+    module private Card =
 
-        let fromInt value =
+        /// Converts a KH card number to a card.
+        let fromInt cardNum =
             let rank =
-                (value / Suit.numSuits) + 2 |> enum<Rank>
+                (cardNum / Suit.numSuits) + 2 |> enum<Rank>
             let suit =
-                match value % Suit.numSuits with
+                match cardNum % Suit.numSuits with
                     | 0 -> Suit.Spades
                     | 1 -> Suit.Hearts
                     | 2 -> Suit.Clubs
@@ -192,6 +198,7 @@ module SharedRecord =
                     | _ -> failwith "Unexpected"
             Card(rank, suit)
 
+        /// Converts a card to a KH card number.
         let toInt (card : Card) =
             let rank =
                 (int card.Rank - 2) * Suit.numSuits
@@ -204,9 +211,9 @@ module SharedRecord =
                     | _ -> failwith "Unexpected"
             rank + suit
 
-    let private readExchange (recordType : ServerRecordType)=
-        let fields = read ()
-        validateKey fields.[0] recordType
+    /// Reads an outgoing or incoming exchange.
+    let private readExchange recordType =
+        let fields = read recordType
         {
             Seat =
                 fields.[1]
@@ -225,15 +232,17 @@ module SharedRecord =
                         |> set
         }
 
+    /// Reads an outgoing exchange.
     let readExchangeOutgoing () =
         readExchange ServerRecordType.ExchangeOutgoing
 
+    /// Reads an incoming exchange.
     let readExchangeIncoming () =
         readExchange ServerRecordType.ExchangeIncoming
 
+    /// Reads a trick start record.
     let readTrickStart () =
-        let fields = read ()
-        validateKey fields.[0] ServerRecordType.TrickStart
+        let fields = read ServerRecordType.TrickStart
         {
             Leader =
                 fields.[1]
@@ -244,9 +253,9 @@ module SharedRecord =
                     |> Int32.Parse
         }
 
+    /// Reads a card played on a trick. Result might be empty.
     let readPlay () =
-        let fields = read ()
-        validateKey fields.[0] ServerRecordType.Play
+        let fields = read ServerRecordType.Play
         {
             Seat =
                 fields.[1]
@@ -260,12 +269,13 @@ module SharedRecord =
                 else cardNum |> Card.fromInt |> Set.singleton
         }
 
-    let private write (chunks : string[]) =
-        printfn $"write: |{String.Join(',', chunks)}|"
+    /// Writes the given fields as a message to KH.
+    let private write (fields : string[]) =
+        printfn $"write: |{String.Join(',', fields)}|"
         let chunks =
             [|
                 yield "CHs"
-                yield! chunks
+                yield! fields
                 yield "CHe"
             |]
         let str = String.Join(',', chunks)
@@ -274,7 +284,8 @@ module SharedRecord =
         sharedFile.Write(buffer, 0, buffer.Length)
         sharedFile.Flush()
 
-    let writeGeneral (recordType : ClientRecordType) =
+    /// Writes an empty message of the given type.
+    let writeEmpty (recordType : ClientRecordType) =
         [|
             $"{int recordType}    "
             "-1     "
@@ -284,10 +295,12 @@ module SharedRecord =
             "-1     "
         |] |> write
 
+    /// Writes an outgoing exchange containing the given
+    /// cards.
     let writeExchangeOutgoing cards =
         let cards = cards |> Seq.toArray
         [|
-            sprintf "%-7d" <| 105
+            sprintf "%-7d" <| int ClientRecordType.ExchangeOutgoing
             sprintf "%-7d" <| Card.toInt cards.[0]
             sprintf "%-7d" <| Card.toInt cards.[1]
             sprintf "%-7d" <| Card.toInt cards.[2]
@@ -295,9 +308,10 @@ module SharedRecord =
             "-1     "
         |] |> write
 
+    /// Writes a card played on a trick.
     let writePlay card =
         [|
-            sprintf "%-7d" <| 108
+            sprintf "%-7d" <| int ClientRecordType.Play
             sprintf "%-7d" <| Card.toInt card
             "-1     "
             "-1     "

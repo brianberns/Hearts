@@ -9,20 +9,20 @@ module Killer =
 
     /// Initializes communication with Killer Hearts.
     let startSesssion () =
-        let record = SharedRecord.readSessionStart ()
-        SharedRecord.writeGeneral ClientRecordType.SessionStart
+        let record = Protocol.readSessionStart ()
+        Protocol.writeEmpty ClientRecordType.SessionStart
         record
 
     /// Starts a new game with KH.
     let startGame () =
-        let record = SharedRecord.readGameStart ()
-        SharedRecord.writeGeneral ClientRecordType.GameStart
+        let record = Protocol.readGameStart ()
+        Protocol.writeEmpty ClientRecordType.GameStart
         record
 
     /// Starts a new deal with KH.
     let startDeal () =
-        let record = SharedRecord.readDealStart ()
-        SharedRecord.writeGeneral ClientRecordType.DealStart
+        let record = Protocol.readDealStart ()
+        Protocol.writeEmpty ClientRecordType.DealStart
         record
 
     /// Receives each player's hand from KH.
@@ -30,9 +30,9 @@ module Killer =
 
         /// Gets a hand from KH.
         let receiveHand _ =
-            let record = SharedRecord.readHand ()
+            let record = Protocol.readHand ()
             assert(record.Cards.Count = ClosedDeal.numCardsPerHand)
-            SharedRecord.writeGeneral ClientRecordType.Hand
+            Protocol.writeEmpty ClientRecordType.Hand
             record
 
             // arrange hands by seat
@@ -42,18 +42,18 @@ module Killer =
             |> Map
 
     let receivePass deal =
-        let record = SharedRecord.readExchangeOutgoing ()
+        let record = Protocol.readExchangeOutgoing ()
         if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         if record.Cards.Count <> Exchange.numCards then failwith "Unexpected"
-        SharedRecord.writeGeneral ClientRecordType.ExchangeOutgoing
+        Protocol.writeEmpty ClientRecordType.ExchangeOutgoing
         record.Cards
 
     let sendPass deal score player =
         let cards = player.MakePass deal score
-        let record = SharedRecord.readExchangeOutgoing ()
+        let record = Protocol.readExchangeOutgoing ()
         if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         if record.Cards.Count <> 0 then failwith "Unexpected"
-        SharedRecord.writeExchangeOutgoing cards
+        Protocol.writeExchangeOutgoing cards
         cards
 
     /// Ignores unused messages from KH.
@@ -63,8 +63,8 @@ module Killer =
         if deal.Exchange |> Exchange.isComplete
             && deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0 then
             for _ = 1 to Seat.numSeats do
-                SharedRecord.readExchangeIncoming () |> ignore
-                SharedRecord.writeGeneral ClientRecordType.ExchangeIncoming
+                Protocol.readExchangeIncoming () |> ignore
+                Protocol.writeEmpty ClientRecordType.ExchangeIncoming
 
             // at the beginning of a trick?
         if deal.Exchange |> Exchange.isComplete
@@ -72,27 +72,27 @@ module Killer =
 
                 // ignore previous trick end
             if deal.ClosedDeal.CompletedTricks.Length > 0 then
-                SharedRecord.readGeneral ServerRecordType.TrickEnd
-                SharedRecord.writeGeneral ClientRecordType.TrickEnd
+                Protocol.readIgnore ServerRecordType.TrickEnd
+                Protocol.writeEmpty ClientRecordType.TrickEnd
 
                 // ignore new trick start
-            SharedRecord.readTrickStart () |> ignore
-            SharedRecord.writeGeneral ClientRecordType.TrickStart
+            Protocol.readTrickStart () |> ignore
+            Protocol.writeEmpty ClientRecordType.TrickStart
 
     let receivePlay deal =
         sync deal
-        let record = SharedRecord.readPlay ()
+        let record = Protocol.readPlay ()
         if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
-        SharedRecord.writeGeneral ClientRecordType.Play
+        Protocol.writeEmpty ClientRecordType.Play
         record.Cards |> Seq.exactlyOne
 
     let sendPlay deal score player =
         sync deal
         let card = player.MakePlay deal score
-        let record = SharedRecord.readPlay ()
+        let record = Protocol.readPlay ()
         if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         if record.Cards.Count <> 0 then failwith "Unexpected"
-        SharedRecord.writePlay card
+        Protocol.writePlay card
         card
 
     let serverPlayer =
@@ -141,8 +141,8 @@ module Killer =
             let game = playDeal game dealer
 
                 // ignore final trick end
-            SharedRecord.readGeneral ServerRecordType.TrickEnd
-            SharedRecord.writeGeneral ClientRecordType.TrickEnd
+            Protocol.readIgnore ServerRecordType.TrickEnd
+            Protocol.writeEmpty ClientRecordType.TrickEnd
 
             loop game dealer.Next
 
