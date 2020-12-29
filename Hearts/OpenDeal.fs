@@ -16,6 +16,9 @@ type OpenDeal =
 
 module OpenDeal =
 
+    /// 2♣ leads on the first trick.
+    let private twoClubs = Card.fromString("2♣")
+
     /// Creates a deal from the given hands.
     let fromHands dealer dir handMap =
         assert(
@@ -26,9 +29,15 @@ module OpenDeal =
                     |> Seq.distinct
                     |> Seq.length
             nCards = ClosedDeal.numCardsPerDeal)
+        let leader =
+            handMap
+                |> Map.toSeq
+                |> Seq.find (fun (_, cards) ->
+                    cards |> Set.contains twoClubs)
+                |> fst
         {
             Exchange = Exchange.create dealer dir
-            ClosedDeal = ClosedDeal.create dealer
+            ClosedDeal = ClosedDeal.create leader
             UnplayedCardMap = handMap
         }
 

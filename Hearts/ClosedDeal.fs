@@ -25,12 +25,12 @@ type ClosedDeal =
 
 module ClosedDeal =
 
-    /// Creates a closed deal.
-    let create dealer =
+    /// Creates a closed deal, with the given player leading on
+    /// the first trick.
+    let create leader =
         {
             CurrentTrickOpt =
-                dealer
-                    |> Seat.next
+                leader
                     |> Trick.create
                     |> Some
             CompletedTricks = List.empty

@@ -48,6 +48,7 @@ type ClientRecordType =
     | ExchangeOutgoing = 105
     | ExchangeIncoming = 106
     | TrickStart = 107
+    | Play = 108
 
 type ClientRecord =
     {
@@ -165,20 +166,6 @@ module SharedRecord =
                 } |> set
         }
 
-    let readTrickStart () =
-        let fields = read ()
-        if Int32.Parse(fields.[0]) <> 7 then
-            failwith "Incorrect key"
-        {
-            Leader =
-                fields.[1]
-                    |> Int32.Parse
-                    |> enum<Seat>
-            TrickNum =
-                fields.[2]
-                    |> Int32.Parse
-        }
-
     module Card =
 
         let fromInt value =
@@ -233,16 +220,47 @@ module SharedRecord =
     let readExchangeIncoming () =
         readExchange 6
 
+    let readTrickStart () =
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> 7 then
+            failwith "Incorrect key"
+        {
+            Leader =
+                fields.[1]
+                    |> Int32.Parse
+                    |> enum<Seat>
+            TrickNum =
+                fields.[2]
+                    |> Int32.Parse
+        }
+
+    let readPlay () =
+        let fields = read ()
+        if Int32.Parse(fields.[0]) <> 8 then
+            failwith "Incorrect key"
+        {
+            Seat =
+                fields.[1]
+                    |> Int32.Parse
+                    |> enum<Seat>
+            Cards =
+                let cardNum =
+                    fields.[2]
+                        |> Int32.Parse
+                if cardNum = -1 then Set.empty
+                else cardNum |> Card.fromInt |> Set.singleton
+        }
+
     let private write clientRecord =
         let chunks =
             [|
                 "CHs"
-                $"    {int clientRecord.RecordType}"
-                "0000000"
-                "0000000"
-                "0000000"
-                "0000000"
-                "0000000"
+                $"{int clientRecord.RecordType}    "
+                "-1     "
+                "-1     "
+                "-1     "
+                "-1     "
+                "-1     "
                 "CHe"
             |]
         let str = String.Join(',', chunks)
@@ -259,12 +277,30 @@ module SharedRecord =
         let chunks =
             [|
                 "CHs"
-                sprintf "%07d" <| 105
-                sprintf "%07d" <| Card.toInt cards.[0]
-                sprintf "%07d" <| Card.toInt cards.[1]
-                sprintf "%07d" <| Card.toInt cards.[2]
-                "0000000"
-                "0000000"
+                sprintf "%7d" <| 105
+                sprintf "%7d" <| Card.toInt cards.[0]
+                sprintf "%7d" <| Card.toInt cards.[1]
+                sprintf "%7d" <| Card.toInt cards.[2]
+                "-1     "
+                "-1     "
+                "CHe"
+            |]
+        let str = String.Join(',', chunks)
+        let buffer = Encoding.Default.GetBytes(str)
+        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+        sharedFile.Write(buffer, 0, buffer.Length)
+        sharedFile.Flush()
+
+    let writePlay card =
+        let chunks =
+            [|
+                "CHs"
+                sprintf "%7d" <| 108
+                sprintf "%7d" <| Card.toInt card
+                "-1     "
+                "-1     "
+                "-1     "
+                "-1     "
                 "CHe"
             |]
         let str = String.Join(',', chunks)

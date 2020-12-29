@@ -74,18 +74,19 @@ module Killer =
 
     let receivePlay deal =
         sync deal
-
-        (*
         let record = SharedRecord.readPlay ()
         if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         SharedRecord.writeGeneral ClientRecordType.Play
-        record.Card
-        *)
-        Card.allCards.[0]
+        record.Cards |> Seq.exactlyOne
 
     let sendPlay deal score player =
         sync deal
-        Card.allCards.[0]
+        let card = player.MakePlay deal score
+        let record = SharedRecord.readPlay ()
+        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
+        if record.Cards.Count <> 0 then failwith "Unexpected"
+        SharedRecord.writePlay card
+        card
 
     let serverPlayer =
 
