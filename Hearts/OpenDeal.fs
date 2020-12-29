@@ -16,9 +16,6 @@ type OpenDeal =
 
 module OpenDeal =
 
-    /// 2♣ leads on the first trick.
-    let private twoClubs = Card.fromString("2♣")
-
     /// Creates a deal from the given hands.
     let fromHands dealer dir handMap =
         assert(
@@ -29,15 +26,9 @@ module OpenDeal =
                     |> Seq.distinct
                     |> Seq.length
             nCards = ClosedDeal.numCardsPerDeal)
-        let leader =
-            handMap
-                |> Map.toSeq
-                |> Seq.find (fun (_, cards) ->
-                    cards |> Set.contains twoClubs)
-                |> fst
         {
             Exchange = Exchange.create dealer dir
-            ClosedDeal = ClosedDeal.create leader
+            ClosedDeal = ClosedDeal.initial
             UnplayedCardMap = handMap
         }
 
@@ -96,8 +87,8 @@ module OpenDeal =
                 UnplayedCardMap = cardMap
         }
 
-    /// Completes the exchange phase of the given deal.
-    let completeExchange deal =
+    /// Starts play in the given deal.
+    let startPlay deal =
         assert(deal.Exchange |> Exchange.isComplete)
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
         assert(
@@ -105,12 +96,30 @@ module OpenDeal =
                 |> Map.forall (fun _ cards ->
                     cards.Count =
                         ClosedDeal.numCardsPerHand - Exchange.numCards))
-        let seatPasses =
-            deal.Exchange
-                |> Exchange.seatPasses
-        (deal, seatPasses)
-            ||> Seq.fold (fun deal (passer, cards) ->
-                receivePass passer cards deal)
+
+            // receive passed cards
+        let deal =
+            if deal.Exchange |> Exchange.isHold |> not then
+                let seatPasses =
+                    deal.Exchange
+                        |> Exchange.seatPasses
+                (deal, seatPasses)
+                    ||> Seq.fold (fun deal (passer, cards) ->
+                        receivePass passer cards deal)
+            else deal
+
+            // determine first trick leader (must wait until cards are passed)
+        let leader =
+            deal.UnplayedCardMap
+                |> Map.toSeq
+                |> Seq.find (fun (_, cards) ->
+                    cards |> Set.contains ClosedDeal.card2C)
+                |> fst
+        {
+            deal with
+                ClosedDeal =
+                    deal.ClosedDeal |> ClosedDeal.start leader
+        }
 
     /// Current player in the given deal.
     let currentPlayer deal =
@@ -128,7 +137,8 @@ module OpenDeal =
         {
             deal with
                 ClosedDeal =
-                    deal.ClosedDeal |> ClosedDeal.addPlay card
+                    deal.ClosedDeal
+                        |> ClosedDeal.addPlay card
                 UnplayedCardMap =
                     let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
                     let unplayedCards = deal.UnplayedCardMap.[seat]

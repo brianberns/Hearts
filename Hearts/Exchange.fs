@@ -83,5 +83,8 @@ module Exchange =
     /// An exchange is complete when it is a hold hand, or all
     /// players have passed cards.
     let isComplete exchange =
+        assert(
+            exchange |> isHold |> not
+                || exchange.Passes.IsEmpty)
         isHold exchange
             || exchange.Passes.Length = Seat.numSeats

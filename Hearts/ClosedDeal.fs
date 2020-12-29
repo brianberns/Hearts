@@ -7,7 +7,7 @@ open PlayingCards
 /// each player. Cards played during a deal are grouped into tricks.
 type ClosedDeal =
     {
-        /// Current active trick, if the deal is not yet complete.
+        /// Current active trick, if play is in progress.
         CurrentTrickOpt : Option<Trick>
 
         /// Completed tricks, in reverse chronological order.
@@ -25,19 +25,34 @@ type ClosedDeal =
 
 module ClosedDeal =
 
-    /// Creates a closed deal, with the given player leading on
-    /// the first trick.
-    let create leader =
+    /// Initial state of all closed deals.
+    let initial =
         {
-            CurrentTrickOpt =
-                leader
-                    |> Trick.create
-                    |> Some
+            CurrentTrickOpt = None
             CompletedTricks = List.empty
             HeartsBroken = false
             Voids = Set.empty
             Score = Score.zero
         }
+
+    /// Starts the given deal with the given first trick leader.
+    let start leader deal =
+        {
+            deal with
+                CurrentTrickOpt =
+                    Trick.create leader |> Some
+        }
+
+    /// Number of cards played so far.
+    let numCardsPlayed deal =
+        let nCompleted =
+            deal.CompletedTricks.Length * Seat.numSeats
+        let nCurrent =
+            deal.CurrentTrickOpt
+                |> Option.map (fun trick ->
+                    trick.Cards.Length)
+                |> Option.defaultValue 0
+        nCompleted + nCurrent
 
     /// Number of cards dealt to each player.
     let numCardsPerHand = Card.numCards / Seat.numSeats
@@ -48,7 +63,9 @@ module ClosedDeal =
     /// Validates the structure of the given deal.
     let private validate deal =
         assert(deal.CompletedTricks.Length <= numCardsPerHand)
-        assert((deal.CompletedTricks.Length = numCardsPerHand) = deal.CurrentTrickOpt.IsNone)
+        assert(
+            let nCards = numCardsPlayed deal
+            (nCards = 0) || (nCards = numCardsPerDeal) = deal.CurrentTrickOpt.IsNone)
         assert(deal.CompletedTricks |> Seq.forall Trick.isComplete)
 
     /// Current trick in the given deal.
@@ -64,7 +81,7 @@ module ClosedDeal =
             |> Trick.currentPlayer
 
     /// Two of clubs.
-    let private card2C = Card.fromString "2♣"
+    let card2C = Card.fromString "2♣"
 
     /// What cards can be played from the given hand?
     let legalPlays (hand : Hand) deal =
@@ -175,14 +192,3 @@ module ClosedDeal =
                 | Some trick -> yield trick
                 | None -> ()
         }
-
-    /// Number of cards played so far.
-    let numCardsPlayed deal =
-        validate deal
-        let nCompleted =
-            deal.CompletedTricks.Length * Seat.numSeats
-        let nCurrent =
-            match deal.CurrentTrickOpt with
-                | Some trick -> trick.Cards.Length
-                | None -> 0
-        nCompleted + nCurrent
