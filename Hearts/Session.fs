@@ -1,0 +1,197 @@
+﻿namespace Hearts
+
+open System
+open System.ComponentModel
+
+open PlayingCards
+
+type Player =
+    {
+        /// Function that passes cards in the given deal.
+        MakePass : OpenDeal -> Score (*game score*) -> Set<Card>
+
+        /// Function plays a card in the given deal.
+        MakePlay : OpenDeal -> Score (*game score*) -> Card
+    }
+
+/// Manages a series of games with the given players.
+type Session
+    (playerMap : Map<_, _>,
+    ?syncOpt : ISynchronizeInvoke) =
+
+        // initialize events raised by this object
+    let gameStartEvent = Event<_>()
+    let dealStartEvent = Event<_>()
+    let exchangeStartEvent = Event<_>()
+    let passEvent = Event<_>()
+    let exchangeFinishEvent = Event<_>()
+    let trickStartEvent = Event<_>()
+    let playEvent = Event<_>()
+    let trickFinishEvent = Event<_>()
+    let dealFinishEvent = Event<_>()
+    let gameFinishEvent = Event<_>()
+
+    /// Triggers the given event safely.
+    let trigger (event : Event<_>) arg =
+        match syncOpt with
+            | Some sync when sync.InvokeRequired ->
+                let del = Action (fun _ -> event.Trigger(arg))
+                sync.Invoke(del, Array.empty) |> ignore
+            | _ -> event.Trigger(arg)
+
+    /// Plays a trick in the given deal.
+    let playTrick deal gameScore =
+        assert(deal.ClosedDeal.CurrentTrickOpt.Value.Cards.IsEmpty)
+
+            // trick start
+        let leader = deal |> OpenDeal.currentPlayer
+        trigger trickStartEvent leader
+
+            // each player plays a card
+        let deal =
+            (deal, leader |> Seat.cycle)
+                ||> Seq.fold (fun deal seat ->
+                    assert (deal |> OpenDeal.currentPlayer = seat)
+                    let card =
+                        playerMap.[seat].MakePlay deal gameScore
+                    let deal = deal |> OpenDeal.addPlay card
+                    trigger playEvent (seat, card, deal)
+                    deal)
+
+            // trick finish
+        trigger trickFinishEvent ()
+        deal
+
+    /// Plays tricks in the given deal.
+    let playTricks deal gameScore =
+
+        let rec loop deal curGameScore =
+
+                // play a trick and update the game score (using the original value)
+            let deal = playTrick deal curGameScore
+            let curGameScore = gameScore + deal.ClosedDeal.Score
+
+                // deal can be finalized?
+            match deal |> OpenDeal.tryFinalize with
+                | None -> loop deal curGameScore   // no  - play another trick
+                | Some score ->                    // yes - all done
+
+                        // update score again with remaining points
+                    let curGameScore = curGameScore + score
+                    assert
+                        (deal.ClosedDeal.Score + curGameScore |> Score.sum
+                            = OpenDeal.numPointsPerDeal)
+
+                    deal, curGameScore
+
+        loop deal gameScore
+
+    /// Plays the given deal.
+    let playDeal deal gameScore =
+        assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
+
+            // deal start
+        trigger dealStartEvent deal
+
+            // exchange?
+        let deal =
+            if deal.Exchange |> Exchange.isHold then
+                deal
+            else
+                    // exchange start
+                let leader = deal |> OpenDeal.currentPlayer
+                trigger exchangeStartEvent leader
+
+                    // each player passes cards
+                let deal =
+                    (deal, leader |> Seat.cycle)
+                        ||> Seq.fold (fun deal seat ->
+                            assert (deal |> OpenDeal.currentPlayer = seat)
+                            let cards =
+                                playerMap.[seat].MakePass deal gameScore
+                            let deal = deal |> OpenDeal.addPass cards
+                            trigger passEvent (seat, cards, deal)
+                            deal)
+                        |> OpenDeal.startPlay
+
+                    // exchange finish
+                trigger exchangeFinishEvent ()
+                deal
+
+            // playout
+        let deal, gameScore =
+            assert(deal.ClosedDeal.Score = Score.zero)
+            playTricks deal gameScore
+
+        // to-do: shoot the moon
+
+            // deal finish
+        trigger dealFinishEvent (deal, gameScore)
+        deal, gameScore
+
+    /// Number of points that ends the game.
+    let gameOverThreshold = 100
+
+    /// Determines seats that won the given game score, if any.
+    let winningSeats gameScore =
+
+            // is game over?
+        let seatPoints =
+            let (ScoreMap scoreMap) = gameScore
+            scoreMap |> Map.toSeq
+        let points =
+            seatPoints |> Seq.map snd
+        let maxPoints =
+            points |> Seq.max
+        if maxPoints >= gameOverThreshold then
+
+                // find winning seats
+            let minPoints =
+                points |> Seq.max
+            seatPoints
+                |> Seq.where (fun (_, points) ->
+                    points = minPoints)
+                |> Seq.map fst
+                |> Seq.toArray
+        else
+            Array.empty
+
+    /// A game has started.
+    [<CLIEvent>]
+    member __.GameStartEvent = gameStartEvent.Publish
+
+    /// A deal has started.
+    [<CLIEvent>]
+    member __.DealStartEvent = dealStartEvent.Publish
+
+    /// An auction has started.
+    [<CLIEvent>]
+    member __.ExchangeStartEvent = exchangeStartEvent.Publish
+
+    /// A pass has been made.
+    [<CLIEvent>]
+    member __.PassEvent = passEvent.Publish
+
+    /// An exchange has finished.
+    [<CLIEvent>]
+    member __.ExchangeFinishEvent = exchangeFinishEvent.Publish
+
+    /// A trick has started.
+    [<CLIEvent>]
+    member __.TrickStartEvent = trickStartEvent.Publish
+
+    /// A card has been played.
+    [<CLIEvent>]
+    member __.PlayEvent = playEvent.Publish
+
+    /// A trick has finished.
+    [<CLIEvent>]
+    member __.TrickFinishEvent = trickFinishEvent.Publish
+
+    /// A deal has finished.
+    [<CLIEvent>]
+    member __.DealFinishEvent = dealFinishEvent.Publish
+
+    /// A game has finished.
+    [<CLIEvent>]
+    member __.GameFinishEvent = gameFinishEvent.Publish
