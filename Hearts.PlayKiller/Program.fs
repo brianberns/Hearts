@@ -33,86 +33,53 @@ module Random =
 
 module Program =
 
-    let serverPlayer =
-
-        let makePass deal score =
-            Killer.receivePass deal
-
-        let makePlay deal score =
-            Killer.receivePlay deal
-
-        {
-            MakePass = makePass
-            MakePlay = makePlay
-        }
-
-    let createClientPlayer player =
-
-        let makePass deal score =
-            Killer.sendPass deal score player
-
-        let makePlay deal score =
-            Killer.sendPlay deal score player
-
-        {
-            MakePass = makePass
-            MakePlay = makePlay
-        }
-
     let validateScore (scoreA : Score) (scoreB : Score) =
         assert(scoreA = scoreB)
 
-    let playDeal (game : Game) dealer =
-        let dealRec = Killer.startDeal ()
-        validateScore game.Score dealRec.GameScore
-        let dir = dealRec.ExchangeDirection
-        let handMap = Killer.receiveHands ()
-        let deal = OpenDeal.fromHands dealer dir handMap
-        let game = { game with CurrentDealOpt = Some deal }
-        game |> Game.playDeal
+    let run player =
 
-    let playGame game =
-
-        let rec loop game dealer =
-
-                // play a deal
-            let game = playDeal game dealer
-
-                // ignore final trick end
-            Protocol.readIgnore ServerRecordType.TrickEnd
-            Protocol.writeEmpty ClientRecordType.TrickEnd
-
-            loop game dealer.Next
-
-        let record = Killer.startGame ()
-        loop game record.Dealer
-
-    let run player nGames =
-
-        let sessionRec = Killer.startSesssion ()
-
-        let playerMap =
-            let clientPlayer =
-                createClientPlayer player
+        let session =
+            let record = Killer.startSession ()
+            let wrappedPlayer = Killer.wrap player
             Seat.allSeats
                 |> Seq.map (fun seat ->
-                    let protocolPlayer =
-                        if sessionRec.ClientSeats.Contains(seat) then
-                            clientPlayer
+                    let khPlayer =
+                        if record.ClientSeats.Contains(seat) then
+                            wrappedPlayer
                         else
-                            serverPlayer
-                    seat, protocolPlayer)
+                            Killer.player
+                    seat, khPlayer)
                 |> Map
+                |> Session
 
-        for gameNum = 1 to nGames do
-            Game.create playerMap
-                |> playGame
-                |> ignore
+        session.GameStartEvent.Add(fun dealer ->
+            let record = Killer.startGame ()
+            assert(dealer = record.Dealer))
+
+        session.ExchangeFinishEvent.Add(fun () ->
+            for _ = 1 to Seat.numSeats do
+                Killer.receiveExchangeIncoming () |> ignore)
+
+        session.TrickStartEvent.Add(fun leader ->
+            let record = Killer.startTrick ()
+            assert(leader = record.Leader))
+
+        session.TrickFinishEvent.Add(fun () ->
+            Killer.finishTrick () |> ignore)
+
+        let createDeal dealer dir gameScore =
+            let record = Killer.startDeal ()
+            assert(dir = record.ExchangeDirection)
+            assert(gameScore = record.GameScore)
+            let handMap = Killer.receiveHands ()
+            OpenDeal.fromHands dealer dir handMap
+
+        session.Run(Seat.South, ExchangeDirection.Left, createDeal)
 
     [<EntryPoint>]
     let main argv =
         try
-            run Random.player 1000
+            run Random.player
         with ex ->
             printfn "%s" ex.Message
         0

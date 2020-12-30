@@ -20,6 +20,7 @@ type Session
     ?syncOpt : ISynchronizeInvoke) =
 
         // initialize events raised by this object
+    let sessionStartEvent = Event<_>()
     let gameStartEvent = Event<_>()
     let dealStartEvent = Event<_>()
     let exchangeStartEvent = Event<_>()
@@ -30,6 +31,7 @@ type Session
     let trickFinishEvent = Event<_>()
     let dealFinishEvent = Event<_>()
     let gameFinishEvent = Event<_>()
+    let sessionFinishEvent = Event<_>()
 
     /// Triggers the given event safely.
     let trigger (event : Event<_>) arg =
@@ -152,9 +154,41 @@ type Session
                 |> Seq.where (fun (_, points) ->
                     points = minPoints)
                 |> Seq.map fst
-                |> Seq.toArray
+                |> set
         else
-            Array.empty
+            Set.empty
+
+    /// Plays a game.
+    let playGame dealer dir createDeal =
+
+        /// Plays deals with rotating dealer and exchange direction.
+        let rec loop (dealer : Seat) dir gameScore =
+
+                // play one deal
+            let deal = createDeal dealer dir gameScore
+            let _, gameScore = playDeal deal gameScore
+
+                // continue this game?
+            let dealer = dealer.Next
+            if gameScore |> winningSeats |> Set.isEmpty then
+                let dir = ExchangeDirection.next dir
+                loop dealer dir gameScore
+            else
+                dealer, gameScore
+
+        trigger gameStartEvent dealer
+        let dealer, gameScore = loop dealer dir Score.zero
+        trigger gameFinishEvent (dealer, gameScore)
+        dealer
+
+    member __.Run(dealer, dir, createDeal) =
+        trigger sessionStartEvent ()
+        playGame dealer dir createDeal |> ignore
+        trigger sessionFinishEvent ()
+
+    /// A session has started.
+    [<CLIEvent>]
+    member __.SessionStartEvent = sessionStartEvent.Publish
 
     /// A game has started.
     [<CLIEvent>]
@@ -195,3 +229,7 @@ type Session
     /// A game has finished.
     [<CLIEvent>]
     member __.GameFinishEvent = gameFinishEvent.Publish
+
+    /// A session has finished.
+    [<CLIEvent>]
+    member __.SessionFinishEvent = sessionFinishEvent.Publish

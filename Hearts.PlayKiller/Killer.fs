@@ -5,7 +5,7 @@ open Hearts
 module Killer =
 
     /// Initializes communication with Killer Hearts.
-    let startSesssion () =
+    let startSession () =
         let record = Protocol.readSessionStart ()
         Protocol.writeEmpty ClientRecordType.SessionStart
         record
@@ -55,32 +55,20 @@ module Killer =
         Protocol.writeExchangeOutgoing cards
         cards
 
-    /// Ignores unused messages from KH.
-    let sync deal =
+    /// Receives an incoming pass from KH. Can be safely ignored.
+    let receiveExchangeIncoming () =
+        let record = Protocol.readExchangeIncoming ()
+        Protocol.writeEmpty ClientRecordType.ExchangeIncoming
+        record
 
-            // ignore incoming passes
-        if deal.Exchange |> Exchange.isComplete
-            && deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0 then
-            for _ = 1 to Seat.numSeats do
-                Protocol.readExchangeIncoming () |> ignore
-                Protocol.writeEmpty ClientRecordType.ExchangeIncoming
-
-            // at the beginning of a trick?
-        if deal.Exchange |> Exchange.isComplete
-            && deal.ClosedDeal.CurrentTrickOpt.Value.Cards.Length = 0 then
-
-                // ignore previous trick end
-            if deal.ClosedDeal.CompletedTricks.Length > 0 then
-                Protocol.readIgnore ServerRecordType.TrickEnd
-                Protocol.writeEmpty ClientRecordType.TrickEnd
-
-                // ignore new trick start
-            Protocol.readTrickStart () |> ignore
-            Protocol.writeEmpty ClientRecordType.TrickStart
+    /// Starts a new trick with KH.
+    let startTrick () =
+        let record = Protocol.readTrickStart ()
+        Protocol.writeEmpty ClientRecordType.TrickStart
+        record
 
     /// Recieves a played card from KH.
     let receivePlay deal =
-        sync deal
         let record = Protocol.readPlay ()
         if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         Protocol.writeEmpty ClientRecordType.Play
@@ -88,10 +76,30 @@ module Killer =
 
     /// Sends a played card to KH.
     let sendPlay deal score player =
-        sync deal
         let card = player.MakePlay deal score
         let record = Protocol.readPlay ()
         if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
         if record.Cards.Count <> 0 then failwith "Unexpected"
         Protocol.writePlay card
         card
+
+    /// Finishes a trick with KH.
+    let finishTrick () =
+        Protocol.readIgnore ServerRecordType.TrickEnd
+        Protocol.writeEmpty ClientRecordType.TrickEnd
+
+    /// KHearts player.
+    let player =
+        {
+            MakePass = fun deal _ -> receivePass deal
+            MakePlay = fun deal _ -> receivePlay deal
+        }
+
+    /// Wraps the given player for use with KHearts.
+    let wrap player =
+        {
+            MakePass =
+                fun deal score -> sendPass deal score player
+            MakePlay =
+                fun deal score -> sendPlay deal score player
+        }
