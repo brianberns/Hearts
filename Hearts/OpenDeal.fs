@@ -91,25 +91,29 @@ module OpenDeal =
     let startPlay deal =
         assert(deal.Exchange |> Exchange.isComplete)
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
-        assert(
-            deal.UnplayedCardMap
-                |> Map.forall (fun _ cards ->
-                    cards.Count =
-                        ClosedDeal.numCardsPerHand - Exchange.numCards))
 
-            // receive passed cards
+            // receive passed cards?
         let deal =
-            if deal.Exchange |> Exchange.isHold |> not then
+            if deal.Exchange |> Exchange.isHold then deal
+            else
+                assert(
+                    deal.UnplayedCardMap
+                        |> Map.forall (fun _ cards ->
+                            cards.Count =
+                                ClosedDeal.numCardsPerHand - Exchange.numCards))
                 let seatPasses =
                     deal.Exchange
                         |> Exchange.seatPasses
                 (deal, seatPasses)
                     ||> Seq.fold (fun deal (passer, cards) ->
                         receivePass passer cards deal)
-            else deal
 
             // determine first trick leader (must wait until cards are passed)
         let leader =
+            assert(
+                deal.UnplayedCardMap
+                    |> Map.forall (fun _ cards ->
+                        cards.Count = ClosedDeal.numCardsPerHand))
             deal.UnplayedCardMap
                 |> Map.toSeq
                 |> Seq.find (fun (_, cards) ->
