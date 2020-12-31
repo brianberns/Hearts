@@ -86,7 +86,7 @@ type Session
                             = OpenDeal.numPointsPerDeal)
 
                     if deal.ClosedDeal |> ClosedDeal.isComplete |> not then
-                        trigger earlyFinalizationEvent ()
+                        trigger earlyFinalizationEvent score
                     deal, curGameScore
 
         loop deal gameScore

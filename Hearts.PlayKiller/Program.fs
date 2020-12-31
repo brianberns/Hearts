@@ -73,8 +73,9 @@ module Program =
         session.TrickFinishEvent.Add(fun () ->
             Killer.finishTrick () |> ignore)
 
-        session.EarlyFinalizationEvent.Add(fun _ ->
-            Killer.startTrick () |> ignore)   // ignore bogus new trick started by KH
+        session.EarlyFinalizationEvent.Add(fun score ->
+            if score <> Score.zero then
+                Killer.startTrick () |> ignore)   // ignore bogus new trick started by KH
 
         session.DealFinishEvent.Add(fun _ ->
             Killer.finishDeal ())
