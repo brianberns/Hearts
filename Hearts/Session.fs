@@ -85,7 +85,7 @@ type Session
                         (deal.ClosedDeal.Score + score |> Score.sum
                             = OpenDeal.numPointsPerDeal)
 
-                    if score <> Score.zero then
+                    if deal.ClosedDeal |> ClosedDeal.isComplete |> not then
                         trigger earlyFinalizationEvent ()
                     deal, curGameScore
 
@@ -222,7 +222,7 @@ type Session
 
     /// A deal has finalized early.
     [<CLIEvent>]
-    member __.EarlyFinalizationEvent = dealFinishEvent.Publish
+    member __.EarlyFinalizationEvent = earlyFinalizationEvent.Publish
 
     /// A deal has finished.
     [<CLIEvent>]
