@@ -19,6 +19,8 @@ type ServerRecordType =
     | Play = 8
     | TrickFinish = 9
     | DealFinish = 10
+    | GameFinish = 11
+    | SessionFinish = 12
 
 type SessionStartRecord =
     {
@@ -52,6 +54,11 @@ type TrickStartRecord =
         TrickNum : int
     }
 
+type GameFinishRecord =
+    {
+        GameScore : Score
+    }
+
 type ClientRecordType =
     | SessionStart = 101
     | GameStart = 102
@@ -63,6 +70,7 @@ type ClientRecordType =
     | Play = 108
     | TrickFinish = 109
     | DealFinish = 110
+    | GameFinish = 111
 
 /// Low-level protocol for interacting with Killer Hearts.
 module Protocol =
@@ -132,18 +140,21 @@ module Protocol =
             NumGames = fields.[4] |> Int32.Parse
         }
 
+    /// Parses a score from the given fields.
+    let private parseScore (fields : _[]) =
+        Seat.allSeats
+            |> Seq.map (fun seat ->
+                let points =
+                    fields.[int seat + 1] |> Int32.Parse
+                seat, points)
+            |> Map
+            |> ScoreMap
+
     /// Reads a deal start record.
     let readDealStart () =
         let fields = read ServerRecordType.DealStart
         {
-            GameScore =
-                Seat.allSeats
-                    |> Seq.map (fun seat ->
-                        let points =
-                            fields.[int seat + 1] |> Int32.Parse
-                        seat, points)
-                    |> Map
-                    |> ScoreMap
+            GameScore = parseScore fields
             ExchangeDirection =
                 match fields.[5] |> Int32.Parse with
                     | 0 -> ExchangeDirection.Left
@@ -269,6 +280,13 @@ module Protocol =
                         |> Int32.Parse
                 if cardNum = -1 then Set.empty
                 else cardNum |> Card.fromInt |> Set.singleton
+        }
+
+    /// Reads a game start record.
+    let readGameFinish () =
+        let fields = read ServerRecordType.GameFinish
+        {
+            GameScore = parseScore fields
         }
 
     /// Writes the given fields as a message to KH.

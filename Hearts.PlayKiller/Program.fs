@@ -79,6 +79,10 @@ module Program =
         session.DealFinishEvent.Add(fun _ ->
             Killer.finishDeal ())
 
+        session.GameFinishEvent.Add(fun gameScore ->
+            let record = Killer.finishGame ()
+            assert(gameScore = record.GameScore))
+
         let createDeal dealer dir =
             let handMap = Killer.receiveHands ()
             OpenDeal.fromHands dealer dir handMap

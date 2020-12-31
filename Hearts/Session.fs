@@ -176,7 +176,7 @@ type Session
 
         trigger gameStartEvent dealer
         let dealer, gameScore = loop dealer dir Score.zero
-        trigger gameFinishEvent (dealer, gameScore)
+        trigger gameFinishEvent gameScore
         dealer
 
     member __.Run(dealer, dir, createDeal) =

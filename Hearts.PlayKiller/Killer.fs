@@ -93,6 +93,12 @@ module Killer =
         Protocol.readIgnore ServerRecordType.DealFinish
         Protocol.writeEmpty ClientRecordType.DealFinish
 
+    /// Finishes a game with KH.
+    let finishGame () =
+        let record = Protocol.readGameFinish ()
+        Protocol.writeEmpty ClientRecordType.GameFinish
+        record
+
     /// KHearts player.
     let player =
         {
