@@ -85,8 +85,13 @@ module Killer =
 
     /// Finishes a trick with KH.
     let finishTrick () =
-        Protocol.readIgnore ServerRecordType.TrickEnd
-        Protocol.writeEmpty ClientRecordType.TrickEnd
+        Protocol.readIgnore ServerRecordType.TrickFinish
+        Protocol.writeEmpty ClientRecordType.TrickFinish
+
+    /// Finishes a deal with KH.
+    let finishDeal () =
+        Protocol.readIgnore ServerRecordType.DealFinish
+        Protocol.writeEmpty ClientRecordType.DealFinish
 
     /// KHearts player.
     let player =

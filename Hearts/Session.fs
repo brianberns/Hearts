@@ -29,6 +29,7 @@ type Session
     let trickStartEvent = Event<_>()
     let playEvent = Event<_>()
     let trickFinishEvent = Event<_>()
+    let earlyFinalizationEvent = Event<_>()
     let dealFinishEvent = Event<_>()
     let gameFinishEvent = Event<_>()
     let sessionFinishEvent = Event<_>()
@@ -81,9 +82,11 @@ type Session
                         // update score again with remaining points
                     let curGameScore = curGameScore + score
                     assert
-                        (deal.ClosedDeal.Score + curGameScore |> Score.sum
+                        (deal.ClosedDeal.Score + score |> Score.sum
                             = OpenDeal.numPointsPerDeal)
 
+                    if score <> Score.zero then
+                        trigger earlyFinalizationEvent ()
                     deal, curGameScore
 
         loop deal gameScore
@@ -91,9 +94,6 @@ type Session
     /// Plays the given deal.
     let playDeal deal gameScore =
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
-
-            // deal start
-        trigger dealStartEvent deal
 
             // exchange?
         let deal =
@@ -126,9 +126,6 @@ type Session
             playTricks deal gameScore
 
         // to-do: shoot the moon
-
-            // deal finish
-        trigger dealFinishEvent (deal, gameScore)
         deal, gameScore
 
     /// Number of points that ends the game.
@@ -165,8 +162,10 @@ type Session
         let rec loop (dealer : Seat) dir gameScore =
 
                 // play one deal
-            let deal = createDeal dealer dir gameScore
+            trigger dealStartEvent (dir, gameScore)
+            let deal = createDeal dealer dir
             let _, gameScore = playDeal deal gameScore
+            trigger dealFinishEvent (deal, gameScore)
 
                 // continue this game?
             let dealer = dealer.Next
@@ -221,6 +220,10 @@ type Session
     /// A trick has finished.
     [<CLIEvent>]
     member __.TrickFinishEvent = trickFinishEvent.Publish
+
+    /// A deal has finalized early.
+    [<CLIEvent>]
+    member __.EarlyFinalizationEvent = dealFinishEvent.Publish
 
     /// A deal has finished.
     [<CLIEvent>]

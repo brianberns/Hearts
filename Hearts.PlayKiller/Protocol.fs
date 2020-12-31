@@ -17,7 +17,8 @@ type ServerRecordType =
     | ExchangeIncoming = 6
     | TrickStart = 7
     | Play = 8
-    | TrickEnd = 9
+    | TrickFinish = 9
+    | DealFinish = 10
 
 type SessionStartRecord =
     {
@@ -60,7 +61,8 @@ type ClientRecordType =
     | ExchangeIncoming = 106
     | TrickStart = 107
     | Play = 108
-    | TrickEnd = 109
+    | TrickFinish = 109
+    | DealFinish = 110
 
 /// Low-level protocol for interacting with Killer Hearts.
 module Protocol =

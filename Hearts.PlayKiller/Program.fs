@@ -60,6 +60,11 @@ module Program =
             for _ = 1 to Seat.numSeats do
                 Killer.receiveExchangeIncoming () |> ignore)
 
+        session.DealStartEvent.Add(fun (dir, gameScore) ->
+            let record = Killer.startDeal ()
+            assert(dir = record.ExchangeDirection)
+            assert(gameScore = record.GameScore))
+
         session.TrickStartEvent.Add(fun leader ->
             let record = Killer.startTrick ()
             assert(leader = record.Leader))
@@ -67,10 +72,13 @@ module Program =
         session.TrickFinishEvent.Add(fun () ->
             Killer.finishTrick () |> ignore)
 
-        let createDeal dealer dir gameScore =
-            let record = Killer.startDeal ()
-            assert(dir = record.ExchangeDirection)
-            assert(gameScore = record.GameScore)
+        session.EarlyFinalizationEvent.Add(fun _ ->
+            Killer.startTrick () |> ignore)   // ignore bogus new trick started by KH
+
+        session.DealFinishEvent.Add(fun _ ->
+            Killer.finishDeal ())
+
+        let createDeal dealer dir =
             let handMap = Killer.receiveHands ()
             OpenDeal.fromHands dealer dir handMap
 
