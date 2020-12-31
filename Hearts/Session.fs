@@ -168,20 +168,24 @@ type Session
 
                 // continue this game?
             let dealer = dealer.Next
+            let dir = ExchangeDirection.next dir
             if gameScore |> winningSeats |> Set.isEmpty then
-                let dir = ExchangeDirection.next dir
                 loop dealer dir gameScore
             else
-                dealer, gameScore
+                dealer, dir, gameScore
 
         trigger gameStartEvent dealer
-        let dealer, gameScore = loop dealer dir Score.zero
+        let dealer, dir, gameScore = loop dealer dir Score.zero
         trigger gameFinishEvent gameScore
-        dealer
+        dealer, dir, gameScore
 
     member __.Run(dealer, dir, createDeal) =
         trigger sessionStartEvent ()
-        playGame dealer dir createDeal |> ignore
+        ((dealer, dir), Seq.init 100 id)
+            ||> Seq.fold (fun (dealer, dir) _ ->
+                let _, dir, _ = playGame dealer dir createDeal
+                dealer.Next, dir)   // KH convention
+            |> ignore
         trigger sessionFinishEvent ()
 
     /// A session has started.

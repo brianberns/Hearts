@@ -88,7 +88,10 @@ module Program =
             let handMap = Killer.receiveHands ()
             OpenDeal.fromHands dealer dir handMap
 
-        session.Run(Seat.South, ExchangeDirection.Left, createDeal)
+        session.Run(
+            Seat.South,
+            ExchangeDirection.Left,
+            createDeal)
 
     [<EntryPoint>]
     let main argv =
