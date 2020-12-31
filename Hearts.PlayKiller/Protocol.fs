@@ -91,7 +91,7 @@ module Protocol =
             if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
                 printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
                 chunks.[1..6]
-            elif sleep > 1000 then
+            elif sleep > 2000 then
                 failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
             else loop (2 * sleep)
 

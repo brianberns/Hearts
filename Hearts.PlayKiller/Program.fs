@@ -61,9 +61,10 @@ module Program =
                 Killer.receiveExchangeIncoming () |> ignore)
 
         session.DealStartEvent.Add(fun (dir, gameScore) ->
-            let record = Killer.startDeal ()
-            assert(dir = record.ExchangeDirection)
-            assert(gameScore = record.GameScore))
+            if gameScore = Score.zero then   // KH bug: deal start only occurs on first deal of hand
+                let record = Killer.startDeal ()
+                assert(dir = record.ExchangeDirection)
+                assert(gameScore = record.GameScore))
 
         session.TrickStartEvent.Add(fun leader ->
             let record = Killer.startTrick ()
