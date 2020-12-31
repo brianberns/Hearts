@@ -97,8 +97,7 @@ type Session
 
             // exchange?
         let deal =
-            if deal.Exchange |> Exchange.isHold then
-                deal
+            if deal.Exchange |> Exchange.isHold then deal
             else
                     // exchange start
                 let leader = deal |> OpenDeal.currentPlayer
@@ -114,7 +113,6 @@ type Session
                             let deal = deal |> OpenDeal.addPass cards
                             trigger passEvent (seat, cards, deal)
                             deal)
-                        |> OpenDeal.startPlay
 
                     // exchange finish
                 trigger exchangeFinishEvent ()
@@ -123,6 +121,7 @@ type Session
             // playout
         let deal, gameScore =
             assert(deal.ClosedDeal.Score = Score.zero)
+            let deal = deal |> OpenDeal.startPlay
             playTricks deal gameScore
 
         // to-do: shoot the moon
