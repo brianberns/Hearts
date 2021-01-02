@@ -309,7 +309,9 @@ module Protocol =
             let str = Encoding.Default.GetString(buffer)
             let chunks = str.Split(',')
             if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
+#if DEBUG
                 printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
+#endif
                 chunks.[1..6]
             elif sleep > 2000 then
                 failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
@@ -335,7 +337,9 @@ module Protocol =
 
     /// Writes the given fields as a message to KH.
     let private write (fields : string[]) =
+#if DEBUG
         printfn $"write: |{String.Join(',', fields)}|"
+#endif
         let chunks =
             [|
                 yield "CHs"
