@@ -8,6 +8,7 @@ open System.Threading
 open PlayingCards
 open Hearts
 
+/// Record types sent from server to client.
 type ServerRecordType =
     | SessionStart = 1
     | GameStart = 2
@@ -22,6 +23,7 @@ type ServerRecordType =
     | GameFinish = 11
     | SessionFinish = 12
 
+/// Session start record.
 type SessionStartRecord =
     {
         ClientSeats : Set<Seat>
@@ -29,6 +31,7 @@ type SessionStartRecord =
         TwoOfClubsLeads : bool
     }
 
+/// Game start record.
 type GameStartRecord =
     {
         Dealer : Seat
@@ -36,29 +39,55 @@ type GameStartRecord =
         NumGames : int
     }
 
+/// Deal start record.
 type DealStartRecord =
     {
         GameScore : Score
         ExchangeDirection : ExchangeDirection
     }
 
-type CardsRecord =
+/// Seat/cards record.
+type SeatCardsRecord =
     {
         Seat : Seat
         Cards : Set<Card>
     }
 
+/// Trick start record.
 type TrickStartRecord =
     {
         Leader : Seat
         TrickNum : int
     }
 
+/// Game finish record.
 type GameFinishRecord =
     {
         GameScore : Score
     }
 
+/// Session finish record.
+type SessionFinishRecord =
+    {
+        SessionScore : Score
+    }
+
+/// Record sent from server to client.
+type ServerRecord =
+    | SessionStart of SessionStartRecord
+    | GameStart of GameStartRecord
+    | DealStart of DealStartRecord
+    | Hand of SeatCardsRecord
+    | ExchangeOutgoing of SeatCardsRecord
+    | ExchangeIncoming of SeatCardsRecord
+    | TrickStart of TrickStartRecord
+    | Play of SeatCardsRecord
+    | TrickFinish
+    | DealFinish
+    | GameFinish of GameFinishRecord
+    | SessionFinish of SessionFinishRecord
+
+/// Record type sent from client to server.
 type ClientRecordType =
     | SessionStart = 101
     | GameStart = 102
@@ -83,61 +112,30 @@ module Protocol =
             FileAccess.ReadWrite,
             FileShare.ReadWrite)
 
-    /// Buffer used for reading messages.
-    let buffer = Array.zeroCreate<byte> 55
-
-    /// Reads a message of the given type from KH.
-    let private read (recordType : ServerRecordType) =
-
-        let rec loop sleep =
-            Thread.Sleep(sleep : int)
-            sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
-            let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
-            assert(nBytes = buffer.Length)
-            let str = Encoding.Default.GetString(buffer)
-            let chunks = str.Split(',')
-            if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
-                printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
-                chunks.[1..6]
-            elif sleep > 2000 then
-                failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
-            else loop (2 * sleep)
-
-        let fields = loop 1
-        if Int32.Parse(fields.[0]) <> int recordType then
-            failwith $"Incorrect key: expected {int recordType}, actual {fields.[0]}"
-        fields
-
-    /// Reads and ignores a message of the given type from KH.
-    let readIgnore recordType =
-        read recordType |> ignore
-
     /// Reads a session start record.
-    let readSessionStart () =
-        let fields = read ServerRecordType.SessionStart
-        {
+    let private readSessionStart (fields : _[]) =
+        SessionStart {
             ClientSeats =
-                let field = fields.[1] |> Int32.Parse
+                let field = fields.[0] |> Int32.Parse
                 Seat.allSeats
                     |> Seq.where (fun seat ->
                         (field >>> int seat) &&& 1 = 1)
                     |> set
             HostDisplay =
-                Int32.Parse(fields.[4]) = 1
+                Int32.Parse(fields.[3]) = 1
             TwoOfClubsLeads =
-                Int32.Parse(fields.[5]) = 0
+                Int32.Parse(fields.[4]) = 0
         }
 
     /// Reads a game start record.
-    let readGameStart () =
-        let fields = read ServerRecordType.GameStart
-        {
+    let private readGameStart (fields : _[]) =
+        GameStart {
             Dealer =
-                fields.[1]
+                fields.[0]
                     |> Int32.Parse
                     |> enum<Seat>
-            DealNum = fields.[2] |> Int32.Parse
-            NumGames = fields.[4] |> Int32.Parse
+            DealNum = fields.[1] |> Int32.Parse
+            NumGames = fields.[3] |> Int32.Parse
         }
 
     /// Parses a score from the given fields.
@@ -145,18 +143,17 @@ module Protocol =
         Seat.allSeats
             |> Seq.map (fun seat ->
                 let points =
-                    fields.[int seat + 1] |> Int32.Parse
+                    fields.[int seat] |> Int32.Parse
                 seat, points)
             |> Map
             |> ScoreMap
 
     /// Reads a deal start record.
-    let readDealStart () =
-        let fields = read ServerRecordType.DealStart
-        {
+    let readDealStart fields =
+        DealStart {
             GameScore = parseScore fields
             ExchangeDirection =
-                match fields.[5] |> Int32.Parse with
+                match fields.[4] |> Int32.Parse with
                     | 0 -> ExchangeDirection.Left
                     | 1 -> ExchangeDirection.Right
                     | 2 -> ExchangeDirection.Across
@@ -165,7 +162,7 @@ module Protocol =
         }
 
     /// Reads a hand.
-    let readHand () =
+    let private readHand (fields : _[]) =
 
         let readRanks (field : int) =
             [|
@@ -174,19 +171,18 @@ module Protocol =
                         yield rank
             |]
 
-        let fields = read ServerRecordType.Hand
-        {
+        Hand {
             Seat =
-                fields.[1]
+                fields.[0]
                     |> Int32.Parse
                     |> enum<Seat>
             Cards =
                 let suits = 
                     [|
-                        Suit.Spades, 2
-                        Suit.Hearts, 3
-                        Suit.Clubs, 4
-                        Suit.Diamonds, 5
+                        Suit.Spades, 1
+                        Suit.Hearts, 2
+                        Suit.Clubs, 3
+                        Suit.Diamonds, 4
                     |]
                 seq {
                     for (suit, iField) in suits do
@@ -225,16 +221,15 @@ module Protocol =
             rank + suit
 
     /// Reads an outgoing or incoming exchange.
-    let private readExchange recordType =
-        let fields = read recordType
+    let private readExchange (fields : _[]) =
         {
             Seat =
-                fields.[1]
+                fields.[0]
                     |> Int32.Parse
                     |> enum<Seat>
             Cards =
                 let cardNums =
-                    fields.[3..5]
+                    fields.[2..4]
                         |> Array.map Int32.Parse
                 if cardNums.[0] = -1 then
                     assert(cardNums |> Array.forall ((=) -1))
@@ -246,48 +241,97 @@ module Protocol =
         }
 
     /// Reads an outgoing exchange.
-    let readExchangeOutgoing () =
-        readExchange ServerRecordType.ExchangeOutgoing
+    let private readExchangeOutgoing fields =
+        fields |> readExchange |> ExchangeOutgoing
 
     /// Reads an incoming exchange.
-    let readExchangeIncoming () =
-        readExchange ServerRecordType.ExchangeIncoming
+    let private readExchangeIncoming fields =
+        fields |> readExchange |> ExchangeOutgoing
 
     /// Reads a trick start record.
-    let readTrickStart () =
-        let fields = read ServerRecordType.TrickStart
-        {
+    let private readTrickStart (fields : _[]) =
+        TrickStart {
             Leader =
-                fields.[1]
+                fields.[0]
                     |> Int32.Parse
                     |> enum<Seat>
             TrickNum =
-                fields.[2]
+                fields.[1]
                     |> Int32.Parse
         }
 
     /// Reads a card played on a trick. Result might be empty.
-    let readPlay () =
-        let fields = read ServerRecordType.Play
-        {
+    let private readPlay (fields : _[]) =
+        Play {
             Seat =
-                fields.[1]
+                fields.[0]
                     |> Int32.Parse
                     |> enum<Seat>
             Cards =
                 let cardNum =
-                    fields.[2]
+                    fields.[1]
                         |> Int32.Parse
                 if cardNum = -1 then Set.empty
                 else cardNum |> Card.fromInt |> Set.singleton
         }
 
-    /// Reads a game start record.
-    let readGameFinish () =
-        let fields = read ServerRecordType.GameFinish
-        {
+    /// Reads a trick finish record.
+    let private readTrickFinish (_ : string[]) =
+        TrickFinish
+
+    /// Reads a deal finish record.
+    let private readDealFinish (_ : string[]) =
+        DealFinish
+
+    /// Reads a game finish record.
+    let private readGameFinish (fields : _[]) =
+        GameFinish {
             GameScore = parseScore fields
         }
+
+    /// Reads a session finish record.
+    let private readSessionFinish (fields : _[]) =
+        SessionFinish {
+            SessionScore = parseScore fields
+        }
+
+    /// Buffer used for reading messages.
+    let buffer = Array.zeroCreate<byte> 55
+
+    /// Reads a message from KH.
+    let read () =
+
+        let rec loop sleep =
+            Thread.Sleep(sleep : int)
+            sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+            let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
+            assert(nBytes = buffer.Length)
+            let str = Encoding.Default.GetString(buffer)
+            let chunks = str.Split(',')
+            if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
+                printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
+                chunks.[1..6]
+            elif sleep > 2000 then
+                failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
+            else loop (2 * sleep)
+
+        let fields = loop 1
+        let reader =
+            match fields.[0] |> Int32.Parse |> enum<ServerRecordType> with
+                | ServerRecordType.SessionStart -> readSessionStart
+                | ServerRecordType.GameStart -> readGameStart
+                | ServerRecordType.DealStart -> readDealStart
+                | ServerRecordType.Hand -> readHand
+                | ServerRecordType.ExchangeOutgoing -> readExchangeOutgoing
+                | ServerRecordType.ExchangeIncoming -> readExchangeIncoming
+                | ServerRecordType.TrickStart -> readTrickStart
+                | ServerRecordType.Play -> readPlay
+                | ServerRecordType.TrickFinish -> readTrickFinish
+                | ServerRecordType.DealFinish -> readDealFinish
+                | ServerRecordType.GameFinish -> readGameFinish
+                | ServerRecordType.SessionFinish -> readSessionFinish
+                | _ -> failwith $"Unexpected server record type: {fields.[0]}"
+        reader fields.[1..]
 
     /// Writes the given fields as a message to KH.
     let private write (fields : string[]) =

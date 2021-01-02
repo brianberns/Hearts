@@ -50,6 +50,7 @@ module OpenDeal =
 
     /// Passes the given cards in the given deal.
     let addPass cards deal =
+        assert(cards |> Set.count = Exchange.numCards)
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
 
             // remove outgoing cards from passer's hand
