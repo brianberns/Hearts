@@ -7,11 +7,11 @@ type State =
     {
         PlayerMap : Map<Seat, Player>
         DealerOpt : Option<Seat>
-        GameScore : Score
+        GameScoreOpt : Option<Score>
         ExchangeDirectionOpt : Option<ExchangeDirection>
         HandMap : Map<Seat, Set<Card>>
         DealOpt : Option<OpenDeal>
-        SessionScore : Score
+        SessionScoreOpt : Option<Score>
     }
 
 module State =
@@ -20,11 +20,11 @@ module State =
         {
             PlayerMap = Map.empty
             DealerOpt = None
-            GameScore = Score.zero
+            GameScoreOpt = None
             ExchangeDirectionOpt = None
             HandMap = Map.empty
             DealOpt = None
-            SessionScore = Score.zero
+            SessionScoreOpt = None
         }
 
 module Killer =
@@ -46,14 +46,13 @@ module Killer =
             state with
                 DealerOpt = Some record.Dealer
                 // NumGames = record.NumGames
-                GameScore = Score.zero
         }
 
     let dealStart state (record : DealStartRecord) =
         Protocol.writeEmpty ClientRecordType.DealStart
         {
             state with
-                State.GameScore = record.GameScore
+                GameScoreOpt = Some record.GameScore
                 ExchangeDirectionOpt = Some record.ExchangeDirection
         }
 
@@ -83,13 +82,13 @@ module Killer =
                 }
 
     let exchangeOutgoing state (record : SeatCardsRecord) =
-        match state.DealOpt with
-            | Some deal ->
+        match state.DealOpt, state.GameScoreOpt with
+            | Some deal, Some gameScore ->
                 let cards =
                     if record.Cards.IsEmpty then
                         let cards =
                             let player = state.PlayerMap.[record.Seat]
-                            player.MakePass deal state.GameScore
+                            player.MakePass deal gameScore
                         Protocol.writeExchangeOutgoing cards
                         cards
                     else
@@ -100,7 +99,7 @@ module Killer =
                         DealOpt =
                             deal |> OpenDeal.addPass cards |> Some
                 }
-            | None -> failwith "Unexpected"
+            | _ -> failwith "Unexpected"
 
     let exchangeIncoming state (_ : SeatCardsRecord) =
         Protocol.writeEmpty ClientRecordType.ExchangeIncoming
@@ -131,24 +130,24 @@ module Killer =
         }
 
     let play state (record : SeatCardsRecord) =
-        match state.DealOpt with
-            | Some deal ->
+        match state.DealOpt, state.GameScoreOpt with
+            | Some deal, Some gameScore ->
                 let card =
                     if record.Cards.IsEmpty then
                         let card =
                             let player = state.PlayerMap.[record.Seat]
-                            player.MakePlay deal state.GameScore
+                            player.MakePlay deal gameScore
                         Protocol.writePlay card
                         card
                     else
-                        Protocol.writeEmpty ClientRecordType.ExchangeOutgoing
+                        Protocol.writeEmpty ClientRecordType.Play
                         record.Cards |> Seq.exactlyOne
                 {
                     state with
                         DealOpt =
                             deal |> OpenDeal.addPlay card |> Some
                 }
-            | None -> failwith "Unexpected"
+            | _ -> failwith "Unexpected"
 
     let trickFinish state =
         Protocol.writeEmpty ClientRecordType.TrickFinish
@@ -159,21 +158,31 @@ module Killer =
 
     let dealFinish state =
         Protocol.writeEmpty ClientRecordType.DealFinish
-        { state with DealOpt = None }
+        match state.DealOpt with
+            | Some deal ->
+                {
+                    state with
+                        DealerOpt = Some deal.Exchange.Dealer.Next
+                        ExchangeDirectionOpt =
+                            deal.Exchange.ExchangeDirection
+                                |> ExchangeDirection.next
+                                |> Some
+                        DealOpt = None
+                }
+            | None -> failwith "Unexpected"
 
     let gameFinish state (record : GameFinishRecord) =
         Protocol.writeEmpty ClientRecordType.GameFinish
         assert(state.DealOpt.IsNone)
         {
             state with
-                GameScore = state.GameScore + record.GameScore
+                GameScoreOpt = Some record.GameScore
         }
 
     let sessionFinish (state : State) (record : SessionFinishRecord) =
         {
             state with
-                SessionScore =
-                    state.SessionScore + record.SessionScore
+                SessionScoreOpt = Some record.SessionScore
         }
 
     let advance state player =
@@ -207,7 +216,7 @@ module Killer =
 
         let rec loop state =
             let state = advance state player
-            if state.SessionScore = Score.zero then
+            if state.SessionScoreOpt.IsNone then
                 loop state
 
         loop State.initial

@@ -246,7 +246,7 @@ module Protocol =
 
     /// Reads an incoming exchange.
     let private readExchangeIncoming fields =
-        fields |> readExchange |> ExchangeOutgoing
+        fields |> readExchange |> ExchangeIncoming
 
     /// Reads a trick start record.
     let private readTrickStart (fields : _[]) =
