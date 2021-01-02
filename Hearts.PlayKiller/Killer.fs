@@ -7,11 +7,11 @@ type State =
     {
         PlayerMap : Map<Seat, Player>
         DealerOpt : Option<Seat>
-        NumGames : int
         GameScore : Score
         ExchangeDirectionOpt : Option<ExchangeDirection>
         HandMap : Map<Seat, Set<Card>>
         DealOpt : Option<OpenDeal>
+        SessionScore : Score
     }
 
 module State =
@@ -20,77 +20,22 @@ module State =
         {
             PlayerMap = Map.empty
             DealerOpt = None
-            NumGames = 0
             GameScore = Score.zero
             ExchangeDirectionOpt = None
             HandMap = Map.empty
             DealOpt = None
+            SessionScore = Score.zero
         }
 
 module Killer =
 
-    /// Receives passed cards from KH.
-    let receivePass deal =
-        let record = Protocol.readExchangeOutgoing ()
-        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
-        if record.Cards.Count <> Exchange.numCards then failwith "Unexpected"
-        Protocol.writeEmpty ClientRecordType.ExchangeOutgoing
-        record.Cards
-
-    /// Sends passed cards to KH.
-    let sendPass deal score player =
-        let cards = player.MakePass deal score
-        let record = Protocol.readExchangeOutgoing ()
-        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
-        if record.Cards.Count <> 0 then failwith "Unexpected"
-        Protocol.writeExchangeOutgoing cards
-        cards
-
-    /// Recieves a played card from KH.
-    let receivePlay deal =
-        let record = Protocol.readPlay ()
-        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
-        Protocol.writeEmpty ClientRecordType.Play
-        record.Cards |> Seq.exactlyOne
-
-    /// Sends a played card to KH.
-    let sendPlay deal score player =
-        let card = player.MakePlay deal score
-        let record = Protocol.readPlay ()
-        if record.Seat <> (deal |> OpenDeal.currentPlayer) then failwith "Unexpected"
-        if record.Cards.Count <> 0 then failwith "Unexpected"
-        Protocol.writePlay card
-        card
-
-    /// KHearts server player.
-    let serverPlayer =
-        {
-            MakePass = fun deal _ -> receivePass deal
-            MakePlay = fun deal _ -> receivePlay deal
-        }
-
-    /// Wraps the given player for use with KHearts.
-    let wrap player =
-        {
-            MakePass =
-                fun deal score -> sendPass deal score player
-            MakePlay =
-                fun deal score -> sendPlay deal score player
-        }
-
-    let sessionStart state rawPlayer (record : SessionStartRecord) =
+    let sessionStart state player (record : SessionStartRecord) =
         Protocol.writeEmpty ClientRecordType.SessionStart
         {
             state with
                 PlayerMap =
-                    let clientPlayer = wrap rawPlayer
-                    Seat.allSeats
+                    record.ClientSeats
                         |> Seq.map (fun seat ->
-                            let player =
-                                if record.ClientSeats.Contains(seat) then
-                                    clientPlayer
-                                else
-                                    serverPlayer
                             seat, player)
                         |> Map
         }
@@ -100,7 +45,8 @@ module Killer =
         {
             state with
                 DealerOpt = Some record.Dealer
-                NumGames = record.NumGames
+                // NumGames = record.NumGames
+                GameScore = Score.zero
         }
 
     let dealStart state (record : DealStartRecord) =
@@ -121,9 +67,9 @@ module Killer =
                 | Some dealer, Some dir ->
                     {
                         state with
-                            HandMap = Map.empty
                             DealerOpt = None
                             ExchangeDirectionOpt = None
+                            HandMap = Map.empty
                             DealOpt =
                                 OpenDeal.fromHands dealer dir handMap
                                     |> Some
@@ -184,10 +130,56 @@ module Killer =
                 DealOpt = Some deal
         }
 
-    let advance state rawPlayer =
+    let play state (record : SeatCardsRecord) =
+        match state.DealOpt with
+            | Some deal ->
+                let card =
+                    if record.Cards.IsEmpty then
+                        let card =
+                            let player = state.PlayerMap.[record.Seat]
+                            player.MakePlay deal state.GameScore
+                        Protocol.writePlay card
+                        card
+                    else
+                        Protocol.writeEmpty ClientRecordType.ExchangeOutgoing
+                        record.Cards |> Seq.exactlyOne
+                {
+                    state with
+                        DealOpt =
+                            deal |> OpenDeal.addPlay card |> Some
+                }
+            | None -> failwith "Unexpected"
+
+    let trickFinish state =
+        Protocol.writeEmpty ClientRecordType.TrickFinish
+        assert(
+            (state.DealOpt.Value.ClosedDeal
+                |> ClosedDeal.numCardsPlayed) % Seat.numSeats = 0)
+        state : State
+
+    let dealFinish state =
+        Protocol.writeEmpty ClientRecordType.DealFinish
+        { state with DealOpt = None }
+
+    let gameFinish state (record : GameFinishRecord) =
+        Protocol.writeEmpty ClientRecordType.GameFinish
+        assert(state.DealOpt.IsNone)
+        {
+            state with
+                GameScore = state.GameScore + record.GameScore
+        }
+
+    let sessionFinish (state : State) (record : SessionFinishRecord) =
+        {
+            state with
+                SessionScore =
+                    state.SessionScore + record.SessionScore
+        }
+
+    let advance state player =
         match Protocol.read () with
             | SessionStart record ->
-                sessionStart state rawPlayer record
+                sessionStart state player record
             | GameStart record ->
                 gameStart state record
             | DealStart record ->
@@ -200,65 +192,22 @@ module Killer =
                 exchangeIncoming state record
             | TrickStart record ->
                 trickStart state record
+            | Play record ->
+                play state record
+            | TrickFinish ->
+                trickFinish state
+            | DealFinish ->
+                dealFinish state
+            | GameFinish record ->
+                gameFinish state record
+            | SessionFinish record ->
+                sessionFinish state record
 
-    /// Initializes communication with Killer Hearts.
-    let startSession () =
-        let record = Protocol.readSessionStart ()
-        Protocol.writeEmpty ClientRecordType.SessionStart
-        record
+    let run player =
 
-    /// Starts a new game with KH.
-    let startGame () =
-        let record = Protocol.readGameStart ()
-        Protocol.writeEmpty ClientRecordType.GameStart
-        record
+        let rec loop state =
+            let state = advance state player
+            if state.SessionScore = Score.zero then
+                loop state
 
-    /// Starts a new deal with KH.
-    let startDeal () =
-        let record = Protocol.readDealStart ()
-        Protocol.writeEmpty ClientRecordType.DealStart
-        record
-
-    /// Receives each player's hand from KH.
-    let receiveHands () =
-
-        /// Gets a hand from KH.
-        let receiveHand _ =
-            let record = Protocol.readHand ()
-            assert(record.Cards.Count = ClosedDeal.numCardsPerHand)
-            Protocol.writeEmpty ClientRecordType.Hand
-            record
-
-            // arrange hands by seat
-        Seq.init Seat.numSeats receiveHand
-            |> Seq.map (fun record ->
-                record.Seat, record.Cards)
-            |> Map
-
-    /// Receives an incoming pass from KH. Can be safely ignored.
-    let receiveExchangeIncoming () =
-        let record = Protocol.readExchangeIncoming ()
-        Protocol.writeEmpty ClientRecordType.ExchangeIncoming
-        record
-
-    /// Starts a new trick with KH.
-    let startTrick () =
-        let record = Protocol.readTrickStart ()
-        Protocol.writeEmpty ClientRecordType.TrickStart
-        record
-
-    /// Finishes a trick with KH.
-    let finishTrick () =
-        Protocol.readIgnore ServerRecordType.TrickFinish
-        Protocol.writeEmpty ClientRecordType.TrickFinish
-
-    /// Finishes a deal with KH.
-    let finishDeal () =
-        Protocol.readIgnore ServerRecordType.DealFinish
-        Protocol.writeEmpty ClientRecordType.DealFinish
-
-    /// Finishes a game with KH.
-    let finishGame () =
-        let record = Protocol.readGameFinish ()
-        Protocol.writeEmpty ClientRecordType.GameFinish
-        record
+        loop State.initial
