@@ -301,9 +301,7 @@ module Protocol =
     /// Reads a message from KH.
     let read () =
 
-        let rec loop sleep =
-            if sleep >= 0 then
-                Thread.Sleep(sleep : int)
+        let rec loop () =
             sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
             let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
             assert(nBytes = buffer.Length)
@@ -314,13 +312,9 @@ module Protocol =
                 printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
 #endif
                 chunks.[1..6]
-            else
-                if sleep > 1000 then sleep
-                elif sleep > 0 then 2 * sleep
-                else sleep + 1
-                |> loop
+            else loop ()
 
-        let fields = loop -3
+        let fields = loop ()
         let reader =
             match fields.[0] |> Int32.Parse |> enum<ServerRecordType> with
                 | ServerRecordType.SessionStart -> readSessionStart
