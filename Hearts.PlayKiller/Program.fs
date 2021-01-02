@@ -36,7 +36,9 @@ module Program =
     [<EntryPoint>]
     let main argv =
         try
-            Killer.run Random.player
+            let (ScoreMap scoreMap) = Killer.run Random.player
+            for (KeyValue(seat, points)) in scoreMap do
+                printfn "%A: %d" seat points
         with ex ->
             printfn "%s" ex.Message
         0

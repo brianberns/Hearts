@@ -216,7 +216,8 @@ module Killer =
 
         let rec loop state =
             let state = advance state player
-            if state.SessionScoreOpt.IsNone then
-                loop state
+            match state.SessionScoreOpt with
+                | None -> loop state
+                | Some score -> score
 
         loop State.initial
