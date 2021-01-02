@@ -98,9 +98,12 @@ module ClosedDeal =
             | _, None ->
                 if deal.HeartsBroken then hand
                 else
-                    hand
-                        |> Seq.where (fun card ->
-                            card.Suit <> Suit.Hearts)
+                    let nonHeartsCards =
+                        hand
+                            |> Seq.where (fun card ->
+                                card.Suit <> Suit.Hearts)
+                    if nonHeartsCards |> Seq.isEmpty then hand
+                    else nonHeartsCards
 
                 // following
             | iTrick, Some suitLed ->
@@ -115,12 +118,12 @@ module ClosedDeal =
 
                     // no point cards on first trick (unless it's unavoidable)
                 if iTrick = 0 then
-                    let benignCards =
+                    let nonPointCards =
                         cards
                             |> Seq.where (fun card ->
                                 Card.pointValue card = 0)
-                    if benignCards |> Seq.isEmpty then cards   // !!!
-                    else benignCards
+                    if nonPointCards |> Seq.isEmpty then cards   // !!!
+                    else nonPointCards
                 else cards
 
     /// Is the given player known to be void in the given suit?
