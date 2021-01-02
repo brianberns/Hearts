@@ -302,7 +302,8 @@ module Protocol =
     let read () =
 
         let rec loop sleep =
-            Thread.Sleep(sleep : int)
+            if sleep >= 0 then
+                Thread.Sleep(sleep : int)
             sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
             let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
             assert(nBytes = buffer.Length)
@@ -313,11 +314,13 @@ module Protocol =
                 printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
 #endif
                 chunks.[1..6]
-            elif sleep > 2000 then
-                failwithf $"Incorrect header/trailer: {chunks.[0]}/{chunks.[7]}"
-            else loop (2 * sleep)
+            else
+                if sleep > 1000 then sleep
+                elif sleep > 0 then 2 * sleep
+                else sleep + 1
+                |> loop
 
-        let fields = loop 1
+        let fields = loop -3
         let reader =
             match fields.[0] |> Int32.Parse |> enum<ServerRecordType> with
                 | ServerRecordType.SessionStart -> readSessionStart
