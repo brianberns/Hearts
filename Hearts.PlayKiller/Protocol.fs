@@ -3,7 +3,6 @@
 open System
 open System.IO
 open System.Text
-open System.Threading
 
 open PlayingCards
 open Hearts
@@ -308,9 +307,7 @@ module Protocol =
             let str = Encoding.Default.GetString(buffer)
             let chunks = str.Split(',')
             if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
-#if DEBUG
-                printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
-#endif
+                // printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
                 chunks.[1..6]
             else loop ()
 
@@ -334,9 +331,7 @@ module Protocol =
 
     /// Writes the given fields as a message to KH.
     let private write (fields : string[]) =
-#if DEBUG
-        printfn $"write: |{String.Join(',', fields)}|"
-#endif
+        // printfn $"write: |{String.Join(',', fields)}|"
         let chunks =
             [|
                 yield "CHs"
