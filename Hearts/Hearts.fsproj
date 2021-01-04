@@ -12,6 +12,7 @@
     <Compile Include="ClosedDeal.fs" />
     <Compile Include="Exchange.fs" />
     <Compile Include="OpenDeal.fs" />
+    <Compile Include="Player.fs" />
     <Compile Include="Session.fs" />
   </ItemGroup>
 

@@ -45,18 +45,45 @@ module Naive =
 
         spadesToPass + othersToPass
 
+    let cardQS = Card(Rank.Queen, Suit.Spades)
+
     let makePlay deal _ =
-        let hand = OpenDeal.currentHand deal
-        deal.ClosedDeal
-            |> ClosedDeal.legalPlays hand
-            |> Seq.sort
-            |> Seq.head
+
+        let hand = deal |> OpenDeal.currentHand
+        let legalPlays =
+            deal.ClosedDeal
+                |> ClosedDeal.legalPlays hand
+                |> Seq.toArray
+        let trick =
+            deal.ClosedDeal |> ClosedDeal.currentTrick
+
+        let cardOpt =
+            if trick.Cards.Length = 0 then
+                if deal.ClosedDeal.PlayedCards.Contains(cardQS) then
+                    None
+                else
+                    let highSpades, lowSpades =
+                        hand
+                            |> Seq.where (fun card ->
+                                card.Suit = Suit.Spades)
+                            |> Seq.toArray
+                            |> Array.partition (fun card ->
+                                card.Rank >= Rank.Queen)
+                    if highSpades.Length = 0 && lowSpades.Length > 0 then
+                        let card = lowSpades |> Seq.max
+                        assert(legalPlays |> Seq.contains card)
+                        Some card
+                    else None
+            else None
+
+        cardOpt
+            |> Option.defaultWith (fun () ->
+                legalPlays
+                    |> Seq.sort
+                    |> Seq.head)
 
     let player =
-        {
-            MakePass = makePass
-            MakePlay = makePlay
-        }
+        Player.create makePass makePlay
 
 module Program =
 

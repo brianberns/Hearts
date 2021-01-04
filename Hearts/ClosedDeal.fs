@@ -13,6 +13,9 @@ type ClosedDeal =
         /// Completed tricks, in reverse chronological order.
         CompletedTricks : List<Trick>
 
+        /// Cards played so far.
+        PlayedCards : Set<Card>
+
         /// Is it legal to lead a heart?
         HeartsBroken : bool
 
@@ -30,6 +33,7 @@ module ClosedDeal =
         {
             CurrentTrickOpt = None
             CompletedTricks = List.empty
+            PlayedCards = Set.empty
             HeartsBroken = false
             Voids = Set.empty
             Score = Score.zero
@@ -147,22 +151,6 @@ module ClosedDeal =
             let updatedTrick = curTrick |> Trick.addPlay card
             updatedTrick, player
 
-            // player is void in suit led?
-        let voids =
-            match updatedTrick.SuitLedOpt with
-                | Some suitLed ->
-                    if card.Suit = suitLed then
-                        assert(deal |> isVoid player card.Suit |> not)
-                        deal.Voids
-                    else
-                        deal.Voids.Add(player, suitLed)
-                | None -> failwith "Unexpected"
-
-            // hearts broken?
-        let heartsBroken =
-            if deal.HeartsBroken || Card.pointValue card > 0 then true
-            else false
-
             // complete trick?
         let curTrickOpt, completedTricks, score =
             if updatedTrick |> Trick.isComplete then
@@ -185,11 +173,32 @@ module ClosedDeal =
             else
                 Some updatedTrick, deal.CompletedTricks, deal.Score
 
+            // add to played cards
+        let playedCards =
+            deal.PlayedCards.Add(card)
+
+            // hearts broken?
+        let heartsBroken =
+            if deal.HeartsBroken || Card.pointValue card > 0 then true
+            else false
+
+            // player is void in suit led?
+        let voids =
+            match updatedTrick.SuitLedOpt with
+                | Some suitLed ->
+                    if card.Suit = suitLed then
+                        assert(deal |> isVoid player card.Suit |> not)
+                        deal.Voids
+                    else
+                        deal.Voids.Add(player, suitLed)
+                | None -> failwith "Unexpected"
+
         {
             deal with
                 CurrentTrickOpt = curTrickOpt
                 CompletedTricks = completedTricks
                 HeartsBroken = heartsBroken
+                PlayedCards = playedCards
                 Voids = voids
                 Score = score
         }

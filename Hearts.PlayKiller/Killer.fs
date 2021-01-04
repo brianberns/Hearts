@@ -100,7 +100,7 @@ module Killer =
                     if record.Cards.IsEmpty then
                         let cards =
                             let player = state.PlayerMap.[record.Seat]
-                            player.MakePass deal gameScore
+                            player.Pass(deal, gameScore)
                         Protocol.writeExchangeOutgoing cards
                         cards
 
@@ -158,7 +158,7 @@ module Killer =
                     if record.Cards.IsEmpty then
                         let card =
                             let player = state.PlayerMap.[record.Seat]
-                            player.MakePlay deal gameScore
+                            player.Play(deal, gameScore)
                         Protocol.writePlay card
                         card
 

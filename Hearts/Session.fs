@@ -5,15 +5,6 @@ open System.ComponentModel
 
 open PlayingCards
 
-type Player =
-    {
-        /// Function that passes cards in the given deal.
-        MakePass : OpenDeal -> Score (*game score*) -> Set<Card>
-
-        /// Function plays a card in the given deal.
-        MakePlay : OpenDeal -> Score (*game score*) -> Card
-    }
-
 /// Manages a series of games with the given players.
 type Session
     (playerMap : Map<_, _>,
