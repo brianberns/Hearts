@@ -291,7 +291,15 @@ module Protocol =
                     chunks.[1..6]
                         |> Array.map Int32.TryParse
                 if flagFields |> Array.forall fst then
-                    flagFields |> Array.map snd
+                    let nSigns =
+                        flagFields.[3..]
+                            |> Seq.map (fun (_, field) ->
+                                field >= 0)
+                            |> Seq.distinct
+                            |> Seq.length
+                    if nSigns = 1 then
+                        flagFields |> Array.map snd
+                    else loop ()
                 else loop ()
             else loop ()
 
