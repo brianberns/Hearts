@@ -301,6 +301,7 @@ module Protocol =
     let read () =
 
         let rec loop () =
+            System.Threading.Thread.Sleep(0)
             sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
             let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
             assert(nBytes = buffer.Length)
@@ -329,19 +330,30 @@ module Protocol =
                 | _ -> failwith $"Unexpected server record type: {fields.[0]}"
         reader fields.[1..]
 
+    /// Client -> Server header.
+    let private headerBuffer =
+        Encoding.Default.GetBytes("CHs,")
+
+    /// Client -> Server footer.
+    let private footerBuffer =
+        Encoding.Default.GetBytes(",CHe")
+
     /// Writes the given fields as a message to KH.
     let private write (fields : string[]) =
         // printfn $"write: |{String.Join(',', fields)}|"
-        let chunks =
-            [|
-                yield "CHs"
-                yield! fields
-                yield "CHe"
-            |]
-        let str = String.Join(',', chunks)
+
+            // write message body first
+        let str = String.Join(',', fields)
         let buffer = Encoding.Default.GetBytes(str)
-        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+        sharedFile.Seek(int64 headerBuffer.Length, SeekOrigin.Begin) |> ignore
         sharedFile.Write(buffer, 0, buffer.Length)
+        sharedFile.Flush()
+
+            // write header and footer last
+        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+        sharedFile.Write(headerBuffer, 0, headerBuffer.Length)
+        sharedFile.Seek(int64 (-footerBuffer.Length), SeekOrigin.End) |> ignore
+        sharedFile.Write(footerBuffer, 0, footerBuffer.Length)
         sharedFile.Flush()
 
     /// Writes an empty message of the given type.
