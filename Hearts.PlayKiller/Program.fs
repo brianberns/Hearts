@@ -12,24 +12,25 @@ module Naive =
 
             // determine spades to pass
         let spadesToPass =
-            let spadeRanks =
+
+            let spades =
                 hand
                     |> Seq.where (fun card ->
                         card.Suit = Suit.Spades)
-                    |> Seq.map (fun card -> card.Rank)
-                    |> set
-            let nSpades = spadeRanks.Count
-            let toPass =
-                if nSpades > 4
-                    || (nSpades = 4
-                        && spadeRanks.Contains(Rank.Queen)) then
-                    fun _ -> false
-                else
-                    fun rank -> rank >= Rank.Queen
-            spadeRanks
-                |> Seq.where toPass
-                |> Seq.map (fun rank -> Card(rank, Suit.Spades))
-                |> set
+                    |> Seq.toArray
+            let nSpades = spades.Length
+
+            let highSpades =
+                spades
+                    |> Array.where (fun card ->
+                        card.Rank >= Rank.Queen)
+            let nHighSpades = highSpades.Length
+
+            if nSpades > 4
+                || (nSpades = 4 && nHighSpades = 1) then
+                Set.empty
+            else
+                Set highSpades
                 
             // determine other cards to pass
         let othersToPass =
