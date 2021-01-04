@@ -115,34 +115,30 @@ module Protocol =
     let private readSessionStart (fields : _[]) =
         SessionStart {
             ClientSeats =
-                let field = fields.[0] |> Int32.Parse
+                let field = fields.[0]
                 Seat.allSeats
                     |> Seq.where (fun seat ->
                         (field >>> int seat) &&& 1 = 1)
                     |> set
             HostDisplay =
-                Int32.Parse(fields.[3]) = 1
+                fields.[3] = 1
             TwoOfClubsLeads =
-                Int32.Parse(fields.[4]) = 0
+                fields.[4] = 0
         }
 
     /// Reads a game start record.
     let private readGameStart (fields : _[]) =
         GameStart {
-            Dealer =
-                fields.[0]
-                    |> Int32.Parse
-                    |> enum<Seat>
-            DealNum = fields.[1] |> Int32.Parse
-            NumGames = fields.[3] |> Int32.Parse
+            Dealer = fields.[0] |> enum<Seat>
+            DealNum = fields.[1]
+            NumGames = fields.[3]
         }
 
     /// Parses a score from the given fields.
     let private parseScore (fields : _[]) =
         Seat.allSeats
             |> Seq.map (fun seat ->
-                let points =
-                    fields.[int seat] |> Int32.Parse
+                let points = fields.[int seat]
                 seat, points)
             |> Map
             |> ScoreMap
@@ -152,7 +148,7 @@ module Protocol =
         DealStart {
             GameScore = parseScore fields
             ExchangeDirection =
-                match fields.[4] |> Int32.Parse with
+                match fields.[4] with
                     | 0 -> ExchangeDirection.Left
                     | 1 -> ExchangeDirection.Right
                     | 2 -> ExchangeDirection.Across
@@ -171,10 +167,7 @@ module Protocol =
             |]
 
         Hand {
-            Seat =
-                fields.[0]
-                    |> Int32.Parse
-                    |> enum<Seat>
+            Seat = fields.[0] |> enum<Seat>
             Cards =
                 let suits = 
                     [|
@@ -185,7 +178,7 @@ module Protocol =
                     |]
                 seq {
                     for (suit, iField) in suits do
-                        let field = fields.[iField] |> Int32.Parse
+                        let field = fields.[iField]
                         for rank in readRanks field do
                             yield Card(rank, suit)
                 } |> set
@@ -222,14 +215,9 @@ module Protocol =
     /// Reads an outgoing or incoming exchange.
     let private readExchange (fields : _[]) =
         {
-            Seat =
-                fields.[0]
-                    |> Int32.Parse
-                    |> enum<Seat>
+            Seat = fields.[0] |> enum<Seat>
             Cards =
-                let cardNums =
-                    fields.[2..4]
-                        |> Array.map Int32.Parse
+                let cardNums = fields.[2..4]
                 if cardNums.[0] = -1 then
                     assert(cardNums |> Array.forall ((=) -1))
                     Set.empty
@@ -250,36 +238,26 @@ module Protocol =
     /// Reads a trick start record.
     let private readTrickStart (fields : _[]) =
         TrickStart {
-            Leader =
-                fields.[0]
-                    |> Int32.Parse
-                    |> enum<Seat>
-            TrickNum =
-                fields.[1]
-                    |> Int32.Parse
+            Leader = fields.[0] |> enum<Seat>
+            TrickNum = fields.[1]
         }
 
     /// Reads a card played on a trick. Result might be empty.
     let private readPlay (fields : _[]) =
         Play {
-            Seat =
-                fields.[0]
-                    |> Int32.Parse
-                    |> enum<Seat>
+            Seat = fields.[0] |> enum<Seat>
             Cards =
-                let cardNum =
-                    fields.[1]
-                        |> Int32.Parse
+                let cardNum = fields.[1]
                 if cardNum = -1 then Set.empty
                 else cardNum |> Card.fromInt |> Set.singleton
         }
 
     /// Reads a trick finish record.
-    let private readTrickFinish (_ : string[]) =
+    let private readTrickFinish (_ : int[]) =
         TrickFinish
 
     /// Reads a deal finish record.
-    let private readDealFinish (_ : string[]) =
+    let private readDealFinish (_ : int[]) =
         DealFinish
 
     /// Reads a game finish record.
@@ -309,12 +287,17 @@ module Protocol =
             let chunks = str.Split(',')
             if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
                 // printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
-                chunks.[1..6]
+                let flagFields =
+                    chunks.[1..6]
+                        |> Array.map Int32.TryParse
+                if flagFields |> Array.forall fst then
+                    flagFields |> Array.map snd
+                else loop ()
             else loop ()
 
         let fields = loop ()
         let reader =
-            match fields.[0] |> Int32.Parse |> enum<ServerRecordType> with
+            match fields.[0] |> enum<ServerRecordType> with
                 | ServerRecordType.SessionStart -> readSessionStart
                 | ServerRecordType.GameStart -> readGameStart
                 | ServerRecordType.DealStart -> readDealStart
