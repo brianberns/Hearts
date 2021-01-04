@@ -58,23 +58,43 @@ module Naive =
             deal.ClosedDeal |> ClosedDeal.currentTrick
 
         let cardOpt =
-            if trick.Cards.Length = 0 then
-                if deal.ClosedDeal.PlayedCards.Contains(cardQS) then
-                    None
-                else
-                    let highSpades, lowSpades =
-                        hand
-                            |> Seq.where (fun card ->
-                                card.Suit = Suit.Spades)
-                            |> Seq.toArray
-                            |> Array.partition (fun card ->
-                                card.Rank >= Rank.Queen)
-                    if highSpades.Length = 0 && lowSpades.Length > 0 then
-                        let card = lowSpades |> Seq.max
-                        assert(legalPlays |> Seq.contains card)
-                        Some card
-                    else None
-            else None
+            match trick.Cards.Length with
+                | 0 ->
+                    if deal.ClosedDeal.PlayedCards.Contains(cardQS) then
+                        None
+                    else
+                        let highSpades, lowSpades =
+                            hand
+                                |> Seq.where (fun card ->
+                                    card.Suit = Suit.Spades)
+                                |> Seq.toArray
+                                |> Array.partition (fun card ->
+                                    card.Rank >= Rank.Queen)
+                        if highSpades.Length = 0 && lowSpades.Length > 0 then
+                            let card = lowSpades |> Seq.max
+                            assert(legalPlays |> Seq.contains card)
+                            Some card
+                        else None
+                | 3 ->
+                    let isTrickWinner card =
+                        let trick = trick |> Trick.addPlay card
+                        snd trick.HighPlayOpt.Value = card
+                    let winners, nonWinners =
+                        legalPlays
+                            |> Array.partition isTrickWinner
+                    if nonWinners.Length > 0 then
+                        nonWinners
+                            |> Seq.maxBy (fun card ->
+                                card |> Card.pointValue, card.Rank)
+                            |> Some
+                    else
+                        let winners =
+                            winners
+                                |> Array.where (fun card -> card <> cardQS)
+                        if winners.Length > 0 then
+                            winners |> Seq.max |> Some
+                        else None
+                | _ -> None
 
         cardOpt
             |> Option.defaultWith (fun () ->
