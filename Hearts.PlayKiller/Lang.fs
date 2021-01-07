@@ -52,57 +52,79 @@ module Expr =
     /// Answers the type of the given term, if it is well-typed.
     let typeOf term =
 
+        /// Raises a type error.
+        let typeError (expected : Type) (actual : Type) =
+            assert(expected <> actual)
+            failwith $"Type error: Expected {expected}, actual {actual}"
+
         /// Determines the type of a term within a given environment,
         /// which is a list of types of free variables (i.e. variables
         /// bound at a higher level than this).
         let rec loop env = function
 
             | BoolLiteral _ -> TBool
+
             | Equal (left, right) ->
-                if loop env left = loop env right then TBool
-                else failwith "Equality type mismatch"
+                let leftType = loop env left
+                let rightType = loop env right
+                if leftType = rightType then TBool
+                else typeError leftType rightType
 
             | IntLiteral _ -> TInt
+
             | CardSetCount cardSetExpr ->
-                if loop env cardSetExpr = TCardSet then TInt
-                else failwith "CardSet type mismatch"
+                let typ = loop env cardSetExpr
+                if typ = TCardSet then TInt
+                else typeError TCardSet typ
 
             | RankLiteral _ -> TRank
+
             | CardRank cardExpr ->
-                if loop env cardExpr = TCard then TRank
-                else failwith "Card type mismatch"
+                let typ = loop env cardExpr
+                if typ = TCard then TRank
+                else typeError TCard typ
 
             | SuitLiteral _ -> TSuit
+
             | CardSuit cardExpr ->
-                if loop env cardExpr = TCard then TSuit
-                else failwith "Card type mismatch"
+                let typ = loop env cardExpr
+                if typ = TCard then TSuit
+                else typeError TCard typ
 
             | RankSuitCard (rankExpr, suitExpr) ->
-                if loop env rankExpr = TRank then
-                    if loop env suitExpr = TSuit then TCard
-                    else failwith "Suit type mismatch"
-                else failwith "Rank type mismatch"
+                let typ = loop env rankExpr
+                if typ = TRank then
+                    let typ = loop env suitExpr
+                    if typ = TSuit then TCard
+                    else typeError TSuit typ
+                else typeError TRank typ
+
             | CardSetMin cardSetExpr ->
-                if loop env cardSetExpr = TCardSet then TCard
-                else failwith "CardSet type mismatch"
+                let typ = loop env cardSetExpr
+                if typ = TCardSet then TCard
+                else typeError TCardSet typ
 
             | CardSetLiteral _ -> TCardSet
+
             | CardSetSingleton cardExpr ->
-                if loop env cardExpr = TCard then TCardSet
-                else failwith "Card type mismatch"
+                let typ = loop env cardExpr
+                if typ = TCard then TCardSet
+                else typeError TCard typ
 
             | MyHand
             | LegalPlays -> TCardSet
+
             | Where (cardSetExpr, lambda) ->
-                if loop env cardSetExpr = TCardSet then
+                let typ = loop env cardSetExpr
+                if typ = TCardSet then
                     match loop env lambda with
                          | TFunction (inType, outType) ->
                             if inType = TCard then
                                 if outType = TBool then TCardSet
-                                else failwith "Bool type mismatch"
-                            else failwith "Card type mismatch"
-                         | _ -> failwith "CardSet type mismatch"
-                else failwith "CardSet type mismatch"
+                                else typeError TBool outType
+                            else typeError TCard inType
+                         | typ -> typeError (TFunction (TCard, TBool)) typ
+                else typeError TCardSet typ
 
                 // if cond then trueBranch else falseBranch
             | If (cond, trueBranch, falseBranch) ->
@@ -111,8 +133,8 @@ module Expr =
                         let trueType = loop env trueBranch
                         let falseType = loop env falseBranch
                         if trueType = falseType then trueType   // branch types must match
-                        else failwith "Branch type mismatch"
-                    | _ -> failwith "Condition must be of type Boolean"
+                        else typeError trueType falseType
+                    | typ -> typeError TBool typ
 
                 // variable in the given environment
             | Variable i ->
@@ -132,8 +154,9 @@ module Expr =
             | Apply (lambda, arg) ->
                 match loop env lambda with   // first term must be a function
                     | TFunction (inType, outType) ->
-                        if loop env arg = inType then outType   // argument's type must match expected input type
-                        else failwith "Unexpected argument type"
+                        let typ = loop env arg
+                        if typ = inType then outType   // argument's type must match expected input type
+                        else typeError inType typ
                     | _ -> failwith "Not a function"
 
         loop [] term
