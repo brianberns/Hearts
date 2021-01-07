@@ -3,6 +3,8 @@
 open PlayingCards
 open Hearts
 
+/// A type is either a primitive type (e.g. Boolean), or
+/// a function type.
 type Type =
     | TBool
     | TInt
@@ -12,6 +14,7 @@ type Type =
     | TCardSet
     | TFunction of Input : Type * Output : Type
 
+/// An expression represents a typed value.
 type Expr =
 
         // bool
@@ -211,9 +214,18 @@ module Expr =
                 let body' = subst (iParam+1) arg body'
                 Lambda (argType, body')
 
+    module private RankSuitCard =
+
+        /// Creates a card expression from the given card.
+        let fromCard (card : Card) =
+            RankSuitCard (
+                RankLiteral card.Rank,
+                SuitLiteral card.Suit)
+
+    /// Evaluates the given expression using the given deal.
     let eval deal expr =
-        let cont = eval deal
-        match expr with
+
+        let rec loop = function
 
             | MyHand ->
                 deal
@@ -228,41 +240,38 @@ module Expr =
                     |> CardSetLiteral
 
             | Equal (left, right) ->
-                let flag =
-                    (Expr.eval deal left) = (Expr.eval deal right)
+                let flag = (loop left = loop right)
                 BoolLiteral flag
 
             | CardSetCount cardSetExpr ->
-                match cont cardSetExpr with
+                match loop cardSetExpr with
                     | CardSetLiteral cardSet ->
                         cardSet.Count |> IntLiteral
                     | _ -> failwith "Type error"
 
             | CardSetMin cardSetExpr ->
-                match cont cardSetExpr with
+                match loop cardSetExpr with
                     | CardSetLiteral cardSet ->
-                        let card = cardSet.MinimumElement
-                        RankSuitCard (
-                            RankLiteral card.Rank,
-                            SuitLiteral card.Suit)
+                        cardSet.MinimumElement
+                            |> RankSuitCard.fromCard
                     | _ -> failwith "Type error"
 
             | CardRank cardExpr ->
-                match cont cardExpr with
+                match loop cardExpr with
                     | RankSuitCard (rankExpr, _) ->
-                        cont rankExpr
+                        loop rankExpr
                     | _ -> failwith "Type error"
 
             | CardSuit cardExpr ->
-                match cont cardExpr with
+                match loop cardExpr with
                     | RankSuitCard (_, suitExpr) ->
-                        cont suitExpr
+                        loop suitExpr
                     | _ -> failwith "Type error"
 
             | CardSetSingleton cardExpr ->
-                match cont cardExpr with
+                match loop cardExpr with
                     | RankSuitCard (rankExpr, suitExpr) ->
-                        match cont rankExpr, cont suitExpr with
+                        match loop rankExpr, loop suitExpr with
                             | RankLiteral rank, SuitLiteral suit ->
                                 Card(rank, suit)
                                     |> Set.singleton
@@ -271,19 +280,17 @@ module Expr =
                     | _ -> failwith "Type error"
 
             | RankSuitCard (rankExpr, suitExpr) ->
-                RankSuitCard (cont rankExpr, cont suitExpr)
+                RankSuitCard (loop rankExpr, loop suitExpr)
 
             | Where (cardSetExpr, lambda) ->
-                match cont cardSetExpr, cont lambda with
+                match loop cardSetExpr, loop lambda with
                     | CardSetLiteral cardSet, Lambda (argType, _)
                         when argType = TCard ->
                         cardSet
                             |> Set.filter (fun card ->
                                 let cardExpr =
-                                    RankSuitCard (
-                                        RankLiteral card.Rank,
-                                        SuitLiteral card.Suit)
-                                match cont <| Apply (lambda, cardExpr) with
+                                    card |> RankSuitCard.fromCard
+                                match loop <| Apply (lambda, cardExpr) with
                                     | BoolLiteral flag -> flag
                                     | _ -> failwith "Type error")
                             |> CardSetLiteral
@@ -291,18 +298,20 @@ module Expr =
 
                 // function application
             | Apply (lambda, arg) ->
-                match cont lambda with
+                match loop lambda with
                     | Lambda (_, body) ->
                         subst 0 arg body
-                            |> cont
+                            |> loop
                     | _ -> failwith "Not a function"
 
                 // evaluate correct branch only
             | If (cond, trueBranch, falseBranch) ->
-                match cont cond with
-                    | BoolLiteral true  -> cont trueBranch
-                    | BoolLiteral false -> cont falseBranch
+                match loop cond with
+                    | BoolLiteral true  -> loop trueBranch
+                    | BoolLiteral false -> loop falseBranch
                     | _ -> failwith "Condition must be of type Boolean"
 
                 // no effect
-            | _ -> expr
+            | expr -> expr
+
+        loop expr
