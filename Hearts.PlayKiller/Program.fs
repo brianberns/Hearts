@@ -1,7 +1,6 @@
 ﻿namespace Hearts.PlayKiller
 
 open PlayingCards
-
 open Hearts
 
 module Naive =
@@ -109,6 +108,19 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
+
+        // hand |> Set.where (fun card -> card.Suit = Suit.Spades)
+        let spadesExpr =
+            Where (
+                MyHand,
+                Lambda (
+                    TCard,
+                    Equal (
+                        CardSuit (Variable 0),
+                        SuitLiteral Suit.Spades)))
+        printfn "%A" <| Expr.typeOf spadesExpr
+
+        (*
         try
             let (ScoreMap scoreMap) = Killer.run Naive.player
             for (KeyValue(seat, points)) in scoreMap do
@@ -116,4 +128,6 @@ module Program =
         with ex ->
             printfn "%s" ex.Message
             printfn "%s" ex.StackTrace
+        *)
+
         0
