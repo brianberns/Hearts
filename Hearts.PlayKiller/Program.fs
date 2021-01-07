@@ -120,6 +120,15 @@ module Program =
                         SuitLiteral Suit.Spades)))
         printfn "%A" <| Expr.typeOf spadesExpr
 
+        let deal =
+            let rng = System.Random(0)
+            let deck = Deck.shuffle rng
+            let deal = OpenDeal.fromDeck Seat.South ExchangeDirection.Hold deck
+            deal |> OpenDeal.startPlay
+        spadesExpr
+            |> Expr.eval deal
+            |> printfn "%A"
+
         (*
         try
             let (ScoreMap scoreMap) = Killer.run Naive.player

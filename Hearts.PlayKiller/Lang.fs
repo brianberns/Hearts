@@ -20,21 +20,22 @@ type Expr =
 
         // int
     | IntLiteral of int
-    | CardSetCount of Expr
+    | CardSetCount of CardSet : Expr
 
         // rank
     | RankLiteral of Rank
-    | CardRank of Expr
+    | CardRank of Card : Expr
 
         // suit
     | SuitLiteral of Suit
-    | CardSuit of Expr
+    | CardSuit of Card : Expr
 
         // card
-    | CardLiteral of Card
-    | CardSetMin of Expr
+    | RankSuitCard of Rank : Expr * Suit : Expr
+    | CardSetMin of CardSet : Expr
 
         // card set
+    | CardSetLiteral of Set<Card>
     | CardSetSingleton of Expr
     | MyHand
     | LegalPlays
@@ -76,11 +77,16 @@ module Expr =
                 if loop env cardExpr = TCard then TSuit
                 else failwith "Card type mismatch"
 
-            | CardLiteral _ -> TCard
+            | RankSuitCard (rankExpr, suitExpr) ->
+                if loop env rankExpr = TRank then
+                    if loop env suitExpr = TSuit then TCard
+                    else failwith "Suit type mismatch"
+                else failwith "Rank type mismatch"
             | CardSetMin cardSetExpr ->
                 if loop env cardSetExpr = TCardSet then TCard
                 else failwith "CardSet type mismatch"
 
+            | CardSetLiteral _ -> TCardSet
             | CardSetSingleton cardExpr ->
                 if loop env cardExpr = TCard then TCardSet
                 else failwith "Card type mismatch"
@@ -132,65 +138,148 @@ module Expr =
 
         loop [] term
 
-    (*
-    let eval = function
+    /// Replaces all occurrences of param with arg in body.
+    let rec private subst iParam arg body =
+        let cont = subst iParam arg   // shorthand for simple recursive substitution
+        match body with
 
-            // bool
-        | BoolLiteral value -> value
-        | RankEqual (rankExprA, rankExprB) ->
-            (rankExprA |> RankExpr.eval)
-                = (rankExprB |> RankExpr.eval)
-        | SuitEqual (suitExprA, suitExprB) ->
-            (suitExprA |> SuitExpr.eval)
-                = (suitExprB |> SuitExpr.eval)
-        | CardEqual (cardExprA, cardExprB) ->
-            (cardExprA |> CardExpr.eval)
-                = (cardExprB |> CardExpr.eval)
+                // no effect
+            | BoolLiteral _
+            | IntLiteral _
+            | RankLiteral _
+            | SuitLiteral _
+            | CardSetLiteral _
+            | MyHand
+            | LegalPlays
+                -> body
 
-            // int
-        | IntLiteral n -> n
-        | Count cardSetExpr ->
-            cardSetExpr
-                |> CardSetExpr.eval
-                |> Set.count
+                // recursively substitute
+            | Equal (left, right) ->
+                Equal (cont left, cont right)
+            | CardSetCount cardSetExpr ->
+                CardSetCount (cont cardSetExpr)
+            | CardRank cardExpr ->
+                CardRank (cont cardExpr)
+            | CardSuit cardExpr ->
+                CardSuit (cont cardExpr)
+            | CardSetMin cardSetExpr ->
+                CardSetMin (cont cardSetExpr)
+            | CardSetSingleton cardExpr ->
+                CardSetSingleton (cont cardExpr)
+            | RankSuitCard (rankExpr, suitExpr) ->
+                RankSuitCard (cont rankExpr, cont suitExpr)
+            | Where (cardSetExpr, lambda) ->
+                Where (cont cardSetExpr, cont lambda)
+            | If (cond, trueBranch, falseBranch) ->
+                If (cont cond, cont trueBranch, cont falseBranch)
+            | Apply (lambda, arg) ->
+                Apply (cont lambda, cont arg)
 
-            // rank
-        | RankLiteral rank -> rank
-        | CardRank cardExpr ->
-            let card =
-                cardExpr |> CardExpr.eval
-            card.Rank
+                // substitute iff variables match
+            | Variable iVar ->
+                match compare iVar iParam with
+                     | -1 -> body                  // not a match: no effect
+                     |  0 -> arg                   // match: substitute value
+                     |  1 -> Variable (iVar - 1)   // free variable: shift to maintain external references to it
+                     |  _ -> failwith "Unexpected"
 
-            // suit
-        | SuitLiteral suit -> suit
-        | CardSuit cardExpr ->
-            let card =
-                cardExpr |> CardExpr.eval
-            card.Suit
+                // current var0 is known as var1 within
+            | Lambda (argType, body') ->
+                let body' = subst (iParam+1) arg body'
+                Lambda (argType, body')
 
-            // card
-        | CardLiteral card -> card
-        | Min cardSetExpr ->
-            cardSetExpr
-                |> CardSetExpr.eval
-                |> Set.minElement
+    let eval deal expr =
+        let cont = eval deal
+        match expr with
 
-            // card set
-        | Singleton cardExpr ->
-            cardExpr
-                |> CardExpr.eval
-                |> Set.singleton
-        | MyHand ->
-            OpenDeal.currentHand deal
-        | LegalPlays ->
-            let hand = OpenDeal.currentHand deal
-            deal.ClosedDeal
-                |> ClosedDeal.legalPlays hand
-                |> set
-        | Where (cardSetExpr, boolExpr) ->
-            cardSetExpr
-                |> CardSetExpr.eval deal
-                |> Set.filter (fun card ->
-                    boolExpr
-                        |> BoolExpr.eval)
-    *)
+            | MyHand ->
+                deal
+                    |> OpenDeal.currentHand
+                    |> CardSetLiteral
+
+            | LegalPlays ->
+                let hand = deal |> OpenDeal.currentHand
+                deal.ClosedDeal
+                    |> ClosedDeal.legalPlays hand
+                    |> set
+                    |> CardSetLiteral
+
+            | Equal (left, right) ->
+                let flag =
+                    (Expr.eval deal left) = (Expr.eval deal right)
+                BoolLiteral flag
+
+            | CardSetCount cardSetExpr ->
+                match cont cardSetExpr with
+                    | CardSetLiteral cardSet ->
+                        cardSet.Count |> IntLiteral
+                    | _ -> failwith "Type error"
+
+            | CardSetMin cardSetExpr ->
+                match cont cardSetExpr with
+                    | CardSetLiteral cardSet ->
+                        let card = cardSet.MinimumElement
+                        RankSuitCard (
+                            RankLiteral card.Rank,
+                            SuitLiteral card.Suit)
+                    | _ -> failwith "Type error"
+
+            | CardRank cardExpr ->
+                match cont cardExpr with
+                    | RankSuitCard (rankExpr, _) ->
+                        cont rankExpr
+                    | _ -> failwith "Type error"
+
+            | CardSuit cardExpr ->
+                match cont cardExpr with
+                    | RankSuitCard (_, suitExpr) ->
+                        cont suitExpr
+                    | _ -> failwith "Type error"
+
+            | CardSetSingleton cardExpr ->
+                match cont cardExpr with
+                    | RankSuitCard (rankExpr, suitExpr) ->
+                        match cont rankExpr, cont suitExpr with
+                            | RankLiteral rank, SuitLiteral suit ->
+                                Card(rank, suit)
+                                    |> Set.singleton
+                                    |> CardSetLiteral
+                            | _ -> failwith "Type error"
+                    | _ -> failwith "Type error"
+
+            | RankSuitCard (rankExpr, suitExpr) ->
+                RankSuitCard (cont rankExpr, cont suitExpr)
+
+            | Where (cardSetExpr, lambda) ->
+                match cont cardSetExpr, cont lambda with
+                    | CardSetLiteral cardSet, Lambda (argType, _)
+                        when argType = TCard ->
+                        cardSet
+                            |> Set.filter (fun card ->
+                                let cardExpr =
+                                    RankSuitCard (
+                                        RankLiteral card.Rank,
+                                        SuitLiteral card.Suit)
+                                match cont <| Apply (lambda, cardExpr) with
+                                    | BoolLiteral flag -> flag
+                                    | _ -> failwith "Type error")
+                            |> CardSetLiteral
+                    | _ -> failwith "Type error"
+
+                // function application
+            | Apply (lambda, arg) ->
+                match cont lambda with
+                    | Lambda (_, body) ->
+                        subst 0 arg body
+                            |> cont
+                    | _ -> failwith "Not a function"
+
+                // evaluate correct branch only
+            | If (cond, trueBranch, falseBranch) ->
+                match cont cond with
+                    | BoolLiteral true  -> cont trueBranch
+                    | BoolLiteral false -> cont falseBranch
+                    | _ -> failwith "Condition must be of type Boolean"
+
+                // no effect
+            | _ -> expr

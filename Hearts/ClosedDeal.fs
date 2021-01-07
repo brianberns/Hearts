@@ -76,7 +76,7 @@ module ClosedDeal =
     let currentTrick deal =
         match deal.CurrentTrickOpt with
             | Some trick -> trick
-            | None -> failwith "Deal is complete"
+            | None -> failwith "No current trick"
 
     /// Current player in the given deal.
     let currentPlayer deal =
