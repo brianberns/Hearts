@@ -20,6 +20,7 @@ type Expr =
         // bool
     | BoolLiteral of bool
     | Equal of Expr * Expr
+    | GreaterThan of Expr * Expr
 
         // int
     | IntLiteral of int
@@ -60,6 +61,11 @@ module Expr =
             assert(expected <> actual)
             failwith $"Type error: Expected {expected}, actual {actual}"
 
+        let isNumeric = function
+            | TInt
+            | TRank -> true
+            | _ -> false
+
         /// Determines the type of a term within a given environment,
         /// which is a list of types of free variables (i.e. variables
         /// bound at a higher level than this).
@@ -72,6 +78,14 @@ module Expr =
                 let rightType = loop env right
                 if leftType = rightType then TBool
                 else typeError leftType rightType
+
+            | GreaterThan (left, right) ->
+                let leftType = loop env left
+                if isNumeric leftType then
+                    let rightType = loop env right
+                    if leftType = rightType then TBool
+                    else typeError leftType rightType
+                else failwith "Not numeric"
 
             | IntLiteral _ -> TInt
 
@@ -182,6 +196,8 @@ module Expr =
                 // recursively substitute
             | Equal (left, right) ->
                 Equal (cont left, cont right)
+            | GreaterThan (left, right) ->
+                GreaterThan (cont left, cont right)
             | CardSetCount cardSetExpr ->
                 CardSetCount (cont cardSetExpr)
             | CardRank cardExpr ->
@@ -242,6 +258,14 @@ module Expr =
             | Equal (left, right) ->
                 let flag = (loop left = loop right)
                 BoolLiteral flag
+
+            | GreaterThan (left, right) ->
+                match loop left, loop right with
+                    | IntLiteral leftValue, IntLiteral rightValue ->
+                        BoolLiteral (leftValue > rightValue)
+                    | RankLiteral leftValue, RankLiteral rightValue ->
+                        BoolLiteral (leftValue > rightValue)
+                    | _ -> failwith "Type error"
 
             | CardSetCount cardSetExpr ->
                 match loop cardSetExpr with

@@ -109,23 +109,61 @@ module Program =
     [<EntryPoint>]
     let main argv =
 
-        // hand |> Set.where (fun card -> card.Suit = Suit.Spades)
-        let spadesExpr =
-            Where (
-                MyHand,
-                Lambda (
-                    TCard,
-                    Equal (
-                        CardSuit (Variable 0),
-                        SuitLiteral Suit.Spades)))
-        printfn "%A" <| Expr.typeOf spadesExpr
+        let Or (a, b) =
+            If (a, BoolLiteral true, b)
+
+        let And (a, b) =
+            If (a, b, BoolLiteral false)
+
+        let greaterThanOrEqualTo (x, y) =
+            Or (
+                Equal (x, y),
+                GreaterThan (x, y))
+
+        let spadesToPass =
+
+            let spades =
+                Where (
+                    MyHand,
+                    Lambda (
+                        TCard,
+                        Equal (
+                            CardSuit (Variable 0),
+                            SuitLiteral Suit.Spades)))
+            let nSpades =
+                CardSetCount spades
+
+            let highSpades =
+                Where (
+                    spades,
+                    Lambda (
+                        TCard,
+                        greaterThanOrEqualTo (
+                            CardRank (Variable 0),
+                            RankLiteral Rank.Queen)))
+            let nHighSpades =
+                CardSetCount highSpades
+
+            If (
+                Or (
+                    greaterThanOrEqualTo (nSpades, IntLiteral 4),
+                    And (
+                        Equal (nSpades, IntLiteral 4),
+                        Equal (nHighSpades, IntLiteral 1))),
+                CardSetLiteral Set.empty,
+                highSpades)
+
+        let expr = spadesToPass
+        expr
+            |> Expr.typeOf
+            |> printfn "%A"
 
         let deal =
             let rng = System.Random(0)
             let deck = Deck.shuffle rng
             let deal = OpenDeal.fromDeck Seat.South ExchangeDirection.Hold deck
             deal |> OpenDeal.startPlay
-        spadesExpr
+        expr
             |> Expr.eval deal
             |> printfn "%A"
 
