@@ -109,13 +109,16 @@ module Program =
     [<EntryPoint>]
     let main argv =
 
+        let Not a =
+            If (a, BoolLiteral false, BoolLiteral true)
+
         let Or (a, b) =
             If (a, BoolLiteral true, b)
 
         let And (a, b) =
             If (a, b, BoolLiteral false)
 
-        let greaterThanOrEqualTo (x, y) =
+        let GreaterThanOrEqualTo (x, y) =
             Or (
                 Equal (x, y),
                 GreaterThan (x, y))
@@ -138,7 +141,7 @@ module Program =
                     spades,
                     Lambda (
                         TCard,
-                        greaterThanOrEqualTo (
+                        GreaterThanOrEqualTo (
                             CardRank (Variable 0),
                             RankLiteral Rank.Queen)))
             let nHighSpades =
@@ -146,14 +149,28 @@ module Program =
 
             If (
                 Or (
-                    greaterThanOrEqualTo (nSpades, IntLiteral 4),
+                    GreaterThanOrEqualTo (nSpades, IntLiteral 4),
                     And (
                         Equal (nSpades, IntLiteral 4),
                         Equal (nHighSpades, IntLiteral 1))),
                 CardSetLiteral Set.empty,
                 highSpades)
 
-        let expr = spadesToPass
+        let othersToPass =
+            TakeDescending (
+                Where (
+                    MyHand,
+                    Lambda (
+                        TCard,
+                        Not (
+                            Equal (
+                                CardSuit (Variable 0),
+                                SuitLiteral Suit.Spades)))),
+                Subtract (
+                    IntLiteral 3,
+                    CardSetCount spadesToPass))
+
+        let expr = Union (spadesToPass, othersToPass)
         expr
             |> Expr.typeOf
             |> printfn "%A"

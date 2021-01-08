@@ -24,6 +24,8 @@ type Expr =
 
         // int
     | IntLiteral of int
+    | Add of IntLeft : Expr * IntRight : Expr
+    | Subtract of IntLeft : Expr * IntRight : Expr
     | CardSetCount of CardSet : Expr
 
         // rank
@@ -44,6 +46,9 @@ type Expr =
     | MyHand
     | LegalPlays
     | Where of CardSet : Expr * Lambda : Expr
+    | TakeAscending of CardSet : Expr * Count : Expr
+    | TakeDescending of CardSet : Expr * Count : Expr
+    | Union of CardSetLeft : Expr * CardSetRight : Expr
 
         // general
     | If of Cond : Expr * Then : Expr * Else : Expr
@@ -53,8 +58,8 @@ type Expr =
 
 module Expr =
 
-    /// Answers the type of the given term, if it is well-typed.
-    let typeOf term =
+    /// Answers the type of the given expression, if it is well-typed.
+    let typeOf expr =
 
         /// Raises a type error.
         let typeError (expected : Type) (actual : Type) =
@@ -69,114 +74,142 @@ module Expr =
         /// Determines the type of a term within a given environment,
         /// which is a list of types of free variables (i.e. variables
         /// bound at a higher level than this).
-        let rec loop env = function
+        let rec loop env expr =
+            let cont = loop env
+            match expr with
 
-            | BoolLiteral _ -> TBool
+                | BoolLiteral _ -> TBool
 
-            | Equal (left, right) ->
-                let leftType = loop env left
-                let rightType = loop env right
-                if leftType = rightType then TBool
-                else typeError leftType rightType
-
-            | GreaterThan (left, right) ->
-                let leftType = loop env left
-                if isNumeric leftType then
-                    let rightType = loop env right
+                | Equal (left, right) ->
+                    let leftType = cont left
+                    let rightType = cont right
                     if leftType = rightType then TBool
                     else typeError leftType rightType
-                else failwith "Not numeric"
 
-            | IntLiteral _ -> TInt
+                | GreaterThan (left, right) ->
+                    let leftType = cont left
+                    if isNumeric leftType then
+                        let rightType = cont right
+                        if leftType = rightType then TBool
+                        else typeError leftType rightType
+                    else failwith "Not numeric"
 
-            | CardSetCount cardSetExpr ->
-                let typ = loop env cardSetExpr
-                if typ = TCardSet then TInt
-                else typeError TCardSet typ
+                | IntLiteral _ -> TInt
 
-            | RankLiteral _ -> TRank
+                | Add (left, right)
+                | Subtract (left, right) ->
+                    let typ = cont left
+                    if typ = TInt then
+                        let typ = cont right
+                        if typ = TInt then TInt
+                        else typeError TInt typ
+                    else typeError TInt typ
 
-            | CardRank cardExpr ->
-                let typ = loop env cardExpr
-                if typ = TCard then TRank
-                else typeError TCard typ
+                | CardSetCount cardSetExpr ->
+                    let typ = cont cardSetExpr
+                    if typ = TCardSet then TInt
+                    else typeError TCardSet typ
 
-            | SuitLiteral _ -> TSuit
+                | RankLiteral _ -> TRank
 
-            | CardSuit cardExpr ->
-                let typ = loop env cardExpr
-                if typ = TCard then TSuit
-                else typeError TCard typ
+                | CardRank cardExpr ->
+                    let typ = cont cardExpr
+                    if typ = TCard then TRank
+                    else typeError TCard typ
 
-            | RankSuitCard (rankExpr, suitExpr) ->
-                let typ = loop env rankExpr
-                if typ = TRank then
-                    let typ = loop env suitExpr
-                    if typ = TSuit then TCard
-                    else typeError TSuit typ
-                else typeError TRank typ
+                | SuitLiteral _ -> TSuit
 
-            | CardSetMin cardSetExpr ->
-                let typ = loop env cardSetExpr
-                if typ = TCardSet then TCard
-                else typeError TCardSet typ
+                | CardSuit cardExpr ->
+                    let typ = cont cardExpr
+                    if typ = TCard then TSuit
+                    else typeError TCard typ
 
-            | CardSetLiteral _ -> TCardSet
+                | RankSuitCard (rankExpr, suitExpr) ->
+                    let typ = cont rankExpr
+                    if typ = TRank then
+                        let typ = cont suitExpr
+                        if typ = TSuit then TCard
+                        else typeError TSuit typ
+                    else typeError TRank typ
 
-            | CardSetSingleton cardExpr ->
-                let typ = loop env cardExpr
-                if typ = TCard then TCardSet
-                else typeError TCard typ
+                | CardSetMin cardSetExpr ->
+                    let typ = cont cardSetExpr
+                    if typ = TCardSet then TCard
+                    else typeError TCardSet typ
 
-            | MyHand
-            | LegalPlays -> TCardSet
+                | CardSetLiteral _ -> TCardSet
 
-            | Where (cardSetExpr, lambda) ->
-                let typ = loop env cardSetExpr
-                if typ = TCardSet then
-                    match loop env lambda with
-                         | TFunction (inType, outType) ->
-                            if inType = TCard then
-                                if outType = TBool then TCardSet
-                                else typeError TBool outType
-                            else typeError TCard inType
-                         | typ -> typeError (TFunction (TCard, TBool)) typ
-                else typeError TCardSet typ
+                | CardSetSingleton cardExpr ->
+                    let typ = cont cardExpr
+                    if typ = TCard then TCardSet
+                    else typeError TCard typ
 
-                // if cond then trueBranch else falseBranch
-            | If (cond, trueBranch, falseBranch) ->
-                match loop env cond with
-                    | TBool ->   // condition must be a plain Boolean
-                        let trueType = loop env trueBranch
-                        let falseType = loop env falseBranch
-                        if trueType = falseType then trueType   // branch types must match
-                        else typeError trueType falseType
-                    | typ -> typeError TBool typ
+                | MyHand
+                | LegalPlays -> TCardSet
 
-                // variable in the given environment
-            | Variable i ->
-                env
-                    |> List.tryItem i
-                    |> Option.defaultWith (fun () ->
-                        failwith "Unbound variable")
+                | Where (cardSetExpr, lambda) ->
+                    let typ = cont cardSetExpr
+                    if typ = TCardSet then
+                        match cont lambda with
+                             | TFunction (inType, outType) ->
+                                if inType = TCard then
+                                    if outType = TBool then TCardSet
+                                    else typeError TBool outType
+                                else typeError TCard inType
+                             | typ -> typeError (TFunction (TCard, TBool)) typ
+                    else typeError TCardSet typ
 
-                // fun (_ : paramType) -> body
-            | Lambda (paramType, body) ->
-                let bodyType =
-                    let env' = paramType :: env   // add param type to environment
-                    loop env' body
-                TFunction (paramType, bodyType)
+                | TakeAscending (cardSetExpr, countExpr)
+                | TakeDescending (cardSetExpr, countExpr) ->
+                    let typ = cont cardSetExpr
+                    if typ = TCardSet then
+                        let typ = cont countExpr
+                        if typ = TInt then TCardSet
+                        else typeError TInt typ
+                    else typeError TCardSet typ
 
-                // function application
-            | Apply (lambda, arg) ->
-                match loop env lambda with   // first term must be a function
-                    | TFunction (inType, outType) ->
-                        let typ = loop env arg
-                        if typ = inType then outType   // argument's type must match expected input type
-                        else typeError inType typ
-                    | _ -> failwith "Not a function"
+                | Union (cardSetExprA, cardSetExprB) ->
+                    let typ = cont cardSetExprA
+                    if typ = TCardSet then
+                        let typ = cont cardSetExprB
+                        if typ = TCardSet then TCardSet
+                        else typeError TCardSet typ
+                    else typeError TCardSet typ
 
-        loop [] term
+                    // if cond then trueBranch else falseBranch
+                | If (cond, trueBranch, falseBranch) ->
+                    match cont cond with
+                        | TBool ->   // condition must be a plain Boolean
+                            let trueType = cont trueBranch
+                            let falseType = cont falseBranch
+                            if trueType = falseType then trueType   // branch types must match
+                            else typeError trueType falseType
+                        | typ -> typeError TBool typ
+
+                    // variable in the given environment
+                | Variable i ->
+                    env
+                        |> List.tryItem i
+                        |> Option.defaultWith (fun () ->
+                            failwith "Unbound variable")
+
+                    // fun (_ : paramType) -> body
+                | Lambda (paramType, body) ->
+                    let bodyType =
+                        let env' = paramType :: env   // add param type to environment
+                        loop env' body
+                    TFunction (paramType, bodyType)
+
+                    // function application
+                | Apply (lambda, arg) ->
+                    match cont lambda with   // first term must be a function
+                        | TFunction (inType, outType) ->
+                            let typ = cont arg
+                            if typ = inType then outType   // argument's type must match expected input type
+                            else typeError inType typ
+                        | _ -> failwith "Not a function"
+
+        loop [] expr
 
     /// Replaces all occurrences of param with arg in body.
     let rec private subst iParam arg body =
@@ -198,6 +231,10 @@ module Expr =
                 Equal (cont left, cont right)
             | GreaterThan (left, right) ->
                 GreaterThan (cont left, cont right)
+            | Add (left, right) ->
+                Add (cont left, cont right)
+            | Subtract (left, right) ->
+                Subtract (cont left, cont right)
             | CardSetCount cardSetExpr ->
                 CardSetCount (cont cardSetExpr)
             | CardRank cardExpr ->
@@ -212,6 +249,12 @@ module Expr =
                 RankSuitCard (cont rankExpr, cont suitExpr)
             | Where (cardSetExpr, lambda) ->
                 Where (cont cardSetExpr, cont lambda)
+            | TakeAscending (cardSetExpr, countExpr) ->
+                TakeAscending (cont cardSetExpr, cont countExpr)
+            | TakeDescending (cardSetExpr, countExpr) ->
+                TakeDescending (cont cardSetExpr, cont countExpr)
+            | Union (left, right) ->
+                Union (cont left, cont right)
             | If (cond, trueBranch, falseBranch) ->
                 If (cont cond, cont trueBranch, cont falseBranch)
             | Apply (lambda, arg) ->
@@ -267,6 +310,18 @@ module Expr =
                         BoolLiteral (leftValue > rightValue)
                     | _ -> failwith "Type error"
 
+            | Add (leftInt, rightInt) ->
+                match loop leftInt, loop rightInt with
+                    | IntLiteral left, IntLiteral right ->
+                        IntLiteral (left + right)
+                    | _ -> failwith "Type error"
+
+            | Subtract (leftInt, rightInt) ->
+                match loop leftInt, loop rightInt with
+                    | IntLiteral left, IntLiteral right ->
+                        IntLiteral (left - right)
+                    | _ -> failwith "Type error"
+
             | CardSetCount cardSetExpr ->
                 match loop cardSetExpr with
                     | CardSetLiteral cardSet ->
@@ -317,6 +372,33 @@ module Expr =
                                 match loop <| Apply (lambda, cardExpr) with
                                     | BoolLiteral flag -> flag
                                     | _ -> failwith "Type error")
+                            |> CardSetLiteral
+                    | _ -> failwith "Type error"
+
+            | TakeAscending (cardSetExpr, countExpr) ->
+                match loop cardSetExpr, loop countExpr with
+                    | CardSetLiteral cardSet, IntLiteral count ->
+                        cardSet
+                            |> Seq.sort
+                            |> Seq.truncate count
+                            |> set
+                            |> CardSetLiteral
+                    | _ -> failwith "Type error"
+
+            | TakeDescending (cardSetExpr, countExpr) ->
+                match loop cardSetExpr, loop countExpr with
+                    | CardSetLiteral cardSet, IntLiteral count ->
+                        cardSet
+                            |> Seq.sortDescending
+                            |> Seq.truncate count
+                            |> set
+                            |> CardSetLiteral
+                    | _ -> failwith "Type error"
+
+            | Union (leftCardSetExpr, rightCardSetExpr) ->
+                match loop leftCardSetExpr, loop rightCardSetExpr with
+                    | CardSetLiteral left, CardSetLiteral right ->
+                        Set.union left right
                             |> CardSetLiteral
                     | _ -> failwith "Type error"
 
