@@ -200,38 +200,26 @@ module Expr =
             | LegalPlays -> body
 
                 // recursively substitute
-            | Equal (left, right) ->
-                Equal (cont left, cont right)
-            | GreaterThan (left, right) ->
-                GreaterThan (cont left, cont right)
-            | Add (left, right) ->
-                Add (cont left, cont right)
-            | Subtract (left, right) ->
-                Subtract (cont left, cont right)
-            | CardSetCount cardSetExpr ->
-                CardSetCount (cont cardSetExpr)
-            | CardRank cardExpr ->
-                CardRank (cont cardExpr)
-            | CardSuit cardExpr ->
-                CardSuit (cont cardExpr)
-            | CardSetMin cardSetExpr ->
-                CardSetMin (cont cardSetExpr)
-            | CardSetSingleton cardExpr ->
-                CardSetSingleton (cont cardExpr)
+            | Equal (left, right) -> Equal (cont left, cont right)
+            | GreaterThan (left, right) -> GreaterThan (cont left, cont right)
+            | Add (left, right) -> Add (cont left, cont right)
+            | Subtract (left, right) -> Subtract (cont left, cont right)
+            | CardSetCount cardSetExpr -> CardSetCount (cont cardSetExpr)
+            | CardRank cardExpr -> CardRank (cont cardExpr)
+            | CardSuit cardExpr -> CardSuit (cont cardExpr)
+            | CardSetMin cardSetExpr -> CardSetMin (cont cardSetExpr)
+            | CardSetSingleton cardExpr -> CardSetSingleton (cont cardExpr)
             | RankSuitCard (rankExpr, suitExpr) ->
                 RankSuitCard (cont rankExpr, cont suitExpr)
-            | Where (cardSetExpr, lambda) ->
-                Where (cont cardSetExpr, cont lambda)
+            | Where (cardSetExpr, lambda) -> Where (cont cardSetExpr, cont lambda)
             | TakeAscending (cardSetExpr, countExpr) ->
                 TakeAscending (cont cardSetExpr, cont countExpr)
             | TakeDescending (cardSetExpr, countExpr) ->
                 TakeDescending (cont cardSetExpr, cont countExpr)
-            | Union (left, right) ->
-                Union (cont left, cont right)
+            | Union (left, right) -> Union (cont left, cont right)
             | If (cond, trueBranch, falseBranch) ->
                 If (cont cond, cont trueBranch, cont falseBranch)
-            | Apply (lambda, arg) ->
-                Apply (cont lambda, cont arg)
+            | Apply (lambda, arg) -> Apply (cont lambda, cont arg)
 
     module private RankSuitCard =
 
