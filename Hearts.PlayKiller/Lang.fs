@@ -1,4 +1,4 @@
-﻿namespace rec Hearts.PlayKiller
+﻿namespace Hearts.PlayKiller
 
 open PlayingCards
 open Hearts
@@ -14,19 +14,32 @@ type Type =
     | TCardSet
     | TFunction of Input : Type * Output : Type
 
+module Type =
+
+    /// Numeric type?
+    let isNumeric = function
+        | TInt
+        | TRank -> true
+        | _ -> false
+
 /// An expression represents a typed value.
 type Expr =
 
+        // general
+    | Variable of Index : int
+    | Lambda of ParamType : Type * Body : Expr
+    | Apply of Lambda : Expr * Arg : Expr
+
         // bool
     | BoolLiteral of bool
+    | If of Cond : Expr * Then : Expr * Else : Expr
     | Equal of Expr * Expr
-    | GreaterThan of Expr * Expr
 
         // int
     | IntLiteral of int
+    | GreaterThan of Expr * Expr
     | Add of IntLeft : Expr * IntRight : Expr
     | Subtract of IntLeft : Expr * IntRight : Expr
-    | CardSetCount of CardSet : Expr
 
         // rank
     | RankLiteral of Rank
@@ -38,23 +51,18 @@ type Expr =
 
         // card
     | RankSuitCard of Rank : Expr * Suit : Expr
-    | CardSetMin of CardSet : Expr
 
         // card set
     | CardSetLiteral of Set<Card>
-    | CardSetSingleton of Expr
     | MyHand
     | LegalPlays
+    | CardSetSingleton of Expr
+    | CardSetCount of CardSet : Expr
+    | CardSetMin of CardSet : Expr
     | Where of CardSet : Expr * Lambda : Expr
     | TakeAscending of CardSet : Expr * Count : Expr
     | TakeDescending of CardSet : Expr * Count : Expr
     | Union of CardSetLeft : Expr * CardSetRight : Expr
-
-        // general
-    | If of Cond : Expr * Then : Expr * Else : Expr
-    | Variable of Index : int
-    | Lambda of ParamType : Type * Body : Expr
-    | Apply of Lambda : Expr * Arg : Expr
 
 module Expr =
 
@@ -66,19 +74,47 @@ module Expr =
             assert(expected <> actual)
             failwith $"Type error: Expected {expected}, actual {actual}"
 
-        let isNumeric = function
-            | TInt
-            | TRank -> true
-            | _ -> false
-
-        /// Determines the type of a term within a given environment,
-        /// which is a list of types of free variables (i.e. variables
-        /// bound at a higher level than this).
+        /// Determines the type of an expression within a given
+        /// environment, which is a list of types of free variables
+        /// (i.e. variables bound at a higher level than this).
         let rec loop env expr =
             let cont = loop env
             match expr with
 
+                    // variable in the given environment
+                | Variable i ->
+                    env
+                        |> List.tryItem i
+                        |> Option.defaultWith (fun () ->
+                            failwith "Unbound variable")
+
+                    // fun (_ : paramType) -> body
+                | Lambda (paramType, body) ->
+                    let bodyType =
+                        let env' = paramType :: env   // add param type to environment
+                        loop env' body
+                    TFunction (paramType, bodyType)
+
+                    // function application
+                | Apply (lambda, arg) ->
+                    match cont lambda with   // first expression must be a function
+                        | TFunction (inType, outType) ->
+                            let typ = cont arg
+                            if typ = inType then outType   // argument's type must match expected input type
+                            else typeError inType typ
+                        | _ -> failwith "Not a function"
+
                 | BoolLiteral _ -> TBool
+
+                    // if cond then trueBranch else falseBranch
+                | If (cond, trueBranch, falseBranch) ->
+                    match cont cond with
+                        | TBool ->   // condition must be a plain Boolean
+                            let trueType = cont trueBranch
+                            let falseType = cont falseBranch
+                            if trueType = falseType then trueType   // branch types must match
+                            else typeError trueType falseType
+                        | typ -> typeError TBool typ
 
                 | Equal (left, right) ->
                     let leftType = cont left
@@ -86,15 +122,15 @@ module Expr =
                     if leftType = rightType then TBool
                     else typeError leftType rightType
 
+                | IntLiteral _ -> TInt
+
                 | GreaterThan (left, right) ->
                     let leftType = cont left
-                    if isNumeric leftType then
+                    if Type.isNumeric leftType then
                         let rightType = cont right
                         if leftType = rightType then TBool
                         else typeError leftType rightType
                     else failwith "Not numeric"
-
-                | IntLiteral _ -> TInt
 
                 | Add (left, right)
                 | Subtract (left, right) ->
@@ -104,11 +140,6 @@ module Expr =
                         if typ = TInt then TInt
                         else typeError TInt typ
                     else typeError TInt typ
-
-                | CardSetCount cardSetExpr ->
-                    let typ = cont cardSetExpr
-                    if typ = TCardSet then TInt
-                    else typeError TCardSet typ
 
                 | RankLiteral _ -> TRank
 
@@ -132,20 +163,25 @@ module Expr =
                         else typeError TSuit typ
                     else typeError TRank typ
 
-                | CardSetMin cardSetExpr ->
-                    let typ = cont cardSetExpr
-                    if typ = TCardSet then TCard
-                    else typeError TCardSet typ
-
                 | CardSetLiteral _ -> TCardSet
+
+                | MyHand
+                | LegalPlays -> TCardSet
 
                 | CardSetSingleton cardExpr ->
                     let typ = cont cardExpr
                     if typ = TCard then TCardSet
                     else typeError TCard typ
 
-                | MyHand
-                | LegalPlays -> TCardSet
+                | CardSetCount cardSetExpr ->
+                    let typ = cont cardSetExpr
+                    if typ = TCardSet then TInt
+                    else typeError TCardSet typ
+
+                | CardSetMin cardSetExpr ->
+                    let typ = cont cardSetExpr
+                    if typ = TCardSet then TCard
+                    else typeError TCardSet typ
 
                 | Where (cardSetExpr, lambda) ->
                     let typ = cont cardSetExpr
@@ -168,46 +204,13 @@ module Expr =
                         else typeError TInt typ
                     else typeError TCardSet typ
 
-                | Union (cardSetExprA, cardSetExprB) ->
-                    let typ = cont cardSetExprA
+                | Union (left, right) ->
+                    let typ = cont left
                     if typ = TCardSet then
-                        let typ = cont cardSetExprB
+                        let typ = cont right
                         if typ = TCardSet then TCardSet
                         else typeError TCardSet typ
                     else typeError TCardSet typ
-
-                    // if cond then trueBranch else falseBranch
-                | If (cond, trueBranch, falseBranch) ->
-                    match cont cond with
-                        | TBool ->   // condition must be a plain Boolean
-                            let trueType = cont trueBranch
-                            let falseType = cont falseBranch
-                            if trueType = falseType then trueType   // branch types must match
-                            else typeError trueType falseType
-                        | typ -> typeError TBool typ
-
-                    // variable in the given environment
-                | Variable i ->
-                    env
-                        |> List.tryItem i
-                        |> Option.defaultWith (fun () ->
-                            failwith "Unbound variable")
-
-                    // fun (_ : paramType) -> body
-                | Lambda (paramType, body) ->
-                    let bodyType =
-                        let env' = paramType :: env   // add param type to environment
-                        loop env' body
-                    TFunction (paramType, bodyType)
-
-                    // function application
-                | Apply (lambda, arg) ->
-                    match cont lambda with   // first term must be a function
-                        | TFunction (inType, outType) ->
-                            let typ = cont arg
-                            if typ = inType then outType   // argument's type must match expected input type
-                            else typeError inType typ
-                        | _ -> failwith "Not a function"
 
         loop [] expr
 
@@ -216,6 +219,19 @@ module Expr =
         let cont = subst iParam arg   // shorthand for simple recursive substitution
         match body with
 
+                // substitute iff variables match
+            | Variable iVar ->
+                match compare iVar iParam with
+                     | -1 -> body                  // not a match: no effect
+                     |  0 -> arg                   // match: substitute value
+                     |  1 -> Variable (iVar - 1)   // free variable: shift to maintain external references to it
+                     |  _ -> failwith "Unexpected"
+
+                // current var0 is known as var1 within
+            | Lambda (argType, body') ->
+                let body' = subst (iParam+1) arg body'
+                Lambda (argType, body')
+
                 // no effect
             | BoolLiteral _
             | IntLiteral _
@@ -223,8 +239,7 @@ module Expr =
             | SuitLiteral _
             | CardSetLiteral _
             | MyHand
-            | LegalPlays
-                -> body
+            | LegalPlays -> body
 
                 // recursively substitute
             | Equal (left, right) ->
@@ -260,19 +275,6 @@ module Expr =
             | Apply (lambda, arg) ->
                 Apply (cont lambda, cont arg)
 
-                // substitute iff variables match
-            | Variable iVar ->
-                match compare iVar iParam with
-                     | -1 -> body                  // not a match: no effect
-                     |  0 -> arg                   // match: substitute value
-                     |  1 -> Variable (iVar - 1)   // free variable: shift to maintain external references to it
-                     |  _ -> failwith "Unexpected"
-
-                // current var0 is known as var1 within
-            | Lambda (argType, body') ->
-                let body' = subst (iParam+1) arg body'
-                Lambda (argType, body')
-
     module private RankSuitCard =
 
         /// Creates a card expression from the given card.
@@ -285,6 +287,21 @@ module Expr =
     let eval deal expr =
 
         let rec loop = function
+
+                // function application
+            | Apply (lambda, arg) ->
+                match loop lambda with
+                    | Lambda (_, body) ->
+                        subst 0 arg body
+                            |> loop
+                    | _ -> failwith "Not a function"
+
+                // evaluate correct branch only
+            | If (cond, trueBranch, falseBranch) ->
+                match loop cond with
+                    | BoolLiteral true  -> loop trueBranch
+                    | BoolLiteral false -> loop falseBranch
+                    | _ -> failwith "Condition must be of type Boolean"
 
             | MyHand ->
                 deal
@@ -401,21 +418,6 @@ module Expr =
                         Set.union left right
                             |> CardSetLiteral
                     | _ -> failwith "Type error"
-
-                // function application
-            | Apply (lambda, arg) ->
-                match loop lambda with
-                    | Lambda (_, body) ->
-                        subst 0 arg body
-                            |> loop
-                    | _ -> failwith "Not a function"
-
-                // evaluate correct branch only
-            | If (cond, trueBranch, falseBranch) ->
-                match loop cond with
-                    | BoolLiteral true  -> loop trueBranch
-                    | BoolLiteral false -> loop falseBranch
-                    | _ -> failwith "Condition must be of type Boolean"
 
                 // no effect
             | expr -> expr

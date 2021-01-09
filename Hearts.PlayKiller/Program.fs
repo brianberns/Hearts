@@ -123,55 +123,58 @@ module Program =
                 Equal (x, y),
                 GreaterThan (x, y))
 
-        let spadesToPass =
+        let passExpr =
 
-            let spades =
-                Where (
-                    MyHand,
-                    Lambda (
-                        TCard,
-                        Equal (
-                            CardSuit (Variable 0),
-                            SuitLiteral Suit.Spades)))
-            let nSpades =
-                CardSetCount spades
+            let spadesToPass =
 
-            let highSpades =
-                Where (
-                    spades,
-                    Lambda (
-                        TCard,
-                        GreaterThanOrEqualTo (
-                            CardRank (Variable 0),
-                            RankLiteral Rank.Queen)))
-            let nHighSpades =
-                CardSetCount highSpades
-
-            If (
-                Or (
-                    GreaterThanOrEqualTo (nSpades, IntLiteral 4),
-                    And (
-                        Equal (nSpades, IntLiteral 4),
-                        Equal (nHighSpades, IntLiteral 1))),
-                CardSetLiteral Set.empty,
-                highSpades)
-
-        let othersToPass =
-            TakeDescending (
-                Where (
-                    MyHand,
-                    Lambda (
-                        TCard,
-                        Not (
+                let spades =
+                    Where (
+                        MyHand,
+                        Lambda (
+                            TCard,
                             Equal (
                                 CardSuit (Variable 0),
-                                SuitLiteral Suit.Spades)))),
-                Subtract (
-                    IntLiteral 3,
-                    CardSetCount spadesToPass))
+                                SuitLiteral Suit.Spades)))
+                let nSpades =
+                    CardSetCount spades
 
-        let expr = Union (spadesToPass, othersToPass)
-        expr
+                let highSpades =
+                    Where (
+                        spades,
+                        Lambda (
+                            TCard,
+                            GreaterThanOrEqualTo (
+                                CardRank (Variable 0),
+                                RankLiteral Rank.Queen)))
+                let nHighSpades =
+                    CardSetCount highSpades
+
+                If (
+                    Or (
+                        GreaterThanOrEqualTo (nSpades, IntLiteral 4),
+                        And (
+                            Equal (nSpades, IntLiteral 4),
+                            Equal (nHighSpades, IntLiteral 1))),
+                    CardSetLiteral Set.empty,
+                    highSpades)
+
+            let othersToPass =
+                TakeDescending (
+                    Where (
+                        MyHand,
+                        Lambda (
+                            TCard,
+                            Not (
+                                Equal (
+                                    CardSuit (Variable 0),
+                                    SuitLiteral Suit.Spades)))),
+                    Subtract (
+                        IntLiteral 3,
+                        CardSetCount spadesToPass))
+
+            Union (spadesToPass, othersToPass)
+
+        passExpr
             |> Expr.typeOf
             |> printfn "%A"
 
@@ -180,7 +183,7 @@ module Program =
             let deck = Deck.shuffle rng
             let deal = OpenDeal.fromDeck Seat.South ExchangeDirection.Hold deck
             deal |> OpenDeal.startPlay
-        expr
+        passExpr
             |> Expr.eval deal
             |> printfn "%A"
 
