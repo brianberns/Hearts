@@ -74,12 +74,6 @@ module Expr =
             assert(expected <> actual)
             failwith $"Type error: Expected {expected}, actual {actual}"
 
-        /// Checks for a type error.
-        let checkType expected actual cont =
-            if expected <> actual then
-                typeError expected actual
-            else cont ()
-
         /// Determines the type of an expression within a given
         /// environment, which is a list of types of free variables
         /// (i.e. variables bound at a higher level than this).
@@ -87,9 +81,24 @@ module Expr =
 
             let cont = loop env
 
+            /// Checks for a type error.
+            let checkType expected actual f =
+                if expected <> actual then
+                    typeError expected actual
+                else f ()
+
+            /// Checks for a type error.
             let check expected expr result =
                 let actual = cont expr
                 checkType expected actual (fun () -> result)
+
+            /// Checks for a type error.
+            let check2
+                (leftExpected, leftExpr)
+                (rightExpected, rightExpr)
+                result =
+                checkType leftExpected (cont leftExpr) (fun () ->
+                    check rightExpected rightExpr result)
 
             match expr with
 
@@ -114,23 +123,17 @@ module Expr =
                             check inType arg outType
                         | _ -> failwith "Not a function"
 
-                | BoolLiteral _ -> TBool
-
                     // if cond then trueBranch else falseBranch
                 | If (cond, trueBranch, falseBranch) ->
                     checkType TBool (cont cond) (fun () ->
                         let trueType = cont trueBranch
                         let falseType = cont falseBranch
-                        checkType trueType falseType (fun () ->
-                            trueType))
+                        checkType trueType falseType (fun () -> trueType))
 
                 | Equal (left, right) ->
                     let leftType = cont left
                     let rightType = cont right
-                    checkType leftType rightType (fun () ->
-                        TBool)
-
-                | IntLiteral _ -> TInt
+                    checkType leftType rightType (fun () -> TBool)
 
                 | GreaterThan (left, right) ->
                     let leftType = cont left
@@ -140,49 +143,32 @@ module Expr =
 
                 | Add (left, right)
                 | Subtract (left, right) ->
-                    checkType TInt (cont left) (fun () ->
-                        check TInt right TInt)
+                    check2 (TInt, left) (TInt, right) TInt
 
+                | BoolLiteral _ -> TBool
+                | IntLiteral _ -> TInt
                 | RankLiteral _ -> TRank
-
-                | CardRank cardExpr ->
-                    check TCard cardExpr TRank
-
+                | CardRank cardExpr -> check TCard cardExpr TRank
                 | SuitLiteral _ -> TSuit
-
-                | CardSuit cardExpr ->
-                    check TCard cardExpr TSuit
-
+                | CardSuit cardExpr -> check TCard cardExpr TSuit
                 | RankSuitCard (rankExpr, suitExpr) ->
-                    checkType TRank (cont rankExpr) (fun () ->
-                        check TSuit suitExpr TCard)
-
+                    check2 (TRank, rankExpr) (TSuit, suitExpr) TCard
                 | CardSetLiteral _ -> TCardSet
-
                 | MyHand
                 | LegalPlays -> TCardSet
-
-                | CardSetSingleton cardExpr ->
-                    check TCard cardExpr TCardSet
-
-                | CardSetCount cardSetExpr ->
-                    check TCardSet cardSetExpr TInt
-
-                | CardSetMin cardSetExpr ->
-                    check TCardSet cardSetExpr TCard
-
+                | CardSetSingleton cardExpr -> check TCard cardExpr TCardSet
+                | CardSetCount cardSetExpr -> check TCardSet cardSetExpr TInt
+                | CardSetMin cardSetExpr -> check TCardSet cardSetExpr TCard
                 | Where (cardSetExpr, lambda) ->
-                    checkType TCardSet (cont cardSetExpr) (fun () ->
-                        check (TFunction (TCard, TBool)) lambda TCardSet)
-
+                    check2
+                        (TCardSet, cardSetExpr)
+                        (TFunction (TCard, TBool), lambda)
+                        TCardSet
                 | TakeAscending (cardSetExpr, countExpr)
                 | TakeDescending (cardSetExpr, countExpr) ->
-                    checkType TCardSet (cont cardSetExpr) (fun () ->
-                        check TInt countExpr TCardSet)
-
+                    check2 (TCardSet, cardSetExpr) (TInt, countExpr) TCardSet
                 | Union (left, right) ->
-                    checkType TCardSet (cont left) (fun () ->
-                        check TCardSet right TCardSet)
+                    check2 (TCardSet, left) (TCardSet, right) TCardSet
 
         loop [] expr
 
