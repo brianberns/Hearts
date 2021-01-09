@@ -74,11 +74,23 @@ module Expr =
             assert(expected <> actual)
             failwith $"Type error: Expected {expected}, actual {actual}"
 
+        /// Checks for a type error.
+        let checkType expected actual cont =
+            if expected <> actual then
+                typeError expected actual
+            else cont ()
+
         /// Determines the type of an expression within a given
         /// environment, which is a list of types of free variables
         /// (i.e. variables bound at a higher level than this).
         let rec loop env expr =
+
             let cont = loop env
+
+            let check expected expr result =
+                let actual = cont expr
+                checkType expected actual (fun () -> result)
+
             match expr with
 
                     // variable in the given environment
@@ -97,71 +109,53 @@ module Expr =
 
                     // function application
                 | Apply (lambda, arg) ->
-                    match cont lambda with   // first expression must be a function
+                    match cont lambda with
                         | TFunction (inType, outType) ->
-                            let typ = cont arg
-                            if typ = inType then outType   // argument's type must match expected input type
-                            else typeError inType typ
+                            check inType arg outType
                         | _ -> failwith "Not a function"
 
                 | BoolLiteral _ -> TBool
 
                     // if cond then trueBranch else falseBranch
                 | If (cond, trueBranch, falseBranch) ->
-                    match cont cond with
-                        | TBool ->   // condition must be a plain Boolean
-                            let trueType = cont trueBranch
-                            let falseType = cont falseBranch
-                            if trueType = falseType then trueType   // branch types must match
-                            else typeError trueType falseType
-                        | typ -> typeError TBool typ
+                    checkType TBool (cont cond) (fun () ->
+                        let trueType = cont trueBranch
+                        let falseType = cont falseBranch
+                        checkType trueType falseType (fun () ->
+                            trueType))
 
                 | Equal (left, right) ->
                     let leftType = cont left
                     let rightType = cont right
-                    if leftType = rightType then TBool
-                    else typeError leftType rightType
+                    checkType leftType rightType (fun () ->
+                        TBool)
 
                 | IntLiteral _ -> TInt
 
                 | GreaterThan (left, right) ->
                     let leftType = cont left
                     if Type.isNumeric leftType then
-                        let rightType = cont right
-                        if leftType = rightType then TBool
-                        else typeError leftType rightType
+                        check leftType right TBool
                     else failwith "Not numeric"
 
                 | Add (left, right)
                 | Subtract (left, right) ->
-                    let typ = cont left
-                    if typ = TInt then
-                        let typ = cont right
-                        if typ = TInt then TInt
-                        else typeError TInt typ
-                    else typeError TInt typ
+                    checkType TInt (cont left) (fun () ->
+                        check TInt right TInt)
 
                 | RankLiteral _ -> TRank
 
                 | CardRank cardExpr ->
-                    let typ = cont cardExpr
-                    if typ = TCard then TRank
-                    else typeError TCard typ
+                    check TCard cardExpr TRank
 
                 | SuitLiteral _ -> TSuit
 
                 | CardSuit cardExpr ->
-                    let typ = cont cardExpr
-                    if typ = TCard then TSuit
-                    else typeError TCard typ
+                    check TCard cardExpr TSuit
 
                 | RankSuitCard (rankExpr, suitExpr) ->
-                    let typ = cont rankExpr
-                    if typ = TRank then
-                        let typ = cont suitExpr
-                        if typ = TSuit then TCard
-                        else typeError TSuit typ
-                    else typeError TRank typ
+                    checkType TRank (cont rankExpr) (fun () ->
+                        check TSuit suitExpr TCard)
 
                 | CardSetLiteral _ -> TCardSet
 
@@ -169,48 +163,26 @@ module Expr =
                 | LegalPlays -> TCardSet
 
                 | CardSetSingleton cardExpr ->
-                    let typ = cont cardExpr
-                    if typ = TCard then TCardSet
-                    else typeError TCard typ
+                    check TCard cardExpr TCardSet
 
                 | CardSetCount cardSetExpr ->
-                    let typ = cont cardSetExpr
-                    if typ = TCardSet then TInt
-                    else typeError TCardSet typ
+                    check TCardSet cardSetExpr TInt
 
                 | CardSetMin cardSetExpr ->
-                    let typ = cont cardSetExpr
-                    if typ = TCardSet then TCard
-                    else typeError TCardSet typ
+                    check TCardSet cardSetExpr TCard
 
                 | Where (cardSetExpr, lambda) ->
-                    let typ = cont cardSetExpr
-                    if typ = TCardSet then
-                        match cont lambda with
-                             | TFunction (inType, outType) ->
-                                if inType = TCard then
-                                    if outType = TBool then TCardSet
-                                    else typeError TBool outType
-                                else typeError TCard inType
-                             | typ -> typeError (TFunction (TCard, TBool)) typ
-                    else typeError TCardSet typ
+                    checkType TCardSet (cont cardSetExpr) (fun () ->
+                        check (TFunction (TCard, TBool)) lambda TCardSet)
 
                 | TakeAscending (cardSetExpr, countExpr)
                 | TakeDescending (cardSetExpr, countExpr) ->
-                    let typ = cont cardSetExpr
-                    if typ = TCardSet then
-                        let typ = cont countExpr
-                        if typ = TInt then TCardSet
-                        else typeError TInt typ
-                    else typeError TCardSet typ
+                    checkType TCardSet (cont cardSetExpr) (fun () ->
+                        check TInt countExpr TCardSet)
 
                 | Union (left, right) ->
-                    let typ = cont left
-                    if typ = TCardSet then
-                        let typ = cont right
-                        if typ = TCardSet then TCardSet
-                        else typeError TCardSet typ
-                    else typeError TCardSet typ
+                    checkType TCardSet (cont left) (fun () ->
+                        check TCardSet right TCardSet)
 
         loop [] expr
 
