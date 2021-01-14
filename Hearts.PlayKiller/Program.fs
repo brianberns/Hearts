@@ -9,97 +9,191 @@ module Naive =
 
         let hand = deal |> OpenDeal.currentHand
 
-            // determine spades to pass
-        let spadesToPass =
+        let cards =
 
-            let spades =
+            let spadeCandidates =
+                [| "QS"; "KS"; "AS" |]
+                    |> Seq.map Card.fromString
+                    |> Seq.where (fun card ->
+                        hand.Contains(card))
+                    |> set
+
+            let clubCandidates =
+                let clubCards =
+                    hand
+                        |> Seq.where (fun card ->
+                            card.Suit = Suit.Clubs)
+                        |> Seq.toArray
+                if clubCards.Length = 1 then
+                    clubCards
+                else
+                    Array.empty
+
+            let diamondCandidates =
+                let diamondCards =
+                    hand
+                        |> Seq.where (fun card ->
+                            card.Suit = Suit.Diamonds)
+                        |> Seq.toArray
+                if diamondCards.Length = 1 then
+                    diamondCards
+                else
+                    Array.empty
+
+            let heartCandidates =
                 hand
                     |> Seq.where (fun card ->
-                        card.Suit = Suit.Spades)
+                        card.Suit = Suit.Hearts)
+                    |> Seq.sortDescending
                     |> Seq.toArray
-            let nSpades = spades.Length
 
-            let highSpades =
-                spades
-                    |> Array.where (fun card ->
-                        card.Rank >= Rank.Queen)
-            let nHighSpades = highSpades.Length
+            [|
+                yield! spadeCandidates
+                yield! clubCandidates
+                yield! diamondCandidates
+                yield! heartCandidates
+            |] |> Seq.truncate 3 |> set
 
-            if nSpades > 4
-                || (nSpades = 4 && nHighSpades = 1) then
-                Set.empty
-            else
-                Set highSpades
-                
-            // determine other cards to pass
-        let othersToPass =
-            let nOthers =
-                Exchange.numCards - spadesToPass.Count
+        let moreCards =
             hand
                 |> Seq.where (fun card ->
-                    card.Suit <> Suit.Spades)
-                |> Seq.sortDescending
-                |> Seq.take nOthers
+                    cards
+                        |> Set.contains card
+                        |> not)
+                |> Seq.sortByDescending (fun card ->
+                    card.Rank)
+                |> Seq.take (3 - cards.Count)
                 |> Set
 
-        spadesToPass + othersToPass
-
-    let cardQS = Card(Rank.Queen, Suit.Spades)
+        Set.union cards moreCards
 
     let makePlay deal _ =
 
         let hand = deal |> OpenDeal.currentHand
+        let trick =
+            deal.ClosedDeal |> ClosedDeal.currentTrick
         let legalPlays =
             deal.ClosedDeal
                 |> ClosedDeal.legalPlays hand
                 |> Seq.toArray
-        let trick =
-            deal.ClosedDeal |> ClosedDeal.currentTrick
 
-        let cardOpt =
-            match trick.Cards.Length with
-                | 0 ->
-                    if deal.ClosedDeal.PlayedCards.Contains(cardQS) then
-                        None
-                    else
-                        let highSpades, lowSpades =
-                            hand
-                                |> Seq.where (fun card ->
-                                    card.Suit = Suit.Spades)
-                                |> Seq.toArray
-                                |> Array.partition (fun card ->
-                                    card.Rank >= Rank.Queen)
-                        if highSpades.Length = 0 && lowSpades.Length > 0 then
-                            let card = lowSpades |> Seq.max
-                            assert(legalPlays |> Seq.contains card)
-                            Some card
-                        else None
-                | 3 ->
-                    let isTrickWinner card =
-                        let trick = trick |> Trick.addPlay card
-                        snd trick.HighPlayOpt.Value = card
-                    let winners, nonWinners =
+        /// Sluffs least desirable card.
+        let sluff () =
+            legalPlays
+                |> Seq.maxBy (fun card ->
+                    match card.Rank, card.Suit with
+                        | Rank.Queen, Suit.Spades -> 3, card.Rank
+                        | Rank.King, Suit.Spades
+                        | Rank.Ace, Suit.Spades -> 2, card.Rank
+                        | rank, Suit.Hearts -> 1, rank
+                        | rank, _ -> 0, rank)
+
+        match trick.SuitLedOpt with
+
+                // leading
+            | None ->
+
+                    // choose lowest legal card
+                let card =
+                    legalPlays
+                        |> Seq.minBy (fun card -> card.Rank)
+
+                    // ... unless it's the QS
+                if card.String = "QS" && legalPlays.Length > 0 then
+                    legalPlays
+                        |> Seq.where (fun card -> card.String <> "QS")
+                        |> Seq.minBy (fun card -> card.Rank)
+                else card
+
+                // following
+            | Some suitLed ->
+
+                    // can follow suit?
+                let canFollowSuit =
+                    legalPlays
+                        |> Seq.map (fun card ->
+                            card.Suit = suitLed)
+                        |> Seq.distinct
+                        |> Seq.exactlyOne
+
+                    // no points yet on trick?
+                let nPoints =
+                    trick.Cards
+                        |> Seq.sumBy (fun card -> card |> Card.pointValue)
+                if nPoints = 0 then
+                    if canFollowSuit then
+                        match suitLed with
+                            | Suit.Spades ->
+
+                                    // play QS on (AK)S winner
+                                let highSpadePlayed =
+                                    trick.Cards
+                                        |> Seq.exists (fun card ->
+                                            card.Rank >= Rank.King)
+                                let qs = Card.fromString "QS"
+                                let hasQS = legalPlays |> Seq.contains qs
+                                if highSpadePlayed && hasQS then
+                                    qs
+
+                                    // safe to take trick with highest non-Q?
+                                elif trick.Cards.Length = 3 then
+                                    legalPlays
+                                        |> Seq.sortDescending
+                                        |> Seq.where (fun card ->
+                                            card.Rank <> Rank.Queen)
+                                        |> Seq.tryHead
+                                        |> Option.defaultValue qs
+
+                                    // play highest <Q if possible
+                                else
+                                    legalPlays
+                                        |> Seq.sortDescending
+                                        |> Seq.where (fun card ->
+                                            card.Rank < Rank.Queen)
+                                        |> Seq.tryHead
+                                        |> Option.defaultWith (fun () ->
+                                            legalPlays |> Seq.max)
+
+                                // safe to play highest card
+                            | Suit.Clubs
+                            | Suit.Diamonds ->
+                                legalPlays |> Seq.max
+
+                            | _ -> failwith "Unexpected"
+
+                    else sluff ()
+                elif canFollowSuit then
+
+                        // play highest trick loser, if possible
+                    let losers =
                         legalPlays
-                            |> Array.partition isTrickWinner
-                    if nonWinners.Length > 0 then
-                        nonWinners
-                            |> Seq.maxBy (fun card ->
-                                card |> Card.pointValue, card.Rank)
-                            |> Some
-                    else
-                        let winners =
-                            winners
-                                |> Array.where (fun card -> card <> cardQS)
-                        if winners.Length > 0 then
-                            winners |> Seq.max |> Some
-                        else None
-                | _ -> None
+                            |> Seq.where (fun card ->
+                                let highCardOpt =
+                                    trick
+                                        |> Trick.addPlay card
+                                        |> Trick.highCardOpt
+                                highCardOpt <> Some card)
+                            |> Seq.toArray
+                    if losers.Length > 0 then
+                        losers |> Seq.max
 
-        cardOpt
-            |> Option.defaultWith (fun () ->
-                legalPlays
-                    |> Seq.sort
-                    |> Seq.head)
+                        // sitting last, play highest safe trick winner
+                    elif trick.Cards.Length = 3 then
+                        legalPlays
+                            |> Seq.sortDescending
+                            |> Seq.where (fun card ->
+                                card.String <> "QS")
+                            |> Seq.tryHead
+                            |> Option.defaultWith (fun () ->
+                                legalPlays |> Seq.max)
+
+                        // play lowest trick winner
+                    else
+                        legalPlays
+                            |> Seq.sort
+                            |> Seq.head
+
+                else sluff ()
 
     let player =
         Player.create makePass makePlay
@@ -108,86 +202,6 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
-
-        let Not a =
-            If (a, BoolLiteral false, BoolLiteral true)
-
-        let Or (a, b) =
-            If (a, BoolLiteral true, b)
-
-        let And (a, b) =
-            If (a, b, BoolLiteral false)
-
-        let GreaterThanOrEqualTo (x, y) =
-            Or (
-                Equal (x, y),
-                GreaterThan (x, y))
-
-        let passExpr =
-
-            let spadesToPass =
-
-                let spades =
-                    Where (
-                        MyHand,
-                        Lambda (
-                            TCard,
-                            Equal (
-                                CardSuit (Variable 0),
-                                SuitLiteral Suit.Spades)))
-                let nSpades =
-                    CardSetCount spades
-
-                let highSpades =
-                    Where (
-                        spades,
-                        Lambda (
-                            TCard,
-                            GreaterThanOrEqualTo (
-                                CardRank (Variable 0),
-                                RankLiteral Rank.Queen)))
-                let nHighSpades =
-                    CardSetCount highSpades
-
-                If (
-                    Or (
-                        GreaterThanOrEqualTo (nSpades, IntLiteral 4),
-                        And (
-                            Equal (nSpades, IntLiteral 4),
-                            Equal (nHighSpades, IntLiteral 1))),
-                    CardSetLiteral Set.empty,
-                    highSpades)
-
-            let othersToPass =
-                TakeDescending (
-                    Where (
-                        MyHand,
-                        Lambda (
-                            TCard,
-                            Not (
-                                Equal (
-                                    CardSuit (Variable 0),
-                                    SuitLiteral Suit.Spades)))),
-                    Subtract (
-                        IntLiteral 3,
-                        CardSetCount spadesToPass))
-
-            Union (spadesToPass, othersToPass)
-
-        passExpr
-            |> Expr.typeOf
-            |> printfn "%A"
-
-        let deal =
-            let rng = System.Random(0)
-            let deck = Deck.shuffle rng
-            let deal = OpenDeal.fromDeck Seat.South ExchangeDirection.Hold deck
-            deal |> OpenDeal.startPlay
-        passExpr
-            |> Expr.eval deal
-            |> printfn "%A"
-
-        (*
         try
             let (ScoreMap scoreMap) = Killer.run Naive.player
             for (KeyValue(seat, points)) in scoreMap do
@@ -195,6 +209,5 @@ module Program =
         with ex ->
             printfn "%s" ex.Message
             printfn "%s" ex.StackTrace
-        *)
 
         0

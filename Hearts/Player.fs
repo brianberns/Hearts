@@ -14,16 +14,23 @@ type Player =
 
     /// Passes cards in the given deal.
     member player.Pass(deal, gameScore) =
-        player.MakePass deal gameScore
+        let cards = player.MakePass deal gameScore
+        assert(cards.Count = Exchange.numCards)
+        cards
 
     /// Plays a card in the given deal.
     member player.Play(deal, gameScore) =
         let hand = deal |> OpenDeal.currentHand
-        deal.ClosedDeal
-            |> ClosedDeal.legalPlays hand
-            |> Seq.tryExactlyOne
-            |> Option.defaultWith (fun () ->
-                player.MakePlay deal gameScore)
+        let legalPlays = 
+            deal.ClosedDeal
+                |> ClosedDeal.legalPlays hand
+        let card =
+            legalPlays
+                |> Seq.tryExactlyOne
+                |> Option.defaultWith (fun () ->
+                    player.MakePlay deal gameScore)
+        assert(legalPlays |> Seq.contains card)
+        card
 
 module Player =
 

@@ -8,7 +8,6 @@
   <ItemGroup>
     <Compile Include="Protocol.fs" />
     <Compile Include="Killer.fs" />
-    <Compile Include="Lang.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

@@ -43,6 +43,11 @@ module Trick =
         trick.Leader
             |> Seat.incr trick.Cards.Length
 
+    /// The high card on this trick, if any.
+    let highCardOpt trick =
+        trick.HighPlayOpt
+            |> Option.map snd
+
     /// Plays the given card on the given trick.
     let addPlay card trick =
         assert(trick.Cards.Length < Seat.numSeats)
