@@ -1,17 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>	  
-    <TargetFramework>net5.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Protocol.fs" />
-    <Compile Include="Killer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Hearts.Cfrm\Hearts.Cfrm.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
     <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
   </ItemGroup>

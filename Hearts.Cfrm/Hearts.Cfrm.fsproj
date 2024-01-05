@@ -6,12 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Prelude.fs" />
-    <Compile Include="Rank.fs" />
-    <Compile Include="Suit.fs" />
-    <Compile Include="Card.fs" />
-    <Compile Include="Deck.fs" />
-    <Compile Include="Hand.fs" />
+    <Compile Include="GameState.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cfrm" Version="2.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hearts\Hearts.fsproj" />
   </ItemGroup>
 
 </Project>

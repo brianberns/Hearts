@@ -194,13 +194,12 @@ module ClosedDeal =
                 | None -> failwith "Unexpected"
 
         {
-            deal with
-                CurrentTrickOpt = curTrickOpt
-                CompletedTricks = completedTricks
-                HeartsBroken = heartsBroken
-                PlayedCards = playedCards
-                Voids = voids
-                Score = score
+            CurrentTrickOpt = curTrickOpt
+            CompletedTricks = completedTricks
+            HeartsBroken = heartsBroken
+            PlayedCards = playedCards
+            Voids = voids
+            Score = score
         }
 
     /// Tricks in the given deal, in chronological order, including the

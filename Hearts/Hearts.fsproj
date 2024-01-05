@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-    <Platforms>AnyCPU;x64</Platforms>
+    <TargetFramework>net8.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +13,6 @@
     <Compile Include="Exchange.fs" />
     <Compile Include="OpenDeal.fs" />
     <Compile Include="Player.fs" />
-    <Compile Include="Session.fs" />
   </ItemGroup>
 
   <ItemGroup>

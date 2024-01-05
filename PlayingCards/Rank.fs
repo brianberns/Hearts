@@ -6,6 +6,7 @@ type Rank =
     | Three =  3
     | Four  =  4
     | Five  =  5
+    (*
     | Six   =  6
     | Seven =  7
     | Eight =  8
@@ -15,6 +16,7 @@ type Rank =
     | Queen = 12
     | King  = 13
     | Ace   = 14   // because Ace > King in most games
+    *)
 
 module Rank =
 
@@ -28,12 +30,14 @@ module Rank =
 
     /// Converts the given character to a rank.
     let fromChar = function
+        (*
         | 'T' -> Rank.Ten
         | 'J' -> Rank.Jack
         | 'Q' -> Rank.Queen
         | 'K' -> Rank.King
         | 'A' -> Rank.Ace
-        | c ->
+        *)
+        | (c : char) ->
             let n = int c - int '0'
             if n >= 2 && n <= 9 then
                 enum<Rank> n

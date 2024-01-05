@@ -8,7 +8,7 @@ module Card =
     let pointValue (card : Card) =
         match card.Rank, card.Suit with
             | _, Suit.Hearts -> 1
-            | Rank.Queen, Suit.Spades -> 13
+            // | Rank.Queen, Suit.Spades -> 13
             | _ -> 0
 
 /// One card played by each player in turn during a deal.
@@ -55,10 +55,8 @@ module Trick =
             trick with
                 Cards = card :: trick.Cards
                 SuitLedOpt =
-                    if trick.SuitLedOpt |> Option.isSome then
-                        trick.SuitLedOpt
-                    else
-                        Some card.Suit
+                    trick.SuitLedOpt
+                        |> Option.orElse (Some card.Suit)
                 HighPlayOpt =
                     let isHigh =
                         match trick.HighPlayOpt with
@@ -68,8 +66,7 @@ module Trick =
                                 else false
                             | None -> true
                     if isHigh then
-                        let player = trick |> currentPlayer
-                        Some (player, card)
+                        Some (currentPlayer trick, card)
                     else trick.HighPlayOpt
         }
 
@@ -86,6 +83,6 @@ module Trick =
 
     /// Each card in the given trick and its player, in chronological order.
     let plays trick =
-        let seats = trick.Leader |> Seat.cycle
-        let cards = trick.Cards |> Seq.rev
+        let seats = Seat.cycle trick.Leader
+        let cards = Seq.rev trick.Cards
         Seq.zip seats cards

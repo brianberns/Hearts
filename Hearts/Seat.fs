@@ -11,17 +11,13 @@ type Seat =
 
 module Seat =
 
-    /// All seats in order.
-    let allSeats =
-        Enum.getValues<Seat>
-
     /// Total number of seats.
     let numSeats =
-        allSeats.Length
+        Enum.getValues<Seat>.Length
 
     /// Converts the given seat to a character.
     let toChar seat =
-        "WNES".[int seat]
+        "WNES"[int seat]
 
     /// Converts the given character to a seat.
     let fromChar = function
@@ -31,14 +27,10 @@ module Seat =
         | 'S' -> Seat.South
         | _ -> failwith "Unexpected seat"
 
-    /// Modulo operation that works for negative numbers.
-    /// https://stackoverflow.com/questions/35848489/f-integer-integer-is-calculated-how
-    let inline (%!) a b =
-        (a % b + b) % b
-
     /// Nth seat after the given seat.
     let incr n (seat : Seat) =
-        (int seat + n) %! numSeats
+        assert(n >= 0)
+        (int seat + n) % numSeats
             |> enum<Seat>
 
     /// Seat that plays after the given seat.
