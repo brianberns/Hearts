@@ -27,7 +27,8 @@ module Program =
         let batchFileName = "Hearts.batch"
         let initialState =
             let fileInfo = FileInfo(batchFileName)
-            if fileInfo.Exists then
+            // if fileInfo.Exists then
+            if false then
                 printfn "Loading existing file"
                 let rng = Random(int fileInfo.Length)   // avoid revisiting original deals
                 CfrBatch.load batchFileName (fun _ -> createGame rng)
@@ -66,5 +67,5 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
-        minimize 100
+        minimize 1000
         0
