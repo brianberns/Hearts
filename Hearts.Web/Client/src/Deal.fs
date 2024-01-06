@@ -84,6 +84,7 @@ module Deal =
                         let deal =
                             Deck.shuffle rng
                                 |> OpenDeal.fromDeck dealer ExchangeDirection.Hold
+                                |> OpenDeal.startPlay
                         let persState =
                             { persState with
                                 RandomState = rng.State

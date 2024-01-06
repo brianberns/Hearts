@@ -42,7 +42,7 @@ module Rank =
             if n >= 2 && n <= 9 then
                 enum<Rank> n
             else
-                failwith "Unexpected rank char"
+                failwith $"Unexpected rank char: |{c}|"
 
 [<AutoOpen>]
 module RankExt =

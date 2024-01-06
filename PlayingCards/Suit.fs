@@ -27,7 +27,7 @@ module Suit =
         | 'D' | '♦' -> Suit.Diamonds
         | 'H' | '♥' -> Suit.Hearts
         | 'S' | '♠' -> Suit.Spades
-        | _ -> failwith "Unexpected suit char"
+        | c -> failwith $"Unexpected suit char: |{c}|"
 
 [<AutoOpen>]
 module SuitExt =
