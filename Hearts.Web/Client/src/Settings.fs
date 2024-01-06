@@ -18,7 +18,7 @@ module Settings =
         }
 
     /// Local storage key.
-    let private key = "Settings"
+    let private key = "HeartsSettings"
 
     /// Saves the given settings.
     let save (settings : Settings) =

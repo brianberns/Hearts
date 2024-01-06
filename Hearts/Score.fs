@@ -2,7 +2,7 @@
 
 open PlayingCards
 
-/// Points scored by each player during one or more deals.
+/// Points taken by each player during one or more deals.
 type Score =
     | ScoreMap of Map<Seat, int>
 
