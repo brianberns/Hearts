@@ -176,9 +176,7 @@ module Playout =
                     let persState' =
                         { persState with DealOpt = Some deal' }
                     let trick =
-                        match deal'.ClosedDeal.CurrentTrickOpt with
-                            | Some trick -> trick
-                            | None -> failwith "Unexpected"
+                        ClosedDeal.currentTrick deal'.ClosedDeal
                     if trick.Cards.Length % Seat.numSeats = 0 then   // save at trick boundary
                         PersistentState.save persState'
                     return! loop persState'
