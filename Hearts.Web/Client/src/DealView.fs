@@ -40,23 +40,18 @@ module DealView =
             |> Seq.toArray
             |> Promise.all
 
-    /// Creates a closed hand view of the given batches of card
-    /// backs.
-    let private closedView backsA backsB =
-        Seq.append backsA backsB
+    /// Creates a closed hand view of the given card backs.
+    let private closedView offset (backs : _[]) =
+        let numPlayers = 4
+        Seq.init ClosedDeal.numCardsPerHand (fun i ->
+            backs[numPlayers * i + offset])
             |> ClosedHandView.ofCardViews
 
     /// Creates an open hand view of the user's cards.
-    let private openView dealer deal =
+    let private openView deal =
         promise {
-            let iUser = Seat.getIndex Seat.User dealer
-            let! handView =
-                deal.UnplayedCards[iUser]
-                    |> OpenHandView.ofHand
-            deal.ClosedDeal.TrumpOpt
-                |> Option.iter (fun trump ->
-                    OpenHandView.establishTrump trump handView)
-            return handView
+            return! deal.UnplayedCardMap[Seat.User]
+                |> OpenHandView.ofHand
         }
 
     /// Animates the start of the given deal on the given surface.
@@ -65,26 +60,26 @@ module DealView =
 
                 // create closed hand views for dealing
             let! backs = getCardBacks surface
-            let closed1 = closedView backs[0.. 2] backs[12..14]
-            let closed2 = closedView backs[3.. 5] backs[15..17]
-            let closed3 = closedView backs[6.. 8] backs[18..20]
-            let closed0 = closedView backs[9..11] backs[21..23]   // dealer receives cards last
+            let closed1 = closedView 0 backs
+            let closed2 = closedView 1 backs
+            let closed3 = closedView 2 backs
+            let closed0 = closedView 3 backs   // dealer receives cards last
             let closedHandViews =
                 [| closed0; closed1; closed2; closed3 |]
 
                 // create open hand view for user
             let iUser = Seat.getIndex Seat.User dealer
-            let! openHandView = openView dealer deal
+            let! openHandView = openView deal
 
                 // deal animation
             let anim =
 
                     // animate hands being dealt
                 let seat iPlayer = Seat.incr iPlayer dealer
-                let anim1a, anim1b = HandView.dealAnim (seat 1) closed1
-                let anim2a, anim2b = HandView.dealAnim (seat 2) closed2
-                let anim3a, anim3b = HandView.dealAnim (seat 3) closed3
-                let anim0a, anim0b = HandView.dealAnim (seat 0) closed0
+                let anim1 = HandView.dealAnim (seat 1) closed1
+                let anim2 = HandView.dealAnim (seat 2) closed2
+                let anim3 = HandView.dealAnim (seat 3) closed3
+                let anim0 = HandView.dealAnim (seat 0) closed0
 
                     // animate user's hand reveal
                 let animReveal =
@@ -100,8 +95,7 @@ module DealView =
 
                     // assemble complete animation
                 [|
-                    anim1a; anim2a; anim3a; anim0a
-                    anim1b; anim2b; anim3b; anim0b
+                    anim1; anim2; anim3; anim0
                     animReveal; animRemove
                 |] |> Animation.Serial 
 
@@ -119,7 +113,7 @@ module DealView =
         }
 
     /// Creates and positions hand views for the given deal.
-    let private createHandViews (surface : JQueryElement) dealer deal =
+    let private createHandViews (surface : JQueryElement) deal =
 
         /// Sets positions of cards in the given hand.
         let setPositions seat handView =
@@ -131,9 +125,8 @@ module DealView =
         let closedViewPair seat =
             promise {
                 let! handView =
-                    let iSeat = Seat.getIndex seat dealer
                     Array.init
-                        deal.UnplayedCards[iSeat].Count
+                        deal.UnplayedCardMap[seat].Count
                         (fun _ -> CardView.ofBack ())
                         |> Promise.all
                         |> Promise.map ResizeArray
@@ -150,7 +143,7 @@ module DealView =
                     |> Promise.all
 
                 // create open hand view for user
-            let! openHandView = openView dealer deal
+            let! openHandView = openView deal
             setPositions Seat.South openHandView
 
             return [|
@@ -161,80 +154,7 @@ module DealView =
 
     /// Creates hand views for the given deal.
     let start surface dealer deal =
-        if deal.ClosedDeal.Auction.NumBids = 0 then
+        if ClosedDeal.numCardsPlayed deal.ClosedDeal = 0 then
             animate surface dealer deal
         else
-            createHandViews surface dealer deal   // no animation
-
-    /// Elements tracking high trump taken.
-    let private highElems =
-        [|
-            "#ewHigh"
-            "#nsHigh"
-        |] |> Array.map (~~)
-
-    /// Elements tracking low trump taken.
-    let private lowElems =
-        [|
-            "#ewLow"
-            "#nsLow"
-        |] |> Array.map (~~)
-
-    /// Elements tracking jack of trump taken.
-    let private jackElems =
-        [|
-            "#ewJack"
-            "#nsJack"
-        |] |> Array.map (~~)
-
-    /// Elements tracking game points taken.
-    let private gamePointsElems =
-        [|
-            "#ewGamePoints"
-            "#nsGamePoints"
-        |] |> Array.map (~~)
-
-    /// Displays deal status (e.g. high, low, jack, and game).
-    let displayStatus dealer deal =
-
-        let displayCard (elems : JQueryElement[]) historyFunc =
-
-                // reset all elements
-            for elem in elems do
-                elem.text("")
-
-                // display card, if it exists
-            option {
-                let! playout = deal.ClosedDeal.PlayoutOpt
-                let! rank, iTeam = historyFunc playout.History
-                let elem =
-                    let iAbsoluteTeam =
-                        (int dealer + iTeam) % Hearts.numTeams
-                    elems[iAbsoluteTeam]
-                let! trump = playout.TrumpOpt
-                let card = Card.create rank trump
-                elem.text(card.String)
-            } |> ignore
-
-        displayCard highElems (fun history -> history.HighTakenOpt)
-        displayCard lowElems (fun history -> history.LowTakenOpt)
-        displayCard jackElems (fun history ->
-            history.JackTakenOpt
-                |> Option.map (fun iTeam -> Rank.Jack, iTeam))
-
-            // game
-        let absoluteGameScore =
-            match deal.ClosedDeal.PlayoutOpt with
-                | Some playout ->
-                    playout.History.GameScore
-                        |> Game.absoluteScore dealer
-                | None -> AbstractScore.zero
-        for iTeam = 0 to Hearts.numTeams - 1 do
-            let gamePointsElem = gamePointsElems[iTeam]
-            let text =
-                let teamScore = absoluteGameScore[iTeam]
-                assert(Hearts.numTeams = 2)
-                if teamScore > absoluteGameScore[1 - iTeam] then
-                    $"▶ {teamScore}"
-                else string teamScore
-            gamePointsElem.text(text)
+            createHandViews surface deal   // no animation

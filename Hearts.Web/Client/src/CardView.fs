@@ -32,7 +32,7 @@ module CardView =
 
     /// Creates a card view.
     // https://stackoverflow.com/a/24201249/344223
-    let private create src name isTrump =
+    let private create src name =
         Promise.create (fun resolve reject ->
 
                 // create the image
@@ -42,8 +42,6 @@ module CardView =
             let cardView = ~~img : CardView
             cardView.attr("data-card", name)
             cardView.addClass("card")
-            if isTrump then
-                cardView.addClass("trump")
             JQueryElement.bringToFront cardView
 
                 // wait for image to load
@@ -126,8 +124,8 @@ module CardView =
         ] |> Map
 
     /// Creates a view of the given card.
-    let ofCard isTrump card =
-        create srcMap[card] card.String isTrump
+    let ofCard card =
+        create srcMap[card] card.String
 
     /// Image of card back.
     let private srcBack =
@@ -135,7 +133,7 @@ module CardView =
 
     /// Creates a view of a card back.
     let ofBack () =
-        create srcBack "Back" false
+        create srcBack "Back"
 
     /// Indicates whether the given card view is a card back.
     let isBack (cardView : CardView) =

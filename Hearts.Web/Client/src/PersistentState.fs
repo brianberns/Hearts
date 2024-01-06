@@ -11,11 +11,8 @@ open Hearts.Cfrm
 /// Persistent state.
 type PersistentState =
     {
-        /// Number of games won by each team.
-        GamesWon : AbstractScore
-
-        /// Absolute score of each team in the current game.
-        GameScore : AbstractScore
+        /// Number of points taken by each player.
+        PointsTaken : Score
 
         /// State of random number generator.
         RandomState : uint64   // can't persist entire RNG
@@ -24,7 +21,7 @@ type PersistentState =
         Dealer : Seat
 
         /// Current deal, if any.
-        DealOpt : Option<AbstractOpenDeal>
+        DealOpt : Option<OpenDeal>
     }
 
     /// Current deal.
@@ -35,11 +32,10 @@ type PersistentState =
 
 module PersistentState =
 
-    /// Creates initial persistent state.
-    let private create gamesWon =
+    /// Initial persistent state.
+    let private initial =
         {
-            GamesWon = gamesWon
-            GameScore = AbstractScore.zero
+            PointsTaken = Score.zero
             RandomState = Random().State   // start with arbitrary seed
             Dealer = Seat.South
             DealOpt = None
@@ -57,22 +53,8 @@ module PersistentState =
     let get () =
         let json = WebStorage.localStorage[key] 
         if isNull json then
-
-                // backward compatibility
-            let gamesWon =
-                let ewScore, nsScore =
-                    let parse (key : string) =
-                        let str = WebStorage.localStorage[key]
-                        WebStorage.localStorage.removeItem(key)
-                        if isNull str then 0
-                        else System.Int32.Parse(str)
-                    parse "ewGamesWon",
-                    parse "nsGamesWon"
-                AbstractScore [| ewScore; nsScore |]
-
-            let persState = create gamesWon
-            save persState
-            persState
+            save initial
+            initial
         else
             Json.parseAs<PersistentState>(json)
 

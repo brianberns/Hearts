@@ -43,10 +43,10 @@ module Trick =
         trick.Leader
             |> Seat.incr trick.Cards.Length
 
-    /// The high card on this trick, if any.
-    let highCardOpt trick =
+    /// The high player on this trick, if any.
+    let highPlayerOpt trick =
         trick.HighPlayOpt
-            |> Option.map snd
+            |> Option.map fst
 
     /// Plays the given card on the given trick.
     let addPlay card trick =

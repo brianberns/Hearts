@@ -44,32 +44,18 @@ module HandView =
     /// Deals the cards in the given hand view into their target
     /// position.
     let dealAnim seat (handView : HandView) =
-
-        assert(handView.Count = ClosedDeal.numCardsPerHand)
-        let batchSize = ClosedDeal.numCardsPerHand / 2
-        let batch1, batch2 =
-            let cardViews = Seq.toArray handView
-            cardViews[..batchSize-1],   // 0, 1, 2
-            cardViews[batchSize..]      // 3, 4, 5
-
-        /// Animate the given batch of cards.
-        let animate cardOffset (cardViews : CardView[]) =
-            let numCards = ClosedDeal.numCardsPerHand
-            [|
-                for iCard = 0 to batchSize - 1 do
-                    let cardView = cardViews[iCard]
-                    let actions =
-                        let centerPos = centerPosMap[seat]
-                        let iCard' = iCard + cardOffset
-                        seq {
-                            animateCard centerPos numCards iCard'
-                            BringToFront
-                        }
-                    for action in actions do
-                        yield Animation.create cardView action
-            |] |> Animation.Parallel
-
-        animate 0 batch1, animate batchSize batch2
+        [|
+            for iCard = 0 to handView.Count - 1 do
+                let cardView = handView[iCard]
+                let actions =
+                    let centerPos = centerPosMap[seat]
+                    seq {
+                        animateCard centerPos handView.Count iCard
+                        BringToFront
+                    }
+                for action in actions do
+                    yield Animation.create cardView action
+        |] |> Animation.Parallel
 
     /// Sets the positions of the cards in the given hand, without
     /// animation.
@@ -139,7 +125,7 @@ module OpenHandView =
                         | Suit.Diamonds -> 1   // red
                         | _ -> failwith "Unexpected"
                 iSuit, card.Rank)
-            |> Seq.map (CardView.ofCard false)
+            |> Seq.map (CardView.ofCard)
             |> Promise.all
             |> Promise.map ResizeArray
 
@@ -177,10 +163,3 @@ module OpenHandView =
                 animPlay
                 animAdjust
             |] |> Animation.Parallel
-
-    /// Establishes trump in the given hand view.
-    let establishTrump trump (handView : HandView) =
-        for cardView in handView do
-            let card = cardView |> CardView.card
-            if card.Suit = trump then
-                cardView.addClass("trump")

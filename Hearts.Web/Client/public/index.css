@@ -96,11 +96,6 @@ a {
     transform: translate(-50%, -50%);
 }
 
-.trump {
-    border: 3px solid #FFD700;
-    background-color: #FFD700;
-}
-
 .active {
     cursor: pointer;
 }

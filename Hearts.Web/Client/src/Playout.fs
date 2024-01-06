@@ -11,9 +11,9 @@ open Hearts.Cfrm
 module Playout =
 
     /// Answers legal plays in the given hand and deal.
-    let private getLegalPlays hand (closedDeal : AbstractClosedDeal) =
-        closedDeal.Playout
-            |> AbstractPlayout.legalPlays hand
+    let private getLegalPlays hand (closedDeal : ClosedDeal) =
+        closedDeal
+            |> ClosedDeal.legalPlays hand
             |> Set.ofSeq
 
     /// Playout context.
@@ -23,47 +23,29 @@ module Playout =
             Dealer : Seat
 
             /// Current deal.
-            Deal : AbstractOpenDeal
+            Deal : OpenDeal
 
             /// Animation of playing a card.
             AnimCardPlay : CardView -> Animation
 
             /// Animation of winning a trick.
             AnimTrickFinish : Seat -> Animation
-
-            /// Animation of establishing trump.
-            AnimEstablishTrump : Seat -> Suit -> Animation
         }
 
     /// Plays the given card on the current trick, and returns the
     /// seat of the resulting trick winner, if any.
     let private getTrickWinnerOpt context card =
-        assert(context.Deal.ClosedDeal.PlayoutOpt.IsSome)
         option {
-                // get trump suit, if any
-            let! playout = context.Deal.ClosedDeal.PlayoutOpt
-            let! trump = playout.TrumpOpt
-
                 // play card on current trick
-            let trick =
-                playout.CurrentTrick
-                    |> AbstractTrick.addPlay trump card
+            assert(context.Deal.ClosedDeal.CurrentTrickOpt.IsSome)
+            let! trick = context.Deal.ClosedDeal.CurrentTrickOpt
+            let trick' = Trick.addPlay card trick
 
                 // if this card completes the trick, determine winner
-            if trick |> AbstractTrick.isComplete then
-                return context.Dealer
-                    |> Seat.incr (
-                        AbstractTrick.highPlayerIndex trick)
-        }
-
-    /// Has trump just been established?
-    let private tryTrumpJustEstablished deal =
-        option {
-            let! playout = deal.ClosedDeal.PlayoutOpt
-            if playout.CurrentTrick.NumPlays = 1
-                && playout.History = AbstractPlayoutHistory.empty then
-                    assert(playout.TrumpOpt.IsSome)
-                    return! playout.TrumpOpt
+            assert(Trick.highPlayerOpt trick' |> Option.isSome)
+            let! highPlayer = Trick.highPlayerOpt trick'
+            if Trick.isComplete trick' then
+                return highPlayer
         }
 
     /// Plays the given card in the given deal and then continues
@@ -74,34 +56,23 @@ module Playout =
 
                 // write to log
             let seat =
-                AbstractOpenDeal.getCurrentSeat
-                    context.Dealer
-                    context.Deal
+                context.Deal.ClosedDeal |> ClosedDeal.currentPlayer
             console.log($"{Seat.toString seat} plays {card}")
 
                 // add the card to the deal
-            let deal =
-                context.Deal
-                    |> AbstractOpenDeal.addPlay card
-
-                // animate if setting trump
-            match tryTrumpJustEstablished deal with
-                | Some trump ->
-                    do! context.AnimEstablishTrump seat trump
-                        |> Animation.run
-                | None -> ()
+            let deal = OpenDeal.addPlay card context.Deal
 
                 // play the card
             do! context.AnimCardPlay cardView
                 |> Animation.run
 
                 // trick is complete?
-            let dealComplete = deal |> AbstractOpenDeal.isComplete
+            let dealComplete = ClosedDeal.isComplete deal.ClosedDeal
             match getTrickWinnerOpt context card with
                 | Some winner ->
 
-                        // track game points won
-                    DealView.displayStatus context.Dealer deal
+                        // track points taken
+                    // DealView.displayStatus context.Dealer deal
 
                         // animate
                     let animate () =
@@ -122,8 +93,7 @@ module Playout =
 
             // determine all legal plays
         let legalPlays =
-            let hand =
-                AbstractOpenDeal.currentHand context.Deal
+            let hand = OpenDeal.currentHand context.Deal
             getLegalPlays hand context.Deal.ClosedDeal
         assert(not legalPlays.IsEmpty)
 
@@ -155,18 +125,12 @@ module Playout =
     let private playAuto context =
         async {
                 // determine card to play
-            let! card =
-                WebPlayer.makePlay AbstractScore.zero context.Deal
+            let! card = WebPlayer.makePlay context.Deal
 
                 // create view of the selected card
             let! cardView =
-                let isTrump =
-                    option {
-                        let! trump = context.Deal.ClosedDeal.TrumpOpt
-                        return card.Suit = trump
-                    } |> Option.defaultValue true
                 card
-                    |> CardView.ofCard isTrump
+                    |> CardView.ofCard
                     |> Async.AwaitPromise
 
                 // play the card
@@ -176,9 +140,6 @@ module Playout =
 
     /// Runs the given deal's playout
     let run (persState : PersistentState) chooser (playoutMap : Map<_, _>) =
-        assert(
-            persState.Deal.ClosedDeal.Auction
-                |> AbstractAuction.isComplete)
 
         let dealer = persState.Dealer
 
@@ -187,23 +148,15 @@ module Playout =
             async {
                 let deal = persState.Deal
                 let isComplete =
-                    deal |> AbstractOpenDeal.isComplete
+                    ClosedDeal.isComplete deal.ClosedDeal
                 if isComplete then
-
-                        // cleanup at end of deal
-                    do! AuctionView.removeAnim ()
-                        |> Animation.run
-                        |> Async.AwaitPromise
-
                     return persState
                 else
                         // prepare current player
-                    let seat =
-                        AbstractOpenDeal.getCurrentSeat dealer deal
+                    let seat = ClosedDeal.currentPlayer deal.ClosedDeal
                     let (handView : HandView),
                         animCardPlay,
-                        animTrickFinish,
-                        animEstablishTrump =
+                        animTrickFinish =
                             playoutMap[seat]
                     let player =
                         if seat.IsUser then
@@ -218,15 +171,16 @@ module Playout =
                             Deal = deal
                             AnimCardPlay = animCardPlay
                             AnimTrickFinish = animTrickFinish
-                            AnimEstablishTrump = animEstablishTrump
                         }
 
                         // recurse until playout is complete
                     let persState' =
                         { persState with DealOpt = Some deal' }
                     let trick =
-                        deal'.ClosedDeal.Playout.CurrentTrick
-                    if trick.NumPlays % Seat.numSeats = 0 then   // save at trick boundary
+                        match deal'.ClosedDeal.CurrentTrickOpt with
+                            | Some trick -> trick
+                            | None -> failwith "Unexpected"
+                    if trick.Cards.Length % Seat.numSeats = 0 then   // save at trick boundary
                         PersistentState.save persState'
                     return! loop persState'
             }
