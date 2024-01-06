@@ -120,6 +120,9 @@ module ClosedDeal =
                         hand |> Seq.where isSuitLed
                     else hand
 
+#if MINI
+                cards
+#else
                     // no point cards on first trick (unless it's unavoidable)
                 if iTrick = 0 then
                     let nonPointCards =
@@ -129,6 +132,7 @@ module ClosedDeal =
                     if nonPointCards |> Seq.isEmpty then cards   // !!!
                     else nonPointCards
                 else cards
+#endif
 
     /// Is the given player known to be void in the given suit?
     let isVoid seat suit deal =

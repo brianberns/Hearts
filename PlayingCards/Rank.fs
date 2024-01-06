@@ -5,7 +5,7 @@ type Rank =
     | Two   =  2
     | Three =  3
     | Four  =  4
-    (*
+#if !MINI
     | Five  =  5
     | Six   =  6
     | Seven =  7
@@ -16,7 +16,7 @@ type Rank =
     | Queen = 12
     | King  = 13
     | Ace   = 14   // because Ace > King in most games
-    *)
+#endif
 
 module Rank =
 
@@ -30,13 +30,13 @@ module Rank =
 
     /// Converts the given character to a rank.
     let fromChar = function
-        (*
+#if !MINI
         | 'T' -> Rank.Ten
         | 'J' -> Rank.Jack
         | 'Q' -> Rank.Queen
         | 'K' -> Rank.King
         | 'A' -> Rank.Ace
-        *)
+#endif
         | (c : char) ->
             let n = int c - int '0'
             if n >= 2 && n <= 9 then

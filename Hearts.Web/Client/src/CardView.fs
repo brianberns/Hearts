@@ -72,7 +72,7 @@ module CardView =
             Card.fromString "4H", importDefault "./assets/card_images/4H.svg"
             Card.fromString "4S", importDefault "./assets/card_images/4S.svg"
 
-            (*
+#if !MINI
             Card.fromString "5C", importDefault "./assets/card_images/5C.svg"
             Card.fromString "5D", importDefault "./assets/card_images/5D.svg"
             Card.fromString "5H", importDefault "./assets/card_images/5H.svg"
@@ -122,7 +122,7 @@ module CardView =
             Card.fromString "AD", importDefault "./assets/card_images/AD.svg"
             Card.fromString "AH", importDefault "./assets/card_images/AH.svg"
             Card.fromString "AS", importDefault "./assets/card_images/AS.svg"
-            *)
+#endif
         ] |> Map
 
     /// Creates a view of the given card.
