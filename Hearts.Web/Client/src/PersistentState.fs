@@ -45,17 +45,23 @@ module PersistentState =
 
     /// Saves the given state.
     let save (persState : PersistentState) =
+        (*
         WebStorage.localStorage[key]
             <- Json.serialize persState
+        *)
+        ()
 
     /// Answers the current state.
     let get () =
+        (*
         let json = WebStorage.localStorage[key] 
         if isNull json then
             save initial
             initial
         else
             Json.parseAs<PersistentState>(json)
+        *)
+        initial
 
 type PersistentState with
 
