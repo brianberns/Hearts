@@ -1,0 +1,139 @@
+﻿body {
+    margin: 0px;
+}
+
+main {
+    background-color: lightblue;
+    font-size: min(2vw, 2vh);
+    font-family: sans-serif;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+a {
+    text-decoration: none;
+}
+
+#score {
+    position: absolute;
+    left: 2%;
+    top: 2%;
+    text-align: end;
+}
+
+    #score th {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    #score td {
+        padding-left: 5px;
+        padding-right: 5px;
+        background-color: #9DC8D6;
+    }
+
+#more {
+    position: absolute;
+    left: 2%;
+    top: 87%;
+}
+
+.bid-chooser {
+    display: none; /* hidden when created */
+    font-size: min(2vw, 2vh);
+    text-align: center;
+    width: fit-content;
+    height: fit-content;
+    /* https://www.w3schools.com/howto/howto_css_center-vertical.asp */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.bid {
+    width: min(8vw, 12vh);
+    font-size: min(2vw, 2vh);
+    padding: min(1vw, 1vh);
+    background-color: whitesmoke;
+    text-align: center;
+    border-radius: min(1vw, 1vh);
+}
+
+.bid-clickable {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.bid-static {
+    position: absolute;
+    transform: translate(-50%, -50%);
+}
+
+.♦ {
+    color: red;
+}
+
+.♥ {
+    color: red;
+}
+
+.♣ {
+    color: black;
+}
+
+.♠ {
+    color: black;
+}
+
+.card {
+    position: absolute;
+    width: max(12vh, 80px);
+    border: 1px solid gray;
+    background-color: gray;
+    border-radius: 10px;
+    transform: translate(-50%, -50%);
+}
+
+.trump {
+    border: 3px solid #FFD700;
+    background-color: #FFD700;
+}
+
+.active {
+    cursor: pointer;
+}
+
+.inactive {
+    filter: contrast(70%);
+}
+
+.play-chooser {
+    display: none; /* hidden when created */
+    font-size: min(2vw, 2vh);
+    padding: min(1vw, 1vh);
+    background-color: lightcyan;
+    text-align: center;
+    border-radius: min(0.5vw, 0.5vh);
+    /* https://www.w3schools.com/howto/howto_css_center-vertical.asp */
+    position: absolute;
+    top: 70%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.banner {
+    font-size: x-large;
+    width: fit-content;
+    height: fit-content;
+    text-align: center;
+    cursor: pointer;
+    color: white;
+    background-color: darkred;
+    padding: 100px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}

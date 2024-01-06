@@ -1,7 +1,10 @@
 ﻿namespace Hearts.Cfrm
 
+#if !FABLE_COMPILER
 open Cfrm
 open PlayingCards
+#endif
+
 open Hearts
 
 module HeartsGameState =
@@ -33,6 +36,7 @@ module HeartsGameState =
                     yield card.String
             } |> String.concat ""
 
+#if !FABLE_COMPILER
 type HeartsGameState(deal : OpenDeal) =
     inherit GameState<Card>()
 
@@ -55,3 +59,4 @@ type HeartsGameState(deal : OpenDeal) =
         OpenDeal.addPlay card deal
             |> HeartsGameState
             :> _
+#endif

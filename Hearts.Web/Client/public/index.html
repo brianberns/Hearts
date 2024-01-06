@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Bernsrite Setback</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Online Setback card game">
+    <meta name="keywords" content="Setback, Auction Pitch, card game">
+    <link rel="stylesheet" type="text/css" href="index.css" />
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
+</head>
+<body>
+    <main>
+        <div id="score">
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Score</th>
+                        <th>Games</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>E+W:</th>
+                        <td id="ewScore"></td>
+                        <td id="ewGamesWon"></td>
+                    </tr>
+                    <tr>
+                        <th>N+S:</th>
+                        <td id="nsScore"></td>
+                        <td id="nsGamesWon"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <br />
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Jack</th>
+                        <th>Game</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>E+W:</th>
+                        <td id="ewHigh"></td>
+                        <td id="ewLow"></td>
+                        <td id="ewJack"></td>
+                        <td id="ewGamePoints">0</td>
+                    </tr>
+                    <tr>
+                        <th>N+S:</th>
+                        <td id="nsHigh"></td>
+                        <td id="nsLow"></td>
+                        <td id="nsJack"></td>
+                        <td id="nsGamePoints">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="more">
+            <p>
+                <label>Animation speed: <input type="range" id="animationSpeed" class="slider" min="0" max="500" value="300"></label>
+            </p>
+            <p><a href="rules.html" target="_blank">Rules</a></p>
+        </div>
+    </main>
+    <script src="bundle.js"></script>
+</body>
+</html>
