@@ -7,9 +7,15 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PlayingCards", "PlayingCard
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Hearts", "Hearts\Hearts.fsproj", "{AB1D86FB-34B3-4812-9E2B-A2FC41B70F8F}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Hearts.Cfrm", "Hearts.Cfrm\Hearts.Cfrm.fsproj", "{932E68C8-33E0-409E-BB5E-C7BA70CC1CC8}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Hearts.Cfrm", "Hearts.Cfrm\Hearts.Cfrm.fsproj", "{932E68C8-33E0-409E-BB5E-C7BA70CC1CC8}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Hearts.Train", "Hearts.Train\Hearts.Train.fsproj", "{25EC1293-FD01-4A85-8BDC-7DFE0E7FE488}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Hearts.Train", "Hearts.Train\Hearts.Train.fsproj", "{25EC1293-FD01-4A85-8BDC-7DFE0E7FE488}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Hearts.Web.Client", "Hearts.Web\Client\src\Hearts.Web.Client.fsproj", "{38054EFF-C796-4902-913C-5C6CF316CFDA}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Hearts.Web.Server", "Hearts.Web\Server\Hearts.Web.Server.fsproj", "{C96E7D60-7620-43B1-B7AD-00D7DB500471}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Hearts.Web.Harness", "Hearts.Web\Harness\Hearts.Web.Harness.fsproj", "{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +57,30 @@ Global
 		{25EC1293-FD01-4A85-8BDC-7DFE0E7FE488}.Release|Any CPU.Build.0 = Release|Any CPU
 		{25EC1293-FD01-4A85-8BDC-7DFE0E7FE488}.Release|x64.ActiveCfg = Release|Any CPU
 		{25EC1293-FD01-4A85-8BDC-7DFE0E7FE488}.Release|x64.Build.0 = Release|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Debug|x64.Build.0 = Debug|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Release|x64.ActiveCfg = Release|Any CPU
+		{38054EFF-C796-4902-913C-5C6CF316CFDA}.Release|x64.Build.0 = Release|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Debug|x64.Build.0 = Debug|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Release|x64.ActiveCfg = Release|Any CPU
+		{C96E7D60-7620-43B1-B7AD-00D7DB500471}.Release|x64.Build.0 = Release|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Debug|x64.Build.0 = Debug|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Release|x64.ActiveCfg = Release|Any CPU
+		{3B5FE59C-78B6-4E48-922E-2E7DE02AF4ED}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

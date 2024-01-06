@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+	<EnableDynamicLoading>true</EnableDynamicLoading>
+    <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\SharedTypes.fs" />
+    <Compile Include="WebPart.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cfrm" Version="2.5.0" />
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Suave" Version="2.6.2">
+      <ExcludeAssets>runtime</ExcludeAssets>
+	</PackageReference>
+	<PackageReference Update="FSharp.Core">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Fable.Remoting.Json">
+      <HintPath>..\..\..\Fable.Remoting.Suave\Fable.Remoting.Suave\bin\Debug\net6.0\Fable.Remoting.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Fable.Remoting.MsgPack">
+      <HintPath>..\..\..\Fable.Remoting.Suave\Fable.Remoting.Suave\bin\Debug\net6.0\Fable.Remoting.MsgPack.dll</HintPath>
+    </Reference>
+    <Reference Include="Fable.Remoting.Server">
+      <HintPath>..\..\..\Fable.Remoting.Suave\Fable.Remoting.Suave\bin\Debug\net6.0\Fable.Remoting.Server.dll</HintPath>
+    </Reference>
+    <Reference Include="Fable.Remoting.Suave">
+      <HintPath>..\..\..\Fable.Remoting.Suave\Fable.Remoting.Suave\bin\Debug\net6.0\Fable.Remoting.Suave.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
