@@ -2,7 +2,6 @@
 
 open PlayingCards
 open Hearts
-open Hearts.Cfrm
 
 [<AutoOpen>]
 module SeatExt =
