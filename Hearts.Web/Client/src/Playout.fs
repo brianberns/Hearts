@@ -175,9 +175,12 @@ module Playout =
                         // recurse until playout is complete
                     let persState' =
                         { persState with DealOpt = Some deal' }
-                    let trick =
-                        ClosedDeal.currentTrick deal'.ClosedDeal
-                    if trick.Cards.Length % Seat.numSeats = 0 then   // save at trick boundary
+                    let save =   // save at trick boundary
+                        match deal'.ClosedDeal.CurrentTrickOpt with   // to-do: clean this up
+                            | Some trick ->
+                                trick.Cards.Length % Seat.numSeats = 0
+                            | None -> true
+                    if save then
                         PersistentState.save persState'
                     return! loop persState'
             }
