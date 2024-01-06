@@ -39,38 +39,6 @@ a {
     top: 87%;
 }
 
-.bid-chooser {
-    display: none; /* hidden when created */
-    font-size: min(2vw, 2vh);
-    text-align: center;
-    width: fit-content;
-    height: fit-content;
-    /* https://www.w3schools.com/howto/howto_css_center-vertical.asp */
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.bid {
-    width: min(8vw, 12vh);
-    font-size: min(2vw, 2vh);
-    padding: min(1vw, 1vh);
-    background-color: whitesmoke;
-    text-align: center;
-    border-radius: min(1vw, 1vh);
-}
-
-.bid-clickable {
-    margin-left: 5px;
-    margin-right: 5px;
-}
-
-.bid-static {
-    position: absolute;
-    transform: translate(-50%, -50%);
-}
-
 .♦ {
     color: red;
 }

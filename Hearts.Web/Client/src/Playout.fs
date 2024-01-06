@@ -6,7 +6,6 @@ open Fable.Core
 
 open PlayingCards
 open Hearts
-open Hearts.Cfrm
 
 module Playout =
 

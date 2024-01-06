@@ -6,7 +6,6 @@ open Fable.SimpleJson
 
 open PlayingCards
 open Hearts
-open Hearts.Cfrm
 
 /// Persistent state.
 type PersistentState =
@@ -42,7 +41,7 @@ module PersistentState =
         }
 
     /// Local storage key.
-    let private key = "PersistentState"
+    let private key = "HeartsPersistentState"
 
     /// Saves the given state.
     let save (persState : PersistentState) =

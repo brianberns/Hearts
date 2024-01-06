@@ -2,7 +2,6 @@ namespace Hearts.Web.Client
 
 open PlayingCards
 open Hearts
-open Hearts.Cfrm
 
 /// Represents a (mutable) hand of cards.
 type HandView = ResizeArray<CardView>
