@@ -24,7 +24,8 @@ module Session =
                     let! persState = Deal.run surface persState
                     let persState =
                         { persState with
-                            Dealer = persState.Dealer.Next }
+                            Dealer = persState.Dealer.Next
+                            DealOpt = None }
                             .Save()
                     do! loop persState
         }

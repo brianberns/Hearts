@@ -52,6 +52,8 @@ module Deal =
             // display banner
         let banner =
             let html =
+                let dealer : Seat = dealer
+                let deal : OpenDeal = deal
                 $"<p>Deal over</p>"
             ~~HTMLDivElement.Create(innerHTML = html)
         banner.addClass("banner")
