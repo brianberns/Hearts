@@ -29,12 +29,17 @@ type Card =
 
     /// Converts this card to a string.
     override this.ToString() =
-#if FABLE_COMPILER
+ #if FABLE_COMPILER
         sprintf "%c%c"
             (Rank.toChar this.Rank)
             (Suit.toChar this.Suit)
 #else
-        sprintf "%A of %A" this.Rank this.Suit
+        System.String.Create(
+            2,
+            this,
+            System.Buffers.SpanAction(fun span (card : Card) ->
+                span.Slice(0, 1).Fill(Rank.toChar card.Rank)
+                span.Slice(1, 1).Fill(Suit.toChar card.Suit)))
 #endif
 
     /// String representation of this card.

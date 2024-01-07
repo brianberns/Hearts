@@ -26,15 +26,15 @@ module HeartsGameState =
         else None
 
     let getKey deal =
-            seq {
-                for trick in ClosedDeal.tricks deal.ClosedDeal do
-                    for (_, card) in Trick.plays trick do
-                        yield card.String
-                    yield "|"
-                yield "|"
-                for card in OpenDeal.currentHand deal do
+        seq {
+            for trick in ClosedDeal.tricks deal.ClosedDeal do
+                for (_, card) in Trick.plays trick do
                     yield card.String
-            } |> String.concat ""
+                yield "|"
+            yield "|"
+            for card in OpenDeal.currentHand deal do
+                yield card.String
+        } |> String.concat ""
 
 #if !FABLE_COMPILER
 type HeartsGameState(deal : OpenDeal) =
