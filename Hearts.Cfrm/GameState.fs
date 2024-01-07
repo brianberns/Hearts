@@ -25,16 +25,21 @@ module HeartsGameState =
                         |> Seq.toArray)
         else None
 
+    let getChar (card : Card) =
+        let offset =
+            Suit.numSuits * (int card.Rank - int Rank.Two)
+                + (int card.Suit)
+        char (int 'a' + offset)
+
     let getKey deal =
-        seq {
+        [|
             for trick in ClosedDeal.tricks deal.ClosedDeal do
                 for (_, card) in Trick.plays trick do
-                    yield card.String
-                yield "|"
-            yield "|"
+                    yield getChar card
+            yield '|'
             for card in OpenDeal.currentHand deal do
-                yield card.String
-        } |> String.concat ""
+                yield getChar card
+        |] |> System.String
 
 #if !FABLE_COMPILER
 type HeartsGameState(deal : OpenDeal) =
