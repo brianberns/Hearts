@@ -67,5 +67,5 @@ module Program =
 
     [<EntryPoint>]
     let main argv =
-        minimize 1
+        minimize 100
         0
