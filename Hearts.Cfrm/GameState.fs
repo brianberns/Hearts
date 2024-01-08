@@ -29,8 +29,8 @@ module GameStateKey =
         let countMap =
             deal.PlayedCards
                 |> Seq.groupBy (fun card -> card.Suit)
-                |> Seq.map (fun (suit, group) ->
-                    suit, Seq.length group)
+                |> Seq.map (fun (suit, cards) ->
+                    suit, Seq.length cards)
                 |> Map
         seq {
             for suit in Enum.getValues<Suit> do
@@ -40,11 +40,42 @@ module GameStateKey =
                     |> Char.fromHexDigit
         }
 
+    let private suitFlagMap =
+        Enum.getValues<Suit>
+            |> Seq.map (fun suit ->
+                suit, 1 <<< int suit)
+            |> Map
+
+    let private getVoids deal =
+        let voidMap =
+            deal.Voids
+                |> Seq.groupBy fst
+                |> Seq.map (fun (seat, group) ->
+                    seat, Seq.map snd group)
+                |> Map
+        let curPlayer = ClosedDeal.currentPlayer deal
+        let seats =
+            curPlayer
+                |> Seat.cycle
+                |> Seq.skip 1
+        seq {
+            for seat in seats do
+                voidMap
+                    |> Map.tryFind seat
+                    |> Option.defaultValue Seq.empty
+                    |> Seq.sumBy (fun suit -> suitFlagMap[suit])
+                    |> Char.fromHexDigit
+        }
+
     let getKey deal =
-        [|
-            yield getShootStatus deal.ClosedDeal
-            yield! getCardCounts deal.ClosedDeal
-        |] |> String
+        let key =
+            [|
+                yield getShootStatus deal.ClosedDeal
+                yield! getCardCounts deal.ClosedDeal
+                yield! getVoids deal.ClosedDeal
+            |] |> String
+        printfn "%s" key
+        key
 
 module GameState =
 
