@@ -45,7 +45,7 @@ module WebPlayer =
             | 1 -> async { return legalPlays[0] }
             | _ ->
                 async {
-                    let key = HeartsGameState.getKey deal
+                    let key = GameState.getKey deal
                     match! Remoting.getActionIndex key with
                         | Some iAction -> return legalPlays[iAction]
                         | None -> return legalPlays[0]

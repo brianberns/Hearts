@@ -7,11 +7,30 @@ open Cfrm
 open PlayingCards
 open Hearts
 
-module HeartsGameState =
+module GameStateKey =
 
-    let canTryFinalize deal =
+    let private getShootStatus (deal : ClosedDeal) =
+        let (ScoreMap scoreMap) = deal.Score
+        let nPlayers =
+            scoreMap
+                |> Map.toSeq
+                |> Seq.where (fun (_, points) ->
+                    points > 0)
+                |> Seq.length
+        match nPlayers with
+            | 0 -> true, true
+            | 1 ->
+                let curPlayer = ClosedDeal.currentPlayer deal
+                let curPlayerFlag = scoreMap[curPlayer] > 0
+                curPlayerFlag, not curPlayerFlag
+            | _ -> false, false
+
+module GameState =
+
+    let private canTryFinalize deal =
         deal.ClosedDeal.CurrentTrickOpt
-            |> Option.map (fun trick -> trick.Cards.IsEmpty)
+            |> Option.map (fun trick ->
+                trick.Cards.IsEmpty)
             |> Option.defaultValue true
 
     let terminalValuesOpt deal =
@@ -21,7 +40,8 @@ module HeartsGameState =
                 |> Option.map (fun (ScoreMap scoreMap) ->
                     scoreMap
                         |> Map.values
-                        |> Seq.map (fun points -> float -points)
+                        |> Seq.map (fun points ->
+                            float -points)
                         |> Seq.toArray)
         else None
 
@@ -69,7 +89,7 @@ module HeartsGameState =
         |] |> System.String
 
 #if !FABLE_COMPILER
-type HeartsGameState(deal : OpenDeal) =
+type GameState(deal : OpenDeal) =
     inherit GameState<Card>()
 
     override _.CurrentPlayerIdx =
@@ -77,10 +97,10 @@ type HeartsGameState(deal : OpenDeal) =
             |> OpenDeal.currentPlayer
             |> int
 
-    override _.Key = HeartsGameState.getKey deal
+    override _.Key = GameState.getKey deal
 
     override _.TerminalValuesOpt =
-        HeartsGameState.terminalValuesOpt deal
+        GameState.terminalValuesOpt deal
 
     override _.LegalActions =
         let hand = OpenDeal.currentHand deal
@@ -89,6 +109,6 @@ type HeartsGameState(deal : OpenDeal) =
 
     override _.AddAction(card) =
         OpenDeal.addPlay card deal
-            |> HeartsGameState
+            |> GameState
             :> _
 #endif

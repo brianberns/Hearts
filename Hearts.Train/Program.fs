@@ -18,7 +18,7 @@ module Program =
         Deck.shuffle rng
             |> OpenDeal.fromDeck dealer ExchangeDirection.Hold
             |> OpenDeal.startPlay
-            |> HeartsGameState
+            |> GameState
 
     /// Runs CFR with the given batch size.
     let minimize batchSize =
