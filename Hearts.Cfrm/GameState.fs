@@ -19,11 +19,12 @@ module GameStateKey =
                     points > 0)
                 |> Seq.length
         match nPlayers with
-            | 0 -> 'A'
+            | 0 -> 0
             | 1 ->
                 let curPlayer = ClosedDeal.currentPlayer deal
-                if scoreMap[curPlayer] > 0 then 'B' else 'C'
-            | _ -> 'D'
+                if scoreMap[curPlayer] > 0 then 1 else 2
+            | _ -> 3
+            |> Char.fromDigit
 
     let private getCardCounts deal =
         let countMap =
