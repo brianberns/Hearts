@@ -68,12 +68,26 @@ module GameStateKey =
                     |> Char.fromHexDigit
         }
 
+    let private getCurrentTrick (deal : ClosedDeal) =
+        let trick = ClosedDeal.currentTrick deal
+        seq {
+            match trick.SuitLedOpt with
+                | Some suit ->
+                    yield Suit.toLetter suit
+                    yield Char.fromHexDigit
+                        (Trick.pointValue trick)
+                | None ->
+                    yield '0'
+                    yield '0'
+        }
+
     let getKey deal =
         let key =
             [|
                 yield getShootStatus deal.ClosedDeal
                 yield! getCardCounts deal.ClosedDeal
                 yield! getVoids deal.ClosedDeal
+                yield! getCurrentTrick deal.ClosedDeal
             |] |> String
         printfn "%s" key
         key
