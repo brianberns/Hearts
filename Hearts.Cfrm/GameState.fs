@@ -70,16 +70,14 @@ module GameStateKey =
 
     let private getCurrentTrick (deal : ClosedDeal) =
         let trick = ClosedDeal.currentTrick deal
-        seq {
-            match trick.SuitLedOpt with
-                | Some suit ->
+        trick.SuitLedOpt
+            |> Option.map (fun suit ->
+                seq {
                     yield Suit.toLetter suit
                     yield Char.fromHexDigit
                         (Trick.pointValue trick)
-                | None ->
-                    yield '0'
-                    yield '0'
-        }
+                })
+            |> Option.defaultValue "00"
 
     let getKey deal =
         let key =
