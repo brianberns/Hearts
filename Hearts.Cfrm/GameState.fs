@@ -2,9 +2,9 @@
 
 #if !FABLE_COMPILER
 open Cfrm
-open PlayingCards
 #endif
 
+open PlayingCards
 open Hearts
 
 module HeartsGameState =
@@ -25,20 +25,47 @@ module HeartsGameState =
                         |> Seq.toArray)
         else None
 
-    let getChar (card : Card) =
+    let private getChar (card : Card) =
         let offset =
             Suit.numSuits * (int card.Rank - int Rank.Two)
                 + (int card.Suit)
         char (int 'a' + offset)
 
     let getKey deal =
+        let compCards =
+            deal.ClosedDeal.CompletedTricks
+                |> Seq.collect (fun trick -> trick.Cards)
+                |> Seq.sort
+        let curCards =
+            deal.ClosedDeal.CurrentTrickOpt
+                |> Option.map (fun trick -> trick.Cards)
+                |> Option.defaultValue List.empty
         [|
-            for trick in ClosedDeal.tricks deal.ClosedDeal do
-                for (_, card) in Trick.plays trick do
-                    yield getChar card
+            for card in compCards do
+                yield getChar card
+            for card in curCards do
+                yield getChar card
+
+            yield '|'
+            let pairs =
+                let curPlayer =
+                    ClosedDeal.currentPlayer deal.ClosedDeal
+                deal.ClosedDeal.Voids
+                    |> Seq.where (fun (seat, _) ->
+                        seat <> curPlayer)
+                    |> Seq.map (fun (seat, suit) ->
+                        let offset =
+                            (int seat - int curPlayer + Seat.numSeats) % Seat.numSeats
+                        offset, suit)
+                    |> Seq.sort
+            for (offset, suit) in pairs do
+                yield char (int '0' + offset)
+                yield suit.Char
+
             yield '|'
             for card in OpenDeal.currentHand deal do
                 yield getChar card
+
         |] |> System.String
 
 #if !FABLE_COMPILER
