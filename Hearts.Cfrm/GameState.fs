@@ -110,12 +110,6 @@ module GameState =
                         |> Seq.toArray)
         else None
 
-    let private getChar (card : Card) =
-        let offset =
-            Suit.numSuits * (int card.Rank - int Rank.Two)
-                + (int card.Suit)
-        char (int 'a' + offset)
-
     let getKey deal =
         GameStateKey.getKey deal
 
