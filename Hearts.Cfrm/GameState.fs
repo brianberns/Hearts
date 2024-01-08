@@ -4,12 +4,13 @@
 open Cfrm
 #endif
 
+open System
 open PlayingCards
 open Hearts
 
 module GameStateKey =
 
-    let private getShootStatus (deal : ClosedDeal) =
+    let private getShootStatus deal =
         let (ScoreMap scoreMap) = deal.Score
         let nPlayers =
             scoreMap
@@ -18,12 +19,32 @@ module GameStateKey =
                     points > 0)
                 |> Seq.length
         match nPlayers with
-            | 0 -> true, true
+            | 0 -> 'A'
             | 1 ->
                 let curPlayer = ClosedDeal.currentPlayer deal
-                let curPlayerFlag = scoreMap[curPlayer] > 0
-                curPlayerFlag, not curPlayerFlag
-            | _ -> false, false
+                if scoreMap[curPlayer] > 0 then 'B' else 'C'
+            | _ -> 'D'
+
+    let private getCardCounts deal =
+        let countMap =
+            deal.PlayedCards
+                |> Seq.groupBy (fun card -> card.Suit)
+                |> Seq.map (fun (suit, group) ->
+                    suit, Seq.length group)
+                |> Map
+        seq {
+            for suit in Enum.getValues<Suit> do
+                countMap
+                    |> Map.tryFind suit
+                    |> Option.defaultValue 0
+                    |> Char.fromHexDigit
+        }
+
+    let getKey deal =
+        [|
+            yield getShootStatus deal.ClosedDeal
+            yield! getCardCounts deal.ClosedDeal
+        |] |> String
 
 module GameState =
 
@@ -52,41 +73,7 @@ module GameState =
         char (int 'a' + offset)
 
     let getKey deal =
-        let compCards =
-            deal.ClosedDeal.CompletedTricks
-                |> Seq.collect (fun trick -> trick.Cards)
-                |> Seq.sort
-        let curCards =
-            deal.ClosedDeal.CurrentTrickOpt
-                |> Option.map (fun trick -> trick.Cards)
-                |> Option.defaultValue List.empty
-        [|
-            for card in compCards do
-                yield getChar card
-            for card in curCards do
-                yield getChar card
-
-            yield '|'
-            let pairs =
-                let curPlayer =
-                    ClosedDeal.currentPlayer deal.ClosedDeal
-                deal.ClosedDeal.Voids
-                    |> Seq.where (fun (seat, _) ->
-                        seat <> curPlayer)
-                    |> Seq.map (fun (seat, suit) ->
-                        let offset =
-                            (int seat - int curPlayer + Seat.numSeats) % Seat.numSeats
-                        offset, suit)
-                    |> Seq.sort
-            for (offset, suit) in pairs do
-                yield char (int '0' + offset)
-                yield suit.Char
-
-            yield '|'
-            for card in OpenDeal.currentHand deal do
-                yield getChar card
-
-        |] |> System.String
+        GameStateKey.getKey deal
 
 #if !FABLE_COMPILER
 type GameState(deal : OpenDeal) =

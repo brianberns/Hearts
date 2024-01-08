@@ -21,6 +21,7 @@
     <Compile Include="..\..\..\Hearts\ClosedDeal.fs" />
     <Compile Include="..\..\..\Hearts\Exchange.fs" />
     <Compile Include="..\..\..\Hearts\OpenDeal.fs" />
+    <Compile Include="..\..\..\Hearts.Cfrm\Prelude.fs" />
     <Compile Include="..\..\..\Hearts.Cfrm\GameState.fs" />
     <Compile Include="..\..\Shared\SharedTypes.fs" />
     <Compile Include="WebPlayer.fs" />
