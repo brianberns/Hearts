@@ -11,8 +11,8 @@ open Hearts
 module Seq =
 
     let chunkBy projection source =
-        ([], source)
-            ||> Seq.fold (fun chunks item ->
+        (source, [])
+            ||> Seq.foldBack (fun item chunks ->
                 let key = projection item
                 match chunks with
                     | [] ->
@@ -25,9 +25,8 @@ module Seq =
                         else
                             {| Key = key; Items = [item] |}
                                 :: chunks)
-            |> List.rev
             |> Seq.map (fun chunk ->
-                chunk.Key, Seq.rev chunk.Items)
+                chunk.Key, List.toSeq chunk.Items)
 
 type CardRange =
     {
