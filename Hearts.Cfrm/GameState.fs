@@ -39,6 +39,7 @@ type CardRange =
         Suit : Suit
         MinRank : Rank
         MaxRank : Rank
+        Present : bool
     }
 
 module CardRange =
@@ -46,55 +47,39 @@ module CardRange =
     let private allCardSet = set Card.allCards
 
     let getRanges (hand : Hand) deal =
-        assert(hand.Count > 0)
         let outstandingCardMap =
             allCardSet - (hand + deal.PlayedCards)
                 |> Seq.groupBy (fun card -> card.Suit)
                 |> Map
-        let ranges =
-            ClosedDeal.legalPlays hand deal
-                |> Seq.groupBy (fun card -> card.Suit)
-                |> Seq.collect (fun (suit, legalPlays) ->
-                    let rankPairs =
-                        let inRankPairs =
-                            legalPlays
-                                |> Seq.map (fun card ->
-                                    card.Rank, true)
-                        let outRankPairs =
-                            outstandingCardMap
-                                |> Map.tryFind suit
-                                |> Option.defaultValue Seq.empty
-                                |> Seq.map (fun card ->
-                                    card.Rank, false)
-                        seq {
-                            yield! inRankPairs
-                            yield! outRankPairs
-                            yield (enum<Rank> Int32.MaxValue, false)   // sentinel value at end
-                        } |> Seq.sort
-                    ((None, []), rankPairs)
-                        ||> Seq.fold (fun (curRangeOpt, ranges) (rank, flag) ->
-                            match curRangeOpt, flag with
-                                | None, true ->
-                                    let curRangeOpt' =
-                                        Some {
-                                            Suit = suit
-                                            MinRank = rank
-                                            MaxRank = rank
-                                        }
-                                    curRangeOpt', ranges
-                                | None, false -> None, ranges
-                                | Some range, true ->
-                                    let curRangeOpt' =
-                                        assert(rank > range.MaxRank)
-                                        Some { range with MaxRank = rank }
-                                    curRangeOpt', ranges
-                                | Some range, false ->
-                                    None, range :: ranges)
-                        |> snd)
-                |> Seq.toArray
-        assert(ranges.Length > 0)
-        assert(ranges.Length <= hand.Count)
-        ranges
+        ClosedDeal.legalPlays hand deal
+            |> Seq.groupBy (fun card -> card.Suit)
+            |> Seq.collect (fun (suit, legalPlays) ->
+                let inRankPairs =
+                    legalPlays
+                        |> Seq.map (fun card ->
+                            card.Rank, true)
+                let outRankPairs =
+                    outstandingCardMap
+                        |> Map.tryFind suit
+                        |> Option.defaultValue Seq.empty
+                        |> Seq.map (fun card ->
+                            card.Rank, false)
+                Seq.append inRankPairs outRankPairs
+                    |> Seq.sort
+                    |> Seq.chunkBy snd
+                    |> Seq.map (fun (flag, rankPairs) ->
+                        let ranks =
+                            rankPairs
+                                |> Seq.map fst
+                                |> Seq.toArray
+                        assert(ranks.Length > 0)
+                        {
+                            Suit = suit
+                            MinRank = Array.head ranks
+                            MaxRank = Array.last ranks
+                            Present = flag
+                        }))
+            |> Seq.toArray
 
 module GameStateKey =
 
@@ -222,9 +207,11 @@ type GameState(deal : OpenDeal) =
         let hand = OpenDeal.currentHand deal
         deal.ClosedDeal
             |> CardRange.getRanges hand
+            |> Seq.where (fun range -> range.Present)
             |> Seq.toArray
 
     override _.AddAction(range) =
+        assert(range.Present)
         let card = Card.create range.MaxRank range.Suit
         OpenDeal.addPlay card deal
             |> GameState
