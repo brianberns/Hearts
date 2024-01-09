@@ -46,7 +46,12 @@ module WebPlayer =
             | _ ->
                 async {
                     let key = GameState.getKey deal
-                    match! Remoting.getActionIndex key with
-                        | Some iAction -> return legalPlays[iAction]
-                        | None -> return legalPlays[0]
+                    let legalActions = GameState.getLegalActions deal
+                    let! iActionOpt = Remoting.getActionIndex key
+                    let range =
+                        iActionOpt
+                            |> Option.map (fun iAction ->
+                                legalActions[iAction])
+                            |> Option.defaultValue legalActions[0]
+                    return { Suit = range.Suit; Rank = range.MaxRank }   // to-do: randomize
                 }

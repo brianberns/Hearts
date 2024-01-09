@@ -195,6 +195,14 @@ module GameState =
                         |> Seq.toArray)
         else None
 
+    let getLegalActions deal =
+        let hand = OpenDeal.currentHand deal
+        deal.ClosedDeal
+            |> CardRange.getRanges hand
+            |> Seq.collect snd
+            |> Seq.where (fun range -> range.Present)
+            |> Seq.toArray
+
     let getKey deal =
         GameStateKey.getKey deal
 
@@ -213,12 +221,7 @@ type GameState(deal : OpenDeal) =
         GameState.terminalValuesOpt deal
 
     override _.LegalActions =
-        let hand = OpenDeal.currentHand deal
-        deal.ClosedDeal
-            |> CardRange.getRanges hand
-            |> Seq.collect snd
-            |> Seq.where (fun range -> range.Present)
-            |> Seq.toArray
+        GameState.getLegalActions deal
 
     override _.AddAction(range) =
         assert(range.Present)
