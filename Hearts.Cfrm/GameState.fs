@@ -27,11 +27,7 @@ module Seq =
                                 :: chunks)
             |> List.rev
             |> Seq.map (fun chunk ->
-                let items =
-                    chunk.Items
-                        |> List.rev
-                        |> List.toSeq
-                chunk.Key, items)
+                chunk.Key, Seq.rev chunk.Items)
 
 type CardRange =
     {
