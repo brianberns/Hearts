@@ -8,6 +8,32 @@ open System
 open PlayingCards
 open Hearts
 
+module Seq =
+
+    let chunkBy projection source =
+        ([], source)
+            ||> Seq.fold (fun chunks item ->
+                let key = projection item
+                match chunks with
+                    | [] ->
+                        [ {| Key = key; Items = [item] |} ]
+                    | chunk :: tail ->
+                        if key = chunk.Key then
+                            let chunk' =
+                                {| chunk with Items = item :: chunk.Items |}
+                            chunk' :: tail
+                        else
+                            let chunk' =
+                                {| Key = key; Items = [item] |}
+                            chunk' :: chunks)
+            |> List.rev
+            |> Seq.map (fun chunk ->
+                let items =
+                    chunk.Items
+                        |> List.rev
+                        |> List.toSeq
+                chunk.Key, items)
+
 type CardRange =
     {
         Suit : Suit
