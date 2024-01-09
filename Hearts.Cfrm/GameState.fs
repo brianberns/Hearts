@@ -47,7 +47,7 @@ module CardRange =
                 |> Map
         ClosedDeal.legalPlays hand deal
             |> Seq.groupBy (fun card -> card.Suit)
-            |> Seq.collect (fun (suit, legalPlays) ->
+            |> Seq.map (fun (suit, legalPlays) ->
                 let inRankPairs =
                     legalPlays
                         |> Seq.map (fun card ->
@@ -58,22 +58,24 @@ module CardRange =
                         |> Option.defaultValue Seq.empty
                         |> Seq.map (fun card ->
                             card.Rank, false)
-                Seq.append inRankPairs outRankPairs
-                    |> Seq.sort
-                    |> Seq.chunkBy snd
-                    |> Seq.map (fun (flag, rankPairs) ->
-                        let ranks =
-                            rankPairs
-                                |> Seq.map fst
-                                |> Seq.toArray
-                        assert(ranks.Length > 0)
-                        {
-                            Suit = suit
-                            MinRank = Array.head ranks
-                            MaxRank = Array.last ranks
-                            Present = flag
-                        }))
-            |> Seq.toArray
+                let ranges =
+                    Seq.append inRankPairs outRankPairs
+                        |> Seq.sort
+                        |> Seq.chunkBy snd
+                        |> Seq.map (fun (flag, rankPairs) ->
+                            let ranks =
+                                rankPairs
+                                    |> Seq.map fst
+                                    |> Seq.toArray
+                            assert(ranks.Length > 0)
+                            {
+                                Suit = suit
+                                MinRank = Array.head ranks
+                                MaxRank = Array.last ranks
+                                Present = flag
+                            })
+                        |> Seq.toArray
+                suit, ranges)
 
 module GameStateKey =
 
@@ -135,7 +137,7 @@ module GameStateKey =
                     |> Char.fromHexDigit
         }
 
-    let private getCurrentTrick (deal : ClosedDeal) =
+    let private getCurrentTrick deal =
         let trick = ClosedDeal.currentTrick deal
         trick.SuitLedOpt
             |> Option.map (fun suit ->
@@ -146,19 +148,32 @@ module GameStateKey =
                 })
             |> Option.defaultValue "00"
 
+    let private getRanges hand deal =
+        let rangeMap =
+            CardRange.getRanges hand deal
+                |> Map
+        seq {
+            for suit in Enum.getValues<Suit> do
+                rangeMap
+                    |> Map.tryFind suit
+                    |> Option.map (fun ranges ->
+                        let incr =
+                            if ranges[0].Present then 1
+                            else 2
+                        ranges.Length * 2 + incr)
+                    |> Option.defaultValue 0
+                    |> Char.fromHexDigit
+        }
+
     let getKey deal =
-        let key =
-            [|
-                yield getShootStatus deal.ClosedDeal
-                yield! getCardCounts deal.ClosedDeal
-                yield! getVoids deal.ClosedDeal
-                yield! getCurrentTrick deal.ClosedDeal
-            |] |> String
-        printfn "%s" key
         let hand = OpenDeal.currentHand deal
-        CardRange.getRanges hand deal.ClosedDeal
-            |> printfn "%A"
-        key
+        [|
+            yield getShootStatus deal.ClosedDeal
+            yield! getCardCounts deal.ClosedDeal
+            yield! getVoids deal.ClosedDeal
+            yield! getCurrentTrick deal.ClosedDeal
+            yield! getRanges hand deal.ClosedDeal
+        |] |> String
 
 module GameState =
 
@@ -201,6 +216,7 @@ type GameState(deal : OpenDeal) =
         let hand = OpenDeal.currentHand deal
         deal.ClosedDeal
             |> CardRange.getRanges hand
+            |> Seq.collect snd
             |> Seq.where (fun range -> range.Present)
             |> Seq.toArray
 
