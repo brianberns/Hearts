@@ -42,7 +42,7 @@ module CardRange =
 
     let getRanges (hand : Hand) deal =
         let outstandingCardMap =
-            allCardSet - (hand + deal.PlayedCards)
+            allCardSet - hand - deal.PlayedCards
                 |> Seq.groupBy (fun card -> card.Suit)
                 |> Map
         ClosedDeal.legalPlays hand deal
