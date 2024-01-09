@@ -19,13 +19,12 @@ module Seq =
                         [ {| Key = key; Items = [item] |} ]
                     | chunk :: tail ->
                         if key = chunk.Key then
-                            let chunk' =
-                                {| chunk with Items = item :: chunk.Items |}
-                            chunk' :: tail
+                            {| chunk with
+                                Items = item :: chunk.Items |}
+                                :: tail
                         else
-                            let chunk' =
-                                {| Key = key; Items = [item] |}
-                            chunk' :: chunks)
+                            {| Key = key; Items = [item] |}
+                                :: chunks)
             |> List.rev
             |> Seq.map (fun chunk ->
                 let items =
