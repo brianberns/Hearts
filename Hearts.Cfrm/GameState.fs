@@ -144,6 +144,9 @@ module GameStateKey =
                 yield! getCurrentTrick deal.ClosedDeal
             |] |> String
         printfn "%s" key
+        let hand = OpenDeal.currentHand deal
+        CardRange.getRanges hand deal.ClosedDeal
+            |> printfn "%A"
         key
 
 module GameState =
@@ -185,10 +188,12 @@ type GameState(deal : OpenDeal) =
 
     override _.LegalActions =
         let hand = OpenDeal.currentHand deal
-        ClosedDeal.legalPlays hand deal.ClosedDeal
+        deal.ClosedDeal
+            |> CardRange.getRanges hand
             |> Seq.toArray
 
-    override _.AddAction(card) =
+    override _.AddAction(range) =
+        let card = Card.create range.MaxRank range.Suit
         OpenDeal.addPlay card deal
             |> GameState
             :> _
