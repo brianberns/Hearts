@@ -2,9 +2,9 @@
 
 open System
 
-/// A "hand of cards" is somewhat ambiguous. Here we use it to refer to
-/// a single player's cards.
-type Hand = seq<Card>
+/// A "hand of cards" is somewhat ambiguous. Here we use it to
+/// refer to a single player's cards.
+type Hand = Set<Card>
 
 module Hand =
 
@@ -17,7 +17,8 @@ module Hand =
             |> Seq.map (fun (suit, cards) ->
                 let sCards =
                     cards
-                        |> Seq.sortByDescending (fun card -> card.Rank)
+                        |> Seq.sortByDescending (fun card ->
+                            card.Rank)
                         |> Seq.map (fun card -> card.Rank.Char)
                         |> Seq.toArray
                         |> String

@@ -8,6 +8,62 @@ open System
 open PlayingCards
 open Hearts
 
+type CardRange =
+    {
+        Suit : Suit
+        MinRank : Rank
+        MaxRank : Rank
+    }
+
+module CardRange =
+
+    let private allCardSet = set Card.allCards
+
+    let getRanges (hand : Hand) deal =
+        let outstandingCardMap =
+            allCardSet - (hand + deal.PlayedCards)
+                |> Seq.groupBy (fun card -> card.Suit)
+                |> Map
+        ClosedDeal.legalPlays hand deal
+            |> Seq.groupBy (fun card -> card.Suit)
+            |> Seq.collect (fun (suit, legalPlays) ->
+                let rankPairs =
+                    let inRankPairs =
+                        legalPlays
+                            |> Seq.map (fun card ->
+                                card.Rank, true)
+                    let outRankPairs =
+                        outstandingCardMap
+                            |> Map.tryFind suit
+                            |> Option.defaultValue Seq.empty
+                            |> Seq.map (fun card ->
+                                card.Rank, false)
+                    seq {
+                        yield! inRankPairs
+                        yield! outRankPairs
+                        yield (enum<Rank> Rank.numRanks, false)   // sentinel value at end
+                    } |> Seq.sort
+                ((None, []), rankPairs)
+                    ||> Seq.fold (fun (curRangeOpt, ranges) (rank, flag) ->
+                        match curRangeOpt, flag with
+                            | None, true ->
+                                let curRangeOpt' =
+                                    Some {
+                                        Suit = suit
+                                        MinRank = rank
+                                        MaxRank = rank
+                                    }
+                                curRangeOpt', ranges
+                            | None, false -> None, ranges
+                            | Some range, true ->
+                                let curRangeOpt' =
+                                    assert(rank > range.MaxRank)
+                                    Some { range with MaxRank = rank }
+                                curRangeOpt', ranges
+                            | Some range, false ->
+                                None, range :: ranges)
+                    |> snd)
+
 module GameStateKey =
 
     let private getShootStatus deal =
@@ -115,7 +171,7 @@ module GameState =
 
 #if !FABLE_COMPILER
 type GameState(deal : OpenDeal) =
-    inherit GameState<Card>()
+    inherit GameState<CardRange>()
 
     override _.CurrentPlayerIdx =
         deal
