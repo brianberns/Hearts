@@ -84,8 +84,10 @@ module ClosedDeal =
             |> currentTrick
             |> Trick.currentPlayer
 
-    /// Two of clubs.
-    let card2C = Card.fromString "2♣"
+    /// Lowest club.
+    let lowestClub =
+        let rank = Enum.getValues<Rank>[0]
+        Card.create rank Suit.Clubs
 
     /// What cards can be played from the given hand?
     let legalPlays (hand : Hand) deal =
@@ -95,8 +97,8 @@ module ClosedDeal =
 
                 // must lead 2♣ on first trick
             | 0, None ->
-                assert(hand |> Seq.contains(card2C))
-                Seq.singleton card2C
+                assert(hand |> Seq.contains(lowestClub))
+                Seq.singleton lowestClub
 
                 // can't lead a heart until they're broken
             | _, None ->

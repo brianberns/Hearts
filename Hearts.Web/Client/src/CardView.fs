@@ -57,6 +57,7 @@ module CardView =
     /// literals.)
     let private srcMap =
         [
+#if !MINI
             Card.fromString "2C", importDefault "./assets/card_images/2C.svg"
             Card.fromString "2D", importDefault "./assets/card_images/2D.svg"
             Card.fromString "2H", importDefault "./assets/card_images/2H.svg"
@@ -82,7 +83,6 @@ module CardView =
             Card.fromString "6H", importDefault "./assets/card_images/6H.svg"
             Card.fromString "6S", importDefault "./assets/card_images/6S.svg"
 
-#if !MINI
             Card.fromString "7C", importDefault "./assets/card_images/7C.svg"
             Card.fromString "7D", importDefault "./assets/card_images/7D.svg"
             Card.fromString "7H", importDefault "./assets/card_images/7H.svg"
@@ -92,6 +92,7 @@ module CardView =
             Card.fromString "8D", importDefault "./assets/card_images/8D.svg"
             Card.fromString "8H", importDefault "./assets/card_images/8H.svg"
             Card.fromString "8S", importDefault "./assets/card_images/8S.svg"
+#endif
 
             Card.fromString "9C", importDefault "./assets/card_images/9C.svg"
             Card.fromString "9D", importDefault "./assets/card_images/9D.svg"
@@ -118,6 +119,7 @@ module CardView =
             Card.fromString "KH", importDefault "./assets/card_images/KH.svg"
             Card.fromString "KS", importDefault "./assets/card_images/KS.svg"
 
+#if !MINI
             Card.fromString "AC", importDefault "./assets/card_images/AC.svg"
             Card.fromString "AD", importDefault "./assets/card_images/AD.svg"
             Card.fromString "AH", importDefault "./assets/card_images/AH.svg"

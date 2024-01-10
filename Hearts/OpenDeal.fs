@@ -118,7 +118,7 @@ module OpenDeal =
             deal.UnplayedCardMap
                 |> Map.toSeq
                 |> Seq.find (fun (_, cards) ->
-                    cards |> Set.contains ClosedDeal.card2C)
+                    cards.Contains(ClosedDeal.lowestClub))
                 |> fst
         {
             deal with
