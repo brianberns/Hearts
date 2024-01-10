@@ -19,9 +19,9 @@ module Seq =
                 match chunks with
                     | (chunkKey, items) :: tail
                         when key = chunkKey ->
-                        (chunkKey, item :: items) :: tail   // add to current chunk
+                        (key, item :: items) :: tail   // add to current chunk
                     | _ ->
-                        (key, [item]) :: chunks)            // start new chunk
+                        (key, [item]) :: chunks)       // start new chunk
             |> Seq.map (fun (key, items) ->
                 key, List.toSeq items)
 
@@ -37,7 +37,7 @@ module CardRange =
 
     let private allCardSet = set Card.allCards
 
-    let getRanges (hand : Hand) deal =
+    let getLegalRanges (hand : Hand) deal =
         let outstandingCardMap =
             allCardSet - hand - deal.PlayedCards
                 |> Seq.groupBy (fun card -> card.Suit)
@@ -73,6 +73,25 @@ module CardRange =
                             })
                         |> Seq.toArray
                 suit, ranges)
+
+    let split rank ranges =
+        (ranges, ([], []))
+            ||> Seq.foldBack (fun range (low, high) ->
+                if rank < range.MinRank then
+                    low, range :: high
+                elif rank > range.MaxRank then
+                    range :: low, high
+                else
+                    assert(rank > range.MinRank)
+                    assert(rank < range.MaxRank)
+                    { range with
+                        MaxRank = enum<Rank> (int rank - 1) }
+                        :: low,
+                    { range with
+                        MinRank = enum<Rank> (int rank + 1) }
+                        :: high)
+            |> fun (low, high) ->
+                Seq.toArray low, Seq.toArray high
 
 module GameStateKey =
 
@@ -145,22 +164,44 @@ module GameStateKey =
                 })
             |> Option.defaultValue "00"
 
-    let private getRanges hand deal =
+    let private rangesChar ranges =
+        match Array.length ranges with
+            | 0 -> 0
+            | length ->
+                let decr =
+                    if ranges[0].Present then 0
+                    else 1
+                length * 2 - decr
+            |> Char.fromHexDigit
+
+    let private getLegalRanges hand deal =
         let rangeMap =
-            CardRange.getRanges hand deal
+            CardRange.getLegalRanges hand deal
                 |> Map
-        seq {
-            for suit in Enum.getValues<Suit> do
-                rangeMap
-                    |> Map.tryFind suit
-                    |> Option.map (fun ranges ->
-                        let incr =
-                            if ranges[0].Present then 1
-                            else 2
-                        ranges.Length * 2 + incr)
-                    |> Option.defaultValue 0
-                    |> Char.fromHexDigit
-        }
+        let followPairOpt =
+            option {
+                let! trick = deal.CurrentTrickOpt
+                let! (_, highCard) = trick.HighPlayOpt
+                let! ranges = Map.tryFind highCard.Suit rangeMap
+                assert(rangeMap.Count = 1)
+                return highCard.Rank, ranges
+            }
+        match followPairOpt with
+            | Some (highRank, ranges) ->
+                [|
+                    let lowRanges, highRanges =
+                        CardRange.split highRank ranges
+                    yield rangesChar lowRanges
+                    yield rangesChar highRanges
+                |]
+            | None ->
+                [|
+                    for suit in Enum.getValues<Suit> do
+                        rangeMap
+                            |> Map.tryFind suit
+                            |> Option.defaultValue Array.empty
+                            |> rangesChar
+                |]
 
     let getKey deal =
         let hand = OpenDeal.currentHand deal
@@ -169,7 +210,7 @@ module GameStateKey =
             yield! getCardCounts deal.ClosedDeal
             yield! getVoids deal.ClosedDeal
             yield! getCurrentTrick deal.ClosedDeal
-            yield! getRanges hand deal.ClosedDeal
+            yield! getLegalRanges hand deal.ClosedDeal
         |] |> String
 
 module GameState =
@@ -195,7 +236,7 @@ module GameState =
     let getLegalActions deal =
         let hand = OpenDeal.currentHand deal
         deal.ClosedDeal
-            |> CardRange.getRanges hand
+            |> CardRange.getLegalRanges hand
             |> Seq.collect snd
             |> Seq.where (fun range -> range.Present)
             |> Seq.toArray
