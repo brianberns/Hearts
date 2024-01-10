@@ -17,12 +17,13 @@ module Seq =
             ||> Seq.foldBack (fun item chunks ->
                 let key = projection item
                 match chunks with
-                    | (chunkKey, items) :: tail when key = chunkKey ->
-                        (chunkKey, item :: items) :: tail
+                    | (chunkKey, items) :: tail
+                        when key = chunkKey ->
+                        (chunkKey, item :: items) :: tail   // add to current chunk
                     | _ ->
-                        (key, [item]) :: chunks)
-            |> Seq.map (fun (chunkKey, items) ->
-                chunkKey, List.toSeq items)
+                        (key, [item]) :: chunks)            // start new chunk
+            |> Seq.map (fun (key, items) ->
+                key, List.toSeq items)
 
 type CardRange =
     {
