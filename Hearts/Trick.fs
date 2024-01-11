@@ -8,7 +8,9 @@ module Card =
     let pointValue (card : Card) =
         match card.Rank, card.Suit with
             | _, Suit.Hearts -> 1
+#if !MINI
             | Rank.Queen, Suit.Spades -> Rank.numRanks
+#endif
             | _ -> 0
 
 /// One card played by each player in turn during a deal.
