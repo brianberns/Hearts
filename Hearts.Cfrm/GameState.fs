@@ -163,15 +163,19 @@ module GameStateKey =
                 })
             |> Option.defaultValue "00"
 
-    let private rangesChar ranges =
-        match Array.length ranges with
-            | 0 -> 0
-            | length ->
-                let decr =
-                    if ranges[0].Present then 0
-                    else 1
-                length * 2 - decr
-            |> Char.fromHexDigit
+    let private getRangeChar range =
+        let length = int range.MaxRank - int range.MinRank + 1
+        assert(length > 0)
+        assert(length <= Rank.numRanks)
+        let index = 2 * length - (if range.Present then 1 else 0)
+        Char.fromHexDigit index
+
+    let private getRangesChars ranges =
+        seq {
+            yield '|'
+            for range in ranges do
+                yield getRangeChar range
+        }
 
     let private getLegalRanges hand deal =
         let rangeMap =
@@ -190,16 +194,16 @@ module GameStateKey =
                 [|
                     let lowRanges, highRanges =
                         CardRange.split highRank ranges
-                    yield rangesChar lowRanges
-                    yield rangesChar highRanges
+                    yield! getRangesChars lowRanges
+                    yield! getRangesChars highRanges
                 |]
             | None ->
                 [|
                     for suit in Enum.getValues<Suit> do
-                        rangeMap
+                        yield! rangeMap
                             |> Map.tryFind suit
                             |> Option.defaultValue Array.empty
-                            |> rangesChar
+                            |> getRangesChars
                 |]
 
     let getKey deal =
