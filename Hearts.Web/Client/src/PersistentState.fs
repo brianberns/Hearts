@@ -45,25 +45,17 @@ module PersistentState =
 
     /// Saves the given state.
     let save (persState : PersistentState) =
-#if MINI
-        ()
-#else
         WebStorage.localStorage[key]
             <- Json.serialize persState
-#endif
 
     /// Answers the current state.
     let get () =
-#if MINI
-        initial
-#else
         let json = WebStorage.localStorage[key] 
         if isNull json then
             save initial
             initial
         else
             Json.parseAs<PersistentState>(json)
-#endif
 
 type PersistentState with
 

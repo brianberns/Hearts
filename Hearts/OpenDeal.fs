@@ -57,8 +57,8 @@ module OpenDeal =
         let cardMap = deal.UnplayedCardMap
         let passer =
             deal.Exchange |> Exchange.currentPasser
-        assert(cardMap.[passer].Count = ClosedDeal.numCardsPerHand)
-        let unplayedCards = cardMap.[passer]
+        assert(cardMap[passer].Count = ClosedDeal.numCardsPerHand)
+        let unplayedCards = cardMap[passer]
         assert(Set.intersect unplayedCards cards = cards)
         let unplayedCards = Set.difference unplayedCards cards
         let cardMap = cardMap |> Map.add passer unplayedCards
@@ -78,7 +78,7 @@ module OpenDeal =
         let receiver =
             deal.Exchange.ExchangeDirection
                 |> ExchangeDirection.apply passer
-        let unplayedCards = cardMap.[receiver]
+        let unplayedCards = cardMap[receiver]
         assert(Set.intersect unplayedCards cards |> Set.isEmpty)
         let unplayedCards = Set.union unplayedCards cards
         let cardMap = cardMap |> Map.add receiver unplayedCards
@@ -135,7 +135,7 @@ module OpenDeal =
 
     /// Answers the current player's unplayed cards.
     let currentHand deal =
-        deal.UnplayedCardMap.[currentPlayer deal]
+        deal.UnplayedCardMap[currentPlayer deal]
 
     /// Plays the given card on the given deal.
     let addPlay card deal =
@@ -146,7 +146,7 @@ module OpenDeal =
                         |> ClosedDeal.addPlay card
                 UnplayedCardMap =
                     let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
-                    let unplayedCards = deal.UnplayedCardMap.[seat]
+                    let unplayedCards = deal.UnplayedCardMap[seat]
                     assert(unplayedCards.Contains(card))
                     let unplayedCards = unplayedCards.Remove(card)
                     deal.UnplayedCardMap |> Map.add seat unplayedCards
@@ -203,7 +203,7 @@ module OpenDeal =
                         assert(rank <> card.Rank)
                         rank < card.Rank)
 
-            let hand = deal.UnplayedCardMap.[player]
+            let hand = deal.UnplayedCardMap[player]
             if hand |> Seq.forall (fun card -> isWinner card) then
                 let points =
                     deal.UnplayedCardMap
@@ -220,8 +220,7 @@ module OpenDeal =
             let! additional = tryFinalAdditional deal
             let score = deal.ClosedDeal.Score + additional
             assert(Score.sum score = numPointsPerDeal)
-            let (ScoreMap scoreMap) = score
-            return scoreMap
+            return score.ScoreMap
                 |> Map.toSeq
                 |> Seq.tryFind (fun (_, points) ->
                     points = numPointsPerDeal)
@@ -233,6 +232,7 @@ module OpenDeal =
                                 else numPointsPerDeal
                             seat, points)
                         |> Map
-                        |> ScoreMap)
+                        |> fun scoreMap ->
+                            { ScoreMap = scoreMap })
                 |> Option.defaultValue score
         }

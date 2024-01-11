@@ -170,5 +170,4 @@ module DealView =
     /// Displays current score for each player.
     let displayStatus (deal : OpenDeal) =
         for seat in Enum.getValues<Seat> do
-            let (ScoreMap scoreMap) = deal.ClosedDeal.Score
-            elemMap[seat].text($"{scoreMap[seat]}")
+            elemMap[seat].text($"{deal.ClosedDeal.Score[seat]}")

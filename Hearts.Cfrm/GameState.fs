@@ -96,9 +96,8 @@ module CardRange =
 module GameStateKey =
 
     let private getShootStatus deal =
-        let (ScoreMap scoreMap) = deal.Score
         let nPlayers =
-            scoreMap
+            deal.Score.ScoreMap
                 |> Map.toSeq
                 |> Seq.where (fun (_, points) ->
                     points > 0)
@@ -107,7 +106,7 @@ module GameStateKey =
             | 0 -> 0
             | 1 ->
                 let curPlayer = ClosedDeal.currentPlayer deal
-                if scoreMap[curPlayer] > 0 then 1 else 2
+                if deal.Score[curPlayer] > 0 then 1 else 2
             | _ -> 3
             |> Char.fromDigit
 
@@ -225,8 +224,8 @@ module GameState =
         if canTryFinalize deal then
             deal
                 |> OpenDeal.tryFinalScore
-                |> Option.map (fun (ScoreMap scoreMap) ->
-                    scoreMap
+                |> Option.map (fun score ->
+                    score.ScoreMap
                         |> Map.values
                         |> Seq.map (fun points ->
                             float -points)

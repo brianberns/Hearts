@@ -4,16 +4,24 @@ open PlayingCards
 
 /// Points taken by each player during one or more deals.
 type Score =
-    | ScoreMap of Map<Seat, int>
+    {
+        ScoreMap : Map<Seat, int>
+    }
+
+    /// Number of points taken by the given player.
+    member score.Item
+        with get(seat) = score.ScoreMap[seat]
 
     /// Adds two scores.
-    static member (+) (ScoreMap mapA, ScoreMap mapB) =
-        Enum.getValues<Seat>
-            |> Seq.map (fun seat ->
-                let sum = mapA.[seat] + mapB.[seat]
-                seat, sum)
-            |> Map
-            |> ScoreMap
+    static member (+) (scoreA : Score, scoreB : Score) =
+        {
+            ScoreMap =
+                Enum.getValues<Seat>
+                    |> Seq.map (fun seat ->
+                        let sum = scoreA[seat] + scoreB[seat]
+                        seat, sum)
+                    |> Map
+        }
 
 module Score =
 
@@ -24,17 +32,14 @@ module Score =
             |> Map
 
     /// Initial score.
-    let zero =
-        ScoreMap zeroMap
+    let zero = { ScoreMap = zeroMap }
 
     /// Creates a score for the given seat.
     let create seat points =
-        zeroMap
-            |> Map.add seat points
-            |> ScoreMap
+        {
+            ScoreMap = Map.add seat points zeroMap
+        }
 
     /// Sum of all points in the given score.
-    let sum (ScoreMap scoreMap) =
-        scoreMap
-            |> Map.toSeq
-            |> Seq.sumBy snd
+    let sum score =
+        Seq.sum score.ScoreMap.Values
