@@ -159,7 +159,7 @@ module OpenDeal =
 
     /// Determines the final additional score of the given deal, if
     /// possible.
-    let tryFinalize deal =
+    let private tryFinalAdditional deal =
 
             // applies only at trick boundaries
         assert(
@@ -214,3 +214,27 @@ module OpenDeal =
             else None
 
         else None
+
+    /// Determines the final score of the deal, including shoot
+    /// reward, if possible.
+    let tryFinalScore deal =
+        option {
+            let! additional = tryFinalAdditional deal
+            let score = deal.ClosedDeal.Score + additional
+            assert(Score.sum score = numPointsPerDeal)
+            let (ScoreMap scoreMap) = score
+            return scoreMap
+                |> Map.toSeq
+                |> Seq.tryFind (fun (_, points) ->
+                    points = numPointsPerDeal)
+                |> Option.map (fun (shooter, _) ->
+                    Enum.getValues<Seat>
+                        |> Seq.map (fun seat ->
+                            let points =
+                                if seat = shooter then 0
+                                else numPointsPerDeal
+                            seat, points)
+                        |> Map
+                        |> ScoreMap)
+                |> Option.defaultValue score
+        }

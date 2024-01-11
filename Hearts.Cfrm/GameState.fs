@@ -224,7 +224,7 @@ module GameState =
     let terminalValuesOpt deal =
         if canTryFinalize deal then
             deal
-                |> OpenDeal.tryFinalize
+                |> OpenDeal.tryFinalScore
                 |> Option.map (fun (ScoreMap scoreMap) ->
                     scoreMap
                         |> Map.values
