@@ -223,7 +223,7 @@ module OpenDeal =
             return score.ScoreMap
                 |> Map.toSeq
                 |> Seq.tryFind (fun (_, points) ->
-                    points = numPointsPerDeal)
+                    points = 2 * numPointsPerDeal)
                 |> Option.map (fun (shooter, _) ->
                     Enum.getValues<Seat>
                         |> Seq.map (fun seat ->
