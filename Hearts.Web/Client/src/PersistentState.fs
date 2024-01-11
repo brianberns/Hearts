@@ -10,8 +10,8 @@ open Hearts
 /// Persistent state.
 type PersistentState =
     {
-        /// Number of points taken by each player.
-        PointsTaken : Score
+        /// Total number of points taken by each player.
+        TotalScore : Score
 
         /// State of random number generator.
         RandomState : uint64   // can't persist entire RNG
@@ -34,7 +34,7 @@ module PersistentState =
     /// Initial persistent state.
     let private initial =
         {
-            PointsTaken = Score.zero
+            TotalScore = Score.zero
             RandomState = Random().State   // start with arbitrary seed
             Dealer = Seat.South
             DealOpt = None
