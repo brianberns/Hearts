@@ -176,7 +176,7 @@ module OpenDeal =
             Some Score.zero
 
             // current player takes all remaining tricks?
-        elif ClosedDeal.numCardsPerHand - deal.ClosedDeal.CompletedTricks.Length > 1 then   // KH doesn't consider this on last trick
+        else
 
             let player = currentPlayer deal
             let cardMap =
@@ -212,8 +212,6 @@ module OpenDeal =
                         |> Seq.sumBy Card.pointValue
                 Score.create player points |> Some
             else None
-
-        else None
 
     /// Determines the final score of the deal, including shoot
     /// reward, if possible.
