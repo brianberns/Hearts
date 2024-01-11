@@ -12,6 +12,39 @@
 </head>
 <body>
     <main>
+        <div id="score">
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Current</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>West</th>
+                        <td id="wCurrent"></td>
+                        <td id="wTotal"></td>
+                    </tr>
+                    <tr>
+                        <th>North</th>
+                        <td id="nCurrent"></td>
+                        <td id="nTotal"></td>
+                    </tr>
+                    <tr>
+                        <th>East</th>
+                        <td id="eCurrent"></td>
+                        <td id="eTotal"></td>
+                    </tr>
+                    <tr>
+                        <th>South</th>
+                        <td id="sCurrent"></td>
+                        <td id="sTotal"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <div id="more">
             <p>
                 <label>Animation speed: <input type="range" id="animationSpeed" class="slider" min="0" max="500" value="300"></label>
