@@ -33,7 +33,7 @@ module Program =
                 let rng = Random(int fileInfo.Length)   // avoid revisiting original deals
                 CfrBatch.load batchFileName (fun _ -> createGame rng)
             else
-                let numPlayers = 4
+                let numPlayers = Seat.numSeats
                 let rng = Random(0)
                 CfrBatch.create numPlayers (fun _ -> createGame rng)
         let batchNums = Seq.initInfinite ((+) 1)   // 1, 2, 3, ...
