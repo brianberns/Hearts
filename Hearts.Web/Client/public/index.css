@@ -15,6 +15,10 @@ a {
     text-decoration: none;
 }
 
+td {
+    background-color: #9DC8D6;
+}
+
 #score {
     position: absolute;
     left: 2%;
@@ -31,8 +35,14 @@ a {
     #score td {
         padding-left: 5px;
         padding-right: 5px;
-        background-color: #9DC8D6;
     }
+
+#deck {
+    position: absolute;
+    left: 80%;
+    top: 2%;
+    text-align: center;
+}
 
 #more {
     position: absolute;

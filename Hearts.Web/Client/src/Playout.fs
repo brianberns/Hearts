@@ -71,7 +71,7 @@ module Playout =
                 | Some winner ->
 
                         // track points taken
-                    DealView.displayScore deal
+                    DealView.displayStatus deal
 
                         // animate
                     let animate () =

@@ -159,7 +159,7 @@ module DealView =
             createHandViews surface deal   // no animation
 
     /// Elements tracking current score.
-    let private elemMap =
+    let private scoreElemMap =
         Map [
             Seat.West,  ~~"#wCurrent"
             Seat.North, ~~"#nCurrent"
@@ -167,7 +167,17 @@ module DealView =
             Seat.South, ~~"#sCurrent"
         ]
 
-    /// Displays current score for each player.
-    let displayScore (deal : OpenDeal) =
+    let private suitElemMap =
+        Map [
+            Suit.Clubs,    ~~"#deckClubs"
+            Suit.Diamonds, ~~"#deckDiamonds"
+            Suit.Hearts,   ~~"#deckHearts"
+            Suit.Spades,   ~~"#deckSpades"
+        ]
+
+    /// Displays current deal status.
+    let displayStatus deal =
+
+            // current score for each player
         for seat in Enum.getValues<Seat> do
-            elemMap[seat].text($"{deal.ClosedDeal.Score[seat]}")
+            scoreElemMap[seat].text($"{deal.ClosedDeal.Score[seat]}")

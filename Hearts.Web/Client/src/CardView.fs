@@ -25,6 +25,20 @@ module HTMLElement =
 
     let HTMLButtonElement = HTMLButtonElementType()
 
+    type HTMLTableHeaderCellElementType() =
+        member _.Create() =
+            document.createElement("th")
+                :?> HTMLTableHeaderCellElement
+
+    let HTMLTableHeaderCellElement = HTMLTableHeaderCellElementType()
+
+    type HTMLTableCellElementType() =
+        member _.Create() =
+            document.createElement("td")
+                :?> HTMLTableCellElement
+
+    let HTMLTableCellElement = HTMLTableCellElementType()
+
 /// A view of a card.
 type CardView = JQueryElement
 

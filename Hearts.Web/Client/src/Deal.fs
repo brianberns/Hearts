@@ -110,7 +110,7 @@ module Deal =
 
                 // animate dealing the cards
             displayScore persState
-            DealView.displayScore deal
+            DealView.displayStatus deal
             let! seatViews =
                 DealView.start surface dealer deal
                     |> Async.AwaitPromise
