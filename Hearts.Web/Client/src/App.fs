@@ -22,11 +22,6 @@ module Session =
                         // run new game
                     console.log("New game")
                     let! persState = Deal.run surface persState
-                    let persState =
-                        { persState with
-                            Dealer = persState.Dealer.Next
-                            DealOpt = None }
-                            .Save()
                     do! loop persState
         }
 

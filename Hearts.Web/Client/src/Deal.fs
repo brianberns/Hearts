@@ -47,12 +47,12 @@ module Deal =
         }
 
     /// Handles the end of a deal.
-    let private dealOver (surface : JQueryElement) deal =
+    let private dealOver (surface : JQueryElement) shooterOpt =
 
             // display banner
         let banner =
             let html =
-                OpenDeal.tryFindShooter deal
+                shooterOpt
                     |> Option.map (fun shooter ->
                         $"{Seat.toString shooter} shot the moon!<br /><span style=\"font-size: 100px\">🎆🌕🎆</span>")
                     |> Option.defaultValue "Deal over"
@@ -102,7 +102,13 @@ module Deal =
 
                 // run the playout
             let! persState = playout surface persState seatViews
-            do! dealOver surface persState.Deal
+            let shooterOpt =
+                OpenDeal.tryFindShooter deal
+            let persState' =
+                { persState with
+                    Dealer = persState.Dealer.Next
+                    DealOpt = None }.Save()
+            do! dealOver surface shooterOpt
                 |> Async.AwaitPromise
-            return persState
+            return persState'
         }
