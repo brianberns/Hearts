@@ -175,6 +175,29 @@ module DealView =
             Suit.Spades,   ~~"#deckSpades"
         ]
 
+    /// Prepares deck table for use.
+    let prepareDeckTable () =
+
+        let ranksRow = ~~"#deckRanks"
+        for rank in Enum.getValues<Rank> do
+
+                // one column for each rank
+            let rankChar = Rank.toChar rank
+            let cell =
+                ~~HTMLTableHeaderCellElement.Create(
+                    innerText = $"{rankChar}")
+            ranksRow.append(cell)
+
+                // empty cell for each card
+            for suit in Enum.getValues<Suit> do
+                let row = suitElemMap[suit]
+                let cell =
+                    let card = Card.create rank suit
+                    ~~HTMLTableCellElement.Create(
+                        id = $"deck{card.String}",
+                        innerHTML="&nbsp;")
+                row.append(cell)
+
     /// Displays current deal status.
     let displayStatus deal =
 

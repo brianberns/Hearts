@@ -44,12 +44,7 @@ module App =
             |> Settings.save)
 
         // prepare deck table
-    let ranksRow = ~~"#deckRanks"
-    for rank in Enum.getValues<Rank> do
-        let cell =
-            ~~HTMLTableHeaderCellElement.Create(
-                innerText = $"{Rank.toChar rank}")
-        ranksRow.append(cell)
+    DealView.prepareDeckTable ()
 
         // start a session when the browser is ready
     (~~document).ready(fun () ->
