@@ -39,10 +39,14 @@ td {
 
 #deck {
     position: absolute;
-    left: 80%;
-    top: 2%;
+    left: 65%;
+    top: 75%;
     text-align: center;
 }
+
+    #deck td {
+        width: 20px;
+    }
 
 #more {
     position: absolute;

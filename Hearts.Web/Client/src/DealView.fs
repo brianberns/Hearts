@@ -175,6 +175,9 @@ module DealView =
             Suit.Spades,   ~~"#deckSpades"
         ]
 
+    let private getCellId (card : Card) =
+        $"deck{card.String}"
+
     /// Prepares deck table for use.
     let prepareDeckTable () =
 
@@ -194,8 +197,7 @@ module DealView =
                 let cell =
                     let card = Card.create rank suit
                     ~~HTMLTableCellElement.Create(
-                        id = $"deck{card.String}",
-                        innerHTML="&nbsp;")
+                        id = getCellId card)
                 row.append(cell)
 
     /// Displays current deal status.
@@ -204,3 +206,15 @@ module DealView =
             // current score for each player
         for seat in Enum.getValues<Seat> do
             scoreElemMap[seat].text($"{deal.ClosedDeal.Score[seat]}")
+
+            // status of each card
+        let handCards =
+            deal
+                |> OpenDeal.currentHand
+                |> set
+        for card in Card.allCards do
+            let text =
+                if deal.ClosedDeal.PlayedCards.Contains(card) then "X"
+                elif handCards.Contains(card) then "O"
+                else ""
+            (~~($"#{getCellId card}")).text(text)
