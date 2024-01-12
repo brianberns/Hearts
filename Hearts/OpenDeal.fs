@@ -213,6 +213,21 @@ module OpenDeal =
                 Score.create player points |> Some
             else None
 
+    /// Answers the seat of the player who shot the moon, if
+    /// one did.
+    let tryFindShooter deal =
+        option {
+            let! additional = tryFinalAdditional deal
+            let score = deal.ClosedDeal.Score + additional
+            assert(Score.sum score = numPointsPerDeal)
+            let! seat, _ =
+                score.ScoreMap
+                    |> Map.toSeq
+                    |> Seq.tryFind (fun (_, points) ->
+                        points = numPointsPerDeal)
+            return seat
+        }
+
     /// Determines the final score of the deal, including shoot
     /// reward, if possible.
     let tryFinalScore deal =
@@ -220,11 +235,9 @@ module OpenDeal =
             let! additional = tryFinalAdditional deal
             let score = deal.ClosedDeal.Score + additional
             assert(Score.sum score = numPointsPerDeal)
-            return score.ScoreMap
-                |> Map.toSeq
-                |> Seq.tryFind (fun (_, points) ->
-                    points = numPointsPerDeal)
-                |> Option.map (fun (shooter, _) ->
+            return deal
+                |> tryFindShooter
+                |> Option.map (fun shooter ->
                     Enum.getValues<Seat>
                         |> Seq.map (fun seat ->
                             let points =

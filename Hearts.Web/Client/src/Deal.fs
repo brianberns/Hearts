@@ -1,4 +1,4 @@
-namespace Hearts.Web.Client
+﻿namespace Hearts.Web.Client
 
 open Browser
 
@@ -52,9 +52,10 @@ module Deal =
             // display banner
         let banner =
             let html =
-                let dealer : Seat = dealer
-                let deal : OpenDeal = deal
-                $"<p>Deal over</p>"
+                OpenDeal.tryFindShooter deal
+                    |> Option.map (fun shooter ->
+                        $"{Seat.toString shooter} shot the moon!<br /><span style=\"font-size: 100px\">🎆🌕🎆</span>")
+                    |> Option.defaultValue "Deal over"
             ~~HTMLDivElement.Create(innerHTML = html)
         banner.addClass("banner")
         surface.append(banner)
