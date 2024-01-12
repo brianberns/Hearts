@@ -47,7 +47,7 @@ module Deal =
         }
 
     /// Handles the end of a deal.
-    let private dealOver (surface : JQueryElement) dealer deal =
+    let private dealOver (surface : JQueryElement) deal =
 
             // display banner
         let banner =
@@ -102,7 +102,7 @@ module Deal =
 
                 // run the playout
             let! persState = playout surface persState seatViews
-            do! dealOver surface dealer persState.Deal
+            do! dealOver surface persState.Deal
                 |> Async.AwaitPromise
             return persState
         }
