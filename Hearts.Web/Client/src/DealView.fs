@@ -175,6 +175,8 @@ module DealView =
             Suit.Spades,   ~~"#deckSpades"
         ]
 
+    /// Gets the ID of the table cell that represents the
+    /// given card.
     let private getCellId (card : Card) =
         $"deck{card.String}"
 

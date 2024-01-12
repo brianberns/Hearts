@@ -64,14 +64,12 @@ module Playout =
                 // play the card
             do! context.AnimCardPlay cardView
                 |> Animation.run
+            DealView.displayStatus deal
 
                 // trick is complete?
             let dealComplete = ClosedDeal.isComplete deal.ClosedDeal
             match getTrickWinnerOpt context card with
                 | Some winner ->
-
-                        // track points taken
-                    DealView.displayStatus deal
 
                         // animate
                     let animate () =
