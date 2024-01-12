@@ -46,6 +46,20 @@ module Deal =
             return persState'
         }
 
+    /// Elements tracking total score.
+    let private elemMap =
+        Map [
+            Seat.West,  ~~"#wTotal"
+            Seat.North, ~~"#nTotal"
+            Seat.East,  ~~"#eTotal"
+            Seat.South, ~~"#sTotal"
+        ]
+
+    /// Displays total score for each player.
+    let displayScore persState =
+        for seat in Enum.getValues<Seat> do
+            elemMap[seat].text($"{persState.TotalScore[seat]}")
+
     /// Handles the end of a deal.
     let private dealOver (surface : JQueryElement) shooterOpt =
 
@@ -95,20 +109,34 @@ module Deal =
                         deal, persState
 
                 // animate dealing the cards
-            DealView.displayStatus deal
+            displayScore persState
+            DealView.displayScore deal
             let! seatViews =
                 DealView.start surface dealer deal
                     |> Async.AwaitPromise
 
                 // run the playout
             let! persState = playout surface persState seatViews
-            let shooterOpt =
-                OpenDeal.tryFindShooter deal
-            let persState' =
-                { persState with
-                    Dealer = persState.Dealer.Next
-                    DealOpt = None }.Save()
-            do! dealOver surface shooterOpt
-                |> Async.AwaitPromise
-            return persState'
+
+                // deal is over
+            match OpenDeal.tryFinalScore persState.Deal with
+                | Some score ->
+
+                    let persState' =
+                        { persState with
+                            TotalScore =
+                                persState.TotalScore + score
+                            Dealer = persState.Dealer.Next
+                            DealOpt = None }.Save()
+                    displayScore persState'
+
+                    let shooterOpt =
+                        OpenDeal.tryFindShooter persState.Deal
+                    do! dealOver surface shooterOpt
+                        |> Async.AwaitPromise
+
+                    return persState'
+
+                | None ->
+                    return failwith "Incomplete deal"
         }
