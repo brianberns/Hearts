@@ -122,18 +122,20 @@ module Deal =
             match OpenDeal.tryFinalScore persState.Deal with
                 | Some score ->
 
+                        // persist updated state
                     let persState' =
                         { persState with
                             TotalScore =
                                 persState.TotalScore + score
                             Dealer = persState.Dealer.Next
                             DealOpt = None }.Save()
-                    displayScore persState'
 
+                        // display deal results
                     let shooterOpt =
                         OpenDeal.tryFindShooter persState.Deal
                     do! dealOver surface shooterOpt
                         |> Async.AwaitPromise
+                    displayScore persState'
 
                     return persState'
 
