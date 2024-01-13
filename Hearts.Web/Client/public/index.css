@@ -39,7 +39,7 @@ td {
 
 #deck {
     position: absolute;
-    left: 65%;
+    left: 25%;
     top: 75%;
     text-align: center;
 }
@@ -50,8 +50,8 @@ td {
 
 #more {
     position: absolute;
-    left: 2%;
-    top: 87%;
+    left: 80%;
+    top: 84%;
 }
 
 .♦ {
