@@ -56,7 +56,7 @@ module Program =
                     // report results from this batch
                 printfn "%d,%A,%d,%A"
                     (batchNum * batchSize)
-                    outBatch.ExpectedGameValues[1]   // value of a deal from the first bidder's point of view
+                    (Seq.average outBatch.ExpectedGameValues)
                     outBatch.InfoSetMap.Count
                     stopwatch.Elapsed
                 stopwatch.Reset()
@@ -68,5 +68,5 @@ module Program =
     [<EntryPoint>]
     let main argv =
         Console.OutputEncoding <- System.Text.Encoding.UTF8
-        minimize 1000
+        minimize 100
         0

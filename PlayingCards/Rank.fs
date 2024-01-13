@@ -7,8 +7,8 @@ type Rank =
     | Four  =  4
     | Five  =  5
     | Six   =  6
-#if !MINI
     | Seven =  7
+#if !MINI
     | Eight =  8
     | Nine  =  9
     | Ten   = 10
