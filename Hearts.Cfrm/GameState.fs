@@ -25,11 +25,26 @@ module Seq =
             |> Seq.map (fun (key, items) ->
                 key, List.toSeq items)
 
+/// A range of cards in a given suit. All unplayed cards in
+/// this range are either present in the current user's hand
+/// or held in another user's hand. Cards that have already
+/// been played are ignored. Example:
+/// * Range 2-4H, present
+///   * 2H: Present in user's hand
+///   * 3H: Already played
+///   * 4H: Present in user's hand
 type CardRange =
     {
+        /// Suit of all cards in this range.
         Suit : Suit
+
+        /// Rank of lowest card in this range.
         MinRank : Rank
+
+        /// Rank of highest card in this range.
         MaxRank : Rank
+
+        /// Card is present in current user's hand?
         Present : bool
     }
 
