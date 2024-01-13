@@ -167,6 +167,7 @@ module DealView =
             Seat.South, ~~"#sCurrent"
         ]
 
+    /// Elements tracking played cards.
     let private suitElemMap =
         Map [
             Suit.Clubs,    ~~"#deckClubs"
@@ -210,13 +211,19 @@ module DealView =
             scoreElemMap[seat].text($"{deal.ClosedDeal.Score[seat]}")
 
             // status of each card
-        let handCards =
-            deal
-                |> OpenDeal.currentHand
-                |> set
-        for card in Card.allCards do
-            let text =
-                if deal.ClosedDeal.PlayedCards.Contains(card) then "X"
-                elif handCards.Contains(card) then "O"
-                else ""
-            (~~($"#{getCellId card}")).text(text)
+        let deckView = ~~"#deck"
+        if deal.ClosedDeal.CurrentTrickOpt.IsSome
+            && OpenDeal.currentPlayer deal = Seat.User then
+            deckView.show()
+            let handCards =
+                deal
+                    |> OpenDeal.currentHand
+                    |> set
+            for card in Card.allCards do
+                let text =
+                    if deal.ClosedDeal.PlayedCards.Contains(card) then "X"
+                    elif handCards.Contains(card) then "O"
+                    else ""
+                (~~($"#{getCellId card}")).text(text)
+        else
+            deckView.hide()

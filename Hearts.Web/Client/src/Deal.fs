@@ -69,7 +69,7 @@ module Deal =
                 shooterOpt
                     |> Option.map (fun shooter ->
                         $"{Seat.toString shooter} shot the moon!<br /><span style=\"font-size: 100px\">🎆🌕🎆</span>")
-                    |> Option.defaultValue "Deal over"
+                    |> Option.defaultValue "Deal is over"
             ~~HTMLDivElement.Create(innerHTML = html)
         banner.addClass("banner")
         surface.append(banner)

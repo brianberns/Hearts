@@ -93,6 +93,9 @@ type JQueryElement =
     /// Gets the underlying DOM element(s).
     abstract get : unit -> Browser.Types.HTMLElement[]
 
+    /// Hides the element.
+    abstract hide : unit -> unit
+
     /// Removes an event handler.
     abstract off : eventName : string -> unit
 
@@ -114,6 +117,9 @@ type JQueryElement =
 
     /// Removes the given class from the element.
     abstract removeClass : className : string -> unit
+
+    /// Shows the element.
+    abstract show : unit -> unit
 
     /// Sets the element's text contents.
     abstract text : text : string -> unit
