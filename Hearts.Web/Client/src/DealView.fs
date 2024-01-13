@@ -222,7 +222,7 @@ module DealView =
             for card in Card.allCards do
                 let text =
                     if deal.ClosedDeal.PlayedCards.Contains(card) then "🞬"
-                    elif handCards.Contains(card) then "🞇"
+                    elif handCards.Contains(card) then "⬤"
                     else ""
                 (~~($"#{getCellId card}")).text(text)
         else
