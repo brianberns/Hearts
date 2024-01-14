@@ -185,7 +185,8 @@ module DealView =
     let prepareDeckTable () =
 
         let ranksRow = ~~"#deckRanks"
-        for rank in Enum.getValues<Rank> do
+        let ranks = Seq.rev Enum.getValues<Rank>
+        for rank in ranks do
 
                 // one column for each rank
             let rankChar = Rank.toChar rank
