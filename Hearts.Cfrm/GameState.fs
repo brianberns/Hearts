@@ -111,24 +111,25 @@ module CardRange =
 
                 suit, ranges)
 
+    /// Splits the given ranges into two subranges above and below
+    /// the given rank.
     let split rank ranges =
         (ranges, ([], []))
-            ||> Seq.foldBack (fun range (low, high) ->
-                if rank < range.MinRank then
-                    low, range :: high
-                elif rank > range.MaxRank then
-                    range :: low, high
-                else
-                    assert(rank > range.MinRank)
-                    assert(rank < range.MaxRank)
+            ||> Seq.foldBack (fun range (below, above) ->
+                if range.MinRank > rank then     // range is above cutoff
+                    below, range :: above
+                elif range.MaxRank < rank then   // range is below cutoff
+                    range :: below, above
+                else                             // range contains cutoff
+                    assert(range.MinRank < rank)
+                    assert(range.MaxRank > rank)
                     { range with
                         MaxRank = enum<Rank> (int rank - 1) }
-                        :: low,
+                        :: below,
                     { range with
                         MinRank = enum<Rank> (int rank + 1) }
-                        :: high)
-            |> fun (low, high) ->
-                Seq.toArray low, Seq.toArray high
+                        :: above)
+            |> Tuple.map Seq.toArray
 
 module GameStateKey =
 
