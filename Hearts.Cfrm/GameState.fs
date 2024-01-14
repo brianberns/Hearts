@@ -25,13 +25,12 @@ module Seq =
             |> Seq.map (fun (key, items) ->
                 key, List.toSeq items)
 
-/// A range of cards in a given suit. All unplayed cards in
-/// this range are either present in the current user's hand
-/// or held in another user's hand. Cards that have already
-/// been played are ignored. Example:
+/// A range of cards in a given suit. All unplayed cards in this
+/// range are either present in the current user's hand or are
+/// held in another user's hand (i.e. "outstanding"). Example:
 /// * Range 2-4H, present
 ///   * 2H: Present in user's hand
-///   * 3H: Already played
+///   * 3H: Previously played
 ///   * 4H: Present in user's hand
 type CardRange =
     {
@@ -50,26 +49,49 @@ type CardRange =
 
 module CardRange =
 
+    /// Creates a card range.
+    let create suit minRank maxRank present =
+        assert(maxRank >= minRank)
+        {
+            Suit = suit
+            MinRank = minRank
+            MaxRank = maxRank
+            Present = present
+        }
+
+    /// All cards in a deck.
     let private allCardSet = set Card.allCards
 
+    /// Answers the ranges determined by legal plays in the given
+    /// hand.
     let getLegalRanges (hand : Hand) deal =
+
+            // group outstanding cards by suit
         let outstandingCardMap =
             allCardSet - hand - deal.PlayedCards
                 |> Seq.groupBy (fun card -> card.Suit)
                 |> Map
+
+            // group legal plays by suit
         ClosedDeal.legalPlays hand deal
             |> Seq.groupBy (fun card -> card.Suit)
             |> Seq.map (fun (suit, legalPlays) ->
+
+                    // ranks of present cards in this suit
                 let inRankPairs =
                     legalPlays
                         |> Seq.map (fun card ->
                             card.Rank, true)
+
+                    // ranks of outstanding cards in this suit
                 let outRankPairs =
                     outstandingCardMap
                         |> Map.tryFind suit
                         |> Option.defaultValue Seq.empty
                         |> Seq.map (fun card ->
                             card.Rank, false)
+
+                    // interleave to create ranges
                 let ranges =
                     Seq.append inRankPairs outRankPairs
                         |> Seq.sort
@@ -80,13 +102,13 @@ module CardRange =
                                     |> Seq.map fst
                                     |> Seq.toArray
                             assert(ranks.Length > 0)
-                            {
-                                Suit = suit
-                                MinRank = Array.head ranks
-                                MaxRank = Array.last ranks
-                                Present = flag
-                            })
+                            create
+                                suit
+                                (Array.head ranks)
+                                (Array.last ranks)
+                                flag)
                         |> Seq.toArray
+
                 suit, ranges)
 
     let split rank ranges =
