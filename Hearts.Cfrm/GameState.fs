@@ -25,37 +25,26 @@ module Seq =
             |> Seq.map (fun (key, items) ->
                 key, List.toSeq items)
 
-/// A range of cards in a given suit. All unplayed cards in this
-/// range are either present in the current user's hand or are
-/// held in another user's hand (i.e. "outstanding"). Example:
-/// * Range 2-4H, present
-///   * 2H: Present in user's hand
-///   * 3H: Previously played
-///   * 4H: Present in user's hand
+/// A range of unplayed cards in a given suit.
 type CardRange =
     {
         /// Suit of all cards in this range.
         Suit : Suit
 
-        /// Rank of lowest card in this range.
-        MinRank : Rank
+        /// Number of unplayed cards in this range.
+        Count : int
 
-        /// Rank of highest card in this range.
-        MaxRank : Rank
-
-        /// Card is present in current user's hand?
+        /// Cards are present in current user's hand?
         Present : bool
     }
 
 module CardRange =
 
     /// Creates a card range.
-    let create suit minRank maxRank present =
-        assert(maxRank >= minRank)
+    let create suit count present =
         {
             Suit = suit
-            MinRank = minRank
-            MaxRank = maxRank
+            Count = count
             Present = present
         }
 
@@ -72,67 +61,61 @@ module CardRange =
                 |> Seq.groupBy (fun card -> card.Suit)
                 |> Map
 
+            // split on high card of current trick?
+        let splitCardOpt =
+            let trick = ClosedDeal.currentTrick deal
+            Option.map snd trick.HighPlayOpt
+
             // group legal plays by suit
         ClosedDeal.legalPlays hand deal
             |> Seq.groupBy (fun card -> card.Suit)
             |> Seq.map (fun (suit, legalPlays) ->
 
-                    // ranks of present cards in this suit
-                let inRankPairs =
-                    legalPlays
-                        |> Seq.map (fun card ->
-                            card.Rank, true)
+                    // gather relevant cards
+                let rankPairs =
+                    seq {
+                            // ranks of present cards in this suit
+                        for card in legalPlays do
+                            yield card.Rank, Some true
 
-                    // ranks of outstanding cards in this suit
-                let outRankPairs =
-                    outstandingCardMap
-                        |> Map.tryFind suit
-                        |> Option.defaultValue Seq.empty
-                        |> Seq.map (fun card ->
-                            card.Rank, false)
+                            // ranks of outstanding cards in this suit
+                        let outCards =
+                            outstandingCardMap
+                                |> Map.tryFind suit
+                                |> Option.defaultValue Seq.empty
+                        for card in outCards do
+                            yield card.Rank, Some false
+
+                            // rank of split card, if in this suit
+                        match splitCardOpt with
+                            | Some (card : Card) when card.Suit = suit ->
+                                yield card.Rank, None
+                            | _ -> ()
+                    }
+                assert(
+                    Seq.length (Seq.distinctBy fst rankPairs)
+                        = Seq.length rankPairs)
 
                     // interleave to create ranges
                 let ranges =
-                    Seq.append inRankPairs outRankPairs
+                    rankPairs
                         |> Seq.sort
                         |> Seq.chunkBy snd
-                        |> Seq.map (fun (flag, rankPairs) ->
-                            let ranks =
-                                rankPairs
-                                    |> Seq.map fst
-                                    |> Seq.toArray
-                            assert(ranks.Length > 0)
-                            create
-                                suit
-                                (Array.head ranks)
-                                (Array.last ranks)
-                                flag)
+                        |> Seq.choose (fun (presentOpt, pairs) ->
+                            presentOpt
+                                |> Option.map (fun present ->
+                                    let count = Seq.length pairs
+                                    create suit count present))
                         |> Seq.toArray
 
                 suit, ranges)
 
-    /// Splits the given ranges into two subranges above and below
-    /// the given rank.
-    let split rank ranges =
-        (ranges, ([], []))
-            ||> Seq.foldBack (fun range (below, above) ->
-                if range.MinRank > rank then     // range is above cutoff
-                    below, range :: above
-                elif range.MaxRank < rank then   // range is below cutoff
-                    range :: below, above
-                else                             // range contains cutoff
-                    assert(range.MinRank < rank)
-                    assert(range.MaxRank > rank)
-                    { range with
-                        MaxRank = enum<Rank> (int rank - 1) }
-                        :: below,
-                    { range with
-                        MinRank = enum<Rank> (int rank + 1) }
-                        :: above)
-            |> Tuple.map Seq.toArray
-
 module GameStateKey =
 
+    /// '0': Any player can shoot
+    /// '1': Only the current player can shoot
+    /// '2': Only another player can shoot
+    /// '3': No player can shoot
     let private getShootStatus deal =
         let nPlayers =
             deal.Score.ScoreMap
@@ -148,27 +131,15 @@ module GameStateKey =
             | _ -> 3
             |> Char.fromDigit
 
-    let private getCardCounts deal =
-        let countMap =
-            deal.PlayedCards
-                |> Seq.groupBy (fun card -> card.Suit)
-                |> Seq.map (fun (suit, cards) ->
-                    suit, Seq.length cards)
-                |> Map
-        seq {
-            for suit in Enum.getValues<Suit> do
-                countMap
-                    |> Map.tryFind suit
-                    |> Option.defaultValue 0
-                    |> Char.fromHexDigit
-        }
-
+    /// Bit flag for each suit: 1, 2, 4, 8.
     let private suitFlagMap =
         Enum.getValues<Suit>
             |> Seq.map (fun suit ->
                 suit, 1 <<< int suit)
             |> Map
 
+    /// One hex character for each other player, indicating which
+    /// suits that player is void in.
     let private getVoids deal =
         let voidMap =
             deal.Voids
@@ -176,9 +147,9 @@ module GameStateKey =
                 |> Seq.map (fun (seat, group) ->
                     seat, Seq.map snd group)
                 |> Map
-        let curPlayer = ClosedDeal.currentPlayer deal
         let seats =
-            curPlayer
+            deal
+                |> ClosedDeal.currentPlayer
                 |> Seat.cycle
                 |> Seq.skip 1
         seq {
@@ -192,20 +163,28 @@ module GameStateKey =
 
     let private getCurrentTrick deal =
         let trick = ClosedDeal.currentTrick deal
-        trick.SuitLedOpt
-            |> Option.map (fun suit ->
+        trick.HighPlayOpt
+            |> Option.map (fun (seat, card) ->
+
+                let iPlayer =
+                    ClosedDeal.currentPlayer deal
+                        |> Seat.getIndex seat
+                assert(iPlayer > 0)
+
+                let hasPoints =
+                    Trick.pointValue trick > 0
+
                 seq {
-                    yield Suit.toLetter suit
-                    yield Char.fromHexDigit
-                        (Trick.pointValue trick)
+                    yield Char.fromDigit iPlayer
+                    yield Suit.toLetter card.Suit
+                    yield if hasPoints then '1' else '0'
                 })
-            |> Option.defaultValue "00"
+            |> Option.defaultValue "000"
 
     let private getRangeChar range =
-        let length = int range.MaxRank - int range.MinRank + 1
-        assert(length > 0)
-        assert(length <= Rank.numRanks)
-        let index = 2 * length - (if range.Present then 1 else 0)
+        let index =
+            (2 * range.Count)
+                - (if range.Present then 1 else 0)
         Char.fromHexDigit index
 
     let private getRangesChars ranges =
@@ -219,36 +198,18 @@ module GameStateKey =
         let rangeMap =
             CardRange.getLegalRanges hand deal
                 |> Map
-        let followPairOpt =
-            option {
-                let! trick = deal.CurrentTrickOpt
-                let! (_, highCard) = trick.HighPlayOpt
-                let! ranges = Map.tryFind highCard.Suit rangeMap
-                assert(rangeMap.Count = 1)
-                return highCard.Rank, ranges
-            }
-        match followPairOpt with
-            | Some (highRank, ranges) ->
-                [|
-                    let lowRanges, highRanges =
-                        CardRange.split highRank ranges
-                    yield! getRangesChars lowRanges
-                    yield! getRangesChars highRanges
-                |]
-            | None ->
-                [|
-                    for suit in Enum.getValues<Suit> do
-                        yield! rangeMap
-                            |> Map.tryFind suit
-                            |> Option.defaultValue Array.empty
-                            |> getRangesChars
-                |]
+        seq {
+            for suit in Enum.getValues<Suit> do
+                yield! rangeMap
+                    |> Map.tryFind suit
+                    |> Option.defaultValue Array.empty
+                    |> getRangesChars
+        }
 
-    let getKey deal =
+    let getKey (deal : OpenDeal) =
         let hand = OpenDeal.currentHand deal
         [|
             yield getShootStatus deal.ClosedDeal
-            yield! getCardCounts deal.ClosedDeal
             yield! getVoids deal.ClosedDeal
             yield! getCurrentTrick deal.ClosedDeal
             yield! getLegalRanges hand deal.ClosedDeal

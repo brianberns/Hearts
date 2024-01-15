@@ -53,6 +53,14 @@ module Seat =
                 yield seat |> incr i
         }
 
+    /// Answers the index of the given seat relative to the given
+    /// base seat.
+    let getIndex (seat : Seat) (baseSeat : Seat) =
+        let idx = ((int seat) - (int baseSeat) + numSeats) % numSeats
+        assert(idx >= 0)
+        assert(idx < numSeats)
+        idx
+
 [<AutoOpen>]
 module SeatExt =
     type Seat with

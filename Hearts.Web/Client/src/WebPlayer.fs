@@ -27,6 +27,7 @@ module Remoting =
 /// Plays Hearts by calling a remote server.
 module WebPlayer =
 
+    open PlayingCards
     open Hearts
     open Hearts.Cfrm
 
@@ -53,5 +54,5 @@ module WebPlayer =
                             |> Option.map (fun iAction ->
                                 legalActions[iAction])
                             |> Option.defaultValue legalActions[0]
-                    return { Suit = range.Suit; Rank = range.MaxRank }   // to-do: randomize
+                    return Card.create range.MaxRank range.Suit
                 }

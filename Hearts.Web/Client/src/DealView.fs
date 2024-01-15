@@ -13,16 +13,6 @@ module SeatExt =
         /// Indicates whether the given seat is played by the user.
         member seat.IsUser = (seat = Seat.User)
 
-module Seat =
-
-    /// Answers the index of the given seat relative to the given
-    /// base seat.
-    let getIndex (seat : Seat) (baseSeat : Seat) =
-        let idx = ((int seat) - (int baseSeat) + Seat.numSeats) % Seat.numSeats
-        assert(idx >= 0)
-        assert(idx < Seat.numSeats)
-        idx
-
 module DealView =
 
     /// Creates card backs at the center of the given surface.
