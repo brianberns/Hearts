@@ -62,11 +62,12 @@ module CardRange =
             Present = present
         }
 
-    /// Creates a sequence of ranges based on the given present/
-    /// outstanding ranks.
+    /// Creates a series of alternating present/outstanding
+    /// ranges based on the given ranks.
     let private getRanges suit inRanks outRanks =
-        assert(Set.intersect (set inRanks) (set outRanks)
-            = Set.empty)
+        assert(
+            let ranks = [| yield! inRanks; yield! outRanks |]
+            (Array.distinct ranks).Length = ranks.Length)
         seq {
             for rank in inRanks -> (rank : Rank), true     // present in current hand
             for rank in outRanks -> (rank : Rank), false   // outstanding
@@ -83,7 +84,7 @@ module CardRange =
 
     /// Answers the ranges determined by legal plays in the given
     /// hand.
-    let private getLegalRanges (hand : Hand) deal =
+    let getLegalRanges (hand : Hand) deal =
 
             // group outstanding cards by suit
         let outMap =
@@ -126,10 +127,10 @@ module CardRange =
                                 |> Seq.partition (fun rank ->
                                     assert(rank <> splitCard.Rank)
                                     rank > splitCard.Rank)
-                        yield suit, Some true, getRanges suit aboveRanks outRanks
-                        yield suit, Some false, getRanges suit belowRanks outRanks
+                        yield suit, getRanges suit aboveRanks outRanks
+                        yield suit, getRanges suit belowRanks outRanks
                     | _ ->
-                        yield suit, None, getRanges suit inRanks outRanks
+                        yield suit, getRanges suit inRanks outRanks
         }
 
 module GameStateKey =
@@ -220,13 +221,18 @@ module GameStateKey =
         let rangeMap =
             let hand = OpenDeal.currentHand deal
             CardRange.getLegalRanges hand deal.ClosedDeal
+                |> Seq.groupBy fst
+                |> Seq.map (fun (suit, group) ->
+                    suit, Seq.map snd group)
                 |> Map
         seq {
             for suit in Enum.getValues<Suit> do
-                yield! rangeMap
-                    |> Map.tryFind suit
-                    |> Option.defaultValue Array.empty
-                    |> getRangesChars
+                let rangeArrays =
+                    rangeMap
+                        |> Map.tryFind suit
+                        |> Option.defaultValue Array.empty
+                for ranges in rangeArrays do
+                    yield! getRangesChars ranges
         }
 
     let getKey deal =
