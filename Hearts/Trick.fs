@@ -28,7 +28,7 @@ type Trick =
         /// Suit of first card played in this trick, if any.
     member trick.SuitLedOpt =
         trick.HighPlayOpt
-            |> Option.map (fun (_, card) -> card.Suit)
+            |> Option.map (snd >> Card.suit)
 
 module Trick =
 

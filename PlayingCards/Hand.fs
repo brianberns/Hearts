@@ -12,14 +12,13 @@ module Hand =
     /// E.g. "K63♠ 2♥ 96♣"
     let toString (hand : Hand) =
         hand
-            |> Seq.groupBy (fun card -> card.Suit)
+            |> Seq.groupBy Card.suit
             |> Seq.sortByDescending fst
             |> Seq.map (fun (suit, cards) ->
                 let sCards =
                     cards
-                        |> Seq.sortByDescending (fun card ->
-                            card.Rank)
-                        |> Seq.map (fun card -> card.Rank.Char)
+                        |> Seq.sortByDescending Card.rank
+                        |> Seq.map (Card.rank >> Rank.toChar)
                         |> Seq.toArray
                         |> String
                 $"{sCards}{suit.Char}")

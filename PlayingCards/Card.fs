@@ -38,8 +38,8 @@ type Card =
             2,
             this,
             System.Buffers.SpanAction(fun span (card : Card) ->
-                span.Slice(0, 1).Fill(Rank.toChar card.Rank)
-                span.Slice(1, 1).Fill(Suit.toChar card.Suit)))
+                span.Slice(0, 1).Fill(card.Rank.Char)
+                span.Slice(1, 1).Fill(card.Suit.Char)))
 #endif
 
     /// String representation of this card.
@@ -57,6 +57,12 @@ module Card =
 
     /// Number of cards in a deck.
     let numCards = Suit.numSuits * Rank.numRanks
+
+    /// Rank of the given card.
+    let rank (card : Card) = card.Rank
+
+    /// Suit of the given card.
+    let suit (card : Card) = card.Suit
 
     /// Converts a two-character string into a card.
     let fromString (str : string) =
