@@ -194,9 +194,10 @@ module GameStateKey =
                 yield getRangeChar range
         }
 
-    let private getLegalRanges hand deal =
+    let private getLegalRanges deal =
         let rangeMap =
-            CardRange.getLegalRanges hand deal
+            let hand = OpenDeal.currentHand deal
+            CardRange.getLegalRanges hand deal.ClosedDeal
                 |> Map
         seq {
             for suit in Enum.getValues<Suit> do
@@ -206,13 +207,12 @@ module GameStateKey =
                     |> getRangesChars
         }
 
-    let getKey (deal : OpenDeal) =
-        let hand = OpenDeal.currentHand deal
+    let getKey deal =
         [|
             yield getShootStatus deal.ClosedDeal
             yield! getVoids deal.ClosedDeal
             yield! getCurrentTrick deal.ClosedDeal
-            yield! getLegalRanges hand deal.ClosedDeal
+            yield! getLegalRanges deal
         |] |> String
 
 module GameState =
