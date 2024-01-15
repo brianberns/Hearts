@@ -22,12 +22,13 @@ type Trick =
         /// Cards played by seat in this trick, in reverse chronological order.
         Cards : List<Card>
 
-        /// Suit of first card played in this trick, if any.
-        SuitLedOpt : Option<Suit>
-
         /// Play that takes this trick, so far, if any.
         HighPlayOpt : Option<Seat * Card>
     }
+        /// Suit of first card played in this trick, if any.
+    member trick.SuitLedOpt =
+        trick.HighPlayOpt
+            |> Option.map (fun (_, card) -> card.Suit)
 
 module Trick =
 
@@ -36,7 +37,6 @@ module Trick =
         {
             Leader = leader
             Cards = List.empty
-            SuitLedOpt = None
             HighPlayOpt = None
         }
 
@@ -56,9 +56,6 @@ module Trick =
         {
             trick with
                 Cards = card :: trick.Cards
-                SuitLedOpt =
-                    trick.SuitLedOpt
-                        |> Option.orElse (Some card.Suit)
                 HighPlayOpt =
                     let isHigh =
                         match trick.HighPlayOpt with
