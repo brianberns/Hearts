@@ -25,6 +25,20 @@ module Seq =
             |> Seq.map (fun (key, items) ->
                 key, List.toSeq items)
 
+    /// Splits the given sequence into two sequences based on the
+    /// given predicate.
+    // https://stackoverflow.com/a/44581431/344223
+    let partition predicate source =
+        let map =
+            source
+                |> Seq.groupBy predicate
+                |> Map.ofSeq
+        let get flag =
+            map
+                |> Map.tryFind flag
+                |> Option.defaultValue Seq.empty
+        get true, get false
+
 /// A range of unplayed cards in a given suit.
 type CardRange =
     {
@@ -48,17 +62,36 @@ module CardRange =
             Present = present
         }
 
+    /// Creates a sequence of ranges based on the given present/
+    /// outstanding ranks.
+    let private getRanges suit inRanks outRanks =
+        assert(Set.intersect (set inRanks) (set outRanks)
+            = Set.empty)
+        seq {
+            for rank in inRanks -> (rank : Rank), true     // present in current hand
+            for rank in outRanks -> (rank : Rank), false   // outstanding
+        }
+            |> Seq.sort                                    // interleave to create ranges
+            |> Seq.chunkBy snd
+            |> Seq.map (fun (present, pairs) ->
+                let count = Seq.length pairs
+                create suit count present)
+            |> Seq.toArray
+
     /// All cards in a deck.
     let private allCardSet = set Card.allCards
 
     /// Answers the ranges determined by legal plays in the given
     /// hand.
-    let getLegalRanges (hand : Hand) deal =
+    let private getLegalRanges (hand : Hand) deal =
 
             // group outstanding cards by suit
-        let outstandingCardMap =
-            allCardSet - hand - deal.PlayedCards
-                |> Seq.groupBy (fun card -> card.Suit)
+        let outMap =
+            (allCardSet - hand - deal.PlayedCards)
+                |> Seq.groupBy Card.suit
+                |> Seq.map (fun (suit, cards) ->
+                    let ranks = Seq.map Card.rank cards
+                    suit, ranks)
                 |> Map
 
             // split on high card of current trick?
@@ -67,48 +100,35 @@ module CardRange =
             Option.map snd trick.HighPlayOpt
 
             // group legal plays by suit
-        ClosedDeal.legalPlays hand deal
-            |> Seq.groupBy (fun card -> card.Suit)
-            |> Seq.map (fun (suit, legalPlays) ->
+        seq {
+            let suitCardsPairs =
+                ClosedDeal.legalPlays hand deal
+                    |> Seq.groupBy Card.suit
+            for suit, legalPlays in suitCardsPairs do
 
-                    // gather relevant cards
-                let rankPairs =
-                    seq {
-                            // ranks of present cards in this suit
-                        for card in legalPlays do
-                            yield card.Rank, Some true
+                    // ranks in this suit present in current hand
+                let inRanks =
+                    Seq.map Card.rank legalPlays
 
-                            // ranks of outstanding cards in this suit
-                        let outCards =
-                            outstandingCardMap
-                                |> Map.tryFind suit
-                                |> Option.defaultValue Seq.empty
-                        for card in outCards do
-                            yield card.Rank, Some false
+                    // outstanding ranks in this suit
+                let outRanks =
+                    outMap
+                        |> Map.tryFind suit
+                        |> Option.defaultValue Seq.empty
 
-                            // rank of split card, if in this suit
-                        match splitCardOpt with
-                            | Some (card : Card) when card.Suit = suit ->
-                                yield card.Rank, None
-                            | _ -> ()
-                    }
-                assert(
-                    Seq.length (Seq.distinctBy fst rankPairs)
-                        = Seq.length rankPairs)
-
-                    // interleave to create ranges
-                let ranges =
-                    rankPairs
-                        |> Seq.sort
-                        |> Seq.chunkBy snd
-                        |> Seq.choose (fun (presentOpt, pairs) ->
-                            presentOpt
-                                |> Option.map (fun present ->
-                                    let count = Seq.length pairs
-                                    create suit count present))
-                        |> Seq.toArray
-
-                suit, ranges)
+                    // split ranges?
+                match splitCardOpt with
+                    | Some splitCard when splitCard.Suit = suit ->
+                        let aboveRanks, belowRanks =
+                            inRanks
+                                |> Seq.partition (fun rank ->
+                                    assert(rank <> splitCard.Rank)
+                                    rank > splitCard.Rank)
+                        yield suit, Some true, getRanges suit aboveRanks outRanks
+                        yield suit, Some false, getRanges suit belowRanks outRanks
+                    | _ ->
+                        yield suit, None, getRanges suit inRanks outRanks
+        }
 
 module GameStateKey =
 
