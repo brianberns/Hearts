@@ -100,10 +100,12 @@ module CardRange =
             Option.map snd trick.HighPlayOpt
 
             // group legal plays by suit
+        let suitCardsPairs =
+            ClosedDeal.legalPlays hand deal
+                |> Seq.groupBy Card.suit
+
+            // create ranges for each suit
         seq {
-            let suitCardsPairs =
-                ClosedDeal.legalPlays hand deal
-                    |> Seq.groupBy Card.suit
             for suit, legalPlays in suitCardsPairs do
 
                     // ranks in this suit present in current hand
