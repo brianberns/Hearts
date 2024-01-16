@@ -225,10 +225,9 @@ module GameStateKey =
                 yield getRangeChar range
         }
 
-    let private getLegalRanges deal =
+    let private getLegalRanges legalRanges =
         let rangeMap =
-            let hand = OpenDeal.currentHand deal
-            CardRange.getLegalRanges hand deal.ClosedDeal
+            legalRanges
                 |> Seq.groupBy fst
                 |> Seq.map (fun (suit, group) ->
                     suit, Seq.map snd group)
@@ -246,23 +245,41 @@ module GameStateKey =
                     yield! getRangesChars ranges
         }
 
-    let getKey deal =
+    let getKey legalRanges deal =
         [|
-            yield getShootStatus deal.ClosedDeal
-            yield! getVoids deal.ClosedDeal
-            yield! getCurrentTrick deal.ClosedDeal
-            yield! getLegalRanges deal
+            yield getShootStatus deal
+            yield! getVoids deal
+            yield! getCurrentTrick deal
+            yield! getLegalRanges legalRanges
         |] |> String
 
-module GameState =
+type GameStateImpl(deal) =
 
-    let private canTryFinalize deal =
+    let legalRanges =
+        lazy (
+            let hand = OpenDeal.currentHand deal
+            deal.ClosedDeal
+                |> CardRange.getLegalRanges hand
+                |> Seq.toArray)
+
+    let canTryFinalize deal =
         deal.ClosedDeal.CurrentTrickOpt
             |> Option.map (fun trick ->
                 trick.Cards.IsEmpty)
             |> Option.defaultValue true
 
-    let terminalValuesOpt deal =
+    member _.Key =
+        GameStateKey.getKey
+            legalRanges.Value
+            deal.ClosedDeal
+
+    member _.LegalActions =
+        legalRanges.Value
+            |> Seq.collect snd
+            |> Seq.where (fun range -> range.Present)
+            |> Seq.toArray
+
+    member _.TerminalValuesOpt =
         if canTryFinalize deal then
             deal
                 |> OpenDeal.tryFinalScore
@@ -274,33 +291,24 @@ module GameState =
                         |> Seq.toArray)
         else None
 
-    let getLegalActions deal =
-        let hand = OpenDeal.currentHand deal
-        deal.ClosedDeal
-            |> CardRange.getLegalRanges hand
-            |> Seq.collect snd
-            |> Seq.where (fun range -> range.Present)
-            |> Seq.toArray
-
-    let getKey deal =
-        GameStateKey.getKey deal
-
 #if !FABLE_COMPILER
-type GameState(deal : OpenDeal) =
+type GameState(deal) =
     inherit GameState<CardRange>()
+
+    let impl = GameStateImpl(deal)
 
     override _.CurrentPlayerIdx =
         deal
             |> OpenDeal.currentPlayer
             |> int
 
-    override _.Key = GameState.getKey deal
+    override _.Key = impl.Key
 
     override _.TerminalValuesOpt =
-        GameState.terminalValuesOpt deal
+        impl.TerminalValuesOpt
 
     override _.LegalActions =
-        GameState.getLegalActions deal
+        impl.LegalActions
 
     override _.AddAction(range) =
         assert(range.Present)

@@ -46,9 +46,10 @@ module WebPlayer =
             | 1 -> async { return legalPlays[0] }
             | _ ->
                 async {
-                    let key = GameState.getKey deal
-                    let legalActions = GameState.getLegalActions deal
-                    let! iActionOpt = Remoting.getActionIndex key
+                    let impl = GameStateImpl(deal)
+                    let! iActionOpt =
+                        Remoting.getActionIndex impl.Key
+                    let legalActions = impl.LegalActions
                     let range =
                         iActionOpt
                             |> Option.map (fun iAction ->
