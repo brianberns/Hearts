@@ -32,7 +32,7 @@ module Seq =
         let map =
             source
                 |> Seq.groupBy predicate
-                |> Map.ofSeq
+                |> Map
         let get flag =
             map
                 |> Map.tryFind flag
