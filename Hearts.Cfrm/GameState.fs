@@ -45,6 +45,9 @@ type CardRange =
         /// Suit of all cards in this range.
         Suit : Suit
 
+        /// Rank of lowest unplayed card in the range.
+        MinRank : Rank
+
         /// Number of unplayed cards in this range.
         Count : int
 
@@ -55,9 +58,11 @@ type CardRange =
 module CardRange =
 
     /// Creates a card range.
-    let create suit count present =
+    let create suit minRank count present =
+        assert(count > 0)
         {
             Suit = suit
+            MinRank = minRank
             Count = count
             Present = present
         }
@@ -75,8 +80,11 @@ module CardRange =
             |> Seq.sort                                    // interleave to create ranges
             |> Seq.chunkBy snd
             |> Seq.map (fun (present, pairs) ->
-                let count = Seq.length pairs
-                create suit count present)
+                let ranks =
+                    pairs
+                        |> Seq.map fst
+                        |> Seq.toArray
+                create suit ranks[0] ranks.Length present)
             |> Seq.toArray
 
     /// All cards in a deck.
@@ -135,10 +143,10 @@ module CardRange =
 
 module GameStateKey =
 
-    /// '0': Any player can shoot
-    /// '1': Only the current player can shoot
-    /// '2': Only another player can shoot
-    /// '3': No player can shoot
+    /// 0: Any player can shoot
+    /// 1: Only the current player can shoot
+    /// 2: Only another player can shoot
+    /// 3: No player can shoot
     let private getShootStatus deal =
         let nPlayers =
             deal.Score.ScoreMap
@@ -293,7 +301,7 @@ type GameState(deal : OpenDeal) =
 
     override _.AddAction(range) =
         assert(range.Present)
-        let card = Card.create range.MaxRank range.Suit
+        let card = Card.create range.MinRank range.Suit
         OpenDeal.addPlay card deal
             |> GameState
             :> _
