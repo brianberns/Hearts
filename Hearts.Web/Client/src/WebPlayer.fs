@@ -54,5 +54,5 @@ module WebPlayer =
                             |> Option.map (fun iAction ->
                                 legalActions[iAction])
                             |> Option.defaultValue legalActions[0]
-                    return Card.create range.MaxRank range.Suit
+                    return Card.create range.MinRank range.Suit
                 }
