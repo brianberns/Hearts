@@ -240,6 +240,9 @@ module GameStateKey =
                         |> Map.tryFind suit
                         |> Option.defaultValue Array.empty
                 for ranges in rangeArrays do
+                    assert(ranges
+                        |> Seq.forall (fun range ->
+                            range.Suit = suit))
                     yield! getRangesChars ranges
         }
 
