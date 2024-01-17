@@ -68,5 +68,5 @@ module Program =
     [<EntryPoint>]
     let main argv =
         Console.OutputEncoding <- System.Text.Encoding.UTF8
-        minimize 10
+        minimize 100
         0

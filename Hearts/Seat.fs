@@ -53,8 +53,8 @@ module Seat =
                 yield seat |> incr i
         }
 
-    /// Answers the index of the given seat relative to the given
-    /// base seat.
+    /// Answers the non-negative offset of the given seat relative
+    /// to the given base seat.
     let getIndex (seat : Seat) (baseSeat : Seat) =
         let idx = ((int seat) - (int baseSeat) + numSeats) % numSeats
         assert(idx >= 0)

@@ -140,23 +140,25 @@ module CardRange =
 
 module GameStateKey =
 
-    /// 0: Any player can shoot
-    /// 1: Only the current player can shoot
-    /// 2: Only another player can shoot
-    /// 3: No player can shoot
+    /// 0:  Any player can shoot
+    /// 1:  No player can shoot
+    /// 2+: Only one player can shoot
     let private getShootStatus deal =
-        let nPlayers =
+        let pairSet =
             deal.Score.ScoreMap
                 |> Map.toSeq
                 |> Seq.where (fun (_, points) ->
                     points > 0)
-                |> Seq.length
-        match nPlayers with
+                |> set
+        match pairSet.Count with
             | 0 -> 0
             | 1 ->
-                let curPlayer = ClosedDeal.currentPlayer deal
-                if deal.Score[curPlayer] > 0 then 1 else 2
-            | _ -> 3
+                let seat, _ = Seq.exactlyOne pairSet
+                let iPlayer =
+                    ClosedDeal.currentPlayer deal
+                        |> Seat.getIndex seat
+                iPlayer + 2
+            | _ -> 1
             |> Char.fromDigit
 
     /// Bit flag for each suit: 1, 2, 4, 8.
@@ -210,8 +212,9 @@ module GameStateKey =
             |> Option.defaultValue "000"
 
     let private getRangeChar range =
+        assert(range.Count > 0)
         let index =
-            (2 * range.Count)
+            (2 * min 2 range.Count)
                 - (if range.Present then 1 else 0)
         Char.fromHexDigit index
 
