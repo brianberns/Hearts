@@ -114,7 +114,7 @@ module CardRange =
                 |> Seq.groupBy Card.suit
 
             // create ranges for each suit
-        seq {
+        [|
             for suit, legalPlays in suitCardsPairs do
 
                     // ranks in this suit present in current hand
@@ -139,7 +139,7 @@ module CardRange =
                         yield suit, getRanges suit belowRanks outRanks
                     | _ ->
                         yield suit, getRanges suit inRanks outRanks
-        }
+        |]
 
 module GameStateKey =
 
@@ -258,9 +258,9 @@ type GameStateImpl(deal) =
     let legalRanges =
         lazy (
             let hand = OpenDeal.currentHand deal
-            deal.ClosedDeal
-                |> CardRange.getLegalRanges hand
-                |> Seq.toArray)
+            CardRange.getLegalRanges
+                hand
+                deal.ClosedDeal)
 
     let canTryFinalize deal =
         deal.ClosedDeal.CurrentTrickOpt
