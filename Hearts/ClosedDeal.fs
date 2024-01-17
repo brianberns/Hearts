@@ -3,8 +3,8 @@
 open PlayingCards
 
 /// A deal is a round of play within a game. A closed deal contains
-/// no information about unplayed cards, which are kept private by
-/// each player. Cards played during a deal are grouped into tricks.
+/// no information about how unplayed cards are distributed among
+/// the players. Cards played during a deal are grouped into tricks.
 type ClosedDeal =
     {
         /// Current active trick, if play is in progress.
@@ -13,8 +13,8 @@ type ClosedDeal =
         /// Completed tricks, in reverse chronological order.
         CompletedTricks : List<Trick>
 
-        /// Cards played so far.
-        PlayedCards : Set<Card>
+        /// Cards not yet played.
+        UnplayedCards : Set<Card>
 
         /// Is it legal to lead a heart?
         HeartsBroken : bool
@@ -28,12 +28,15 @@ type ClosedDeal =
 
 module ClosedDeal =
 
+    /// Set of all cards in a deck.
+    let private allCards = set Card.allCards
+
     /// Initial state of all closed deals.
     let initial =
         {
             CurrentTrickOpt = None
             CompletedTricks = List.empty
-            PlayedCards = Set.empty
+            UnplayedCards = allCards
             HeartsBroken = false
             Voids = Set.empty
             Score = Score.zero
@@ -179,9 +182,10 @@ module ClosedDeal =
             else
                 Some updatedTrick, deal.CompletedTricks, deal.Score
 
-            // add to played cards
-        let playedCards =
-            deal.PlayedCards.Add(card)
+            // remove from unplayed cards
+        let unplayedCards =
+            assert(deal.UnplayedCards.Contains(card))
+            deal.UnplayedCards.Remove(card)
 
             // hearts broken?
         let heartsBroken =
@@ -203,7 +207,7 @@ module ClosedDeal =
             CurrentTrickOpt = curTrickOpt
             CompletedTricks = completedTricks
             HeartsBroken = heartsBroken
-            PlayedCards = playedCards
+            UnplayedCards = unplayedCards
             Voids = voids
             Score = score
         }

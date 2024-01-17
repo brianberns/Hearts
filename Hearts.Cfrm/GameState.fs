@@ -87,16 +87,13 @@ module CardRange =
                 create suit ranks[0] ranks.Length present)
             |> Seq.toArray
 
-    /// All cards in a deck.
-    let private allCardSet = set Card.allCards
-
     /// Answers the ranges determined by legal plays in the given
     /// hand.
     let getLegalRanges (hand : Hand) deal =
 
             // group outstanding cards by suit
         let outMap =
-            (allCardSet - hand - deal.PlayedCards)
+            deal.UnplayedCards - hand
                 |> Seq.groupBy Card.suit
                 |> Seq.map (fun (suit, cards) ->
                     let ranks = Seq.map Card.rank cards

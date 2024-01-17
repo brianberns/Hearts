@@ -206,15 +206,12 @@ module DealView =
         if deal.ClosedDeal.CurrentTrickOpt.IsSome
             && OpenDeal.currentPlayer deal = Seat.User then
             deckView.show()
-            let handCards =
-                deal
-                    |> OpenDeal.currentHand
-                    |> set
+            let hand = OpenDeal.currentHand deal
             for card in Card.allCards do
                 let text =
-                    if deal.ClosedDeal.PlayedCards.Contains(card) then "🞬"
-                    elif handCards.Contains(card) then "⬤"
-                    else ""
+                    if hand.Contains(card) then "⬤"
+                    elif deal.ClosedDeal.UnplayedCards.Contains(card) then ""
+                    else "🞬"
                 (~~($"#{getCellId card}")).text(text)
         else
             deckView.hide()
