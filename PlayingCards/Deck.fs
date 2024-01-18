@@ -1,7 +1,5 @@
 ﻿namespace PlayingCards
 
-open System
-
 /// A shuffled deck of cards.
 type Deck =
     {
