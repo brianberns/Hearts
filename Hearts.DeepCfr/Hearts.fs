@@ -1,5 +1,72 @@
 ﻿namespace Hearts.DeepCfr
 
+open PlayingCards
+open Hearts
+
+module private Array =
+
+    let oneHot length hot =
+        assert(hot >= 0)
+        assert(hot < length)
+        Array.init length (fun i ->
+            if i = hot then 1.0f
+            else 0.0f)
+
+module Rank =
+
+    let encode (rank : Rank) =
+        Array.oneHot
+            Rank.numRanks
+            (int rank - int Rank.Two)
+
+module Suit =
+
+    let encode (suit : Suit) =
+        Array.oneHot Suit.numSuits (int suit)
+
+module Card =
+
+    let encode (card : Card) =
+        [|
+            yield! Rank.encode card.Rank
+            yield! Suit.encode card.Suit
+        |]
+
+module Hand =
+
+    let encode (hand : Hand) =
+        [|
+            for card in hand do
+                yield! Card.encode card
+        |]
+
+module Seat =
+
+    let encode (seat : Seat) =
+        Array.oneHot Seat.numSeats (int seat)
+
+module Trick =
+
+    let encode (trick : Trick) =
+        [|
+            yield! Seat.encode trick.Leader
+            for card in trick.Cards do
+                yield! Card.encode card
+        |]
+
+module ClosedDeal =
+
+    let encode (deal : ClosedDeal) =
+        [|
+            for trick in deal.CompletedTricks do
+                yield! Trick.encode trick
+            match deal.CurrentTrickOpt with
+                | Some trick -> yield! Trick.encode trick
+                | None -> ()
+        |]
+
+(*
+
 type Deal = string[]   // cards indexed by player
 
 /// Kuhn poker
@@ -97,3 +164,4 @@ module KuhnPoker =
                 |]
             assert(encoded.Length = encodedLength)
             encoded
+*)
