@@ -1,20 +1,19 @@
 ﻿namespace Hearts.FastCfr
 
+open System
 open Hearts
 open PlayingCards
 open FastCfr
 
 module Program =
 
-    let getInfoSetKey (hand : Hand) (deal : ClosedDeal) =
+    let getInfoSetKey hand deal =
         [|
-            for card in hand do
-                string card
-            "|"
+            Hand.toString hand
             for trick in ClosedDeal.tricks deal do
-                string trick.Leader.Char
+                sprintf " %c" trick.Leader.Char
                 for card in Seq.rev trick.Cards do
-                    string card
+                    sprintf " %A" card
         |] |> String.concat ""
 
     let canTryFinalize deal =
@@ -52,7 +51,7 @@ module Program =
                 }
 
     let train numGames chunkSize =
-        let rng = System.Random(0)
+        let rng = Random(0)
         let gameChunks =
             Seq.init numGames (fun iGame ->
                 let deck = Deck.shuffle rng
@@ -69,13 +68,18 @@ module Program =
     let run () =
 
             // train
-        let numGames = 2
+        let numGames = 100
         let chunkSize = 2
         let util, infoSetMap = train numGames chunkSize
 
             // expected overall utility
         printfn $"Average game value for first player: %0.5f{util}\n"
 
-        printfn $"{infoSetMap}"
+        printfn ""
+        for (KeyValue(key, infoSet)) in infoSetMap do
+            let strategy =
+                InformationSet.getAverageStrategy infoSet
+            printfn $"{key}: %A{strategy.ToArray()}"
 
+    Console.OutputEncoding <- Text.Encoding.UTF8
     run ()
