@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Hearts.FastCfr": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
+    }
+  }
+}

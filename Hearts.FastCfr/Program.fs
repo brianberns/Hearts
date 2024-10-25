@@ -132,6 +132,7 @@ module Program =
                     strategy
                         |> Seq.distinct
                         |> Seq.length > 1)
+                |> Seq.truncate 30
         for (key, strategy) in pairs do
             printfn $"{key}: %A{strategy.ToArray()}"
 
