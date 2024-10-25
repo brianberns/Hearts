@@ -111,7 +111,7 @@ module ClosedDeal =
                         hand
                             |> Seq.where (fun card ->
                                 card.Suit <> Suit.Hearts)
-                    if nonHeartsCards |> Seq.isEmpty then hand
+                    if nonHeartsCards |> Seq.isEmpty then hand   // !!!
                     else nonHeartsCards
 
                 // following
@@ -202,6 +202,17 @@ module ClosedDeal =
                     else
                         deal.Voids.Add(player, suitLed)
                 | None -> failwith "Unexpected"
+
+            // leader is void in all non-hearts suits? (very rare)
+        let voids =
+            if card.Suit = Suit.Hearts
+                && not deal.HeartsBroken
+                && updatedTrick.Leader = player then
+                deal.Voids
+                    .Add(player, Suit.Clubs)
+                    .Add(player, Suit.Diamonds)
+                    .Add(player, Suit.Spades)
+            else voids
 
         {
             CurrentTrickOpt = curTrickOpt
