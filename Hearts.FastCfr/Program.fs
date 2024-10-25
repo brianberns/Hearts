@@ -113,8 +113,8 @@ module Program =
     let run () =
 
             // train
-        let numGames = 10000
-        let chunkSize = 1000
+        let numGames = 1000000
+        let chunkSize = 100000
         let util, infoSetMap = train numGames chunkSize
 
             // expected overall utility
