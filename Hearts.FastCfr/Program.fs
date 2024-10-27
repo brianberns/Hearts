@@ -1,9 +1,12 @@
 ﻿namespace Hearts.FastCfr
 
 open System
+open System.IO
+
 open Hearts
 open PlayingCards
 open FastCfr
+open MathNet.Numerics.LinearAlgebra
 
 module Program =
 
@@ -110,11 +113,22 @@ module Program =
                     chunk)
         Trainer.train (rng.Next()) gameChunks
 
+    let save (strategyMap : Map<string, Vector<float>>) =
+        let path = "Hearts.strategy"
+        use stream = new FileStream(path, FileMode.Create)
+        use wtr = new BinaryWriter(stream)
+        wtr.Write(strategyMap.Count)
+        for (KeyValue(key, strategy)) in strategyMap do
+            wtr.Write(key)
+            wtr.Write(uint8 strategy.Count)
+            for prob in strategy do
+                wtr.Write(prob)
+
     let run () =
 
             // train
-        let numGames = 1000000
-        let chunkSize = 100000
+        let numGames = 10000
+        let chunkSize = 100
         let util, infoSetMap = train numGames chunkSize
 
             // expected overall utility
@@ -122,19 +136,11 @@ module Program =
         printfn $"# of info sets: {infoSetMap.Count}"
 
         printfn ""
-        let pairs =
+        let strategyMap =
             infoSetMap
-                |> Map.toSeq
-                |> Seq.map (fun (key, infoSet) ->
-                    key,
+                |> Map.map (fun _ infoSet ->
                     InformationSet.getAverageStrategy infoSet)
-                |> Seq.where (fun (_, strategy) ->
-                    strategy
-                        |> Seq.distinct
-                        |> Seq.length > 1)
-                |> Seq.truncate 30
-        for (key, strategy) in pairs do
-            printfn $"{key}: %A{strategy.ToArray()}"
+        save strategyMap
 
     Console.OutputEncoding <- Text.Encoding.UTF8
     run ()
