@@ -11,48 +11,49 @@ open MathNet.Numerics.LinearAlgebra
 module Program =
 
     let getInfoSetKey (hand : Hand) deal =
-        let sb = Text.StringBuilder()
+        let bytes = ResizeArray<byte>(41)
 
             // hand and other unplayed cards
         for card in Card.allCards do
-            sb.Append(
+            bytes.Add(
                 if hand.Contains(card) then
                     assert(deal.UnplayedCards.Contains(card))
-                    'o'
-                elif deal.UnplayedCards.Contains(card) then 'x'
-                else '.')
-                |> ignore
+                    2uy
+                elif deal.UnplayedCards.Contains(card) then 1uy
+                else 0uy)
 
             // current trick
         let trick = ClosedDeal.currentTrick deal
-        sb.Append(trick.Leader.Char) |> ignore
+        bytes.Add(byte trick.Leader)
         let cards =
             trick.Cards
                 |> List.rev
                 |> List.toArray
         for iCard = 0 to Seat.numSeats - 1 do
-            sb.Append(
+            bytes.Add(
                 if iCard < cards.Length then
-                    cards[iCard].String
-                else "..")
-                |> ignore
+                    byte cards[iCard].Rank
+                else 0uy)
+            bytes.Add(
+                if iCard < cards.Length then
+                    byte cards[iCard].Suit
+                else 0uy)
 
             // voids
         let player = Trick.currentPlayer trick
         for seat in Enum.getValues<Seat> do
             if seat <> player then
                 for suit in Enum.getValues<Suit> do
-                    sb.Append(
-                        if deal.Voids.Contains(seat, suit) then 'x'
-                        else '.')
-                        |> ignore
+                    bytes.Add(
+                        if deal.Voids.Contains(seat, suit) then 1uy
+                        else 0uy)
 
             // score
         for score in deal.Score.ScoreMap.Values do
             assert(score >= 0 && score < 10)
-            sb.Append(score) |> ignore
+            bytes.Add(byte score)
 
-        sb.ToString()
+        bytes.ToArray()
 
     let canTryFinalize deal =
         deal.ClosedDeal.CurrentTrickOpt
@@ -113,12 +114,13 @@ module Program =
                     chunk)
         Trainer.train (rng.Next()) gameChunks
 
-    let save (strategyMap : Map<string, Vector<float>>) =
+    let save (strategyMap : Map<byte[], Vector<float>>) =
         let path = "Hearts.strategy"
         use stream = new FileStream(path, FileMode.Create)
         use wtr = new BinaryWriter(stream)
         wtr.Write(strategyMap.Count)
         for (KeyValue(key, strategy)) in strategyMap do
+            assert(key.Length = 41)
             wtr.Write(key)
             wtr.Write(uint8 strategy.Count)
             for prob in strategy do
@@ -127,8 +129,8 @@ module Program =
     let run () =
 
             // train
-        let numGames = 10000
-        let chunkSize = 100
+        let numGames = 100000
+        let chunkSize = 1000
         let util, infoSetMap = train numGames chunkSize
 
             // expected overall utility
