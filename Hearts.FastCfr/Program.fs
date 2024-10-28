@@ -90,9 +90,9 @@ module Program =
                         |> Map.toSeq
                         |> Seq.where (fun (seat, _) -> seat <> Seat.South)
                         |> Seq.sumBy snd
-                        |> float32)
-                        / float32 (Seat.numSeats - 1)
-                let payoff = otherAvg - float32 score[Seat.South]
+                        |> float)
+                        / float (Seat.numSeats - 1)
+                let payoff = otherAvg - float score[Seat.South]
                 TerminalGameState.create 0 payoff
                     |> Terminal
             | None ->
@@ -131,7 +131,7 @@ module Program =
                     chunk)
         Trainer.train (rng.Next()) gameChunks
 
-    let save (strategyMap : Map<uint16[], Vector<float32>>) =
+    let save (strategyMap : Map<uint16[], Vector<float>>) =
         let path = "Hearts.strategy"
         use stream = new FileStream(path, FileMode.Create)
         use wtr = new BinaryWriter(stream)
