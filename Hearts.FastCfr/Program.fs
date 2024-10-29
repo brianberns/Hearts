@@ -137,7 +137,6 @@ module Program =
         use wtr = new BinaryWriter(stream)
         wtr.Write(strategyMap.Count)
         for (KeyValue(key, strategy)) in strategyMap do
-            assert(key.Length = 12)
             for value in key do
                 wtr.Write(value)
             wtr.Write(uint8 strategy.Count)
