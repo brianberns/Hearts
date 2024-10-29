@@ -5,7 +5,9 @@ type Suit =
     | Clubs    = 0
     | Diamonds = 1
     | Hearts   = 2
+#if !MINI
     | Spades   = 3
+#endif
 
 module Suit =
 
@@ -26,7 +28,9 @@ module Suit =
         | 'C' | '♣' -> Suit.Clubs
         | 'D' | '♦' -> Suit.Diamonds
         | 'H' | '♥' -> Suit.Hearts
+#if !MINI
         | 'S' | '♠' -> Suit.Spades
+#endif
         | c -> failwith $"Unexpected suit char: |{c}|"
 
 [<AutoOpen>]

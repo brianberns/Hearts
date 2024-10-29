@@ -50,7 +50,9 @@ module Deal =
     let private elemMap =
         Map [
             Seat.West,  ~~"#wTotal"
+#if !MINI
             Seat.North, ~~"#nTotal"
+#endif
             Seat.East,  ~~"#eTotal"
             Seat.South, ~~"#sTotal"
         ]

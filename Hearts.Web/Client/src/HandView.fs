@@ -35,7 +35,9 @@ module HandView =
     let private centerPosMap =
         Position.seatMap [
             Seat.West,  (12, 50)
+#if !MINI
             Seat.North, (50, 16)
+#endif
             Seat.East,  (88, 50)
             Seat.South, (50, 83)
         ]
@@ -118,7 +120,9 @@ module OpenHandView =
             |> Seq.sortByDescending (fun card ->
                 let iSuit =
                     match card.Suit with
+#if !MINI
                         | Suit.Spades   -> 4   // black
+#endif
                         | Suit.Hearts   -> 3   // red
                         | Suit.Clubs    -> 2   // black
                         | Suit.Diamonds -> 1   // red

@@ -4,10 +4,16 @@ open PlayingCards
 
 /// A location occupied by a player.
 type Seat =
+#if MINI
+    | West  = 0
+    | East  = 1
+    | South = 2
+#else
     | West  = 0
     | North = 1
     | East  = 2
     | South = 3
+#endif
 
 module Seat =
 
@@ -23,7 +29,9 @@ module Seat =
     /// Display name.
     let toString = function
         | Seat.West -> "West"
+#if !MINI
         | Seat.North -> "North"
+#endif
         | Seat.East -> "East"
         | Seat.South -> "South"
         | _ -> failwith "Unexpected seat"
@@ -32,7 +40,9 @@ module Seat =
     /// Converts the given character to a seat.
     let fromChar = function
         | 'W' -> Seat.West
+#if !MINI
         | 'N' -> Seat.North
+#endif
         | 'E' -> Seat.East
         | 'S' -> Seat.South
         | _ -> failwith "Unexpected seat"

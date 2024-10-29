@@ -127,7 +127,13 @@ module DealView =
 
                 // create closed hand views
             let! closedHandViewPairs =
-                [ Seat.West; Seat.North; Seat.East ]
+                [
+                    Seat.West
+#if !MINI
+                    Seat.North
+#endif
+                    Seat.East
+                ]
                     |> Seq.map closedViewPair
                     |> Promise.all
 
@@ -152,7 +158,9 @@ module DealView =
     let private scoreElemMap =
         Map [
             Seat.West,  ~~"#wCurrent"
+#if !MINI
             Seat.North, ~~"#nCurrent"
+#endif
             Seat.East,  ~~"#eCurrent"
             Seat.South, ~~"#sCurrent"
         ]
@@ -163,7 +171,9 @@ module DealView =
             Suit.Clubs,    ~~"#deckClubs"
             Suit.Diamonds, ~~"#deckDiamonds"
             Suit.Hearts,   ~~"#deckHearts"
+#if !MINI
             Suit.Spades,   ~~"#deckSpades"
+#endif
         ]
 
     /// Gets the ID of the table cell that represents the

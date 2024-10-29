@@ -5,9 +5,9 @@ type Rank =
     | Two   =  2
     | Three =  3
     | Four  =  4
-#if !MINI
     | Five  =  5
     | Six   =  6
+#if !MINI
     | Seven =  7
     | Eight =  8
     | Nine  =  9

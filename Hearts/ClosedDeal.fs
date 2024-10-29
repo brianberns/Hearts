@@ -62,7 +62,9 @@ module ClosedDeal =
         nCompleted + nCurrent
 
     /// Number of cards dealt to each player.
-    let numCardsPerHand = Card.numCards / Seat.numSeats
+    let numCardsPerHand =
+        assert(Card.numCards % Seat.numSeats = 0)
+        Card.numCards / Seat.numSeats
 
     /// Number of cards in a deal.
     let numCardsPerDeal = numCardsPerHand * Seat.numSeats
@@ -211,7 +213,9 @@ module ClosedDeal =
                 deal.Voids
                     .Add(player, Suit.Clubs)
                     .Add(player, Suit.Diamonds)
+#if !MINI
                     .Add(player, Suit.Spades)
+#endif
             else voids
 
         {
