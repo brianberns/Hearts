@@ -14,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="GameState.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

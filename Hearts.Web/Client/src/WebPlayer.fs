@@ -29,7 +29,7 @@ module WebPlayer =
 
     open PlayingCards
     open Hearts
-    open Hearts.Cfrm
+    open Hearts.FastCfr
 
     /// Plays a card in the given deal.
     let makePlay (deal : OpenDeal) =
@@ -46,14 +46,12 @@ module WebPlayer =
             | 1 -> async { return legalPlays[0] }
             | _ ->
                 async {
-                    let impl = GameStateImpl(deal)
+                    let infoSetKey =
+                        GameState.getInfoSetKey hand deal.ClosedDeal
                     let! iActionOpt =
-                        Remoting.getActionIndex impl.Key
-                    let legalActions = impl.LegalActions
-                    let range =
+                        Remoting.getActionIndex infoSetKey
+                    return
                         iActionOpt
-                            |> Option.map (fun iAction ->
-                                legalActions[iAction])
-                            |> Option.defaultValue legalActions[0]
-                    return Card.create range.MinRank range.Suit
+                            |> Option.map (Array.get legalPlays)
+                            |> Option.defaultValue legalPlays[0]
                 }
