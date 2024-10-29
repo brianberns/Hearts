@@ -11,66 +11,48 @@ open MathNet.Numerics.LinearAlgebra
 module Program =
 
     let getInfoSetKey (hand : Hand) deal =
-        let key = ResizeArray<uint16>(12)
+        let sb = Text.StringBuilder()
 
-            // hand
-        assert(Card.allCards.Length <= 16)
-        Seq.sum [|
-            for i, card in Seq.indexed Card.allCards do
+            // hand and other unplayed cards
+        for card in Card.allCards do
+            sb.Append(
                 if hand.Contains(card) then
-                    let value = 1us <<< i
-                    assert(value >>> i = 1us)
-                    value
-        |] |> key.Add
-
-            // other unplayed cards
-        Seq.sum [|
-            for i, card in Seq.indexed Card.allCards do
-                if not (hand.Contains(card))
-                    && deal.UnplayedCards.Contains(card) then
-                    let value = 1us <<< i
-                    assert(value >>> i = 1us)
-                    value
-        |] |> key.Add
+                    assert(deal.UnplayedCards.Contains(card))
+                    'o'
+                elif deal.UnplayedCards.Contains(card) then 'x'
+                else '.')
+                |> ignore
 
             // current trick
         let trick = ClosedDeal.currentTrick deal
-        key.Add(uint16 trick.Leader)
+        sb.Append(trick.Leader.Char) |> ignore
         let cards =
             trick.Cards
                 |> List.rev
                 |> List.toArray
         for iCard = 0 to Seat.numSeats - 1 do
-            key.Add(
+            sb.Append(
                 if iCard < cards.Length then
-                    let value =
-                        (uint16 cards[iCard].Rank <<< 8) +
-                            uint16 cards[iCard].Suit
-                    assert((value / (1us <<< 8)) = uint16 cards[iCard].Rank)
-                    assert((value % (1us <<< 8)) = uint16 cards[iCard].Suit)
-                    value
-                else 0us)
+                    cards[iCard].String
+                else "..")
+                |> ignore
 
             // voids
         let player = Trick.currentPlayer trick
-        let pairs =
-            [|
-                for seat in Enum.getValues<Seat> do
-                    if seat <> player then
-                        for suit in Enum.getValues<Suit> do
-                            yield seat, suit
-            |]
-        Seq.sum [|
-            for i, pair in Seq.indexed pairs do
-                if deal.Voids.Contains(pair) then
-                    1us <<< i
-        |] |> key.Add
+        for seat in Enum.getValues<Seat> do
+            if seat <> player then
+                for suit in Enum.getValues<Suit> do
+                    sb.Append(
+                        if deal.Voids.Contains(seat, suit) then 'x'
+                        else '.')
+                        |> ignore
 
             // score
         for score in deal.Score.ScoreMap.Values do
-            key.Add(uint16 score)
+            assert(score >= 0 && score < 10)
+            sb.Append(score) |> ignore
 
-        key.ToArray()
+        sb.ToString()
 
     let canTryFinalize deal =
         deal.ClosedDeal.CurrentTrickOpt
@@ -131,22 +113,21 @@ module Program =
                     chunk)
         Trainer.train (rng.Next()) gameChunks
 
-    let save (strategyMap : Map<uint16[], Vector<float>>) =
+    let save (strategyMap : Map<string, Vector<float>>) =
         let path = "Hearts.strategy"
         use stream = new FileStream(path, FileMode.Create)
         use wtr = new BinaryWriter(stream)
         wtr.Write(strategyMap.Count)
         for (KeyValue(key, strategy)) in strategyMap do
-            for value in key do
-                wtr.Write(value)
-            wtr.Write(uint8 strategy.Count)
+            wtr.Write(key)
+            wtr.Write(strategy.Count)
             for prob in strategy do
                 wtr.Write(prob)
 
     let run () =
 
             // train
-        let numGames = 10_000_000
+        let numGames = 1_000_000
         let chunkSize = 100_000
         let util, infoSetMap = train numGames chunkSize
 
