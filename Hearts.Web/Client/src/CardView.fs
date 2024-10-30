@@ -74,23 +74,31 @@ module CardView =
             Card.fromString "2C", importDefault "./assets/card_images/2C.svg"
             Card.fromString "2D", importDefault "./assets/card_images/2D.svg"
             Card.fromString "2H", importDefault "./assets/card_images/2H.svg"
+#if !MINI
             Card.fromString "2S", importDefault "./assets/card_images/2S.svg"
-
+#endif
             Card.fromString "3C", importDefault "./assets/card_images/3C.svg"
             Card.fromString "3D", importDefault "./assets/card_images/3D.svg"
             Card.fromString "3H", importDefault "./assets/card_images/3H.svg"
+#if !MINI
             Card.fromString "3S", importDefault "./assets/card_images/3S.svg"
+#endif
 
             Card.fromString "4C", importDefault "./assets/card_images/4C.svg"
             Card.fromString "4D", importDefault "./assets/card_images/4D.svg"
             Card.fromString "4H", importDefault "./assets/card_images/4H.svg"
+#if !MINI
             Card.fromString "4S", importDefault "./assets/card_images/4S.svg"
+#endif
 
             Card.fromString "5C", importDefault "./assets/card_images/5C.svg"
             Card.fromString "5D", importDefault "./assets/card_images/5D.svg"
             Card.fromString "5H", importDefault "./assets/card_images/5H.svg"
+#if !MINI
             Card.fromString "5S", importDefault "./assets/card_images/5S.svg"
+#endif
 
+#if !MINI
             Card.fromString "6C", importDefault "./assets/card_images/6C.svg"
             Card.fromString "6D", importDefault "./assets/card_images/6D.svg"
             Card.fromString "6H", importDefault "./assets/card_images/6H.svg"
@@ -101,7 +109,6 @@ module CardView =
             Card.fromString "7H", importDefault "./assets/card_images/7H.svg"
             Card.fromString "7S", importDefault "./assets/card_images/7S.svg"
 
-#if !MINI
             Card.fromString "8C", importDefault "./assets/card_images/8C.svg"
             Card.fromString "8D", importDefault "./assets/card_images/8D.svg"
             Card.fromString "8H", importDefault "./assets/card_images/8H.svg"
