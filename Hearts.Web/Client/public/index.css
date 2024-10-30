@@ -48,6 +48,12 @@ td {
         width: 20px;
     }
 
+#hint {
+    position: absolute;
+    left: 64%;
+    top: 75%;
+}
+
 #more {
     position: absolute;
     left: 80%;

@@ -27,7 +27,6 @@ module Remoting =
 /// Plays Hearts by calling a remote server.
 module WebPlayer =
 
-    open PlayingCards
     open Hearts
     open Hearts.FastCfr
 

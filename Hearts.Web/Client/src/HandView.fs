@@ -128,7 +128,7 @@ module OpenHandView =
                         | Suit.Diamonds -> 1   // red
                         | _ -> failwith "Unexpected"
                 iSuit, card.Rank)
-            |> Seq.map (CardView.ofCard)
+            |> Seq.map CardView.ofCard
             |> Promise.all
             |> Promise.map ResizeArray
 
