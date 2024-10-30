@@ -2,13 +2,25 @@
 
 module Remoting =
 
+    open System
+    open System.IO
+    open Hearts.FastCfr
+    open MathNet.Numerics.Distributions
+
     let private heartsApi dir =
-        let profile =
-            let path = System.IO.Path.Combine(dir, "Hearts.strategy")
-            Cfrm.StrategyProfile.Load(path)
+        let strategyMap =
+            let path = Path.Combine(dir, "Hearts.strategy")
+            Strategy.load path
+        let rng = Random(0)
         {
             GetPlayIndex =
-                fun key -> async { return profile.Best(key) }
+                fun key ->
+                    async {
+                        return strategyMap
+                            |> Map.tryFind key
+                            |> Option.map (fun strategy ->
+                                Categorical.Sample(rng, strategy.ToArray()))
+                    }
         }
 
     open Fable.Remoting.Server

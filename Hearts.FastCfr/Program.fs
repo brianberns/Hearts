@@ -28,17 +28,6 @@ module Program =
                     chunk)
         Trainer.train (rng.Next()) gameChunks
 
-    let save (strategyMap : Map<string, Vector<float>>) =
-        let path = "Hearts.strategy"
-        use stream = new FileStream(path, FileMode.Create)
-        use wtr = new BinaryWriter(stream)
-        wtr.Write(strategyMap.Count)
-        for (KeyValue(key, strategy)) in strategyMap do
-            wtr.Write(key)
-            wtr.Write(strategy.Count)
-            for prob in strategy do
-                wtr.Write(prob)
-
     let run () =
 
             // train
@@ -55,7 +44,7 @@ module Program =
             infoSetMap
                 |> Map.map (fun _ infoSet ->
                     InformationSet.getAverageStrategy infoSet)
-        save strategyMap
+        Strategy.save strategyMap
 
     Console.OutputEncoding <- Text.Encoding.UTF8
     run ()
