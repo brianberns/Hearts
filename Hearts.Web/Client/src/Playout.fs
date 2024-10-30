@@ -110,10 +110,12 @@ module Playout =
                     let innerHtml =
                         strategyOpt
                             |> Option.map (fun strategy ->
-                                Array.zip legalPlays strategy
-                                    |> Array.map (fun (card, prob) ->
-                                        $"{card}: %.1f{100. * prob}%%")
-                                    |> String.concat "<br />")
+                                let rows =
+                                    Array.zip legalPlays strategy
+                                        |> Array.map (fun (card, prob) ->
+                                            $"<tr><td style='width: 30px; text-align: center'>{card}</td><td style='width: 60px; text-align: right'>%.1f{100. * prob}%%</td></tr>")
+                                        |> String.concat ""
+                                $"<table>{rows}</table>")
                             |> Option.defaultValue "Unknown"
                     hint.html(innerHtml)
                 } |> Async.Start
