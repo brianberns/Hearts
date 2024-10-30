@@ -96,6 +96,9 @@ type JQueryElement =
     /// Hides the element.
     abstract hide : unit -> unit
 
+    /// Sets inner HTML.
+    abstract html : string -> unit
+
     /// Removes an event handler.
     abstract off : eventName : string -> unit
 

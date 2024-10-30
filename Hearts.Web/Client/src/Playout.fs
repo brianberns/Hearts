@@ -6,14 +6,9 @@ open Fable.Core
 
 open PlayingCards
 open Hearts
+open Hearts.FastCfr
 
 module Playout =
-
-    /// Answers legal plays in the given hand and deal.
-    let private getLegalPlays hand (closedDeal : ClosedDeal) =
-        closedDeal
-            |> ClosedDeal.legalPlays hand
-            |> Set.ofSeq
 
     /// Playout context.
     type private Context =
@@ -89,22 +84,51 @@ module Playout =
     let private playUser chooser (handView : HandView) context =
 
             // determine all legal plays
+        let hand = OpenDeal.currentHand context.Deal
         let legalPlays =
-            let hand = OpenDeal.currentHand context.Deal
-            getLegalPlays hand context.Deal.ClosedDeal
-        assert(not legalPlays.IsEmpty)
+            context.Deal.ClosedDeal
+                |> ClosedDeal.legalPlays hand
+                |> Seq.toArray
+        assert(legalPlays.Length > 0)
 
             // enable user to select one of the corresponding card views
         Promise.create(fun resolve _reject ->
+
+                // prompt user to play
             chooser |> PlayChooser.display
+
+                // display hint?
+            let hint = ~~"#hint"
+            if legalPlays.Length > 1 then
+                async {
+                    let infoSetKey =
+                        GameState.getInfoSetKey
+                            hand
+                            context.Deal.ClosedDeal
+                    let! strategyOpt =
+                        Remoting.api.GetStrategy infoSetKey
+                    let innerHtml =
+                        strategyOpt
+                            |> Option.map (fun strategy ->
+                                Array.zip legalPlays strategy
+                                    |> Array.map (fun (card, prob) ->
+                                        $"{card}: %.1f{100. * prob}%%")
+                                    |> String.concat "<br />")
+                            |> Option.defaultValue "Unknown"
+                    hint.html(innerHtml)
+                } |> Async.Start
+
+                // handle card clicks
+            let legalPlaySet = set legalPlays
             for cardView in handView do
                 let card = cardView |> CardView.card
-                if legalPlays.Contains(card) then
+                if legalPlaySet.Contains(card) then
                     cardView.addClass("active")
                     cardView.click(fun () ->
 
                             // prevent further clicks
                         chooser |> PlayChooser.hide
+                        hint.html("")
                         for cardView in handView do
                             cardView.removeClass("active")
                             cardView.removeClass("inactive")
