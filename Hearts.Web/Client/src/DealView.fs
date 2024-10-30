@@ -36,7 +36,6 @@ module DealView =
 #else
         let numPlayers = 4
 #endif
-        Browser.Dom.window.alert($"backs: {backs.Length}")
         Seq.init ClosedDeal.numCardsPerHand (fun i ->
             backs[numPlayers * i + offset])
             |> ClosedHandView.ofCardViews
