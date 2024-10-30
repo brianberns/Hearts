@@ -116,7 +116,7 @@ module Playout =
                                             $"<tr><td style='width: 30px; text-align: center'>{card}</td><td style='width: 60px; text-align: right'>%.1f{100. * prob}%%</td></tr>")
                                         |> String.concat ""
                                 $"<table>{rows}</table>")
-                            |> Option.defaultValue "Unknown"
+                            |> Option.defaultValue ""
                     hint.html(innerHtml)
                 } |> Async.Start
 
