@@ -113,9 +113,9 @@ module Playout =
                                 let rows =
                                     Array.zip legalPlays strategy
                                         |> Array.map (fun (card, prob) ->
-                                            $"<tr><td style='width: 30px; text-align: center'>{card}</td><td style='width: 60px; text-align: right'>%.1f{100. * prob}%%</td></tr>")
+                                            $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
                                         |> String.concat ""
-                                $"<table>{rows}</table>")
+                                $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>")
                             |> Option.defaultValue ""
                     hint.html(innerHtml)
                 } |> Async.Start
