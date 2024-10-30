@@ -43,7 +43,9 @@ module Program =
         let strategyMap =
             infoSetMap
                 |> Map.map (fun _ infoSet ->
-                    InformationSet.getAverageStrategy infoSet)
+                    let strategy =
+                        InformationSet.getAverageStrategy infoSet
+                    strategy.ToArray())
         Strategy.save strategyMap
 
     Console.OutputEncoding <- Text.Encoding.UTF8

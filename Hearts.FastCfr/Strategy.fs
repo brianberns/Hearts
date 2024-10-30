@@ -1,18 +1,17 @@
 ﻿namespace Hearts.FastCfr
 
 open System.IO
-open MathNet.Numerics.LinearAlgebra
 
 module Strategy =
 
-    let save (strategyMap : Map<string, Vector<float>>) =
+    let save (strategyMap : Map<string, float[]>) =
         let path = "Hearts.strategy"
         use stream = new FileStream(path, FileMode.Create)
         use wtr = new BinaryWriter(stream)
         wtr.Write(strategyMap.Count)
         for (KeyValue(key, strategy)) in strategyMap do
             wtr.Write(key)
-            wtr.Write(strategy.Count)
+            wtr.Write(strategy.Length)
             for prob in strategy do
                 wtr.Write(prob)
 
@@ -25,7 +24,7 @@ module Strategy =
                 let key = rdr.ReadString()
                 let strategyCount = rdr.ReadInt32()
                 let strategy =
-                    DenseVector.ofArray [|
+                    [|
                         for _ = 1 to strategyCount do
                             rdr.ReadDouble()
                     |]

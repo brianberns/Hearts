@@ -8,19 +8,26 @@ module Remoting =
     open MathNet.Numerics.Distributions
 
     let private heartsApi dir =
+
         let strategyMap =
             let path = Path.Combine(dir, "Hearts.strategy")
             Strategy.load path
+
+        let lookup key =
+            Map.tryFind key strategyMap
+
         let rng = Random(0)
+
         {
             GetPlayIndex =
                 fun key ->
                     async {
-                        return strategyMap
-                            |> Map.tryFind key
+                        return lookup key
                             |> Option.map (fun strategy ->
-                                Categorical.Sample(rng, strategy.ToArray()))
+                                Categorical.Sample(rng, strategy))
                     }
+            GetStrategy =
+                fun key -> async { return lookup key }
         }
 
     open Fable.Remoting.Server
