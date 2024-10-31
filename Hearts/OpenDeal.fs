@@ -25,7 +25,7 @@ module OpenDeal =
                     |> Seq.collect snd
                     |> Seq.distinct
                     |> Seq.length
-            nCards = ClosedDeal.numCardsPerDeal)
+            nCards = Card.numCards)
         {
             Exchange = Exchange.create dealer dir
             ClosedDeal = ClosedDeal.initial
@@ -123,7 +123,7 @@ module OpenDeal =
         {
             deal with
                 ClosedDeal =
-                    deal.ClosedDeal |> ClosedDeal.start leader
+                    deal.ClosedDeal |> ClosedDeal.startPlay leader
         }
 
     /// Current player in the given deal.

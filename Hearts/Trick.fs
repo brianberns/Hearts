@@ -58,12 +58,12 @@ module Trick =
                 Cards = card :: trick.Cards
                 HighPlayOpt =
                     let isHigh =
-                        match trick.HighPlayOpt with
-                            | Some (_, prevCard) ->
+                        trick.HighPlayOpt
+                            |> Option.map (fun (_, prevCard) ->
                                 if card.Suit = prevCard.Suit then
                                     card.Rank > prevCard.Rank
-                                else false
-                            | None -> true
+                                else false)
+                            |> Option.defaultValue true
                     if isHigh then
                         Some (currentPlayer trick, card)
                     else trick.HighPlayOpt

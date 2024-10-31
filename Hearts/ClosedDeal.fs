@@ -7,7 +7,9 @@ open PlayingCards
 /// the players. Cards played during a deal are grouped into tricks.
 type ClosedDeal =
     {
-        /// Current active trick, if play is in progress.
+        /// Current active trick, if play is in progress. No
+        /// trick is active during an exchange, nor after the
+        /// last card of the deal is played.
         CurrentTrickOpt : Option<Trick>
 
         /// Completed tricks, in reverse chronological order.
@@ -28,22 +30,20 @@ type ClosedDeal =
 
 module ClosedDeal =
 
-    /// Set of all cards in a deck.
-    let private allCards = set Card.allCards
-
     /// Initial state of all closed deals.
     let initial =
         {
             CurrentTrickOpt = None
             CompletedTricks = List.empty
-            UnplayedCards = allCards
+            UnplayedCards = set Card.allCards
             HeartsBroken = false
             Voids = Set.empty
             Score = Score.zero
         }
 
-    /// Starts the given deal with the given first trick leader.
-    let start leader deal =
+    /// Starts play in the given deal with the given first
+    /// trick leader.
+    let startPlay leader deal =
         {
             deal with
                 CurrentTrickOpt =
@@ -66,15 +66,12 @@ module ClosedDeal =
         assert(Card.numCards % Seat.numSeats = 0)
         Card.numCards / Seat.numSeats
 
-    /// Number of cards in a deal.
-    let numCardsPerDeal = numCardsPerHand * Seat.numSeats
-
     /// Validates the structure of the given deal.
     let private validate deal =
         assert(deal.CompletedTricks.Length <= numCardsPerHand)
         assert(
             let nCards = numCardsPlayed deal
-            (nCards = 0) || (nCards = numCardsPerDeal) = deal.CurrentTrickOpt.IsNone)
+            (nCards = 0) || (nCards = Card.numCards) = deal.CurrentTrickOpt.IsNone)
         assert(deal.CompletedTricks |> Seq.forall Trick.isComplete)
 
     /// Current trick in the given deal.
@@ -102,7 +99,7 @@ module ClosedDeal =
 
                 // must lead 2♣ on first trick
             | 0, None ->
-                assert(hand |> Seq.contains(lowestClub))
+                assert(hand.Contains(lowestClub))
                 Seq.singleton lowestClub
 
                 // can't lead a heart until they're broken
@@ -142,7 +139,7 @@ module ClosedDeal =
 #endif
 
     /// Is the given player known to be void in the given suit?
-    let isVoid seat suit deal =
+    let private isVoid seat suit deal =
         deal.Voids.Contains(seat, suit)
 
     /// Indicates whether the given deal has finished.
@@ -191,7 +188,8 @@ module ClosedDeal =
 
             // hearts broken?
         let heartsBroken =
-            if deal.HeartsBroken || Card.pointValue card > 0 then true
+            if deal.HeartsBroken
+                || Card.pointValue card > 0 then true   // Q♠ also breaks hearts
             else false
 
             // player is void in suit led?
