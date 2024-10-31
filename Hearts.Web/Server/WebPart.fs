@@ -1,13 +1,13 @@
 ﻿namespace Hearts.Web
 
+open System.IO
+open System.Reflection
+
+open Suave
+open Suave.Filters
+open Suave.Operators
+
 module WebPart =
-
-    open System.IO
-    open System.Reflection
-
-    open Suave
-    open Suave.Filters
-    open Suave.Operators
 
     /// Web part.
     let app =
