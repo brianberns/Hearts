@@ -51,18 +51,8 @@ module GameState =
 
         sb.ToString()
 
-    let private canTryFinalize deal =
-        deal.ClosedDeal.CurrentTrickOpt
-            |> Option.map (fun trick ->
-                trick.Cards.IsEmpty)
-            |> Option.defaultValue true
-
     let rec create deal =
-        let scoreOpt =
-            if canTryFinalize deal then
-                OpenDeal.tryFinalScore deal
-            else None
-        match scoreOpt with
+        match OpenDeal.tryFinalScore deal with
             | Some score ->
                 let otherAvg =
                     (score.ScoreMap

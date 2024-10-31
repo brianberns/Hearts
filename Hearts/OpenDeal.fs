@@ -157,68 +157,74 @@ module OpenDeal =
         Card.allCards
             |> Seq.sumBy Card.pointValue
 
-    /// Determines the final additional score of the given deal, if
-    /// possible.
-    let private tryFinalAdditional deal =
+    /// Determines the inevitable additional score of the given deal,
+    /// if possible.
+    let private tryFindInevitable deal =
 
             // applies only at trick boundaries
-        assert(
+        let isApplicable =
             deal.ClosedDeal.CurrentTrickOpt
                 |> Option.map (fun trick -> trick.Cards.IsEmpty)
-                |> Option.defaultValue true)
+                |> Option.defaultValue true
+        if isApplicable then
 
-            // deal is actually complete?
-        if deal.ClosedDeal |> ClosedDeal.isComplete then
-            Some Score.zero
+                // deal is actually complete?
+            if deal.ClosedDeal |> ClosedDeal.isComplete then
+                Some Score.zero
 
-            // all points have been taken?
-        elif deal.ClosedDeal.Score |> Score.sum = numPointsPerDeal then
-            Some Score.zero
+                // all points have been taken?
+            elif deal.ClosedDeal.Score |> Score.sum = numPointsPerDeal then
+                Some Score.zero
 
-            // current player takes all remaining tricks?
-        else
-
-            let player = currentPlayer deal
-            let cardMap =
-                deal.UnplayedCardMap
-                    |> Map.toSeq
-                    |> Seq.where (fun (seat, _) -> seat <> player)
-                    |> Seq.collect snd
-                    |> Seq.groupBy Card.suit
-                    |> Seq.map (fun (suit, cards) ->
-                        let ranks =
-                            cards
-                                |> Seq.map Card.rank
-                                |> Seq.toArray
-                        suit, ranks)
-                    |> Map
-
-            /// Is the given card guaranteed to win any trick in which
-            /// it is led?
-            let isWinner (card : Card) =
-                cardMap
-                    |> Map.tryFind card.Suit
-                    |> Option.defaultValue Array.empty
-                    |> Array.forall (fun rank ->
-                        assert(rank <> card.Rank)
-                        rank < card.Rank)
-
-            let hand = deal.UnplayedCardMap[player]
-            if hand |> Seq.forall (fun card -> isWinner card) then
-                let points =
+                // current player takes all remaining tricks?
+            else
+                    // gather opponent cards
+                let player = currentPlayer deal
+                assert(
+                    (ClosedDeal.currentTrick deal.ClosedDeal).Leader
+                        = player)
+                let cardMap =
                     deal.UnplayedCardMap
                         |> Map.toSeq
+                        |> Seq.where (fst >> (<>) player)
                         |> Seq.collect snd
-                        |> Seq.sumBy Card.pointValue
-                Score.create player points |> Some
-            else None
+                        |> Seq.groupBy Card.suit
+                        |> Seq.map (fun (suit, cards) ->
+                            let ranks =
+                                cards
+                                    |> Seq.map Card.rank
+                                    |> Seq.toArray
+                            suit, ranks)
+                        |> Map
+
+                /// Is the given card guaranteed to win any trick in which
+                /// it is led?
+                let isWinner (card : Card) =
+                    cardMap
+                        |> Map.tryFind card.Suit
+                        |> Option.defaultValue Array.empty
+                        |> Array.forall (fun rank ->
+                            assert(rank <> card.Rank)
+                            rank < card.Rank)
+
+                        // player's cards are all winners?
+                let hand = deal.UnplayedCardMap[player]
+                if hand |> Seq.forall isWinner then
+                    let points =
+                        deal.UnplayedCardMap
+                            |> Map.toSeq
+                            |> Seq.collect snd
+                            |> Seq.sumBy Card.pointValue
+                    Score.create player points |> Some
+                else None
+
+        else None
 
     /// Answers the seat of the player who shot the moon, if
-    /// one did.
-    let tryFindShooter deal =
+    /// one did. The given score must not already include the
+    /// shoot reward.
+    let tryFindShooter score =
         option {
-            let! additional = tryFinalAdditional deal
-            let score = deal.ClosedDeal.Score + additional
             assert(Score.sum score = numPointsPerDeal)
             let! seat, _ =
                 score.ScoreMap
@@ -232,11 +238,10 @@ module OpenDeal =
     /// reward, if possible.
     let tryFinalScore deal =
         option {
-            let! additional = tryFinalAdditional deal
-            let score = deal.ClosedDeal.Score + additional
+            let! inevitable = tryFindInevitable deal
+            let score = deal.ClosedDeal.Score + inevitable
             assert(Score.sum score = numPointsPerDeal)
-            return deal
-                |> tryFindShooter
+            return tryFindShooter score
                 |> Option.map (fun shooter ->
                     Enum.getValues<Seat>
                         |> Seq.map (fun seat ->

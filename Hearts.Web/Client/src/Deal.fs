@@ -134,7 +134,8 @@ module Deal =
 
                         // display deal results
                     let shooterOpt =
-                        OpenDeal.tryFindShooter persState.Deal
+                        OpenDeal.tryFindShooter
+                            persState.Deal.ClosedDeal.Score
                     do! dealOver surface shooterOpt
                         |> Async.AwaitPromise
                     displayScore persState'
