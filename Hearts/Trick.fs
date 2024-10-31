@@ -32,7 +32,7 @@ type Trick =
 
 module Trick =
 
-    /// Creates a trick with the given leader.
+    /// Creates a trick with the given leader to play first.
     let create leader =
         {
             Leader = leader
@@ -76,7 +76,6 @@ module Trick =
 
     /// Indicates whether the given trick has finished.
     let isComplete trick =
-        assert(trick.Cards.Length >= 0)
         assert(trick.Cards.Length <= Seat.numSeats)
         trick.Cards.Length = Seat.numSeats
 

@@ -4,12 +4,11 @@ open PlayingCards
 
 /// A location occupied by a player.
 type Seat =
-#if MINI
     | West  = 0
+#if MINI
     | East  = 1
     | South = 2
 #else
-    | West  = 0
     | North = 1
     | East  = 2
     | South = 3
@@ -23,7 +22,11 @@ module Seat =
 
     /// Converts the given seat to a character.
     let toChar seat =
+#if MINI
+        "WES"[int seat]
+#else
         "WNES"[int seat]
+#endif
 
 #if FABLE_COMPILER
     /// Display name.

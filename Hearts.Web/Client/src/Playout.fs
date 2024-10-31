@@ -118,7 +118,7 @@ module Playout =
                                 $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>")
                             |> Option.defaultValue ""
                     hint.html(innerHtml)
-                } |> Async.Start
+                } |> Async.StartImmediate
 
                 // handle card clicks
             let legalPlaySet = set legalPlays
