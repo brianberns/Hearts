@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\SharedTypes.fs" />
+    <Compile Include="Remoting.fs" />
     <Compile Include="WebPart.fs" />
   </ItemGroup>
 
