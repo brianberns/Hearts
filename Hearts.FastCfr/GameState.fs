@@ -38,7 +38,7 @@ module GameState =
         let player = Trick.currentPlayer trick
         let unplayedSuits =
             (deal.UnplayedCards - hand)
-                |> Seq.map _.Suit
+                |> Seq.map (fun card -> card.Suit)
                 |> set
         for suit in Enum.getValues<Suit> do
             let hasUnplayed = unplayedSuits.Contains(suit)
