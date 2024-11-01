@@ -36,11 +36,17 @@ module GameState =
 
             // voids
         let player = Trick.currentPlayer trick
-        for seat in Enum.getValues<Seat> do
-            if seat <> player then
-                for suit in Enum.getValues<Suit> do
+        let unplayedSuits =
+            (deal.UnplayedCards - hand)
+                |> Seq.map _.Suit
+                |> set
+        for suit in Enum.getValues<Suit> do
+            let hasUnplayed = unplayedSuits.Contains(suit)
+            for seat in Enum.getValues<Seat> do
+                if seat <> player then
                     sb.Append(
-                        if deal.Voids.Contains(seat, suit) then 'x'
+                        if hasUnplayed
+                            && deal.Voids.Contains(seat, suit) then 'x'
                         else '.')
                         |> ignore
 
