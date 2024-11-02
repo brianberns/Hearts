@@ -2,19 +2,21 @@
 
 /// The rank of a card.
 type Rank =
+#if !MINI
     | Two   =  2
     | Three =  3
     | Four  =  4
     | Five  =  5
     | Six   =  6
-#if !MINI
     | Seven =  7
     | Eight =  8
+#endif
     | Nine  =  9
     | Ten   = 10
     | Jack  = 11
     | Queen = 12
     | King  = 13
+#if !MINI
     | Ace   = 14   // because Ace > King in most games
 #endif
 

@@ -3,9 +3,12 @@
 /// The suit of a card.
 type Suit =
     | Clubs    = 0
+#if MINI
+    | Hearts   = 1
+    | Spades   = 2
+#else
     | Diamonds = 1
     | Hearts   = 2
-#if !MINI
     | Spades   = 3
 #endif
 
@@ -26,11 +29,11 @@ module Suit =
     /// Converts the given character to a rank.
     let fromChar = function
         | 'C' | '♣' -> Suit.Clubs
-        | 'D' | '♦' -> Suit.Diamonds
-        | 'H' | '♥' -> Suit.Hearts
 #if !MINI
-        | 'S' | '♠' -> Suit.Spades
+        | 'D' | '♦' -> Suit.Diamonds
 #endif
+        | 'H' | '♥' -> Suit.Hearts
+        | 'S' | '♠' -> Suit.Spades
         | c -> failwith $"Unexpected suit char: |{c}|"
 
 [<AutoOpen>]

@@ -191,11 +191,11 @@ module DealView =
     let private suitElemMap =
         Map [
             Suit.Clubs,    ~~"#deckClubs"
-            Suit.Diamonds, ~~"#deckDiamonds"
-            Suit.Hearts,   ~~"#deckHearts"
 #if !MINI
-            Suit.Spades,   ~~"#deckSpades"
+            Suit.Diamonds, ~~"#deckDiamonds"
 #endif
+            Suit.Hearts,   ~~"#deckHearts"
+            Suit.Spades,   ~~"#deckSpades"
         ]
 
     /// Gets the ID of the table cell that represents the

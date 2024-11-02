@@ -210,10 +210,10 @@ module ClosedDeal =
                 && updatedTrick.Leader = player then
                 deal.Voids
                     .Add(player, Suit.Clubs)
-                    .Add(player, Suit.Diamonds)
 #if !MINI
-                    .Add(player, Suit.Spades)
+                    .Add(player, Suit.Diamonds)
 #endif
+                    .Add(player, Suit.Spades)
             else voids
 
         {

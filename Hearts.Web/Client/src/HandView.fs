@@ -120,12 +120,12 @@ module OpenHandView =
             |> Seq.sortByDescending (fun card ->
                 let iSuit =
                     match card.Suit with
-#if !MINI
                         | Suit.Spades   -> 4   // black
-#endif
                         | Suit.Hearts   -> 3   // red
                         | Suit.Clubs    -> 2   // black
+#if !MINI
                         | Suit.Diamonds -> 1   // red
+#endif
                         | _ -> failwith "Unexpected"
                 iSuit, card.Rank)
             |> Seq.map CardView.ofCard

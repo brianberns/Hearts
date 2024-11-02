@@ -28,7 +28,7 @@ module Program =
     let run () =
 
             // train
-        let numGames = 10_000_000
+        let numGames = 20_000_000
         let chunkSize = 100_000
         let util, infoSetMap = train numGames chunkSize
 
