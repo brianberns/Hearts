@@ -13,6 +13,5 @@ module Deck =
         {
             Cards =
                 Card.allCards
-                    |> Array.clone
                     |> Array.randomShuffleWith rng
         }
