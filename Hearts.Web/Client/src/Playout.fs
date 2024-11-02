@@ -26,6 +26,36 @@ module Playout =
             AnimTrickFinish : Seat -> Animation
         }
 
+    let private displayHint hand deal legalPlays (elem : JQueryElement) =
+        async {
+            let infoSetKey =
+                GameState.getInfoSetKey hand deal.ClosedDeal
+            let! strategyOpt =
+                Remoting.api.GetStrategy infoSetKey
+            let innerHtml =
+                match strategyOpt with
+                    | Some strategy ->
+                        let rows =
+                            Array.zip legalPlays strategy
+                                |> Seq.sortByDescending snd
+                                |> Seq.map (fun (card : Card, prob) ->
+                                    $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
+                                |> String.concat ""
+                        $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>"
+                    | None ->
+                        match deal |> OpenDeal.tryFindInevitable with
+                            | Some score ->
+                                let rows =
+                                    score.ScoreMap
+                                        |> Map.toSeq
+                                        |> Seq.map (fun (seat, points) ->
+                                            $"<tr><td>{Seat.toString seat}</td><td style='text-align: right'>{points}</td></tr>")
+                                        |> String.concat ""
+                                $"<b>Inevitable</b><br /><table><tr><th style='text-align: left'>Seat</th><th>Points</th></tr>{rows}</table>"
+                            | None -> "Unknown"
+            elem.html(innerHtml)
+        }
+
     /// Plays the given card on the current trick, and returns the
     /// seat of the resulting trick winner, if any.
     let private getTrickWinnerOpt context card =
@@ -100,26 +130,8 @@ module Playout =
                 // display hint?
             let hint = ~~"#hint"
             if legalPlays.Length > 1 then
-                async {
-                    let infoSetKey =
-                        GameState.getInfoSetKey
-                            hand
-                            context.Deal.ClosedDeal
-                    let! strategyOpt =
-                        Remoting.api.GetStrategy infoSetKey
-                    let innerHtml =
-                        strategyOpt
-                            |> Option.map (fun strategy ->
-                                let rows =
-                                    Array.zip legalPlays strategy
-                                        |> Seq.sortByDescending snd
-                                        |> Seq.map (fun (card, prob) ->
-                                            $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
-                                        |> String.concat ""
-                                $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>")
-                            |> Option.defaultValue ""
-                    hint.html(innerHtml)
-                } |> Async.StartImmediate
+                displayHint hand context.Deal legalPlays hint
+                    |> Async.StartImmediate
 
                 // handle card clicks
             let legalPlaySet = set legalPlays

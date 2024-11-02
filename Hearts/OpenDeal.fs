@@ -159,7 +159,7 @@ module OpenDeal =
 
     /// Determines the inevitable additional score of the given deal,
     /// if possible.
-    let private tryFindInevitable deal =
+    let tryFindInevitable deal =
 
             // applies only at trick boundaries
         let isApplicable =
