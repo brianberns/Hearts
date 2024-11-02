@@ -98,10 +98,10 @@ module CardView =
             Card.fromString "5S", importDefault "./assets/card_images/5S.svg"
 #endif
 
-#if !MINI
             Card.fromString "6C", importDefault "./assets/card_images/6C.svg"
             Card.fromString "6D", importDefault "./assets/card_images/6D.svg"
             Card.fromString "6H", importDefault "./assets/card_images/6H.svg"
+#if !MINI
             Card.fromString "6S", importDefault "./assets/card_images/6S.svg"
 
             Card.fromString "7C", importDefault "./assets/card_images/7C.svg"
