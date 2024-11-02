@@ -112,7 +112,8 @@ module Playout =
                             |> Option.map (fun strategy ->
                                 let rows =
                                     Array.zip legalPlays strategy
-                                        |> Array.map (fun (card, prob) ->
+                                        |> Seq.sortByDescending snd
+                                        |> Seq.map (fun (card, prob) ->
                                             $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
                                         |> String.concat ""
                                 $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>")
