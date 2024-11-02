@@ -26,34 +26,35 @@ module Playout =
             AnimTrickFinish : Seat -> Animation
         }
 
-    let private displayHint hand deal legalPlays (elem : JQueryElement) =
+    /// Gets hint HTML.
+    let private getHint hand deal (legalPlays : _[]) =
         async {
-            let infoSetKey =
-                GameState.getInfoSetKey hand deal.ClosedDeal
-            let! strategyOpt =
-                Remoting.api.GetStrategy infoSetKey
-            let innerHtml =
-                match strategyOpt with
-                    | Some strategy ->
-                        let rows =
-                            Array.zip legalPlays strategy
-                                |> Seq.sortByDescending snd
-                                |> Seq.map (fun (card : Card, prob) ->
-                                    $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
-                                |> String.concat ""
-                        $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>"
-                    | None ->
-                        match deal |> OpenDeal.tryFindInevitable with
-                            | Some score ->
-                                let rows =
-                                    score.ScoreMap
-                                        |> Map.toSeq
-                                        |> Seq.map (fun (seat, points) ->
-                                            $"<tr><td>{Seat.toString seat}</td><td style='text-align: right'>{points}</td></tr>")
-                                        |> String.concat ""
-                                $"<b>Inevitable</b><br /><table><tr><th style='text-align: left'>Seat</th><th>Points</th></tr>{rows}</table>"
-                            | None -> "Unknown"
-            elem.html(innerHtml)
+            match deal |> OpenDeal.tryFindInevitable with
+
+                | Some score ->
+                    let rows =
+                        score.ScoreMap
+                            |> Map.toSeq
+                            |> Seq.map (fun (seat, points) ->
+                                $"<tr><td>{Seat.toString seat}</td><td style='text-align: right'>{points}</td></tr>")
+                            |> String.concat ""
+                    return $"<b>Inevitable</b><br /><table><tr><th style='text-align: left'>Seat</th><th>Points</th></tr>{rows}</table>"
+
+                | None when legalPlays.Length > 1 ->
+                    let infoSetKey =
+                        GameState.getInfoSetKey hand deal.ClosedDeal
+                    match! Remoting.api.GetStrategy infoSetKey with
+                        | Some strategy ->
+                            let rows =
+                                Array.zip legalPlays strategy
+                                    |> Seq.sortByDescending snd
+                                    |> Seq.map (fun (card : Card, prob) ->
+                                        $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
+                                    |> String.concat ""
+                            return $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>"
+                        | None -> return "Unknown"
+
+                | _ -> return ""
         }
 
     /// Plays the given card on the current trick, and returns the
@@ -127,11 +128,12 @@ module Playout =
                 // prompt user to play
             chooser |> PlayChooser.display
 
-                // display hint?
+                // display hint
             let hint = ~~"#hint"
-            if legalPlays.Length > 1 then
-                displayHint hand context.Deal legalPlays hint
-                    |> Async.StartImmediate
+            async {
+                let! html = getHint hand context.Deal legalPlays
+                hint.html(html)
+            } |> Async.StartImmediate
 
                 // handle card clicks
             let legalPlaySet = set legalPlays
