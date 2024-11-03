@@ -20,7 +20,11 @@ module Suit =
 
     /// Converts the given suit to a character.
     let toChar suit =
+#if MINI
+        "♣♥♠".[int suit]
+#else
         "♣♦♥♠".[int suit]
+#endif
 
     /// Converts the given suit to a letter character.
     let toLetter suit =

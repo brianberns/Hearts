@@ -32,11 +32,11 @@ module Rank =
 
     /// Converts the given character to a rank.
     let fromChar = function
-#if !MINI
         | 'T' -> Rank.Ten
         | 'J' -> Rank.Jack
         | 'Q' -> Rank.Queen
         | 'K' -> Rank.King
+#if !MINI
         | 'A' -> Rank.Ace
 #endif
         | (c : char) ->

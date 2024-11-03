@@ -109,11 +109,11 @@ module CardView =
 #endif
 
             Card.fromString "9C", importDefault "./assets/card_images/9C.svg"
-            Card.fromString "9D", importDefault "./assets/card_images/9D.svg"
-            Card.fromString "9H", importDefault "./assets/card_images/9H.svg"
 #if !MINI
-            Card.fromString "9S", importDefault "./assets/card_images/9S.svg"
+            Card.fromString "9D", importDefault "./assets/card_images/9D.svg"
 #endif
+            Card.fromString "9H", importDefault "./assets/card_images/9H.svg"
+            Card.fromString "9S", importDefault "./assets/card_images/9S.svg"
 
             Card.fromString "TC", importDefault "./assets/card_images/TC.svg"
 #if !MINI
@@ -132,15 +132,15 @@ module CardView =
             Card.fromString "QC", importDefault "./assets/card_images/QC.svg"
 #if !MINI
             Card.fromString "QD", importDefault "./assets/card_images/QD.svg"
-            Card.fromString "QH", importDefault "./assets/card_images/QH.svg"
 #endif
+            Card.fromString "QH", importDefault "./assets/card_images/QH.svg"
             Card.fromString "QS", importDefault "./assets/card_images/QS.svg"
 
             Card.fromString "KC", importDefault "./assets/card_images/KC.svg"
 #if !MINI
             Card.fromString "KD", importDefault "./assets/card_images/KD.svg"
-            Card.fromString "KH", importDefault "./assets/card_images/KH.svg"
 #endif
+            Card.fromString "KH", importDefault "./assets/card_images/KH.svg"
             Card.fromString "KS", importDefault "./assets/card_images/KS.svg"
 
 #if !MINI
