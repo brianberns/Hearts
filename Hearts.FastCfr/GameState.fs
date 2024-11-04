@@ -51,6 +51,7 @@ module GameState =
                         |> ignore
 
             // score
+        assert(deal.Score.ScoreMap.Count = Seat.numSeats)
         for score in deal.Score.ScoreMap.Values do
             assert(score >= 0 && score < 10)
             sb.Append(score) |> ignore

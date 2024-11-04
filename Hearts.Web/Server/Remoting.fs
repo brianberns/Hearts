@@ -28,9 +28,13 @@ module Remoting =
             GetPlayIndex =
                 fun key ->
                     async {
-                        return lookup key
-                            |> Option.map (fun strategy ->
-                                Categorical.Sample(rng, strategy))
+                        return
+                            match lookup key with
+                                | Some strategy ->
+                                    Some (Categorical.Sample(rng, strategy))
+                                | None ->
+                                    printfn $"No strategy for {key}"
+                                    None
                     }
             GetStrategy =
                 fun key -> async { return lookup key }

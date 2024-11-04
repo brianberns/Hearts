@@ -43,7 +43,7 @@ module Playout =
                 | None when legalPlays.Length > 1 ->
                     let infoSetKey =
                         GameState.getInfoSetKey hand deal.ClosedDeal
-                    match! Remoting.api.GetStrategy infoSetKey with
+                    match! Remoting.getStrategy infoSetKey with
                         | Some strategy ->
                             let rows =
                                 Array.zip legalPlays strategy
