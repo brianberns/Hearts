@@ -25,6 +25,18 @@ module Program =
                     chunk)
         Trainer.train (rng.Next()) gameChunks
 
+    let isSeat (seat : Seat) (infoSetKey : string) =
+        let leaderIdx = Card.allCards.Length
+        let leader = Seat.fromChar infoSetKey[leaderIdx]
+        let nPlayed =
+            infoSetKey.Substring(leaderIdx + 1, 2 * (Seat.numSeats - 1))
+                |> Seq.chunkBySize 2
+                |> Seq.map String
+                |> Seq.where (fun substr -> substr <> "..")
+                |> Seq.map Card.fromString
+                |> Seq.length
+        Seat.incr nPlayed leader = seat
+
     let run () =
 
             // train
@@ -39,10 +51,13 @@ module Program =
         printfn ""
         let strategyMap =
             infoSetMap
-                |> Map.map (fun _ infoSet ->
+                |> Map.toSeq
+                |> Seq.where (fst >> isSeat Seat.South)
+                |> Seq.map (fun (key, infoSet) ->
                     let strategy =
                         InformationSet.getAverageStrategy infoSet
-                    strategy.ToArray())
+                    key, strategy.ToArray())
+                |> Map
         Strategy.save strategyMap
 
     Console.OutputEncoding <- Text.Encoding.UTF8
