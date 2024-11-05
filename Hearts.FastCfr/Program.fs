@@ -40,7 +40,7 @@ module Program =
     let run () =
 
             // train
-        let numGames = 20_000_000
+        let numGames = 10_000_000
         let chunkSize = 100_000
         let util, infoSetMap = train numGames chunkSize
 
@@ -61,4 +61,5 @@ module Program =
         Strategy.save strategyMap
 
     Console.OutputEncoding <- Text.Encoding.UTF8
+    printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
     run ()
