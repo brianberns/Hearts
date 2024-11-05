@@ -25,15 +25,22 @@ module Program =
                     chunk)
         Trainer.train (rng.Next()) gameChunks
 
-    let isSeat (seat : Seat) (infoSetKey : string) =
+    let isSeat (seat : Seat) (infoSetKey : byte[]) =
         let leaderIdx = Card.allCards.Length
-        let leader = Seat.fromChar infoSetKey[leaderIdx]
+        let leader = infoSetKey[leaderIdx] |> int |> enum<Seat> 
         let nPlayed =
-            infoSetKey.Substring(leaderIdx + 1, 2 * (Seat.numSeats - 1))
+            infoSetKey
+                |> Seq.skip (leaderIdx + 1)
+                |> Seq.take (2 * (Seat.numSeats - 1))
                 |> Seq.chunkBySize 2
-                |> Seq.map String
-                |> Seq.where (fun substr -> substr <> "..")
-                |> Seq.map Card.fromString
+                |> Seq.where (fun bytes ->
+                    bytes <> [| Byte.MaxValue; Byte.MaxValue |])
+                |> Seq.map (fun bytes ->
+                    let rank = bytes[0] |> int |> enum<Rank>
+                    let suit = bytes[1] |> int |> enum<Suit>
+                    assert(rank >= Rank.Nine && rank <= Rank.King)
+                    assert(int suit < Suit.numSuits)
+                    Card(rank, suit))
                 |> Seq.length
         Seat.incr nPlayed leader = seat
 

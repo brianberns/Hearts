@@ -1,6 +1,8 @@
 ﻿namespace Hearts.FastCfr
 
 open System
+open System.IO
+
 open PlayingCards
 open Hearts
 open FastCfr
@@ -8,31 +10,38 @@ open FastCfr
 module GameState =
 
     let getInfoSetKey (hand : Hand) deal =
-        let sb = Text.StringBuilder(29)
+        use stream =
+            new MemoryStream(
+                Card.allCards.Length                          // unplayed cards
+                    + 1                                       // trick leader
+                    + (2 * (Seat.numSeats - 1))               // trick cards
+                    + (Suit.numSuits * (Seat.numSeats - 1))   // voids
+                    + 1)                                      // score
 
             // hand and other unplayed cards
         for card in Card.allCards do
-            sb.Append(
+            stream.WriteByte(
                 if hand.Contains(card) then
                     assert(deal.UnplayedCards.Contains(card))
-                    'o'
-                elif deal.UnplayedCards.Contains(card) then 'x'
-                else '.')
-                |> ignore
+                    2uy
+                elif deal.UnplayedCards.Contains(card) then 1uy
+                else 0uy)
 
             // current trick
         let trick = ClosedDeal.currentTrick deal
-        sb.Append(trick.Leader.Char) |> ignore
+        stream.WriteByte(uint8 trick.Leader)
         let cards =
             trick.Cards
                 |> List.rev
                 |> List.toArray
-        for iCard = 0 to Seat.numSeats - 1 do
-            sb.Append(
-                if iCard < cards.Length then
-                    cards[iCard].String
-                else "..")
-                |> ignore
+        assert(cards.Length < Seat.numSeats)
+        for iCard = 0 to Seat.numSeats - 2 do
+            if iCard < cards.Length then
+                stream.WriteByte(uint8 cards[iCard].Rank)
+                stream.WriteByte(uint8 cards[iCard].Suit)
+            else
+                stream.WriteByte(Byte.MaxValue)
+                stream.WriteByte(Byte.MaxValue)
 
             // voids
         let player = Trick.currentPlayer trick
@@ -44,28 +53,27 @@ module GameState =
             let hasUnplayed = unplayedSuits.Contains(suit)
             for seat in Enum.getValues<Seat> do
                 if seat <> player then
-                    sb.Append(
+                    stream.WriteByte(
                         if hasUnplayed
-                            && deal.Voids.Contains(seat, suit) then 'x'
-                        else '.')
-                        |> ignore
+                            && deal.Voids.Contains(seat, suit) then 1uy
+                        else 0uy)
 
             // score
         assert(deal.Score.ScoreMap.Count = Seat.numSeats)
-        let withPoints =
+        let seats =
             deal.Score.ScoreMap
                 |> Map.toSeq
                 |> Seq.where (fun (_, points) -> points > 0)
                 |> Seq.map fst
                 |> Seq.toArray
-        match withPoints.Length with
-            | 0 -> '0'
-            | 1 -> withPoints[0].Char
-            | _ -> 'x'
-            |> sb.Append
-            |> ignore
+        match seats.Length with
+            | 0 -> Byte.MaxValue
+            | 1 -> uint8 seats[0]
+            | _ -> Byte.MaxValue / 2uy
+            |> stream.WriteByte
 
-        sb.ToString()
+        assert(stream.Length = stream.Capacity)
+        stream.ToArray()
 
     let rec create deal =
         match OpenDeal.tryFinalScore deal with

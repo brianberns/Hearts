@@ -4,12 +4,13 @@ open System.IO
 
 module Strategy =
 
-    let save (strategyMap : Map<string, float[]>) =
+    let save (strategyMap : Map<byte[], float[]>) =
         let path = "Hearts.strategy"
         use stream = new FileStream(path, FileMode.Create)
         use wtr = new BinaryWriter(stream)
         wtr.Write(strategyMap.Count)
         for (KeyValue(key, strategy)) in strategyMap do
+            wtr.Write(key.Length)
             wtr.Write(key)
             wtr.Write(strategy.Length)
             for prob in strategy do
@@ -21,11 +22,12 @@ module Strategy =
         let mapCount = rdr.ReadInt32()
         Map [|
             for _ = 1 to mapCount do
-                let key = rdr.ReadString()
-                let strategyCount = rdr.ReadInt32()
+                let keyLength = rdr.ReadInt32()
+                let key = rdr.ReadBytes(keyLength)
+                let strategyLength = rdr.ReadInt32()
                 let strategy =
                     [|
-                        for _ = 1 to strategyCount do
+                        for _ = 1 to strategyLength do
                             rdr.ReadDouble()
                     |]
                 key, strategy
