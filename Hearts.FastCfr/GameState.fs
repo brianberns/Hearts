@@ -8,7 +8,7 @@ open FastCfr
 module GameState =
 
     let getInfoSetKey (hand : Hand) deal =
-        let sb = Text.StringBuilder()
+        let sb = Text.StringBuilder(29)
 
             // hand and other unplayed cards
         for card in Card.allCards do
@@ -52,9 +52,18 @@ module GameState =
 
             // score
         assert(deal.Score.ScoreMap.Count = Seat.numSeats)
-        for score in deal.Score.ScoreMap.Values do
-            assert(score >= 0 && score < 10)
-            sb.Append(score) |> ignore
+        let withPoints =
+            deal.Score.ScoreMap
+                |> Map.toSeq
+                |> Seq.where (fun (_, points) -> points > 0)
+                |> Seq.map fst
+                |> Seq.toArray
+        match withPoints.Length with
+            | 0 -> '0'
+            | 1 -> withPoints[0].Char
+            | _ -> 'x'
+            |> sb.Append
+            |> ignore
 
         sb.ToString()
 
