@@ -33,7 +33,7 @@ module Remoting =
                                 | Some strategy ->
                                     Some (Categorical.Sample(rng, strategy))
                                 | None ->
-                                    printfn $"No strategy for {key}"
+                                    printfn $"No strategy for %A{key}"
                                     None
                     }
             GetStrategy =
