@@ -6,5 +6,5 @@ type IHeartsApi =
         GetPlayIndex : byte[] (*key*) -> Async<Option<int>> (*action index*)
 
         /// Gets the strategy for the given info set.
-        GetStrategy : byte[] (*key*) -> Async<Option<float[]>> (*action probabilities*)
+        GetStrategy : byte[] (*key*) -> Async<Option<float32[]>> (*action probabilities*)
     }

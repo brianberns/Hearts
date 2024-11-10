@@ -31,7 +31,11 @@ module Remoting =
                         return
                             match lookup key with
                                 | Some strategy ->
-                                    Some (Categorical.Sample(rng, strategy))
+                                    let arr =
+                                        strategy
+                                            |> Seq.map float
+                                            |> Seq.toArray
+                                    Some (Categorical.Sample(rng, arr))
                                 | None ->
                                     printfn $"No strategy for %A{key}"
                                     None

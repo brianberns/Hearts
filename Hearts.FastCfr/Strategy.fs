@@ -4,7 +4,7 @@ open System.IO
 
 module Strategy =
 
-    let save (strategyMap : Map<byte[], float[]>) =
+    let save (strategyMap : Map<byte[], float32[]>) =
         let path = "Hearts.strategy"
         use stream = new FileStream(path, FileMode.Create)
         use wtr = new BinaryWriter(stream)
@@ -28,7 +28,7 @@ module Strategy =
                 let strategy =
                     [|
                         for _ = 1 to strategyLength do
-                            rdr.ReadDouble()
+                            rdr.ReadSingle()
                     |]
                 key, strategy
             assert(stream.Position = stream.Length)

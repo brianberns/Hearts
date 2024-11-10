@@ -49,7 +49,7 @@ module Playout =
                                 Array.zip legalPlays strategy
                                     |> Seq.sortByDescending snd
                                     |> Seq.map (fun (card : Card, prob) ->
-                                        $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
+                                        $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100.f * prob}%%</td></tr>")
                                     |> String.concat ""
                             return $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>"
                         | None -> return "Unknown"

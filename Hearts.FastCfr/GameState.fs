@@ -99,9 +99,9 @@ module GameState =
                         |> Map.toSeq
                         |> Seq.where (fun (seat, _) -> seat <> Seat.South)
                         |> Seq.sumBy snd
-                        |> float)
-                        / float (Seat.numSeats - 1)
-                let payoff = otherAvg - float score[Seat.South]
+                        |> float32)
+                        / float32 (Seat.numSeats - 1)
+                let payoff = otherAvg - float32 score[Seat.South]
                 TerminalGameState.create 0 payoff
                     |> Terminal
             | None ->
