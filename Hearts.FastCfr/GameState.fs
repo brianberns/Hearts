@@ -9,7 +9,22 @@ open FastCfr
 
 module GameState =
 
+#if FABLE_COMPILER
+    type Collections.Generic.List<'t> with
+        member this.WriteByte(item) = this.Add(item)
+        member this.Length = this.Count
+        member this.Capacity = this.Count
+#endif
+
     let getInfoSetKey (hand : Hand) deal =
+#if FABLE_COMPILER
+        let stream = ResizeArray<byte>(
+                    Card.allCards.Length                          // unplayed cards
+                        + 1                                       // trick leader
+                        + (2 * (Seat.numSeats - 1))               // trick cards
+                        + (Suit.numSuits * (Seat.numSeats - 1))   // voids
+                        + 1)                                      // score
+#else
         use stream =
             new MemoryStream(
                 Card.allCards.Length                          // unplayed cards
@@ -17,6 +32,7 @@ module GameState =
                     + (2 * (Seat.numSeats - 1))               // trick cards
                     + (Suit.numSuits * (Seat.numSeats - 1))   // voids
                     + 1)                                      // score
+#endif
 
             // hand and other unplayed cards
         for card in Card.allCards do
