@@ -3,6 +3,8 @@
 open System
 open System.IO
 
+open FastCfr
+
 open Hearts.FastCfr
 
 open MathNet.Numerics.Distributions
@@ -31,11 +33,7 @@ module Remoting =
                         return
                             match lookup key with
                                 | Some strategy ->
-                                    let arr =
-                                        strategy
-                                            |> Seq.map float
-                                            |> Seq.toArray
-                                    Some (Categorical.Sample(rng, arr))
+                                    Some (Categorical.Sample(rng, strategy))
                                 | None ->
                                     printfn $"No strategy for %A{key}"
                                     None
