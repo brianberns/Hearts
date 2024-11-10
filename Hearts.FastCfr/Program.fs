@@ -44,11 +44,12 @@ module Program =
                 |> Seq.length
         Seat.incr nPlayed leader = seat
 
-    let run () =
+    let run numGames chunkSize =
 
             // train
-        let numGames = 10_000_000
-        let chunkSize = 10_000
+        printfn "# of games: %s" ((numGames : int).ToString("N0"))
+        printfn "Chunk size: %s" ((chunkSize : int).ToString("N0"))
+        printfn ""
         let util, infoSetMap = train numGames chunkSize
 
             // expected overall utility
@@ -67,6 +68,21 @@ module Program =
                 |> Map
         Strategy.save strategyMap
 
-    Console.OutputEncoding <- Text.Encoding.UTF8
-    printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
-    run ()
+    [<EntryPoint>]
+    let main argv =
+
+        let numGames =
+            if argv.Length >= 1 then
+                Int32.Parse(argv[0])
+            else 10_000_000
+        let chunkSize =
+            if argv.Length >= 2 then
+                Int32.Parse(argv[1])
+            else
+                10_000
+
+        Console.OutputEncoding <- Text.Encoding.UTF8
+        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
+        run numGames chunkSize
+
+        0
