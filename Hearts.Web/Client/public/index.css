@@ -19,6 +19,13 @@ td {
     background-color: #9DC8D6;
 }
 
+caption {
+    caption-side: top;
+    padding: 5px;
+    text-decoration: underline;
+    font-size: smaller;
+}
+
 #score {
     position: absolute;
     left: 2%;

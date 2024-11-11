@@ -51,7 +51,7 @@ module Playout =
                                     |> Seq.map (fun (card : Card, prob) ->
                                         $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
                                     |> String.concat ""
-                            return $"<table><tr><th>Card</th><th>Probability</th></tr>{rows}</table>"
+                            return $"<table><caption>Hint</caption><tr><th>Card</th><th>Choice</th></tr>{rows}</table>"
                         | None -> return "Unknown"
 
                 | _ -> return ""
