@@ -198,9 +198,20 @@ module DealView =
             Suit.Spades,   ~~"#deckSpades"
         ]
 
+    /// Elements tracking void suits.
+    let private voidElemMap =
+        Map [
+            Seat.West,  ~~"#wVoid"
+#if !MINI
+            Seat.North, ~~"#nVoid"
+#endif
+            Seat.East,  ~~"#eVoid"
+            Seat.South, ~~"#sVoid"
+        ]
+
     /// Gets the ID of the table cell that represents the
     /// given card.
-    let private getCellId (card : Card) =
+    let private getCardCellId (card : Card) =
         $"deck{card.String}"
 
     /// Prepares deck table for use.
@@ -223,8 +234,13 @@ module DealView =
                 let cell =
                     let card = Card.create rank suit
                     ~~HTMLTableCellElement.Create(
-                        id = getCellId card)
+                        id = getCardCellId card)
                 row.append(cell)
+
+    /// Gets the ID of the table cell that represents the
+    /// given void seat and suit.
+    let private getVoidCellId (seat : Seat) (suit : Suit) =
+        $"void{Seat.toChar seat}{Suit.toChar suit}"
 
     /// Displays current deal status.
     let displayStatus deal =
@@ -234,9 +250,11 @@ module DealView =
             scoreElemMap[seat].text($"{deal.ClosedDeal.Score[seat]}")
 
             // status of each card
+        let isUserPlay =
+            deal.ClosedDeal.CurrentTrickOpt.IsSome
+                && OpenDeal.currentPlayer deal = Seat.User
         let deckView = ~~"#deck"
-        if deal.ClosedDeal.CurrentTrickOpt.IsSome
-            && OpenDeal.currentPlayer deal = Seat.User then
+        if isUserPlay then
             deckView.show()
             let hand = OpenDeal.currentHand deal
             for card in Card.allCards do
@@ -244,6 +262,20 @@ module DealView =
                     if hand.Contains(card) then "ⓢ"
                     elif deal.ClosedDeal.UnplayedCards.Contains(card) then ""
                     else "🞬"
-                (~~($"#{getCellId card}")).text(text)
+                (~~($"#{getCardCellId card}")).text(text)
         else
             deckView.hide()
+
+            // known void suits
+        let voidView = ~~"#void"
+        if isUserPlay then
+            voidView.show()
+            for seat in Enum.getValues<Seat> do
+                if seat <> Seat.User then
+                    for suit in Enum.getValues<Suit> do
+                        let text =
+                            if deal.ClosedDeal.Voids.Contains(seat, suit) then "🞬"
+                            else ""
+                        (~~($"#{getVoidCellId seat suit}")).text(text)
+        else
+            voidView.hide()
