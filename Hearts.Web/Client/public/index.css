@@ -19,6 +19,13 @@ td {
     background-color: #9DC8D6;
 }
 
+caption {
+    caption-side: top;
+    padding: 5px;
+    text-decoration: underline;
+    font-size: smaller;
+}
+
 #score {
     position: absolute;
     left: 2%;
@@ -29,7 +36,7 @@ td {
     #score th {
         padding-left: 5px;
         padding-right: 5px;
-        width: 80px;
+        text-align: center;
     }
 
     #score td {
@@ -39,12 +46,28 @@ td {
 
 #deck {
     position: absolute;
-    left: 23%;
+    left: 10%;
     top: 75%;
     text-align: center;
 }
 
     #deck td {
+        width: 20px;
+    }
+
+#void {
+    position: absolute;
+    left: 23%;
+    top: 75%;
+    text-align: center;
+}
+
+    #void th {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    #void td {
         width: 20px;
     }
 

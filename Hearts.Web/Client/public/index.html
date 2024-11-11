@@ -13,6 +13,7 @@
 <body>
     <main>
         <table id="score">
+            <caption>Score</caption>
             <thead>
                 <tr>
                     <th></th>
@@ -26,13 +27,13 @@
                     <td id="wCurrent"></td>
                     <td id="wTotal"></td>
                 </tr>
-<!--
+                <!--
                 <tr>
                     <th>North</th>
                     <td id="nCurrent"></td>
                     <td id="nTotal"></td>
                 </tr>
--->
+                -->
                 <tr>
                     <th>East</th>
                     <td id="eCurrent"></td>
@@ -46,23 +47,69 @@
             </tbody>
         </table>
         <table id="deck">
-            <tbody>
+            <caption>Cards played</caption>
+            <thead>
                 <tr id="deckRanks">
                     <th></th>
                 </tr>
+            </thead>
+            <tbody>
                 <tr id="deckSpades">
                     <th class="♠">♠</th>
                 </tr>
                 <tr id="deckHearts">
                     <th class="♥">♥</th>
                 </tr>
-<!--
+                <!--
                 <tr id="deckDiamonds">
                     <th class="♦">♦</th>
                 </tr>
--->
+                -->
                 <tr id="deckClubs">
                     <th class="♣">♣</th>
+                </tr>
+            </tbody>
+        </table>
+        <table id="void">
+            <caption>Voids</caption>
+            <thead>
+                <tr id="voidSuits">
+                    <th></th>
+                    <th class="♠">♠</th>
+                    <th class="♥">♥</th>
+                    <!--
+                    <th class="♦">♦</th>
+                    -->
+                    <th class="♣">♣</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>West</th>
+                    <td id="voidW♠"></td>
+                    <td id="voidW♥"></td>
+                    <!--
+                    <td id="voidW♦"></td>
+                    -->
+                    <td id="voidW♣"></td>
+                </tr>
+                <!--
+                <tr>
+                    <th>North</th>
+                    <td id="voidN♠"></td>
+                    <td id="voidN♥"></td>
+                    <td id="voidN♦"></td>
+                    <td id="voidN♣"></td>
+                </tr>
+                -->
+                <tr>
+                    <th>East</th>
+                    <td id="voidE♠"></td>
+                    <td id="voidE♥"></td>
+                    <!--
+                    <td id="voidE♦"></td>
+                    -->
+                    <td id="voidE♣"></td>
                 </tr>
             </tbody>
         </table>

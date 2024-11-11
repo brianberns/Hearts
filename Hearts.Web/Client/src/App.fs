@@ -1,7 +1,6 @@
 namespace Hearts.Web.Client
 
 open Browser
-open PlayingCards
 open Hearts.Web.Client   // force AutoOpen
 
 module Session =
