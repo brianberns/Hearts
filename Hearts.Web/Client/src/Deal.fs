@@ -46,21 +46,44 @@ module Deal =
             return persState'
         }
 
-    /// Elements tracking total score.
-    let private elemMap =
+    /// Elements tracking current deal score.
+    let private dealScoreMap =
         Map [
-            Seat.West,  ~~"#wTotal"
+            Seat.West,  ~~"#wDealScore"
 #if !MINI
-            Seat.North, ~~"#nTotal"
+            Seat.North, ~~"#nDealScore"
 #endif
-            Seat.East,  ~~"#eTotal"
-            Seat.South, ~~"#sTotal"
+            Seat.East,  ~~"#eDealScore"
+            Seat.South, ~~"#sDealScore"
         ]
 
-    /// Displays total score for each player.
-    let displayScore persState =
+    /// Elements tracking current game score.
+    let private gameScoreMap =
+        Map [
+            Seat.West,  ~~"#wGameScore"
+#if !MINI
+            Seat.North, ~~"#nGameScore"
+#endif
+            Seat.East,  ~~"#eGameScore"
+            Seat.South, ~~"#sGameScore"
+        ]
+
+    /// Elements tracking number of games won.
+    let private gamesWonMap =
+        Map [
+            Seat.West,  ~~"#wGamesWon"
+#if !MINI
+            Seat.North, ~~"#nGamesWon"
+#endif
+            Seat.East,  ~~"#eGamesWon"
+            Seat.South, ~~"#sGamesWon"
+        ]
+
+    /// Displays score for each player.
+    let private displayScore persState =
         for seat in Enum.getValues<Seat> do
-            elemMap[seat].text($"{persState.TotalScore[seat]}")
+            gameScoreMap[seat].text($"{persState.GameScore[seat]}")
+            gamesWonMap[seat].text($"{persState.GamesWon[seat]}")
 
     /// Handles the end of a deal.
     let private dealOver (surface : JQueryElement) shooterOpt =
@@ -81,6 +104,24 @@ module Deal =
             banner.click(fun () ->
                 banner.remove()
                 resolve ()))
+
+    /// End of game point threshold.
+    let private gameThreshold = 100
+
+    /// Finds game winners, if any, in the given score.
+    let private findGameWinners score =
+        let isOver =
+            score.ScoreMap.Values
+                |> Seq.exists (fun points ->
+                    points >= gameThreshold)
+        if isOver then
+            let minPoints = Seq.min score.ScoreMap.Values
+            score.ScoreMap
+                |> Map.toSeq
+                |> Seq.where (snd >> (=) minPoints)
+                |> Seq.map fst
+                |> set
+        else Set.empty
 
     /// Runs one deal.
     let run surface persState =
@@ -125,10 +166,21 @@ module Deal =
                 | Some score ->
 
                         // persist updated state
+                    let gameScore, gamesWon =
+                        let gameScore = persState.GameScore + score
+                        let winners = findGameWinners gameScore
+                        let gameScore =
+                            if winners.IsEmpty then gameScore
+                            else Score.zero
+                        let gamesWon =
+                            (persState.GamesWon, winners)
+                                ||> Seq.fold (fun score seat ->
+                                    score + Score.create seat 1)
+                        gameScore, gamesWon
                     let persState' =
                         { persState with
-                            TotalScore =
-                                persState.TotalScore + score
+                            GameScore = gameScore
+                            GamesWon = gamesWon
                             Dealer = persState.Dealer.Next
                             DealOpt = None }.Save()
 
