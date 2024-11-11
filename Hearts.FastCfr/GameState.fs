@@ -12,8 +12,6 @@ module GameState =
 #if FABLE_COMPILER
     type Collections.Generic.List<'t> with
         member this.WriteByte(item) = this.Add(item)
-        member this.Length = this.Count
-        member this.Capacity = this.Count
 #endif
 
     let getInfoSetKey (hand : Hand) deal =
@@ -88,7 +86,9 @@ module GameState =
             | _ -> Byte.MaxValue / 2uy
             |> stream.WriteByte
 
+#if !FABLE_COMPILER
         assert(stream.Length = stream.Capacity)
+#endif
         stream.ToArray()
 
     let rec create deal =
