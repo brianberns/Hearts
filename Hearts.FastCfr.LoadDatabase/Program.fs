@@ -14,9 +14,8 @@ module Program =
             new SQLiteCommand(
                 "create table Strategy ( \
                     Key blob, \
-                    ActionIndex integernot null, \
-                    Probability real not null, \
-                    primary key (Key, ActionIndex))",
+                    Probabilities blob, \
+                    primary key (Key))",
                 conn)
         cmd.ExecuteNonQuery() |> ignore
 
@@ -36,11 +35,12 @@ module Program =
 
         conn
 
-    /// Converts the given option to a database-safe value.
-    let safeValue valueOpt =
-        valueOpt
-            |> Option.map (fun value -> value :> obj)
-            |> Option.defaultValue (DBNull.Value :> _)
+    /// Converts an array to a blob.
+    let toBlob (probs : float[]) =
+        [|
+            for prob in probs do
+                yield! BitConverter.GetBytes(prob)
+        |]
 
     /// Creates and loads database.
     let load conn =
@@ -56,12 +56,11 @@ module Program =
             // prepare insert command
         use strategyCmd =
             new SQLiteCommand(
-                "insert into Strategy (Key, ActionIndex, Probability) \
-                values (@Key, @ActionIndex, @Probability)",
+                "insert into Strategy (Key, Probabilities) \
+                values (@Key, @Probabilities)",
                 conn)
         let keyParam = strategyCmd.Parameters.Add("Key", DbType.Binary)
-        let actionIdxParam = strategyCmd.Parameters.Add("ActionIndex", DbType.Int32)
-        let probParam = strategyCmd.Parameters.Add("Probability", DbType.Double)
+        let probsParam = strategyCmd.Parameters.Add("Probabilities", DbType.Binary)
 
             // insert strategy's rows
         let strategy = Strategy.load "Hearts.strategy"
@@ -73,14 +72,10 @@ module Program =
                 printfn $"{strategyNum}"
 
             keyParam.Value <- key
+            probsParam.Value <- toBlob probs
 
-            for (iProb, prob) in Seq.indexed probs do
-
-                actionIdxParam.Value <- iProb
-                probParam.Value <- prob
-
-                let nRows = strategyCmd.ExecuteNonQuery()
-                assert(nRows = 1)
+            let nRows = strategyCmd.ExecuteNonQuery()
+            assert(nRows = 1)
 
     do
         use conn = connect "Hearts.db"
