@@ -52,26 +52,31 @@ module Game =
 
             // add points to non-shooters
         let gameScore' =
-            Enum.getValues<Seat>
-                |> Seq.map (fun seat ->
-                    let points =
-                        if seat = shooter then 0
-                        else OpenDeal.numPointsPerDeal
-                    seat, points)
-                |> toScore
+            let dealScore =
+                Enum.getValues<Seat>
+                    |> Seq.map (fun seat ->
+                        let points =
+                            if seat = shooter then 0
+                            else OpenDeal.numPointsPerDeal
+                        seat, points)
+                    |> toScore
+            gameScore + dealScore
 
             // subtract points from shooter instead?
-        let winners = findGameLeaders gameScore'
-        if winners.Count = 0 || winners.Contains(shooter) then
+        let leaders = findGameLeaders gameScore'
+        if leaders.Contains(shooter) then
             gameScore'
         else
-            Enum.getValues<Seat>
-                |> Seq.map (fun seat ->
-                    let points =
-                        if seat = shooter then -OpenDeal.numPointsPerDeal
-                        else 0
-                    seat, points)
-                |> toScore
+            let dealScore =
+                Enum.getValues<Seat>
+                    |> Seq.map (fun seat ->
+                        let points =
+                            if seat = shooter then
+                                -OpenDeal.numPointsPerDeal
+                            else 0
+                        seat, points)
+                    |> toScore
+            gameScore + dealScore
 
     /// Determines the final score of the deal, including shoot
     /// reward, if possible.
