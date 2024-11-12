@@ -61,7 +61,7 @@ module Game =
                 |> toScore
 
             // subtract points from shooter instead?
-        let winners = findGameLeaders gameScore
+        let winners = findGameLeaders gameScore'
         if winners.Count = 0 || winners.Contains(shooter) then
             gameScore'
         else
