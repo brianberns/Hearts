@@ -78,14 +78,14 @@ module Game =
                     |> toScore
             gameScore + dealScore
 
-    /// Determines the final score of the deal, including shoot
+    /// Updates the given game score, including shoot
     /// reward, if possible.
-    let tryFinalScore deal gameScore =
+    let tryUpdateScore deal gameScore =
         option {
             let! inevitable = OpenDeal.tryFindInevitable deal
             let dealScore = deal.ClosedDeal.Score + inevitable
             assert(Score.sum dealScore = OpenDeal.numPointsPerDeal)
             return tryFindShooter dealScore
                 |> Option.map (applyShootReward gameScore)
-                |> Option.defaultValue dealScore
+                |> Option.defaultValue (gameScore + dealScore)
         }

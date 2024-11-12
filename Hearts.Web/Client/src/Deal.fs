@@ -176,8 +176,8 @@ module Deal =
             let! persState = playout surface persState seatViews
 
                 // deal is over
-            match Game.tryFinalScore persState.Deal persState.GameScore with
-                | Some dealScore ->
+            match Game.tryUpdateScore persState.Deal persState.GameScore with
+                | Some gameScore ->
 
                         // display deal results
                     let shooterOpt =
@@ -187,7 +187,6 @@ module Deal =
                         |> Async.AwaitPromise
 
                         // update game score
-                    let gameScore = persState.GameScore + dealScore
                     displayGameScore gameScore
 
                         // is the game over?
