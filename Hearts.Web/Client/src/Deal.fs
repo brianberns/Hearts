@@ -46,17 +46,6 @@ module Deal =
             return persState'
         }
 
-    /// Elements tracking current deal score.
-    let private dealScoreMap =
-        Map [
-            Seat.West,  ~~"#wDealScore"
-#if !MINI
-            Seat.North, ~~"#nDealScore"
-#endif
-            Seat.East,  ~~"#eDealScore"
-            Seat.South, ~~"#sDealScore"
-        ]
-
     /// Elements tracking current game score.
     let private gameScoreMap =
         Map [
@@ -79,11 +68,10 @@ module Deal =
             Seat.South, ~~"#sGamesWon"
         ]
 
-    /// Displays score for each player.
-    let private displayScore persState =
+    /// Displays game score for each player.
+    let private displayGameScore (gameScore : Score) =
         for seat in Enum.getValues<Seat> do
-            gameScoreMap[seat].text($"{persState.GameScore[seat]}")
-            gamesWonMap[seat].text($"{persState.GamesWon[seat]}")
+            gameScoreMap[seat].text($"{gameScore[seat]}")
 
     /// Handles the end of a deal.
     let private dealOver (surface : JQueryElement) shooterOpt =
@@ -106,7 +94,7 @@ module Deal =
                 resolve ()))
 
     /// End of game point threshold.
-    let private gameThreshold = 100
+    let private gameThreshold = 25
 
     /// Finds game winners, if any, in the given score.
     let private findGameWinners score =
@@ -122,6 +110,49 @@ module Deal =
                 |> Seq.map fst
                 |> set
         else Set.empty
+
+    /// Displays games won for each player.
+    let private displayGamesWon (gamesWon : Score) =
+        for seat in Enum.getValues<Seat> do
+            gamesWonMap[seat].text($"{gamesWon[seat]}")
+
+    /// Increments the number of games won by the given players.
+    let private incrGamesWon winners persState =
+
+            // increment counts
+        let gamesWon =
+            (persState.GamesWon, winners)
+                ||> Seq.fold (fun score seat ->
+                    score + Score.create seat 1)
+
+            // update persistent state
+        { persState with
+            GamesWon = gamesWon
+            GameScore = Score.zero }
+
+    /// Handles the end of a game.
+    let private gameOver (surface : JQueryElement) winners gamesWon =
+
+            // display banner
+        let banner =
+            let sWinners =
+                winners
+                    |> Seq.map Seat.toString
+                    |> String.concat " and "
+            let suffix =
+                if sWinners.Contains(' ') then ""
+                else "s"
+            let text = $"{sWinners} win{suffix} the game!"
+            ~~HTMLDivElement.Create(innerText = text)
+        banner.addClass("banner")
+        surface.append(banner)
+
+            // wait for user to click banner
+        Promise.create (fun resolve _reject ->
+            banner.click(fun () ->
+                banner.remove()
+                displayGamesWon gamesWon
+                resolve ()))
 
     /// Runs one deal.
     let run surface persState =
@@ -152,7 +183,7 @@ module Deal =
                         deal, persState
 
                 // animate dealing the cards
-            displayScore persState
+            displayGameScore persState.GameScore
             DealView.displayStatus deal
             let! seatViews =
                 DealView.start surface dealer deal
@@ -163,26 +194,7 @@ module Deal =
 
                 // deal is over
             match OpenDeal.tryFinalScore persState.Deal with
-                | Some score ->
-
-                        // persist updated state
-                    let gameScore, gamesWon =
-                        let gameScore = persState.GameScore + score
-                        let winners = findGameWinners gameScore
-                        let gameScore =
-                            if winners.IsEmpty then gameScore
-                            else Score.zero
-                        let gamesWon =
-                            (persState.GamesWon, winners)
-                                ||> Seq.fold (fun score seat ->
-                                    score + Score.create seat 1)
-                        gameScore, gamesWon
-                    let persState' =
-                        { persState with
-                            GameScore = gameScore
-                            GamesWon = gamesWon
-                            Dealer = persState.Dealer.Next
-                            DealOpt = None }.Save()
+                | Some dealScore ->
 
                         // display deal results
                     let shooterOpt =
@@ -190,9 +202,32 @@ module Deal =
                             persState.Deal.ClosedDeal.Score
                     do! dealOver surface shooterOpt
                         |> Async.AwaitPromise
-                    displayScore persState'
 
-                    return persState'
+                        // update game score
+                    let gameScore = persState.GameScore + dealScore
+                    displayGameScore gameScore
+
+                        // is the game over?
+                    let winners = findGameWinners gameScore
+                    let persState' =
+                        { persState with
+                            GameScore = gameScore
+                            Dealer = persState.Dealer.Next
+                            DealOpt = None }
+                    if winners.IsEmpty then
+                        PersistentState.save persState'
+                        return persState'
+                    else
+                            // increment games won
+                        let persState'' =
+                            incrGamesWon winners persState'
+                        PersistentState.save persState''
+
+                            // display game result
+                        do! gameOver surface winners persState''.GamesWon
+                            |> Async.AwaitPromise
+
+                        return persState''
 
                 | None ->
                     return failwith "Incomplete deal"
