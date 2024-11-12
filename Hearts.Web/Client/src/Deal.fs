@@ -93,24 +93,6 @@ module Deal =
                 banner.remove()
                 resolve ()))
 
-    /// End of game point threshold.
-    let private gameThreshold = 100
-
-    /// Finds game winners, if any, in the given score.
-    let private findGameWinners score =
-        let isOver =
-            score.ScoreMap.Values
-                |> Seq.exists (fun points ->
-                    points >= gameThreshold)
-        if isOver then
-            let minPoints = Seq.min score.ScoreMap.Values
-            score.ScoreMap
-                |> Map.toSeq
-                |> Seq.where (snd >> (=) minPoints)
-                |> Seq.map fst
-                |> set
-        else Set.empty
-
     /// Displays games won for each player.
     let private displayGamesWon (gamesWon : Score) =
         for seat in Enum.getValues<Seat> do
@@ -194,7 +176,7 @@ module Deal =
             let! persState = playout surface persState seatViews
 
                 // deal is over
-            match OpenDeal.tryFinalScore persState.Deal with
+            match Game.tryFinalScore persState.Deal persState.GameScore with
                 | Some dealScore ->
 
                         // display deal results
@@ -209,7 +191,7 @@ module Deal =
                     displayGameScore gameScore
 
                         // is the game over?
-                    let winners = findGameWinners gameScore
+                    let winners = Game.findGameWinners gameScore
                     let persState' =
                         { persState with
                             GameScore = gameScore

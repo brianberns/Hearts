@@ -233,24 +233,3 @@ module OpenDeal =
                         points = numPointsPerDeal)
             return seat
         }
-
-    /// Determines the final score of the deal, including shoot
-    /// reward, if possible.
-    let tryFinalScore deal =
-        option {
-            let! inevitable = tryFindInevitable deal
-            let score = deal.ClosedDeal.Score + inevitable
-            assert(Score.sum score = numPointsPerDeal)
-            return tryFindShooter score
-                |> Option.map (fun shooter ->
-                    Enum.getValues<Seat>
-                        |> Seq.map (fun seat ->
-                            let points =
-                                if seat = shooter then 0
-                                else numPointsPerDeal
-                            seat, points)
-                        |> Map
-                        |> fun scoreMap ->
-                            { ScoreMap = scoreMap })
-                |> Option.defaultValue score
-        }
