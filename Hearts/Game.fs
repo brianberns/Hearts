@@ -4,6 +4,29 @@ open PlayingCards
 
 module Game =
 
+    /// Answers the seat of the player who shot the moon, if
+    /// one did. The given score must not already include the
+    /// shoot reward.
+    let tryFindShooter dealScore =
+        option {
+            assert(Score.sum dealScore = OpenDeal.numPointsPerDeal)
+            let! seat, _ =
+                dealScore.ScoreMap
+                    |> Map.toSeq
+                    |> Seq.tryFind (fun (_, points) ->
+                        points = OpenDeal.numPointsPerDeal)
+            return seat
+        }
+
+    /// Finds leaders in the given game score.
+    let findGameLeaders gameScore =
+        let minPoints = Seq.min gameScore.ScoreMap.Values
+        gameScore.ScoreMap
+            |> Map.toSeq
+            |> Seq.where (snd >> (=) minPoints)
+            |> Seq.map fst
+            |> set
+
     /// End of game point threshold.
     let endThreshold = 40   // 100
 
@@ -13,13 +36,7 @@ module Game =
             gameScore.ScoreMap.Values
                 |> Seq.exists (fun points ->
                     points >= endThreshold)
-        if isOver then
-            let minPoints = Seq.min gameScore.ScoreMap.Values
-            gameScore.ScoreMap
-                |> Map.toSeq
-                |> Seq.where (snd >> (=) minPoints)
-                |> Seq.map fst
-                |> set
+        if isOver then findGameLeaders gameScore
         else Set.empty
 
     /// Applies the shoot reward to the given game score for
@@ -40,7 +57,7 @@ module Game =
                 |> toScore
 
             // subtract points from shooter instead?
-        let winners = findGameWinners gameScore
+        let winners = findGameLeaders gameScore
         if winners.Count = 0 || winners.Contains(shooter) then
             gameScore'
         else
@@ -59,7 +76,7 @@ module Game =
             let! inevitable = OpenDeal.tryFindInevitable deal
             let dealScore = deal.ClosedDeal.Score + inevitable
             assert(Score.sum dealScore = OpenDeal.numPointsPerDeal)
-            return OpenDeal.tryFindShooter dealScore
+            return tryFindShooter dealScore
                 |> Option.map (applyShootReward gameScore)
                 |> Option.defaultValue dealScore
         }
