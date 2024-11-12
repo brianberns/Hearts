@@ -94,7 +94,7 @@ module Deal =
                 resolve ()))
 
     /// End of game point threshold.
-    let private gameThreshold = 25
+    let private gameThreshold = 100
 
     /// Finds game winners, if any, in the given score.
     let private findGameWinners score =
@@ -159,6 +159,7 @@ module Deal =
         async {
 
                 // new deal needed?
+            displayGamesWon persState.GamesWon
             let dealer = persState.Dealer
             let deal, persState =
                 match persState.DealOpt with
