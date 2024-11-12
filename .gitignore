@@ -346,3 +346,4 @@ fable_modules
 # Webpack output
 /Hearts.Web/Client/public/*.svg
 /Hearts.Web/Client/public/*.LICENSE.txt
+/Hearts.FastCfr.LoadDatabase/Hearts.strategy
