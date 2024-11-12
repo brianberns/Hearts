@@ -28,7 +28,11 @@ module Game =
             |> set
 
     /// End of game point threshold.
-    let endThreshold = 40   // 100
+#if MINI
+    let endThreshold = 40
+#else
+    let endThreshold = 100
+#endif
 
     /// Finds game winners, if any, in the given game score.
     let findGameWinners gameScore =
