@@ -19,7 +19,7 @@ module Game =
         }
 
     /// Finds leaders in the given game score.
-    let findGameLeaders gameScore =
+    let private findGameLeaders gameScore =
         let minPoints = Seq.min gameScore.ScoreMap.Values
         gameScore.ScoreMap
             |> Map.toSeq
