@@ -39,7 +39,9 @@ module Program =
     let toBlob (probs : float[]) =
         [|
             for prob in probs do
-                yield! BitConverter.GetBytes(prob)
+                yield! prob
+                    |> Half.op_Explicit
+                    |> BitConverter.GetBytes
         |]
 
     /// Creates and loads database.
