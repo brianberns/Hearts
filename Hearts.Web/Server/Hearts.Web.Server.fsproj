@@ -7,6 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Hearts.db">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="..\Shared\SharedTypes.fs" />
     <Compile Include="Remoting.fs" />
     <Compile Include="WebPart.fs" />
@@ -19,6 +22,7 @@
     <PackageReference Include="Suave" Version="2.6.2">
       <ExcludeAssets>runtime</ExcludeAssets>
 	</PackageReference>
+    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
     <ProjectReference Include="..\..\Hearts.FastCfr\Hearts.FastCfr.fsproj" />
 	<PackageReference Update="FSharp.Core">
       <ExcludeAssets>runtime</ExcludeAssets>

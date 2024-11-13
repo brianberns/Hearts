@@ -1,6 +1,7 @@
 ﻿namespace Hearts.Web
 
 open System
+open System.Data.SQLite
 open System.IO
 
 open Hearts.FastCfr
@@ -15,21 +16,38 @@ module Remoting =
     /// Hearts API.
     let private heartsApi dir =
 
-        let strategyMap =
-            let path = Path.Combine(dir, "Hearts.strategy")
-            Strategy.load path
+        /// Database connection.
+        let path = Path.Combine(dir, "Hearts.db")
+        let connStr = $"DataSource={path};Version=3;"
+        let conn = new SQLiteConnection(connStr)
+        conn.Open()
 
-        let lookup key =
-            Map.tryFind key strategyMap
+        /// Finds the strategy for the given key, if any.
+        let tryGetStrategy (key : byte[]) =
+            use cmd =   // each invocation has its own command to support multithreading
+                new SQLiteCommand(
+                    "select Probabilities \
+                    from Strategy \
+                    where Key = @Key",
+                    conn)
+            cmd.Parameters.AddWithValue("Key", key)
+                |> ignore
+            let value = cmd.ExecuteScalar()
+            if isNull value then None
+            else
+                value :?> byte[]
+                    |> Seq.chunkBySize 2   // number of bytes in a Half
+                    |> Seq.map (BitConverter.ToHalf >> float)
+                    |> Seq.toArray
+                    |> Some
 
         let rng = Random(0)
-
         {
             GetPlayIndex =
                 fun key ->
                     async {
                         return
-                            match lookup key with
+                            match tryGetStrategy key with
                                 | Some strategy ->
                                     Some (Categorical.Sample(rng, strategy))
                                 | None ->
@@ -37,7 +55,7 @@ module Remoting =
                                     None
                     }
             GetStrategy =
-                fun key -> async { return lookup key }
+                fun key -> async { return tryGetStrategy key }
         }
 
     /// Build API.
