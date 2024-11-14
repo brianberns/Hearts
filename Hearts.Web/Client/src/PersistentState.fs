@@ -10,6 +10,9 @@ open Hearts
 /// Persistent state.
 type PersistentState =
     {
+        /// Structure version number.
+        VersionNum : int
+
         /// Number of games won by each player.
         GamesWon : Score
 
@@ -37,6 +40,7 @@ module PersistentState =
     /// Initial persistent state.
     let private initial =
         {
+            VersionNum = 1
             GamesWon = Score.zero
             GameScore = Score.zero
             RandomState = Random().State   // start with arbitrary seed
