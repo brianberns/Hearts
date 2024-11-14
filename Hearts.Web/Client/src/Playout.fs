@@ -47,7 +47,7 @@ module Playout =
                             console.log("Hint:")
                             for (card : Card), prob in pairs do
                                 console.log($"   {card}: %.1f{100. * prob}%%")
-                        | None -> console.log("Unknown case")
+                        | None -> console.log("No hint available")
 
                 | _ -> ()
         } |> Async.StartImmediate
