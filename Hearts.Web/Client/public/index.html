@@ -12,24 +12,25 @@
 </head>
 <body>
     <main>
-        <table id="score">
-            <caption>Score</caption>
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>Deal</th>
-                    <th>Game</th>
-                    <th>Won</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <th>West</th>
-                    <td id="wDealScore"></td>
-                    <td id="wGameScore"></td>
-                    <td id="wGamesWon"></td>
-                </tr>
-                <!--
+        <div id="score">
+            <table>
+                <caption>Score</caption>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Deal</th>
+                        <th>Game</th>
+                        <th>Won</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>West</th>
+                        <td id="wDealScore"></td>
+                        <td id="wGameScore"></td>
+                        <td id="wGamesWon"></td>
+                    </tr>
+                    <!--
                 <tr>
                     <th>North</th>
                     <td id="nDealScore"></td>
@@ -37,44 +38,53 @@
                     <td id="nGamesWon"></td>
                 </tr>
                 -->
-                <tr>
-                    <th>East</th>
-                    <td id="eDealScore"></td>
-                    <td id="eGameScore"></td>
-                    <td id="eGamesWon"></td>
-                </tr>
-                <tr>
-                    <th>South</th>
-                    <td id="sDealScore"></td>
-                    <td id="sGameScore"></td>
-                    <td id="sGamesWon"></td>
-                </tr>
-            </tbody>
-        </table>
-        <table id="deck">
-            <caption>Cards played</caption>
-            <thead>
-                <tr id="deckRanks">
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr id="deckSpades">
-                    <th class="♠">♠</th>
-                </tr>
-                <tr id="deckHearts">
-                    <th class="♥">♥</th>
-                </tr>
-                <!--
-                <tr id="deckDiamonds">
-                    <th class="♦">♦</th>
-                </tr>
-                -->
-                <tr id="deckClubs">
-                    <th class="♣">♣</th>
-                </tr>
-            </tbody>
-        </table>
+                    <tr>
+                        <th>East</th>
+                        <td id="eDealScore"></td>
+                        <td id="eGameScore"></td>
+                        <td id="eGamesWon"></td>
+                    </tr>
+                    <tr>
+                        <th>South</th>
+                        <td id="sDealScore"></td>
+                        <td id="sGameScore"></td>
+                        <td id="sGamesWon"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="note">&ndash; Game ends at 40 points &ndash;</p>
+        </div>
+        <div id="deck">
+            <table>
+                <caption>Cards played</caption>
+                <thead>
+                    <tr id="deckRanks">
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="deckSpades">
+                        <th class="♠">♠</th>
+                    </tr>
+                    <tr id="deckHearts">
+                        <th class="♥">♥</th>
+                    </tr>
+                    <!--
+            <tr id="deckDiamonds">
+                <th class="♦">♦</th>
+            </tr>
+            -->
+                    <tr id="deckClubs">
+                        <th class="♣">♣</th>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="note">
+                &ndash; 9♣ plays first &ndash;<br />
+                &ndash; Point cards are allowed on first trick &ndash;<br />
+                &ndash; Q♠ is 5 points and also breaks hearts &ndash;
+            </p>
+        </div>
         <table id="void">
             <caption>Voids</caption>
             <thead>
@@ -83,8 +93,8 @@
                     <th class="♠">♠</th>
                     <th class="♥">♥</th>
                     <!--
-                    <th class="♦">♦</th>
-                    -->
+                <th class="♦">♦</th>
+                -->
                     <th class="♣">♣</th>
                 </tr>
             </thead>
@@ -94,26 +104,26 @@
                     <td id="voidW♠"></td>
                     <td id="voidW♥"></td>
                     <!--
-                    <td id="voidW♦"></td>
-                    -->
+                <td id="voidW♦"></td>
+                -->
                     <td id="voidW♣"></td>
                 </tr>
                 <!--
-                <tr>
-                    <th>North</th>
-                    <td id="voidN♠"></td>
-                    <td id="voidN♥"></td>
-                    <td id="voidN♦"></td>
-                    <td id="voidN♣"></td>
-                </tr>
-                -->
+            <tr>
+                <th>North</th>
+                <td id="voidN♠"></td>
+                <td id="voidN♥"></td>
+                <td id="voidN♦"></td>
+                <td id="voidN♣"></td>
+            </tr>
+            -->
                 <tr>
                     <th>East</th>
                     <td id="voidE♠"></td>
                     <td id="voidE♥"></td>
                     <!--
-                    <td id="voidE♦"></td>
-                    -->
+                <td id="voidE♦"></td>
+                -->
                     <td id="voidE♣"></td>
                 </tr>
             </tbody>
