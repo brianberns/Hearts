@@ -12,9 +12,9 @@ module Session =
         let rec loop persState =
             async {
                 if persState.DealOpt.IsSome then
-                    console.log("Finishing game in progress")
+                    console.log("Finishing deal in progress")
                 else
-                    console.log("New game")
+                    console.log("New deal")
 
                 let! persState = Deal.run surface persState
                 do! loop persState

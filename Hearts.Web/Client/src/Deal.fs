@@ -81,6 +81,7 @@ module Deal =
             let html =
                 shooterOpt
                     |> Option.map (fun shooter ->
+                        console.log($"{Seat.toString shooter} shot the moon!")
                         $"{Seat.toString shooter} shot the moon!<br /><span style=\"font-size: 100px\">🎆🌕🎆</span>")
                     |> Option.defaultValue "Deal is over"
             ~~HTMLDivElement.Create(innerHTML = html)
@@ -125,6 +126,7 @@ module Deal =
                 if sWinners.Contains(' ') then ""
                 else "s"
             let text = $"{sWinners} win{suffix} the game!"
+            console.log($"{sWinners} win{suffix} the game!")
             ~~HTMLDivElement.Create(innerText = text)
         banner.addClass("banner")
         surface.append(banner)
@@ -180,6 +182,9 @@ module Deal =
                 | Some gameScore ->
 
                         // display deal results
+                    for seat in Enum.getValues<Seat> do
+                        console.log(
+                            $"{Seat.toString seat} takes {persState.Deal.ClosedDeal.Score[seat]} point(s)")
                     let shooterOpt =
                         Game.tryFindShooter
                             persState.Deal.ClosedDeal.Score
@@ -187,6 +192,9 @@ module Deal =
                         |> Async.AwaitPromise
 
                         // update game score
+                    for seat in Enum.getValues<Seat> do
+                        console.log(
+                            $"{Seat.toString seat} has {gameScore[seat]} point(s)")
                     displayGameScore gameScore
 
                         // is the game over?
