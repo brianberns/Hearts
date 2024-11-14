@@ -26,36 +26,31 @@ module Playout =
             AnimTrickFinish : Seat -> Animation
         }
 
-    /// Gets hint HTML.
-    let private getHint hand deal (legalPlays : _[]) =
+    /// Logs hint information.
+    let private logHint hand deal (legalPlays : _[]) =
         async {
             match deal |> OpenDeal.tryFindInevitable with
 
                 | Some score ->
-                    let rows =
-                        score.ScoreMap
-                            |> Map.toSeq
-                            |> Seq.map (fun (seat, points) ->
-                                $"<tr><td>{Seat.toString seat}</td><td style='text-align: right'>{points}</td></tr>")
-                            |> String.concat ""
-                    return $"<b>Inevitable</b><br /><table><tr><th style='text-align: left'>Seat</th><th>Points</th></tr>{rows}</table>"
+                    console.log("Inevitable:")
+                    for seat, points in Map.toSeq score.ScoreMap do
+                        console.log($"   {Seat.toString seat}: {points} point(s)")
 
                 | None when legalPlays.Length > 1 ->
                     let infoSetKey =
                         GameState.getInfoSetKey hand deal.ClosedDeal
                     match! Remoting.getStrategy infoSetKey with
                         | Some strategy ->
-                            let rows =
+                            let pairs =
                                 Array.zip legalPlays strategy
                                     |> Seq.sortByDescending snd
-                                    |> Seq.map (fun (card : Card, prob) ->
-                                        $"<tr><td style='text-align: center'>{card}</td><td style='text-align: right'>%.1f{100. * prob}%%</td></tr>")
-                                    |> String.concat ""
-                            return $"<table><caption>Hint</caption><tr><th>Card</th><th>Choice</th></tr>{rows}</table>"
-                        | None -> return "Unknown"
+                            console.log("Hint:")
+                            for (card : Card), prob in pairs do
+                                console.log($"   {card}: %.1f{100. * prob}%%")
+                        | None -> console.log("Unknown case")
 
-                | _ -> return ""
-        }
+                | _ -> ()
+        } |> Async.StartImmediate
 
     /// Plays the given card on the current trick, and returns the
     /// seat of the resulting trick winner, if any.
@@ -127,13 +122,7 @@ module Playout =
 
                 // prompt user to play
             chooser |> PlayChooser.display
-
-                // display hint
-            let hint = ~~"#hint"
-            async {
-                let! html = getHint hand context.Deal legalPlays
-                hint.html(html)
-            } |> Async.StartImmediate
+            logHint hand context.Deal legalPlays
 
                 // handle card clicks
             let legalPlaySet = set legalPlays
@@ -145,7 +134,6 @@ module Playout =
 
                             // prevent further clicks
                         chooser |> PlayChooser.hide
-                        hint.html("")
                         for cardView in handView do
                             cardView.removeClass("active")
                             cardView.removeClass("inactive")
