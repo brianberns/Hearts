@@ -19,7 +19,7 @@ type Loss = Loss<Tensor, Tensor, Tensor>
 module Network =
 
     /// Length of neural network input.
-    let inputSize = KuhnPoker.Encoding.encodedLength
+    let inputSize = Encoding.encodedLength
 
     /// Length of neural network output.
     let outputSize = KuhnPoker.actions.Length
@@ -81,7 +81,7 @@ module AdvantageModel =
     /// Gets the advantage for the given info set.
     let getAdvantage infoSetKey model =
         (infoSetKey
-            |> KuhnPoker.Encoding.encodeInput
+            |> Encoding.encodeInput
             |> tensor)
             --> model.Network
 
@@ -93,7 +93,7 @@ module AdvantageModel =
             samples
                 |> Seq.map (fun sample ->
                     sample.InfoSetKey
-                        |> KuhnPoker.Encoding.encodeInput)
+                        |> Encoding.encodeInput)
                 |> array2D
                 |> tensor
         let targets =
@@ -201,7 +201,7 @@ module StrategyModel =
             samples
                 |> Seq.map (fun sample ->
                     sample.InfoSetKey
-                        |> KuhnPoker.Encoding.encodeInput)
+                        |> Encoding.encodeInput)
                 |> array2D
                 |> tensor
         let targets =
@@ -243,7 +243,7 @@ module StrategyModel =
     /// Gets the strategy for the given info set.
     let getStrategy infoSetKey model =
         (infoSetKey
-            |> KuhnPoker.Encoding.encodeInput
+            |> Encoding.encodeInput
             |> tensor)
             --> model.Network
             |> model.Softmax.forward

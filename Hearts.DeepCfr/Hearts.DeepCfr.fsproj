@@ -8,15 +8,22 @@
   <ItemGroup>
     <Compile Include="Prelude.fs" />
     <Compile Include="Reservoir.fs" />
+    <Compile Include="Encoding.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="InformationSet.fs" />
     <Compile Include="Settings.fs" />
+    <Compile Include="Trainer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
     <PackageReference Include="TorchSharp-cpu" Version="0.103.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hearts\Hearts.fsproj" />
+    <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
   </ItemGroup>
 
 </Project>
