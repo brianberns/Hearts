@@ -9,6 +9,8 @@ open FSharp.Core.Operators   // reclaim "float32" and other F# operators
 
 open MathNet.Numerics.LinearAlgebra
 
+open PlayingCards
+
 /// Neural network that maps an input tensor to an output
 /// tensor.
 type Network = Module<Tensor, Tensor>
@@ -22,13 +24,13 @@ module Network =
     let inputSize = Encoding.encodedLength
 
     /// Length of neural network output.
-    let outputSize = KuhnPoker.actions.Length
+    let outputSize = Card.allCards.Length
 
 /// An observed advantage event.
 type AdvantageSample =
     {
         /// Key of info set.
-        InfoSetKey : string
+        InfoSetKey : InfoSetKey
 
         /// Observed regrets.
         Regrets : Vector<float32>
@@ -81,7 +83,7 @@ module AdvantageModel =
     /// Gets the advantage for the given info set.
     let getAdvantage infoSetKey model =
         (infoSetKey
-            |> Encoding.encodeInput
+            |> Encoding.encode
             |> tensor)
             --> model.Network
 
@@ -93,7 +95,7 @@ module AdvantageModel =
             samples
                 |> Seq.map (fun sample ->
                     sample.InfoSetKey
-                        |> Encoding.encodeInput)
+                        |> Encoding.encode)
                 |> array2D
                 |> tensor
         let targets =
@@ -134,7 +136,7 @@ module AdvantageModel =
 type StrategySample =
     {
         /// Key of info set.
-        InfoSetKey : string
+        InfoSetKey : InfoSetKey
 
         /// Observed strategy.
         Strategy : Vector<float32>
@@ -201,7 +203,7 @@ module StrategyModel =
             samples
                 |> Seq.map (fun sample ->
                     sample.InfoSetKey
-                        |> Encoding.encodeInput)
+                        |> Encoding.encode)
                 |> array2D
                 |> tensor
         let targets =
@@ -243,7 +245,7 @@ module StrategyModel =
     /// Gets the strategy for the given info set.
     let getStrategy infoSetKey model =
         (infoSetKey
-            |> Encoding.encodeInput
+            |> Encoding.encode
             |> tensor)
             --> model.Network
             |> model.Softmax.forward
