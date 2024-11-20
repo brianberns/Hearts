@@ -158,13 +158,14 @@ module Trainer =
     let private generateSamples iter updatingPlayer stateMap =
         Choice.unzip [|
             for iGame = 0 to settings.NumTraversals - 1 do
-                let deck = Deck.shuffle settings.Random
-                let dealer = enum<Seat> (iGame % Seat.numSeats)
                 let deal =
+                    let deck = Deck.shuffle settings.Random
+                    let dealer = enum<Seat> (iGame % Seat.numSeats)
                     OpenDeal.fromDeck
                         dealer
                         ExchangeDirection.Hold
                         deck
+                        |> OpenDeal.startPlay
                 let models =
                     stateMap
                         |> Map.values
