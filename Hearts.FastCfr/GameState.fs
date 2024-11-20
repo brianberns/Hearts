@@ -92,7 +92,7 @@ module GameState =
         stream.ToArray()
 
     let rec create deal =
-        match OpenDeal.tryFinalScore deal with
+        match Game.tryUpdateScore deal Score.zero with
             | Some score ->
                 let otherAvg =
                     (score.ScoreMap

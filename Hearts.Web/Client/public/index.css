@@ -46,7 +46,7 @@ caption {
 
 #deck {
     position: absolute;
-    left: 10%;
+    left: 5%;
     top: 75%;
     text-align: center;
 }
@@ -143,4 +143,10 @@ caption {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+.note {
+    text-align: center;
+    font-size: small;
+    font-style: italic;
 }

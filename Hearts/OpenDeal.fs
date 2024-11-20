@@ -219,38 +219,3 @@ module OpenDeal =
                 else None
 
         else None
-
-    /// Answers the seat of the player who shot the moon, if
-    /// one did. The given score must not already include the
-    /// shoot reward.
-    let tryFindShooter score =
-        option {
-            assert(Score.sum score = numPointsPerDeal)
-            let! seat, _ =
-                score.ScoreMap
-                    |> Map.toSeq
-                    |> Seq.tryFind (fun (_, points) ->
-                        points = numPointsPerDeal)
-            return seat
-        }
-
-    /// Determines the final score of the deal, including shoot
-    /// reward, if possible.
-    let tryFinalScore deal =
-        option {
-            let! inevitable = tryFindInevitable deal
-            let score = deal.ClosedDeal.Score + inevitable
-            assert(Score.sum score = numPointsPerDeal)
-            return tryFindShooter score
-                |> Option.map (fun shooter ->
-                    Enum.getValues<Seat>
-                        |> Seq.map (fun seat ->
-                            let points =
-                                if seat = shooter then 0
-                                else numPointsPerDeal
-                            seat, points)
-                        |> Map
-                        |> fun scoreMap ->
-                            { ScoreMap = scoreMap })
-                |> Option.defaultValue score
-        }

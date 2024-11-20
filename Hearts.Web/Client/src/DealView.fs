@@ -176,15 +176,15 @@ module DealView =
         else
             createHandViews surface deal   // no animation
 
-    /// Elements tracking current score.
-    let private scoreElemMap =
+    /// Elements tracking current deal score.
+    let private dealScoreElemMap =
         Map [
-            Seat.West,  ~~"#wCurrent"
+            Seat.West,  ~~"#wDealScore"
 #if !MINI
-            Seat.North, ~~"#nCurrent"
+            Seat.North, ~~"#nDealScore"
 #endif
-            Seat.East,  ~~"#eCurrent"
-            Seat.South, ~~"#sCurrent"
+            Seat.East,  ~~"#eDealScore"
+            Seat.South, ~~"#sDealScore"
         ]
 
     /// Elements tracking played cards.
@@ -196,17 +196,6 @@ module DealView =
 #endif
             Suit.Hearts,   ~~"#deckHearts"
             Suit.Spades,   ~~"#deckSpades"
-        ]
-
-    /// Elements tracking void suits.
-    let private voidElemMap =
-        Map [
-            Seat.West,  ~~"#wVoid"
-#if !MINI
-            Seat.North, ~~"#nVoid"
-#endif
-            Seat.East,  ~~"#eVoid"
-            Seat.South, ~~"#sVoid"
         ]
 
     /// Gets the ID of the table cell that represents the
@@ -247,7 +236,8 @@ module DealView =
 
             // current score for each player
         for seat in Enum.getValues<Seat> do
-            scoreElemMap[seat].text($"{deal.ClosedDeal.Score[seat]}")
+            dealScoreElemMap[seat]
+                .text($"{deal.ClosedDeal.Score[seat]}")
 
             // status of each card
         let isUserPlay =
