@@ -155,10 +155,10 @@ module Trainer =
             }
 
     /// Generates training data for the given player.
-    let private generateSamples rng iter updatingPlayer stateMap =
+    let private generateSamples iter updatingPlayer stateMap =
         Choice.unzip [|
             for iGame = 0 to settings.NumTraversals - 1 do
-                let deck = Deck.shuffle rng
+                let deck = Deck.shuffle settings.Random
                 let dealer = enum<Seat> (iGame % Seat.numSeats)
                 let deal =
                     OpenDeal.fromDeck
@@ -187,7 +187,7 @@ module Trainer =
         resv, losses
 
     /// Trains a single iteration.
-    let private trainIteration rng iter stateMap =
+    let private trainIteration iter stateMap =
 
             // train each player's model
         let stratSampleSeqs, resvMap =
@@ -196,7 +196,7 @@ module Trainer =
 
                         // generate training data for this player
                     let advSamples, stratSamples =
-                        generateSamples rng iter updatingPlayer stateMap
+                        generateSamples iter updatingPlayer stateMap
 
                         // train this player's model
                     let state =
@@ -253,7 +253,7 @@ module Trainer =
         model
 
     /// Trains for the given number of iterations.
-    let train rng =
+    let train () =
 
             // create advantage state
         let advStateMap =
@@ -272,7 +272,7 @@ module Trainer =
             ((advStateMap, stratResv), iterNums)
                 ||> Seq.fold (fun (advStateMap, stratResv) iter ->
                     let advResvMap, stratSamples =
-                        trainIteration rng iter advStateMap
+                        trainIteration iter advStateMap
                     let stratResv =
                         Reservoir.addMany stratSamples stratResv
                     settings.Writer.add_scalar(

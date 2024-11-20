@@ -2,4 +2,5 @@
 
 module Program =
 
-    printfn "Hello from F#"
+    let stratModel = Trainer.train ()
+    ()
