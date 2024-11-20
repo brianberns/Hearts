@@ -2,6 +2,7 @@
 
 open MathNet.Numerics.LinearAlgebra
 open TorchSharp
+open PlayingCards
 open Hearts
 
 module Trainer =
@@ -154,14 +155,16 @@ module Trainer =
             }
 
     /// Generates training data for the given player.
-    let private generateSamples iter updatingPlayer stateMap =
+    let private generateSamples rng iter updatingPlayer stateMap =
         Choice.unzip [|
-            for _ = 1 to settings.NumTraversals do
+            for iGame = 0 to settings.NumTraversals - 1 do
+                let deck = Deck.shuffle rng
+                let dealer = enum<Seat> (iGame % Seat.numSeats)
                 let deal =
-                    let iDeal =
-                        settings.Random.Next(
-                            KuhnPoker.allDeals.Length)
-                    KuhnPoker.allDeals[iDeal]
+                    OpenDeal.fromDeck
+                        dealer
+                        ExchangeDirection.Hold
+                        deck
                 let models =
                     stateMap
                         |> Map.values
@@ -184,16 +187,16 @@ module Trainer =
         resv, losses
 
     /// Trains a single iteration.
-    let private trainIteration iter stateMap =
+    let private trainIteration rng iter stateMap =
 
             // train each player's model
         let stratSampleSeqs, resvMap =
-            (stateMap, seq { 0 .. KuhnPoker.numPlayers - 1 })
+            (stateMap, seq { 0 .. numPlayers - 1 })
                 ||> Seq.mapFold (fun stateMap updatingPlayer ->
 
                         // generate training data for this player
                     let advSamples, stratSamples =
-                        generateSamples iter updatingPlayer stateMap
+                        generateSamples rng iter updatingPlayer stateMap
 
                         // train this player's model
                     let state =
@@ -217,6 +220,7 @@ module Trainer =
 
                     stratSamples, stateMap)
 
+        (*
             // log betting behavior
         for infoSetKey in [ "J"; "K"; "Jc"; "Qb"; "Qcb" ] do
             let betProb =
@@ -228,6 +232,7 @@ module Trainer =
                 $"advantage bet probability/{infoSetKey}",
                 betProb,
                 iter)
+        *)
 
         resvMap, Seq.concat stratSampleSeqs
 
@@ -248,7 +253,7 @@ module Trainer =
         model
 
     /// Trains for the given number of iterations.
-    let train () =
+    let train rng =
 
             // create advantage state
         let advStateMap =
@@ -267,7 +272,7 @@ module Trainer =
             ((advStateMap, stratResv), iterNums)
                 ||> Seq.fold (fun (advStateMap, stratResv) iter ->
                     let advResvMap, stratSamples =
-                        trainIteration iter advStateMap
+                        trainIteration rng iter advStateMap
                     let stratResv =
                         Reservoir.addMany stratSamples stratResv
                     settings.Writer.add_scalar(
