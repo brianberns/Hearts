@@ -2,8 +2,24 @@
 
 open MathNet.Numerics.LinearAlgebra
 open TorchSharp
+open Hearts
 
 module Trainer =
+
+    /// Assume two-player, zero-sum game.
+    let private numPlayers = 2
+
+    let private tryGetPayoff deal =
+        Game.tryUpdateScore deal Score.zero
+            |> Option.map (fun score ->
+                let otherAvg =
+                    (score.ScoreMap
+                        |> Map.toSeq
+                        |> Seq.where (fun (seat, _) -> seat <> Seat.South)
+                        |> Seq.sumBy snd
+                        |> float)
+                        / float (Seat.numSeats - 1)
+                otherAvg - float score[Seat.South])
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
@@ -28,19 +44,26 @@ module Trainer =
             [| yield! items; yield item |]
 
         /// Top-level loop.
-        let rec loop history =
-            match KuhnPoker.getPayoff deal history with
+        let rec loop deal =
+            match tryGetPayoff deal with
                 | Some payoff ->
                     float32 payoff, Array.empty   // game is over
                 | None ->
-                    loopNonTerminal history
+                    loopNonTerminal deal
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal history =
+        and loopNonTerminal (deal : OpenDeal) =
 
                 // get info set for current state from this player's point of view
-            let activePlayer = KuhnPoker.getActivePlayer history
-            let infoSetKey = deal[activePlayer] + history
+            let activePlayer =
+                if OpenDeal.currentPlayer deal = Seat.South then 0
+                else 1
+            let hand = OpenDeal.currentHand deal
+            let infoSetKey =
+                {
+                    Hand = hand
+                    Deal = deal.ClosedDeal
+                }
 
                 // get active player's current strategy for this info set
             let strategy =
@@ -52,9 +75,13 @@ module Trainer =
                     // get utility of each action
                 let actionUtilities, samples =
                     let utilities, sampleArrays =
-                        KuhnPoker.actions
-                            |> Array.map (fun action ->
-                                loop (history + action))
+                        deal.ClosedDeal
+                            |> ClosedDeal.legalPlays hand
+                            |> Seq.toArray
+                            |> Array.map (fun play ->
+                                deal
+                                    |> OpenDeal.addPlay play
+                                    |> loop)
                             |> Array.unzip
                     getActiveUtilities utilities,
                     Array.concat sampleArrays
@@ -71,11 +98,17 @@ module Trainer =
             else
                     // sample a single action according to the strategy
                 let utility, samples =
-                    let action =
+                    let plays =
+                        deal.ClosedDeal
+                            |> ClosedDeal.legalPlays hand
+                            |> Seq.toArray
+                    let play =
                         strategy
                             |> Vector.sample settings.Random
-                            |> Array.get KuhnPoker.actions
-                    loop (history + action)
+                            |> Array.get plays
+                    deal
+                       |> OpenDeal.addPlay play
+                       |> loop
                 let sample =
                     StrategySample.create
                         infoSetKey
@@ -83,7 +116,7 @@ module Trainer =
                         iter |> Choice2Of2
                 -utility, append samples sample
 
-        loop "" |> snd
+        loop deal |> snd
 
     /// Advantage state managed for each player.
     type private AdvantageState =
@@ -220,7 +253,7 @@ module Trainer =
             // create advantage state
         let advStateMap =
             Map [|
-                for player = 0 to KuhnPoker.numPlayers - 1 do
+                for player = 0 to numPlayers - 1 do
                     player, AdvantageState.create ()
             |]
 
