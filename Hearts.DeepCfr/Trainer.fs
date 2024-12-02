@@ -201,11 +201,14 @@ module Trainer =
     let private trainPlayer iter stateMap updatingPlayer =
 
         if settings.Verbose then
-            printfn $"Training player {updatingPlayer}"
+            printfn $"\nTraining player {updatingPlayer}"
 
             // generate training data for this player
         let advSamples, stratSamples =
             generateSamples iter updatingPlayer stateMap
+        if settings.Verbose then
+            printfn $"   {advSamples.Length} advantage samples generated"
+            printfn $"   {stratSamples.Length} strategy samples generated"
 
             // train this player's model
         let state =
@@ -216,6 +219,7 @@ module Trainer =
         let stateMap =
             let state = { state with Reservoir = resv }
             Map.add updatingPlayer state stateMap
+        if settings.Verbose then printfn "   Model trained"
 
             // log inputs and losses
         settings.Writer.add_scalar(
@@ -233,7 +237,7 @@ module Trainer =
     let private trainIteration iter stateMap =
 
         if settings.Verbose then
-            printfn $"\n*** Iteration {iter} ***\n"
+            printfn $"\n*** Iteration {iter} ***"
 
             // train each player's model
         let stratSampleSeqs, resvMap =

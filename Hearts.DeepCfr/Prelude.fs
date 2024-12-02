@@ -6,12 +6,11 @@ module Choice =
     let unzip choices =
         let opts =
             choices
-                |> Seq.map (function
+                |> Array.map (function
                     | Choice1Of2 ch -> Some ch, None
                     | Choice2Of2 ch -> None, Some ch)
-                |> Seq.cache
-        Seq.choose fst opts,
-        Seq.choose snd opts
+        Array.choose fst opts,
+        Array.choose snd opts
 
 module Vector =
 
