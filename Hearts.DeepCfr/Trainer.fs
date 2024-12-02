@@ -197,43 +197,50 @@ module Trainer =
                 state.Model
         resv, losses
 
+    /// Trains a player.
+    let private trainPlayer iter stateMap updatingPlayer =
+
+        if settings.Verbose then
+            printfn $"Training player {updatingPlayer}"
+
+            // generate training data for this player
+        let advSamples, stratSamples =
+            generateSamples iter updatingPlayer stateMap
+
+            // train this player's model
+        let state =
+            stateMap[updatingPlayer]
+                |> AdvantageState.resetModel
+        let resv, losses =
+            trainAdvantageModel state advSamples
+        let stateMap =
+            let state = { state with Reservoir = resv }
+            Map.add updatingPlayer state stateMap
+
+            // log inputs and losses
+        settings.Writer.add_scalar(
+            $"advantage reservoir/player{updatingPlayer}",
+            float32 resv.Items.Count,
+            iter)
+        for step = 0 to losses.Length - 1 do
+            settings.Writer.add_scalar(
+                $"advantage loss/iter%04d{iter}/player{updatingPlayer}",
+                losses[step], step)
+
+        stratSamples, stateMap
+
     /// Trains a single iteration.
     let private trainIteration iter stateMap =
 
-        if settings.Verbose then printfn $"\n*** Iteration {iter} ***\n"
+        if settings.Verbose then
+            printfn $"\n*** Iteration {iter} ***\n"
 
             // train each player's model
         let stratSampleSeqs, resvMap =
-            (stateMap, seq { 0 .. numPlayers - 1 })
-                ||> Seq.mapFold (fun stateMap updatingPlayer ->
-
-                    if settings.Verbose then printfn $"Training player {updatingPlayer}"
-
-                        // generate training data for this player
-                    let advSamples, stratSamples =
-                        generateSamples iter updatingPlayer stateMap
-
-                        // train this player's model
-                    let state =
-                        stateMap[updatingPlayer]
-                            |> AdvantageState.resetModel
-                    let resv, losses =
-                        trainAdvantageModel state advSamples
-                    let stateMap =
-                        let state = { state with Reservoir = resv }
-                        Map.add updatingPlayer state stateMap
-
-                        // log inputs and losses
-                    settings.Writer.add_scalar(
-                        $"advantage reservoir/player{updatingPlayer}",
-                        float32 resv.Items.Count,
-                        iter)
-                    for step = 0 to losses.Length - 1 do
-                        settings.Writer.add_scalar(
-                            $"advantage loss/iter%04d{iter}/player{updatingPlayer}",
-                            losses[step], step)
-
-                    stratSamples, stateMap)
+            Seq.mapFold
+                (trainPlayer iter)
+                stateMap
+                (seq { 0 .. numPlayers - 1 })
 
         (*
             // log betting behavior
