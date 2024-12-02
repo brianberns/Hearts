@@ -9,6 +9,15 @@ type InfoSetKey =
         Deal : ClosedDeal
     }
 
+module Card =
+
+    let private minRank =
+        Seq.min Enum.getValues<Rank>
+
+    let toIndex (card : Card) =
+        (int card.Suit * Rank.numRanks)
+            + int card.Rank - int minRank
+
 module Encoding =
 
     let private encodePlayer player =
@@ -18,13 +27,10 @@ module Encoding =
                 else 0.0f
         |]
 
-    let private toIndex (card : Card) =
-        (int card.Suit * Rank.numRanks) + int card.Rank
-
     let private encodeCards cards =
         let indexes =
             cards
-                |> Seq.map toIndex
+                |> Seq.map Card.toIndex
                 |> set
         [|
             for index = 0 to Card.allCards.Length - 1 do

@@ -24,10 +24,14 @@ module Trainer =
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
-    let getStrategy infoSetKey model =
+    let getStrategy infoSetKey model indexes =
         use _ = torch.no_grad()   // use model.eval() instead?
-        (AdvantageModel.getAdvantage infoSetKey model)
-            .data<float32>()
+        let wide =
+            (AdvantageModel.getAdvantage infoSetKey model)
+                .data<float32>()
+                |> DenseVector.ofSeq
+        indexes
+            |> Seq.map (fun idx -> wide[idx])
             |> DenseVector.ofSeq
             |> InformationSet.getStrategy
 
@@ -67,8 +71,14 @@ module Trainer =
                 }
 
                 // get active player's current strategy for this info set
+            let legalPlays =
+                deal.ClosedDeal
+                    |> ClosedDeal.legalPlays hand
+                    |> Seq.toArray
             let strategy =
-                getStrategy infoSetKey models[activePlayer]
+                legalPlays
+                    |> Seq.map Card.toIndex
+                    |> getStrategy infoSetKey models[activePlayer]
 
                 // get utility of this info set
             if activePlayer = updatingPlayer then
@@ -76,9 +86,7 @@ module Trainer =
                     // get utility of each action
                 let actionUtilities, samples =
                     let utilities, sampleArrays =
-                        deal.ClosedDeal
-                            |> ClosedDeal.legalPlays hand
-                            |> Seq.toArray
+                        legalPlays
                             |> Array.map (fun play ->
                                 deal
                                     |> OpenDeal.addPlay play
@@ -99,14 +107,10 @@ module Trainer =
             else
                     // sample a single action according to the strategy
                 let utility, samples =
-                    let plays =
-                        deal.ClosedDeal
-                            |> ClosedDeal.legalPlays hand
-                            |> Seq.toArray
                     let play =
                         strategy
                             |> Vector.sample settings.Random
-                            |> Array.get plays
+                            |> Array.get legalPlays
                     deal
                        |> OpenDeal.addPlay play
                        |> loop
