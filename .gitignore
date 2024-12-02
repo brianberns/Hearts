@@ -350,3 +350,6 @@ fable_modules
 # Databases
 /Hearts.FastCfr.LoadDatabase/Hearts.strategy
 /Hearts.Web/Server/Hearts.db
+
+# Python virtual environment
+/venv

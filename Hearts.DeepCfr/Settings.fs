@@ -7,7 +7,7 @@ module Settings =
 
     /// Hyperparameters.
     let settings =
-        let seed = 1
+        let seed = 0
         TorchSharp.torch.manual_seed(seed) |> ignore
         {|
             /// Random number generator.
