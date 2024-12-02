@@ -200,10 +200,14 @@ module Trainer =
     /// Trains a single iteration.
     let private trainIteration iter stateMap =
 
+        if settings.Verbose then printfn $"\n*** Iteration {iter} ***\n"
+
             // train each player's model
         let stratSampleSeqs, resvMap =
             (stateMap, seq { 0 .. numPlayers - 1 })
                 ||> Seq.mapFold (fun stateMap updatingPlayer ->
+
+                    if settings.Verbose then printfn $"Training player {updatingPlayer}"
 
                         // generate training data for this player
                     let advSamples, stratSamples =

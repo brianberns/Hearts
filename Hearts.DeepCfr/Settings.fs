@@ -14,25 +14,25 @@ module Settings =
             Random = Random(seed)
 
             /// Size of a neural network hidden layer.
-            HiddenSize = 32
+            HiddenSize = Encoding.encodedLength * 2
 
             /// Optimizer learning rate.
-            LearningRate = 1e-2
+            LearningRate = 1e-3
 
             /// Number of steps to use when training advantage models.
-            NumAdvantageTrainSteps = 40
+            NumAdvantageTrainSteps = 2000
 
             /// Number of advantage samples to keep.
-            NumAdvantageSamples = 2048
+            NumAdvantageSamples = 1_000_000
 
             /// Number of deals to traverse during each iteration.
-            NumTraversals = 40
+            NumTraversals = 10
 
             /// Number of iterations to perform.
             NumIterations = 400
 
             /// Number of steps to use when training the strategy model.
-            NumStrategyTrainSteps = 400
+            NumStrategyTrainSteps = 4000
 
             /// Number of strategy samples to keep.
             NumStrategySamples = 1_000_000
@@ -42,4 +42,7 @@ module Settings =
                 let timespan = DateTime.Now - DateTime.Today
                 TorchSharp.torch.utils.tensorboard.SummaryWriter(
                     $"runs/run%05d{int timespan.TotalSeconds}")
+
+            /// Verbose output?
+            Verbose = true
         |}
