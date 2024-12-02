@@ -98,9 +98,15 @@ module Trainer =
                     // utility of this info set is action utilities weighted by action probabilities
                 let utility = actionUtilities * strategy
                 let sample =
+                    let wideRegrets =
+                        let narrowRegrets = actionUtilities - utility
+                        assert(narrowRegrets.Count = legalPlays.Length)
+                        Seq.zip legalPlays narrowRegrets
+                            |> Encoding.encodeCardValues
+                            |> DenseVector.ofArray
                     AdvantageSample.create
                         infoSetKey
-                        (actionUtilities - utility)
+                        wideRegrets
                         iter |> Choice1Of2
                 utility, append samples sample
 

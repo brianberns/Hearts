@@ -27,16 +27,23 @@ module Encoding =
                 else 0.0f
         |]
 
-    let private encodeCards cards =
-        let indexes =
-            cards
-                |> Seq.map Card.toIndex
-                |> set
+    let encodeCardValues pairs =
+        let valueMap =
+            pairs
+                |> Seq.map (fun (card, value) ->
+                    Card.toIndex card, value)
+                |> Map
         [|
             for index = 0 to Card.allCards.Length - 1 do
-                if indexes.Contains(index) then 1.0f
-                else 0.0f
+                valueMap
+                    |> Map.tryFind index
+                    |> Option.defaultValue 0.0f
         |]
+
+    let private encodeCards cards =
+        cards
+            |> Seq.map (fun card -> card, 1.0f)
+            |> encodeCardValues
 
     let private encodeTrick trick =
         let cards =
