@@ -166,11 +166,19 @@ module Trainer =
 
     /// Generates training data for the given player.
     let private generateSamples iter updatingPlayer stateMap =
+
+        let nDeals =
+            let factor =
+                if updatingPlayer = 0 then
+                    settings.CutthroatCompensation
+                else 1
+            factor * settings.NumTraversals
+
         Choice.unzip [|
-            for iGame = 0 to settings.NumTraversals - 1 do
+            for iDeal = 0 to nDeals do
                 let deal =
                     let deck = Deck.shuffle settings.Random
-                    let dealer = enum<Seat> (iGame % Seat.numSeats)
+                    let dealer = enum<Seat> (iDeal % Seat.numSeats)
                     OpenDeal.fromDeck
                         dealer
                         ExchangeDirection.Hold
