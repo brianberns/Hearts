@@ -49,6 +49,12 @@ module AdvantageSample =
             Iteration = iteration
         }
 
+module Tensor =
+     
+    /// Converts the given rows to a tensor.
+    let ofSeq (rows : seq<#seq<float32>>) =
+        tensor(array2D rows, device = settings.Device)
+
 /// Model used for learning advantages.
 type AdvantageModel =
     {
@@ -89,9 +95,6 @@ module AdvantageModel =
     /// Trains the given model using the given samples.
     let train samples model =
 
-        let toTensor (rows : seq<#seq<float32>>) =
-            tensor(array2D rows, device = settings.Device)
-
             // prepare training data
         let tensors =
             samples
@@ -113,9 +116,9 @@ module AdvantageModel =
                                         |> Seq.singleton
                                 input, target, iter)
                             |> Array.unzip3
-                    toTensor inputs,
-                    toTensor targets,
-                    toTensor iters)
+                    Tensor.ofSeq inputs,
+                    Tensor.ofSeq targets,
+                    Tensor.ofSeq iters)
 
         [|
             for _ = 1 to settings.NumAdvantageTrainEpochs do
@@ -225,9 +228,9 @@ module StrategyModel =
                                         |> Seq.singleton
                                 input, target, iter)
                             |> Array.unzip3
-                    inputs |> array2D |> tensor,
-                    targets |> array2D |> tensor,
-                    iters |> array2D |> tensor)
+                    Tensor.ofSeq inputs,
+                    Tensor.ofSeq targets,
+                    Tensor.ofSeq iters)
 
         [|
             for _ = 1 to settings.NumStrategyTrainEpochs do

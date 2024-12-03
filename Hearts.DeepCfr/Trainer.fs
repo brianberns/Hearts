@@ -122,9 +122,14 @@ module Trainer =
                        |> OpenDeal.addPlay play
                        |> loop
                 let sample =
+                    let wideStrategy =
+                        assert(strategy.Count = legalPlays.Length)
+                        Seq.zip legalPlays strategy
+                            |> Encoding.encodeCardValues
+                            |> DenseVector.ofArray
                     StrategySample.create
                         infoSetKey
-                        strategy
+                        wideStrategy
                         iter |> Choice2Of2
                 -utility, append samples sample
 
