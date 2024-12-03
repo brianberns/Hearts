@@ -93,8 +93,10 @@ module AdvantageModel =
             // prepare training data
         let tensors =
             samples
-                |> Seq.chunkBySize batchSize
-                |> Seq.map (fun batch ->
+                |> Seq.toArray
+                |> Array.randomShuffle
+                |> Array.chunkBySize batchSize
+                |> Array.map (fun batch ->
                     let inputs, targets, iters =
                         batch
                             |> Array.map (fun sample ->
@@ -112,7 +114,6 @@ module AdvantageModel =
                     inputs |> array2D |> tensor,
                     targets |> array2D |> tensor,
                     iters |> array2D |> tensor)
-                |> Seq.toArray
 
         [|
             for _ = 1 to numEpochs do
@@ -204,8 +205,10 @@ module StrategyModel =
             // prepare training data
         let tensors =
             samples
-                |> Seq.chunkBySize batchSize
-                |> Seq.map (fun batch ->
+                |> Seq.toArray
+                |> Array.randomShuffle
+                |> Array.chunkBySize batchSize
+                |> Array.map (fun batch ->
                     let inputs, targets, iters =
                         batch
                             |> Array.map (fun sample ->
@@ -223,7 +226,6 @@ module StrategyModel =
                     inputs |> array2D |> tensor,
                     targets |> array2D |> tensor,
                     iters |> array2D |> tensor)
-                |> Seq.toArray
 
         [|
             for _ = 1 to numEpochs do
