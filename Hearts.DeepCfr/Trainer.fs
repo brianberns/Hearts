@@ -282,15 +282,23 @@ module Trainer =
 
     /// Trains a strategy model using the given samples.
     let private trainStrategyModel (resv : Reservoir<_>) =
+
+        if settings.Verbose then
+            printfn $"\n*** Training strategy model ***"
+
         let model =
             StrategyModel.create
                 settings.HiddenSize
                 settings.LearningRate
         let losses =
             StrategyModel.train resv.Items model
+        if settings.Verbose then
+            printfn $"Trained model on {resv.Items.Count} samples"
+
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 "strategy loss", losses[epoch], epoch)
+
         model
 
     /// Trains for the given number of iterations.
