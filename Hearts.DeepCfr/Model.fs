@@ -88,7 +88,7 @@ module AdvantageModel =
             --> model.Network
 
     /// Trains the given model using the given samples.
-    let train numSteps samples model =
+    let train numEpochs samples model =
 
             // prepare training data
         let inputs =
@@ -115,7 +115,7 @@ module AdvantageModel =
                 |> tensor
 
         [|
-            for _ = 1 to numSteps do
+            for _ = 1 to numEpochs do
 
                     // forward pass
                 let loss =
@@ -196,7 +196,7 @@ module StrategyModel =
         }
 
     /// Trains the given model using the given samples.
-    let train numSteps samples model =
+    let train numEpochs samples model =
 
             // prepare training data
         let inputs =
@@ -223,7 +223,7 @@ module StrategyModel =
                 |> tensor
 
         [|
-            for _ = 1 to numSteps do
+            for _ = 1 to numEpochs do
 
                     // forward pass
                 let loss =

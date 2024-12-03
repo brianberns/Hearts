@@ -200,7 +200,7 @@ module Trainer =
             Reservoir.addMany newSamples state.Reservoir
         let losses =
             AdvantageModel.train
-                settings.NumAdvantageTrainSteps
+                settings.NumAdvantageTrainEpochs
                 resv.Items
                 state.Model
         resv, losses
@@ -234,10 +234,10 @@ module Trainer =
             $"advantage reservoir/player{updatingPlayer}",
             float32 resv.Items.Count,
             iter)
-        for step = 0 to losses.Length - 1 do
+        for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 $"advantage loss/iter%04d{iter}/player{updatingPlayer}",
-                losses[step], step)
+                losses[epoch], epoch)
 
         stratSamples, stateMap
 
@@ -278,12 +278,12 @@ module Trainer =
                 settings.LearningRate
         let losses =
             StrategyModel.train
-                settings.NumStrategyTrainSteps
+                settings.NumStrategyTrainEpochs
                 resv.Items
                 model
-        for step = 0 to losses.Length - 1 do
+        for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
-                "strategy loss", losses[step], step)
+                "strategy loss", losses[epoch], epoch)
         model
 
     /// Trains for the given number of iterations.

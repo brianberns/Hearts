@@ -17,8 +17,8 @@ type Settings =
         /// Optimizer learning rate.
         LearningRate : float
 
-        /// Number of steps to use when training advantage models.
-        NumAdvantageTrainSteps : int
+        /// Number of epochs to use when training advantage models.
+        NumAdvantageTrainEpochs : int
 
         /// Number of advantage samples to keep.
         NumAdvantageSamples : int
@@ -29,8 +29,8 @@ type Settings =
         /// Number of iterations to perform.
         NumIterations : int
 
-        /// Number of steps to use when training the strategy model.
-        NumStrategyTrainSteps : int
+        /// Number of epochs to use when training the strategy model.
+        NumStrategyTrainEpochs : int
 
         /// Number of strategy samples to keep.
         NumStrategySamples : int
@@ -54,11 +54,11 @@ module Settings =
             CutthroatCompensation = 9
             HiddenSize = Encoding.encodedLength * 2
             LearningRate = 1e-3
-            NumAdvantageTrainSteps = 2000
+            NumAdvantageTrainEpochs = 2000
             NumAdvantageSamples = 1_000_000
             NumTraversals = 10
             NumIterations = 400
-            NumStrategyTrainSteps = 4000
+            NumStrategyTrainEpochs = 4000
             NumStrategySamples = 1_000_000
             Writer =
                 let timespan = DateTime.Now - DateTime.Today
