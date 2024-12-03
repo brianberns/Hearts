@@ -1,6 +1,7 @@
 ﻿namespace Hearts.DeepCfr
 
 open System
+open TorchSharp
 
 /// Hyperparameters.
 type Settings =
@@ -41,8 +42,11 @@ type Settings =
         /// Number of strategy samples to keep.
         NumStrategySamples : int
 
+        /// Device to use for training models.
+        Device : torch.Device
+
         /// Tensorboard writer.
-        Writer : TorchSharp.Modules.SummaryWriter
+        Writer : Modules.SummaryWriter
 
         /// Verbose output?
         Verbose : bool
@@ -68,6 +72,7 @@ module Settings =
             NumIterations = 400
             NumStrategyTrainEpochs = 4000
             NumStrategySamples = 1_000_000
+            Device = torch.CUDA
             Writer =
                 let timespan = DateTime.Now - DateTime.Today
                 TorchSharp.torch.utils.tensorboard.SummaryWriter(

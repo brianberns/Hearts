@@ -72,7 +72,7 @@ module AdvantageModel =
                 ReLU(),
                 Linear(hiddenSize, Network.outputSize))
         {
-            Network = network
+            Network = network.``to``(settings.Device)
             Optimizer =
                 Adam(
                     network.parameters(),
@@ -82,20 +82,22 @@ module AdvantageModel =
 
     /// Gets the advantage for the given info set.
     let getAdvantage infoSetKey model =
-        (infoSetKey
-            |> Encoding.encode
-            |> tensor)
+        let encoded = Encoding.encode infoSetKey
+        tensor(encoded, device = settings.Device)
             --> model.Network
 
     /// Trains the given model using the given samples.
-    let train numEpochs batchSize samples model =
+    let train samples model =
+
+        let toTensor (rows : seq<#seq<float32>>) =
+            tensor(array2D rows, device = settings.Device)
 
             // prepare training data
         let tensors =
             samples
                 |> Seq.toArray
                 |> Array.randomShuffle
-                |> Array.chunkBySize batchSize
+                |> Array.chunkBySize settings.AdvantageBatchSize
                 |> Array.map (fun batch ->
                     let inputs, targets, iters =
                         batch
@@ -111,12 +113,12 @@ module AdvantageModel =
                                         |> Seq.singleton
                                 input, target, iter)
                             |> Array.unzip3
-                    inputs |> array2D |> tensor,
-                    targets |> array2D |> tensor,
-                    iters |> array2D |> tensor)
+                    toTensor inputs,
+                    toTensor targets,
+                    toTensor iters)
 
         [|
-            for _ = 1 to numEpochs do
+            for _ = 1 to settings.NumAdvantageTrainEpochs do
                 Array.last [|
                     for inputs, targets, iters in tensors do
 
@@ -190,7 +192,7 @@ module StrategyModel =
                 ReLU(),
                 Linear(hiddenSize, Network.outputSize))
         {
-            Network = network
+            Network = network.``to``(settings.Device)
             Optimizer =
                 Adam(
                     network.parameters(),
@@ -200,14 +202,14 @@ module StrategyModel =
         }
 
     /// Trains the given model using the given samples.
-    let train numEpochs batchSize samples model =
+    let train samples model =
 
             // prepare training data
         let tensors =
             samples
                 |> Seq.toArray
                 |> Array.randomShuffle
-                |> Array.chunkBySize batchSize
+                |> Array.chunkBySize settings.StrategyBatchSize
                 |> Array.map (fun batch ->
                     let inputs, targets, iters =
                         batch
@@ -228,7 +230,7 @@ module StrategyModel =
                     iters |> array2D |> tensor)
 
         [|
-            for _ = 1 to numEpochs do
+            for _ = 1 to settings.NumStrategyTrainEpochs do
                 Array.last [|
                     for inputs, targets, iters in tensors do
 

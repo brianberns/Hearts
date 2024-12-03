@@ -203,11 +203,7 @@ module Trainer =
 
         let stopwatch = Stopwatch.StartNew()
         let losses =
-            AdvantageModel.train
-                settings.NumAdvantageTrainEpochs
-                settings.AdvantageBatchSize
-                resv.Items
-                state.Model
+            AdvantageModel.train resv.Items state.Model
         if settings.Verbose then
             printfn $"   Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed}"
 
@@ -284,11 +280,7 @@ module Trainer =
                 settings.HiddenSize
                 settings.LearningRate
         let losses =
-            StrategyModel.train
-                settings.NumStrategyTrainEpochs
-                settings.StrategyBatchSize
-                resv.Items
-                model
+            StrategyModel.train resv.Items model
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 "strategy loss", losses[epoch], epoch)
