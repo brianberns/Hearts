@@ -205,7 +205,9 @@ module Trainer =
         let losses =
             AdvantageModel.train resv.Items state.Model
         if settings.Verbose then
-            printfn $"   Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed}"
+            stopwatch.Stop()
+            printfn $"   Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
+                (%.2f{float resv.Items.Count / float stopwatch.ElapsedMilliseconds} ms/sample)"
 
         resv, losses
 
