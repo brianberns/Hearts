@@ -58,7 +58,8 @@ module Settings =
     /// Hyperparameters.
     let settings =
         let seed = 0
-        TorchSharp.torch.manual_seed(seed) |> ignore
+        torch.manual_seed(seed) |> ignore
+        torch.cuda.manual_seed_all(seed)
         {
             Random = Random(seed)
             CutthroatCompensation = 9
@@ -75,7 +76,7 @@ module Settings =
             Device = torch.CUDA
             Writer =
                 let timespan = DateTime.Now - DateTime.Today
-                TorchSharp.torch.utils.tensorboard.SummaryWriter(
+                torch.utils.tensorboard.SummaryWriter(
                     $"runs/run%05d{int timespan.TotalSeconds}")
             Verbose = true
         }
