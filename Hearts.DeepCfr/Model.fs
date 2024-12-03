@@ -88,48 +88,51 @@ module AdvantageModel =
             --> model.Network
 
     /// Trains the given model using the given samples.
-    let train numEpochs samples model =
+    let train numEpochs batchSize samples model =
 
             // prepare training data
-        let inputs =
+        let tensors =
             samples
-                |> Seq.map (fun sample ->
-                    sample.InfoSetKey
-                        |> Encoding.encode)
-                |> array2D
-                |> tensor
-        let targets =
-            samples
-                |> Seq.map (fun sample ->
-                    sample.Regrets)
-                |> array2D
-                |> tensor
-        let iters =
-            samples
-                |> Seq.map (fun sample ->
-                    (sample.Iteration + 1)   // make 1-based
-                        |> float32
-                        |> sqrt
-                        |> Seq.singleton )
-                |> array2D
-                |> tensor
+                |> Seq.chunkBySize batchSize
+                |> Seq.map (fun batch ->
+                    let inputs, targets, iters =
+                        batch
+                            |> Array.map (fun sample ->
+                                let input =
+                                    sample.InfoSetKey
+                                        |> Encoding.encode
+                                let target = sample.Regrets
+                                let iter =
+                                    (sample.Iteration + 1)   // make 1-based
+                                        |> float32
+                                        |> sqrt
+                                        |> Seq.singleton
+                                input, target, iter)
+                            |> Array.unzip3
+                    inputs |> array2D |> tensor,
+                    targets |> array2D |> tensor,
+                    iters |> array2D |> tensor)
+                |> Seq.toArray
 
         [|
             for _ = 1 to numEpochs do
+                Array.last [|
+                    for inputs, targets, iters in tensors do
 
-                    // forward pass
-                let loss =
-                    let outputs = inputs --> model.Network
-                    model.Loss.forward(
-                        iters * outputs,   // favor later iterations
-                        iters * targets)
+                            // forward pass
+                        let loss =
+                            let outputs = inputs --> model.Network
+                            model.Loss.forward(
+                                iters * outputs,   // favor later iterations
+                                iters * targets)
 
-                    // backward pass and optimize
-                model.Optimizer.zero_grad()
-                loss.backward()
-                model.Optimizer.step() |> ignore
+                            // backward pass and optimize
+                        model.Optimizer.zero_grad()
+                        loss.backward()
+                        model.Optimizer.step() |> ignore
 
-                loss.item<float32>()
+                        loss.item<float32>()
+                |]
         |]
 
 /// An observed strategy event.

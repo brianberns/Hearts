@@ -201,6 +201,7 @@ module Trainer =
         let losses =
             AdvantageModel.train
                 settings.NumAdvantageTrainEpochs
+                settings.AdvantageBatchSize
                 resv.Items
                 state.Model
         resv, losses

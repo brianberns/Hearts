@@ -20,6 +20,9 @@ type Settings =
         /// Number of epochs to use when training advantage models.
         NumAdvantageTrainEpochs : int
 
+        /// Batch size to use when training advantage models.
+        AdvantageBatchSize : int
+
         /// Number of advantage samples to keep.
         NumAdvantageSamples : int
 
@@ -31,6 +34,9 @@ type Settings =
 
         /// Number of epochs to use when training the strategy model.
         NumStrategyTrainEpochs : int
+
+        /// Batch size to use when training the strategy model.
+        StrategyBatchSize : int
 
         /// Number of strategy samples to keep.
         NumStrategySamples : int
@@ -55,7 +61,9 @@ module Settings =
             HiddenSize = Encoding.encodedLength * 2
             LearningRate = 1e-3
             NumAdvantageTrainEpochs = 2000
+            AdvantageBatchSize = 1000
             NumAdvantageSamples = 1_000_000
+            StrategyBatchSize = 1000
             NumTraversals = 10
             NumIterations = 400
             NumStrategyTrainEpochs = 4000
