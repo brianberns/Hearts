@@ -291,6 +291,9 @@ module Trainer =
     /// Trains for the given number of iterations.
     let train () =
 
+        if settings.Verbose then
+            printfn $"{settings}"
+
             // create advantage state
         let advStateMap =
             Map [|
@@ -305,8 +308,6 @@ module Trainer =
                     settings.Random
                     settings.NumStrategySamples
             let iterNums = seq { 0 .. settings.NumIterations - 1 }
-            if settings.Verbose then
-                printfn $"Training on {settings.Device}"
             ((advStateMap, stratResv), iterNums)
                 ||> Seq.fold (fun (advStateMap, stratResv) iter ->
                     let advResvMap, stratSamples =
