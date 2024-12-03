@@ -1,5 +1,6 @@
 ﻿namespace Hearts.DeepCfr
 
+open System.Diagnostics
 open MathNet.Numerics.LinearAlgebra
 open TorchSharp
 open PlayingCards
@@ -196,14 +197,20 @@ module Trainer =
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train the given advantage model.
     let private trainAdvantageModel state newSamples =
+
         let resv =
             Reservoir.addMany newSamples state.Reservoir
+
+        let stopwatch = Stopwatch.StartNew()
         let losses =
             AdvantageModel.train
                 settings.NumAdvantageTrainEpochs
                 settings.AdvantageBatchSize
                 resv.Items
                 state.Model
+        if settings.Verbose then
+            printfn $"   Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed}"
+
         resv, losses
 
     /// Trains a player.
@@ -228,7 +235,6 @@ module Trainer =
         let stateMap =
             let state = { state with Reservoir = resv }
             Map.add updatingPlayer state stateMap
-        if settings.Verbose then printfn "   Model trained"
 
             // log inputs and losses
         settings.Writer.add_scalar(
