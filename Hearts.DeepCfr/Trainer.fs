@@ -280,6 +280,7 @@ module Trainer =
         let losses =
             StrategyModel.train
                 settings.NumStrategyTrainEpochs
+                settings.StrategyBatchSize
                 resv.Items
                 model
         for epoch = 0 to losses.Length - 1 do
