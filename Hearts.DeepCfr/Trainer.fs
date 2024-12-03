@@ -207,7 +207,7 @@ module Trainer =
         if settings.Verbose then
             stopwatch.Stop()
             printfn $"   Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float resv.Items.Count / float stopwatch.ElapsedMilliseconds} ms/sample)"
+                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
 
         resv, losses
 
