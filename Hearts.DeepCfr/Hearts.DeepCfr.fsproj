@@ -6,22 +6,28 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Hearts.db">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="Prelude.fs" />
     <Compile Include="Reservoir.fs" />
     <Compile Include="Encoding.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="InformationSet.fs" />
+    <Compile Include="Champion.fs" />
     <Compile Include="Trainer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
     <PackageReference Include="TorchSharp-cuda-windows" Version="0.103.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Hearts.FastCfr\Hearts.FastCfr.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
     <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
   </ItemGroup>

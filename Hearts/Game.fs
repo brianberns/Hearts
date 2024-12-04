@@ -6,7 +6,7 @@ open PlayingCards
 type Player =
     {
         /// Plays a card from the given hand on the given deal.
-        Play : ClosedDeal -> Hand -> Card
+        Play : Hand -> ClosedDeal -> Card
     }
 
 module Game =
@@ -103,7 +103,7 @@ module Game =
         let rec loop deal gameScore =
             let seat = OpenDeal.currentPlayer deal
             let hand = deal.UnplayedCardMap[seat]
-            let card = playerMap[seat].Play deal.ClosedDeal hand
+            let card = playerMap[seat].Play hand deal.ClosedDeal
             match tryUpdateScore deal gameScore with
                 | Some gameScore -> gameScore
                 | None ->
