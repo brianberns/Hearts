@@ -2,6 +2,13 @@
 
 open PlayingCards
 
+/// Interface for a Hearts player.
+type Player =
+    {
+        /// Plays a card from the given hand on the given deal.
+        Play : ClosedDeal -> Hand -> Card
+    }
+
 module Game =
 
     /// Answers the seat of the player who shot the moon, if
@@ -89,3 +96,32 @@ module Game =
                 |> Option.map (applyShootReward gameScore)
                 |> Option.defaultValue (gameScore + dealScore)
         }
+
+    /// Creates and plays one deal.
+    let playDeal rng dealer (playerMap : Map<_, _>) gameScore =
+
+        let rec loop deal gameScore =
+            let seat = OpenDeal.currentPlayer deal
+            let hand = deal.UnplayedCardMap[seat]
+            let card = playerMap[seat].Play deal.ClosedDeal hand
+            match tryUpdateScore deal gameScore with
+                | Some gameScore -> gameScore
+                | None ->
+                    let deal = OpenDeal.addPlay card deal
+                    loop deal gameScore
+
+        let deal =
+            let deck = Deck.shuffle rng
+            OpenDeal.fromDeck
+                dealer
+                ExchangeDirection.Hold
+                deck
+                |> OpenDeal.startPlay
+        loop deal gameScore
+
+    /// Plays the given number of deals.
+    let playDeals rng numDeals playerMap =
+        (Score.zero, seq { 0 .. numDeals - 1})
+            ||> Seq.fold (fun gameScore iDeal ->
+                let dealer = enum<Seat> (iDeal % Seat.numSeats)
+                playDeal rng dealer playerMap gameScore)
