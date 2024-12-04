@@ -4,8 +4,6 @@ open System
 open System.Data.SQLite
 open System.IO
 
-open Hearts.FastCfr
-
 open MathNet.Numerics.Distributions
 
 open Fable.Remoting.Server

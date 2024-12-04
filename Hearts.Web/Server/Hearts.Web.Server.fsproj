@@ -23,7 +23,6 @@
       <ExcludeAssets>runtime</ExcludeAssets>
 	</PackageReference>
     <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
-    <ProjectReference Include="..\..\Hearts.FastCfr\Hearts.FastCfr.fsproj" />
 	<PackageReference Update="FSharp.Core">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
