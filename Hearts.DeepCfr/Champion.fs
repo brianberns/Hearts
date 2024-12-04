@@ -11,13 +11,13 @@ open Hearts.FastCfr
 module Champion =
 
     /// Database connection.
-    let conn =
+    let private conn =
         let connStr = "DataSource=./Hearts.db;Version=3;"
         new SQLiteConnection(connStr)
     do conn.Open()
 
     /// Finds the strategy for the given key, if any.
-    let tryGetStrategy (key : byte[]) =
+    let private tryGetStrategy (key : byte[]) =
         use cmd =   // each invocation has its own command to support multithreading
             new SQLiteCommand(
                 "select Probabilities \
@@ -35,6 +35,7 @@ module Champion =
                 |> Seq.toArray
                 |> Some
 
+    /// Plays a card from the given hand in the given deal.
     let private play hand deal =
         let index =
             GameState.getInfoSetKey hand deal
@@ -46,5 +47,6 @@ module Champion =
             |> ClosedDeal.legalPlays hand
             |> Seq.item index
 
+    /// Champion player.
     let player =
         { Play = play }
