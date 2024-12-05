@@ -252,6 +252,16 @@ module Trainer =
 
         stratSamples, stateMap
 
+    let private randomPlayer =
+
+        let play hand deal =
+            let legalPlays =
+                ClosedDeal.legalPlays hand deal
+                    |> Seq.toArray
+            legalPlays[settings.Random.Next(legalPlays.Length)]
+
+        { Play = play }
+
     let private createChallenger model =
 
         let play model hand deal =
@@ -280,7 +290,7 @@ module Trainer =
                 |> Seq.map (fun seat ->
                     let player =
                         if seat = Seat.South then challenger
-                        else Champion.player
+                        else randomPlayer // Champion.player
                     seat, player)
                 |> Map
         let score =
