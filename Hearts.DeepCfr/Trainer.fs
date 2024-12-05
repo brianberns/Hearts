@@ -251,6 +251,13 @@ module Trainer =
 
         stratSamples, stateMap
 
+    let private challenger model =
+
+        let play model hand deal =
+            Seq.head hand
+
+        { Play = play model }
+
     /// Trains a single iteration.
     let private trainIteration iter stateMap =
 
@@ -258,7 +265,7 @@ module Trainer =
             printfn $"\n*** Iteration {iter} ***"
 
             // train each player's model
-        let stratSampleSeqs, resvMap =
+        let stratSampleSeqs, stateMap =
             Seq.mapFold
                 (trainPlayer iter)
                 stateMap
@@ -278,7 +285,7 @@ module Trainer =
                 iter)
         *)
 
-        resvMap, Seq.concat stratSampleSeqs
+        stateMap, Seq.concat stratSampleSeqs
 
     /// Trains a strategy model using the given samples.
     let private trainStrategyModel (resv : Reservoir<_>) =
