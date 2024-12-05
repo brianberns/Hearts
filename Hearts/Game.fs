@@ -101,14 +101,15 @@ module Game =
     let playDeal rng dealer (playerMap : Map<_, _>) gameScore =
 
         let rec loop deal gameScore =
-            let seat = OpenDeal.currentPlayer deal
-            let hand = deal.UnplayedCardMap[seat]
-            let card = playerMap[seat].Play hand deal.ClosedDeal
+            let deal =
+                let seat = OpenDeal.currentPlayer deal
+                let card =
+                    let hand = deal.UnplayedCardMap[seat]
+                    playerMap[seat].Play hand deal.ClosedDeal
+                OpenDeal.addPlay card deal
             match tryUpdateScore deal gameScore with
                 | Some gameScore -> gameScore
-                | None ->
-                    let deal = OpenDeal.addPlay card deal
-                    loop deal gameScore
+                | None -> loop deal gameScore
 
         let deal =
             let deck = Deck.shuffle rng
