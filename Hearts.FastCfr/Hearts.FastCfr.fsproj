@@ -16,6 +16,7 @@
   <ItemGroup>
     <Compile Include="GameState.fs" />
     <Compile Include="Strategy.fs" />
+    <Compile Include="ClosedDeal.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

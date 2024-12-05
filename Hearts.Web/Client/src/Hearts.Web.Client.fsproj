@@ -24,6 +24,7 @@
     <Compile Include="..\..\..\Hearts\Game.fs" />
 	<Compile Include="..\..\..\..\FastCfr\FastCfr\GameState.fs" />
 	<Compile Include="..\..\..\Hearts.FastCfr\GameState.fs" />
+	<Compile Include="..\..\..\Hearts.FastCfr\ClosedDeal.fs" />
     <Compile Include="..\..\Shared\SharedTypes.fs" />
     <Compile Include="WebPlayer.fs" />
     <Compile Include="JQuery.fs" />
