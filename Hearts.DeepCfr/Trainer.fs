@@ -285,7 +285,7 @@ module Trainer =
                 |> Map
         let score =
             Game.playDeals
-                settings.Random
+                (System.Random(0))   // use same deals each iteration
                 settings.NumEvaluationDeals
                 playerMap
         printfn "\nTournament score:"
