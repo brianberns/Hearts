@@ -284,8 +284,13 @@ module Trainer =
                     seat, player)
                 |> Map
         let score =
-            Game.playDeals settings.Random 100 playerMap
-        printfn "%A" score
+            Game.playDeals
+                settings.Random
+                settings.NumEvaluationDeals
+                playerMap
+        printfn "\nTournament score:"
+        for (KeyValue(seat, points)) in score.ScoreMap do
+            printfn $"   {seat}: {points}"
 
     /// Trains a single iteration.
     let private trainIteration iter stateMap =

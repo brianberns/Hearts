@@ -33,6 +33,9 @@ type Settings =
         /// Number of iterations to perform.
         NumIterations : int
 
+        /// Number of deals to evaluate model.
+        NumEvaluationDeals : int
+
         /// Number of epochs to use when training the strategy model.
         NumStrategyTrainEpochs : int
 
@@ -69,7 +72,8 @@ module Settings =
             AdvantageBatchSize = 10_000
             NumAdvantageSamples = 1_000_000
             NumTraversals = 10
-            NumIterations = 10
+            NumIterations = 100
+            NumEvaluationDeals = 1000
             NumStrategyTrainEpochs = 4_000
             StrategyBatchSize = 10_000
             NumStrategySamples = 1_000_000
