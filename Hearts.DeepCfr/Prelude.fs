@@ -2,7 +2,7 @@
 
 module Choice =
 
-    /// Unzips a sequence of choices.
+    /// Unzips an array of choices.
     let unzip choices =
         let opts =
             choices
