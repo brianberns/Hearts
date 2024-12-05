@@ -82,17 +82,20 @@ module Champion =
 
     /// Plays a card from the given hand in the given deal.
     let private play hand deal =
+        let legalPlays =
+            ClosedDeal.legalPlays hand deal
+                |> Seq.toArray
         let index =
-            deal
-                |> adjustDeal Seat.South
-                |> GameState.getInfoSetKey hand
-                |> tryGetStrategy
-                |> Option.map (fun strategy ->
-                    Categorical.Sample(settings.Random, strategy))
-                |> Option.defaultValue 0
-        deal
-            |> ClosedDeal.legalPlays hand
-            |> Seq.item index
+            if legalPlays.Length = 1 then 0
+            else
+                deal
+                    |> adjustDeal Seat.South
+                    |> GameState.getInfoSetKey hand
+                    |> tryGetStrategy
+                    |> Option.map (fun strategy ->
+                        Categorical.Sample(settings.Random, strategy))
+                    |> Option.defaultValue 0
+        legalPlays[index]
 
     /// Champion player.
     let player =
