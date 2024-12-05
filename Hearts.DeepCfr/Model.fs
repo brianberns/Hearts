@@ -74,11 +74,17 @@ module AdvantageModel =
     let create hiddenSize learningRate =
         let network =
             Sequential(
-                Linear(Network.inputSize, hiddenSize),
+                Linear(
+                    Network.inputSize,
+                    hiddenSize,
+                    device = settings.Device),
                 ReLU(),
-                Linear(hiddenSize, Network.outputSize))
+                Linear(
+                    hiddenSize,
+                    Network.outputSize,
+                    device = settings.Device))
         {
-            Network = network.``to``(settings.Device)
+            Network = network
             Optimizer =
                 Adam(
                     network.parameters(),
@@ -191,11 +197,17 @@ module StrategyModel =
     let create hiddenSize learningRate =
         let network =
             Sequential(
-                Linear(Network.inputSize, hiddenSize),
+                Linear(
+                    Network.inputSize,
+                    hiddenSize,
+                    device = settings.Device),
                 ReLU(),
-                Linear(hiddenSize, Network.outputSize))
+                Linear(
+                    hiddenSize,
+                    Network.outputSize,
+                    device = settings.Device))
         {
-            Network = network.``to``(settings.Device)
+            Network = network
             Optimizer =
                 Adam(
                     network.parameters(),
