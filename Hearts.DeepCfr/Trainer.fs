@@ -4,6 +4,7 @@ open System.Diagnostics
 open MathNet.Numerics.LinearAlgebra
 open TorchSharp
 open PlayingCards
+
 open Hearts
 
 module Trainer =
@@ -251,12 +252,40 @@ module Trainer =
 
         stratSamples, stateMap
 
-    let private challenger model =
+    let private createChallenger model =
 
         let play model hand deal =
-            Seq.head hand
+            let infoSetKey =
+                {
+                    Hand = hand
+                    Deal = deal
+                }
+            let legalPlays =
+                deal
+                    |> ClosedDeal.legalPlays hand
+                    |> Seq.toArray
+            let strategy =
+                legalPlays
+                    |> Seq.map Card.toIndex
+                    |> getStrategy infoSetKey model
+            strategy
+                |> Vector.sample settings.Random
+                |> Array.get legalPlays
 
         { Play = play model }
+
+    let private runTournament challenger =
+        let playerMap =
+            Enum.getValues<Seat>
+                |> Seq.map (fun seat ->
+                    let player =
+                        if seat = Seat.South then challenger
+                        else Champion.player
+                    seat, player)
+                |> Map
+        let score =
+            Game.playDeals settings.Random 100 playerMap
+        printfn "%A" score
 
     /// Trains a single iteration.
     let private trainIteration iter stateMap =
@@ -271,19 +300,8 @@ module Trainer =
                 stateMap
                 (seq { 0 .. numPlayers - 1 })
 
-        (*
-            // log betting behavior
-        for infoSetKey in [ "J"; "K"; "Jc"; "Qb"; "Qcb" ] do
-            let betProb =
-                let model =
-                    let player = (infoSetKey.Length - 1) % 2
-                    stateMap[player].Model
-                (getStrategy infoSetKey model)[0]
-            settings.Writer.add_scalar(
-                $"advantage bet probability/{infoSetKey}",
-                betProb,
-                iter)
-        *)
+        let challenger = createChallenger stateMap[0].Model
+        runTournament challenger
 
         stateMap, Seq.concat stratSampleSeqs
 
