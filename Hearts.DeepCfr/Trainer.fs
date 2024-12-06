@@ -261,19 +261,9 @@ module Trainer =
 
         stratSamples, stateMap
 
-    let private randomPlayer =
-
-        let play hand deal =
-            let legalPlays =
-                ClosedDeal.legalPlays hand deal
-                    |> Seq.toArray
-            legalPlays[settings.Random.Next(legalPlays.Length)]
-
-        { Play = play }
-
     let private createChallenger model =
 
-        let play model hand deal =
+        let play hand deal =
             let legalPlays =
                 deal
                     |> ClosedDeal.legalPlays hand
@@ -287,25 +277,7 @@ module Trainer =
                 |> Vector.sample settings.Random
                 |> Array.get legalPlays
 
-        { Play = play model }
-
-    let private runTournament challenger =
-        let playerMap =
-            Enum.getValues<Seat>
-                |> Seq.map (fun seat ->
-                    let player =
-                        if seat = Seat.South then challenger
-                        else randomPlayer // Champion.player
-                    seat, player)
-                |> Map
-        let score =
-            Game.playDeals
-                (System.Random(0))   // use same deals each iteration
-                settings.NumEvaluationDeals
-                playerMap
-        printfn "\nTournament score:"
-        for (KeyValue(seat, points)) in score.ScoreMap do
-            printfn $"   {seat}: {points}"
+        { Play = play }
 
     /// Trains a single iteration.
     let private trainIteration iter stateMap =
@@ -321,7 +293,7 @@ module Trainer =
                 (seq { 0 .. numPlayers - 1 })
 
         let challenger = createChallenger stateMap[0].Model
-        runTournament challenger
+        Tournament.run Tournament.randomPlayer challenger
 
         stateMap, Seq.concat stratSampleSeqs
 

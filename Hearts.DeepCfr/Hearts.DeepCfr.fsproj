@@ -15,7 +15,7 @@
     <Compile Include="Settings.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="InformationSet.fs" />
-    <Compile Include="Champion.fs" />
+    <Compile Include="Tournament.fs" />
     <Compile Include="Trainer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
