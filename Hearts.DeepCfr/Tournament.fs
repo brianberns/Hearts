@@ -10,7 +10,7 @@ open Hearts.Web
 
 module Tournament =
 
-    let run champion challenger =
+    let run rng champion challenger =
         let playerMap =
             Enum.getValues<Seat>
                 |> Seq.map (fun seat ->
@@ -19,14 +19,10 @@ module Tournament =
                         else champion
                     seat, player)
                 |> Map
-        let score =
-            Game.playDeals
-                (System.Random(0))   // use same deals each iteration
-                settings.NumEvaluationDeals
-                playerMap
-        printfn "\nTournament score:"
-        for (KeyValue(seat, points)) in score.ScoreMap do
-            printfn $"   {seat}: {points}"
+        Game.playDeals
+            rng
+            settings.NumEvaluationDeals
+            playerMap
 
     let randomPlayer =
 

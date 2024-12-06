@@ -1,10 +1,12 @@
 ﻿namespace Hearts.DeepCfr
 
+open System
 open System.Diagnostics
+
 open MathNet.Numerics.LinearAlgebra
 open TorchSharp
-open PlayingCards
 
+open PlayingCards
 open Hearts
 
 module Trainer =
@@ -292,8 +294,16 @@ module Trainer =
                 stateMap
                 (seq { 0 .. numPlayers - 1 })
 
-        let challenger = createChallenger stateMap[0].Model
-        Tournament.run Tournament.randomPlayer challenger
+            // evaluate model
+        let score =
+            let challenger = createChallenger stateMap[0].Model
+            Tournament.run
+                (Random(0))   // use same deals each iteration
+                Tournament.randomPlayer
+                challenger
+        printfn "\nTournament score:"
+        for (KeyValue(seat, points)) in score.ScoreMap do
+            printfn $"   {seat}: {points}"
 
         stateMap, Seq.concat stratSampleSeqs
 
