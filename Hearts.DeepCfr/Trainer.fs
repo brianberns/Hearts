@@ -39,14 +39,22 @@ module Trainer =
             |> DenseVector.ofSeq
             |> InformationSet.getStrategy
 
-    /// Negates opponent's utilties (assuming a zero-zum game).
-    let private getActiveUtilities utilities =
-        utilities
-            |> Seq.map (~-)
-            |> DenseVector.ofSeq
-
     /// Evaluates the utility of the given deal.
     let private traverse iter deal updatingPlayer (models : _[]) =
+
+        /// Negates opponent's utilties (assuming a zero-zum game).
+        let getActiveUtilities utilities =
+            utilities
+                |> Seq.map (~-)
+                |> DenseVector.ofSeq
+
+        /// Converts a narrow vector (indexed by legal plays) to
+        /// a wide vector (indexed by entire deck).
+        let toWide (legalPlays : _[]) (narrowValues : Vector<_>) =
+            assert(narrowValues.Count = legalPlays.Length)
+            Seq.zip legalPlays narrowValues
+                |> Encoding.encodeCardValues
+                |> DenseVector.ofArray
 
         /// Appends an item to the end of an array.
         let append items item =
@@ -105,11 +113,8 @@ module Trainer =
             let utility = actionUtilities * strategy
             let sample =
                 let wideRegrets =
-                    let narrowRegrets = actionUtilities - utility
-                    assert(narrowRegrets.Count = legalPlays.Length)
-                    Seq.zip legalPlays narrowRegrets
-                        |> Encoding.encodeCardValues
-                        |> DenseVector.ofArray
+                    (actionUtilities - utility)
+                        |> toWide legalPlays
                 AdvantageSample.create
                     infoSetKey
                     wideRegrets
@@ -131,10 +136,7 @@ module Trainer =
                     |> loop
             let sample =
                 let wideStrategy =
-                    assert(strategy.Count = legalPlays.Length)
-                    Seq.zip legalPlays strategy
-                        |> Encoding.encodeCardValues
-                        |> DenseVector.ofArray
+                    toWide legalPlays strategy
                 StrategySample.create
                     infoSetKey
                     wideStrategy
