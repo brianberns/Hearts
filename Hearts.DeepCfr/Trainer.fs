@@ -61,7 +61,7 @@ module Trainer =
                     loopNonTerminal deal
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal (deal : OpenDeal) =
+        and loopNonTerminal deal =
 
                 // get info set for current state from this player's point of view
             let activePlayer =
@@ -81,56 +81,65 @@ module Trainer =
                     |> getStrategy infoSetKey models[activePlayer]
 
                 // get utility of this info set
-            if activePlayer = updatingPlayer then
+            let getUtility =
+                if activePlayer = updatingPlayer then getFullUtility
+                else getOneUtility
+            getUtility deal infoSetKey legalPlays strategy
 
-                    // get utility of each action
-                let actionUtilities, samples =
-                    let utilities, sampleArrays =
-                        legalPlays
-                            |> Array.map (fun play ->
-                                deal
-                                    |> OpenDeal.addPlay play
-                                    |> loop)
-                            |> Array.unzip
-                    getActiveUtilities utilities,
-                    Array.concat sampleArrays
+        /// Gets the full utility of the given info set.
+        and getFullUtility deal infoSetKey legalPlays strategy =
 
-                    // utility of this info set is action utilities weighted by action probabilities
-                let utility = actionUtilities * strategy
-                let sample =
-                    let wideRegrets =
-                        let narrowRegrets = actionUtilities - utility
-                        assert(narrowRegrets.Count = legalPlays.Length)
-                        Seq.zip legalPlays narrowRegrets
-                            |> Encoding.encodeCardValues
-                            |> DenseVector.ofArray
-                    AdvantageSample.create
-                        infoSetKey
-                        wideRegrets
-                        iter |> Choice1Of2
-                utility, append samples sample
+                // get utility of each action
+            let actionUtilities, samples =
+                let utilities, sampleArrays =
+                    legalPlays
+                        |> Array.map (fun play ->
+                            deal
+                                |> OpenDeal.addPlay play
+                                |> loop)
+                        |> Array.unzip
+                getActiveUtilities utilities,
+                Array.concat sampleArrays
 
-            else
-                    // sample a single action according to the strategy
-                let utility, samples =
-                    let play =
-                        strategy
-                            |> Vector.sample settings.Random
-                            |> Array.get legalPlays
-                    deal
-                       |> OpenDeal.addPlay play
-                       |> loop
-                let sample =
-                    let wideStrategy =
-                        assert(strategy.Count = legalPlays.Length)
-                        Seq.zip legalPlays strategy
-                            |> Encoding.encodeCardValues
-                            |> DenseVector.ofArray
-                    StrategySample.create
-                        infoSetKey
-                        wideStrategy
-                        iter |> Choice2Of2
-                -utility, append samples sample
+                // utility of this info set is action utilities weighted by action probabilities
+            let utility = actionUtilities * strategy
+            let sample =
+                let wideRegrets =
+                    let narrowRegrets = actionUtilities - utility
+                    assert(narrowRegrets.Count = legalPlays.Length)
+                    Seq.zip legalPlays narrowRegrets
+                        |> Encoding.encodeCardValues
+                        |> DenseVector.ofArray
+                AdvantageSample.create
+                    infoSetKey
+                    wideRegrets
+                    iter |> Choice1Of2
+            utility, append samples sample
+
+        /// Gets the utility of the given info set by sampling
+        /// a single action.
+        and getOneUtility deal infoSetKey legalPlays strategy =
+
+                // sample a single action according to the strategy
+            let utility, samples =
+                let play =
+                    strategy
+                        |> Vector.sample settings.Random
+                        |> Array.get legalPlays
+                deal
+                    |> OpenDeal.addPlay play
+                    |> loop
+            let sample =
+                let wideStrategy =
+                    assert(strategy.Count = legalPlays.Length)
+                    Seq.zip legalPlays strategy
+                        |> Encoding.encodeCardValues
+                        |> DenseVector.ofArray
+                StrategySample.create
+                    infoSetKey
+                    wideStrategy
+                    iter |> Choice2Of2
+            -utility, append samples sample
 
         loop deal |> snd
 
