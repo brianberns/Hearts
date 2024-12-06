@@ -39,26 +39,26 @@ module Trainer =
             |> DenseVector.ofSeq
             |> InformationSet.getStrategy
 
+    /// Negates opponent's utilties (assuming a zero-zum game).
+    let private getActiveUtilities utilities =
+        utilities
+            |> Seq.map (~-)
+            |> DenseVector.ofSeq
+
+    /// Converts a narrow vector (indexed by legal plays) to
+    /// a wide vector (indexed by entire deck).
+    let private toWide (legalPlays : _[]) (narrowValues : Vector<_>) =
+        assert(narrowValues.Count = legalPlays.Length)
+        Seq.zip legalPlays narrowValues
+            |> Encoding.encodeCardValues
+            |> DenseVector.ofArray
+
+    /// Appends an item to the end of an array.
+    let private append items item =
+        [| yield! items; yield item |]
+
     /// Evaluates the utility of the given deal.
     let private traverse iter deal updatingPlayer (models : _[]) =
-
-        /// Negates opponent's utilties (assuming a zero-zum game).
-        let getActiveUtilities utilities =
-            utilities
-                |> Seq.map (~-)
-                |> DenseVector.ofSeq
-
-        /// Converts a narrow vector (indexed by legal plays) to
-        /// a wide vector (indexed by entire deck).
-        let toWide (legalPlays : _[]) (narrowValues : Vector<_>) =
-            assert(narrowValues.Count = legalPlays.Length)
-            Seq.zip legalPlays narrowValues
-                |> Encoding.encodeCardValues
-                |> DenseVector.ofArray
-
-        /// Appends an item to the end of an array.
-        let append items item =
-            [| yield! items; yield item |]
 
         /// Top-level loop.
         let rec loop deal =
