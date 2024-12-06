@@ -12,6 +12,8 @@ module Trainer =
     /// Assume two-player, zero-sum game.
     let private numPlayers = 2
 
+    /// Computes the payoff for the given deal, if it is
+    /// complete.
     let private tryGetPayoff deal =
         Game.tryUpdateScore deal Score.zero
             |> Option.map (fun score ->
@@ -66,11 +68,7 @@ module Trainer =
                 if OpenDeal.currentPlayer deal = Seat.South then 0
                 else 1
             let hand = OpenDeal.currentHand deal
-            let infoSetKey =
-                {
-                    Hand = hand
-                    Deal = deal.ClosedDeal
-                }
+            let infoSetKey = InfoSetKey.create hand deal.ClosedDeal
 
                 // get active player's current strategy for this info set
             let legalPlays =
@@ -265,16 +263,12 @@ module Trainer =
     let private createChallenger model =
 
         let play model hand deal =
-            let infoSetKey =
-                {
-                    Hand = hand
-                    Deal = deal
-                }
             let legalPlays =
                 deal
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             let strategy =
+                let infoSetKey = InfoSetKey.create hand deal
                 legalPlays
                     |> Seq.map Card.toIndex
                     |> getStrategy infoSetKey model

@@ -9,6 +9,14 @@ type InfoSetKey =
         Deal : ClosedDeal
     }
 
+module InfoSetKey =
+
+    let create hand deal =
+        {
+            Hand = hand
+            Deal = deal
+        }
+
 module Card =
 
     let private minRank =
