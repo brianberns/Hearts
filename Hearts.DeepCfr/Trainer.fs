@@ -94,6 +94,12 @@ module Trainer =
                 else getOneUtility
             getUtility deal infoSetKey legalPlays strategy
 
+        /// Adds the given play to the given deal and loops.
+        and addLoop deal play =
+            deal
+                |> OpenDeal.addPlay play
+                |> loop
+
         /// Gets the full utility of the given info set.
         and getFullUtility deal infoSetKey legalPlays strategy =
 
@@ -101,10 +107,7 @@ module Trainer =
             let actionUtilities, samples =
                 let utilities, sampleArrays =
                     legalPlays
-                        |> Array.map (fun play ->
-                            deal
-                                |> OpenDeal.addPlay play
-                                |> loop)
+                        |> Array.map (addLoop deal)
                         |> Array.unzip
                 getActiveUtilities utilities,
                 Array.concat sampleArrays
@@ -127,13 +130,10 @@ module Trainer =
 
                 // sample a single action according to the strategy
             let utility, samples =
-                let play =
-                    strategy
-                        |> Vector.sample settings.Random
-                        |> Array.get legalPlays
-                deal
-                    |> OpenDeal.addPlay play
-                    |> loop
+                strategy
+                    |> Vector.sample settings.Random
+                    |> Array.get legalPlays
+                    |> addLoop deal
             let sample =
                 let wideStrategy =
                     toWide legalPlays strategy
