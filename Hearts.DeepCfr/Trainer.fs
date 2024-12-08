@@ -30,7 +30,7 @@ module Trainer =
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
-    let getStrategy infoSetKey model indexes =
+    let private getStrategy infoSetKey model indexes =
         use _ = torch.no_grad()   // use model.eval() instead?
         let wide =
             (AdvantageModel.getAdvantage infoSetKey model)
