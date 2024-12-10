@@ -102,8 +102,8 @@ module Game =
 
         let rec loop deal gameScore =
             let deal =
-                let seat = OpenDeal.currentPlayer deal
                 let card =
+                    let seat = OpenDeal.currentPlayer deal
                     let hand = deal.UnplayedCardMap[seat]
                     playerMap[seat].Play hand deal.ClosedDeal
                 OpenDeal.addPlay card deal

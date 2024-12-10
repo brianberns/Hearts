@@ -362,3 +362,63 @@ module Trainer =
 
             // train the final strategy model
         trainStrategyModel stratResv
+
+    let trainDirect numDeals =
+
+        let conn = Hearts.Web.Database.connect "."
+
+        let rec loop deal =
+            seq {
+                let hand =
+                    let seat = OpenDeal.currentPlayer deal
+                    deal.UnplayedCardMap[seat]
+                let legalPlays =
+                    ClosedDeal.legalPlays hand deal.ClosedDeal
+                        |> Seq.toArray
+                let adjustedDeal =
+                    Hearts.FastCfr.ClosedDeal.adjustDeal
+                        Seat.South
+                        deal.ClosedDeal
+                let strategyOpt =
+                    if legalPlays.Length = 1 then None
+                    else
+                        adjustedDeal
+                            |> Hearts.FastCfr.GameState.getInfoSetKey hand
+                            |> Hearts.Web.Database.tryGetStrategy conn
+                match strategyOpt with
+                    | Some strategy ->
+                        let wide =
+                            strategy
+                                |> Array.map float32
+                                |> DenseVector.ofArray
+                                |> toWide legalPlays
+                        yield hand, adjustedDeal, wide
+                    | None -> ()
+
+                let deal =
+                    let card =
+                        let index =
+                            match strategyOpt with
+                                | Some strategy ->
+                                    MathNet.Numerics.Distributions.Categorical.Sample(
+                                        settings.Random,
+                                        strategy)
+                                | None -> 0
+                        legalPlays[index]
+                    OpenDeal.addPlay card deal
+                match Game.tryUpdateScore deal Score.zero with
+                    | Some _ -> ()
+                    | None -> yield! loop deal
+            }
+
+        seq {
+            for _ = 1 to numDeals do
+                let deal =
+                    let deck = Deck.shuffle settings.Random
+                    OpenDeal.fromDeck
+                        Seat.South
+                        ExchangeDirection.Hold
+                        deck
+                        |> OpenDeal.startPlay
+                yield! loop deal
+        }
