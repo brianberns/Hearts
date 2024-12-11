@@ -432,14 +432,15 @@ module Trainer =
                 settings.HiddenSize
                 settings.LearningRate
         let losses = AdvantageModel.train samples model
-        printf $"Final loss {Array.last losses}"
+        printfn $"Final loss {Array.last losses}"
 
-        let score =
-            let challenger = createChallenger model
-            Tournament.run
-                (Random(0))   // use same deals each iteration
-                Tournament.randomPlayer
-                challenger
-        printfn "\nTournament score:"
-        for (KeyValue(seat, points)) in score.ScoreMap do
-            printfn $"   {seat}: {points}"
+        for champion in [ Tournament.randomPlayer; Database.player ] do
+            let score =
+                let challenger = createChallenger model
+                Tournament.run
+                    settings.Random
+                    champion
+                    challenger
+            printfn "\nTournament score:"
+            for (KeyValue(seat, points)) in score.ScoreMap do
+                printfn $"   {seat}: {points}"
