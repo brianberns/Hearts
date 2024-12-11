@@ -426,6 +426,10 @@ module Trainer =
         }
 
     let trainDirect numDeals =
+
+        if settings.Verbose then
+            printfn $"{settings}"
+
         let samples = createTrainingData numDeals
         let model =
             AdvantageModel.create
@@ -434,13 +438,18 @@ module Trainer =
         let losses = AdvantageModel.train samples model
         printfn $"Final loss {Array.last losses}"
 
-        for champion in [ Tournament.randomPlayer; Database.player ] do
+        let pairs =
+            [
+                "Random", Tournament.randomPlayer
+                "Database", Database.player
+            ]
+        for name, champion in pairs do
             let score =
                 let challenger = createChallenger model
                 Tournament.run
                     settings.Random
                     champion
                     challenger
-            printfn "\nTournament score:"
+            printfn $"\nTournament score vs. {name}:"
             for (KeyValue(seat, points)) in score.ScoreMap do
                 printfn $"   {seat}: {points}"
