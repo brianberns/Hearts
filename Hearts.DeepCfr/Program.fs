@@ -7,5 +7,4 @@ module Program =
         ()
 
     System.Console.OutputEncoding <- System.Text.Encoding.UTF8
-    for loss in Trainer.trainDirect 10000 do
-        printfn "%A" loss
+    Trainer.trainDirect 1000
