@@ -363,7 +363,7 @@ module Trainer =
             // train the final strategy model
         trainStrategyModel stratResv
 
-    let trainDirect numDeals =
+    let private createTrainingData numDeals =
 
         let conn = Hearts.Web.Database.connect "."
 
@@ -387,12 +387,14 @@ module Trainer =
                             |> Hearts.Web.Database.tryGetStrategy conn
                 match strategyOpt with
                     | Some strategy ->
-                        let wide =
+                        let regrets =
                             strategy
                                 |> Array.map float32
                                 |> DenseVector.ofArray
                                 |> toWide legalPlays
-                        yield hand, adjustedDeal, wide
+                        let infoSetKey =
+                            InfoSetKey.create hand adjustedDeal
+                        yield AdvantageSample.create infoSetKey regrets 0
                     | None -> ()
 
                 let deal =
@@ -422,3 +424,11 @@ module Trainer =
                         |> OpenDeal.startPlay
                 yield! loop deal
         }
+
+    let trainDirect numDeals =
+        let samples = createTrainingData numDeals
+        let model =
+            AdvantageModel.create
+                settings.HiddenSize
+                settings.LearningRate
+        AdvantageModel.train samples model
