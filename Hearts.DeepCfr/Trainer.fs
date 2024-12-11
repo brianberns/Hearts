@@ -427,8 +427,8 @@ module Trainer =
 
     let trainDirect numDeals =
 
-        if settings.Verbose then
-            printfn $"{settings}"
+        printfn $"{settings}"
+        printfn $"numDeals: {numDeals}"
 
         let samples = createTrainingData numDeals
         let model =
