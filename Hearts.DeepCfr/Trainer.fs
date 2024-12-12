@@ -116,15 +116,16 @@ module Trainer =
 
                 // utility of this info set is action utilities weighted by action probabilities
             let utility = actionUtilities * strategy
-            let sample =
-                let wideRegrets =
-                    (actionUtilities - utility)
-                        |> toWide legalPlays
-                AdvantageSample.create
-                    infoSetKey
-                    wideRegrets
-                    iter |> Choice1Of2
-            utility, append samples sample
+            let samples =
+                if legalPlays.Length > 1 then
+                    let wideRegrets =
+                        (actionUtilities - utility)
+                            |> toWide legalPlays
+                    AdvantageSample.create infoSetKey wideRegrets iter
+                            |> Choice1Of2
+                            |> append samples
+                else samples
+            utility, samples
 
         /// Gets the utility of the given info set by sampling
         /// a single action.
@@ -136,14 +137,15 @@ module Trainer =
                     |> Vector.sample settings.Random
                     |> Array.get legalPlays
                     |> addLoop deal
-            let sample =
-                let wideStrategy =
-                    toWide legalPlays strategy
-                StrategySample.create
-                    infoSetKey
-                    wideStrategy
-                    iter |> Choice2Of2
-            -utility, append samples sample
+            let samples =
+                if legalPlays.Length > 1 then
+                    let wideStrategy =
+                        toWide legalPlays strategy
+                    StrategySample.create infoSetKey wideStrategy iter
+                        |> Choice2Of2
+                        |> append samples
+                else samples
+            -utility, samples
 
         loop deal |> snd
 
@@ -429,8 +431,11 @@ module Trainer =
 
         printfn $"{settings}"
         printfn $"numDeals: {numDeals}"
+        let samples =
+            createTrainingData numDeals
+                |> Seq.toArray
+        printfn $"Number of samples: {samples.Length}"
 
-        let samples = createTrainingData numDeals
         let model =
             AdvantageModel.create
                 settings.HiddenSize

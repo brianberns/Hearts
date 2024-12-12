@@ -7,4 +7,5 @@ module Program =
         ()
 
     System.Console.OutputEncoding <- System.Text.Encoding.UTF8
-    Trainer.trainDirect 20_000
+    run ()
+    // Trainer.trainDirect 20_000
