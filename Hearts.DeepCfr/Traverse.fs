@@ -105,18 +105,20 @@ module Traverse =
                 deal.ClosedDeal
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
-            let strategy =
-                Strategy.get
-                    hand
-                    deal.ClosedDeal
-                    models[activePlayer]
-                    legalPlays
-
-                // get utility of this info set
-            let getUtility =
-                if activePlayer = updatingPlayer then getFullUtility
-                else getOneUtility
-            getUtility hand deal activePlayer legalPlays strategy
+            if legalPlays.Length = 1 then
+                addLoop deal legalPlays[0]   // forced play
+            else
+                    // get utility of this info set
+                let strategy =
+                    Strategy.get
+                        hand
+                        deal.ClosedDeal
+                        models[activePlayer]
+                        legalPlays
+                let getUtility =
+                    if activePlayer = updatingPlayer then getFullUtility
+                    else getOneUtility
+                getUtility hand deal activePlayer legalPlays strategy
 
         /// Adds the given play to the given deal and loops.
         and addLoop deal play =
@@ -142,15 +144,13 @@ module Traverse =
                 // utility of this info set is action utilities weighted by action probabilities
             let utility = actionUtilities * strategy
             let samples =
-                if legalPlays.Length > 1 then
-                    let wideRegrets =
-                        (actionUtilities - utility)
-                            |> Strategy.toWide legalPlays
-                    AdvantageSample.create
-                        hand deal.ClosedDeal wideRegrets iter
-                        |> Choice1Of2
-                        |> append samples
-                else samples
+                let wideRegrets =
+                    (actionUtilities - utility)
+                        |> Strategy.toWide legalPlays
+                AdvantageSample.create
+                    hand deal.ClosedDeal wideRegrets iter
+                    |> Choice1Of2
+                    |> append samples
             let utilities =
                 Array.init ZeroSum.numPlayers (fun i ->
                     if i = activePlayer then utility
@@ -168,14 +168,12 @@ module Traverse =
                     |> Array.get legalPlays
                     |> addLoop deal
             let samples =
-                if legalPlays.Length > 1 then
-                    let wideStrategy =
-                        Strategy.toWide legalPlays strategy
-                    StrategySample.create
-                        hand deal.ClosedDeal wideStrategy iter
-                        |> Choice2Of2
-                        |> append samples
-                else samples
+                let wideStrategy =
+                    Strategy.toWide legalPlays strategy
+                StrategySample.create
+                    hand deal.ClosedDeal wideStrategy iter
+                    |> Choice2Of2
+                    |> append samples
             utilities, samples
 
         loop deal |> snd
