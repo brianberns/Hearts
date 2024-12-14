@@ -30,14 +30,15 @@ module Trainer =
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
-    let private getStrategy infoSetKey model indexes =
+    let private getStrategy infoSetKey model legalPlays =
         use _ = torch.no_grad()   // use model.eval() instead?
         let wide =
             (AdvantageModel.getAdvantage infoSetKey model)
                 .data<float32>()
                 |> DenseVector.ofSeq
-        indexes
-            |> Seq.map (fun idx -> wide[idx])
+        assert(wide.Count = Card.allCards.Length)
+        legalPlays
+            |> Seq.map (fun card -> wide[Card.toIndex card])
             |> DenseVector.ofSeq
             |> InformationSet.getStrategy
 
@@ -86,9 +87,7 @@ module Trainer =
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             let strategy =
-                legalPlays
-                    |> Seq.map Card.toIndex
-                    |> getStrategy infoSetKey models[activePlayer]
+                getStrategy infoSetKey models[activePlayer] legalPlays
 
                 // get utility of this info set
             let getUtility =
@@ -274,9 +273,7 @@ module Trainer =
                     |> Seq.toArray
             let strategy =
                 let infoSetKey = InfoSetKey.create hand deal
-                legalPlays
-                    |> Seq.map Card.toIndex
-                    |> getStrategy infoSetKey model
+                getStrategy infoSetKey model legalPlays
             strategy
                 |> Vector.sample settings.Random
                 |> Array.get legalPlays
