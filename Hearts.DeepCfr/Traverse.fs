@@ -47,28 +47,32 @@ module Strategy =
                 if i = idx then 1.0f
                 else 0.0f)
 
-    /// Computes strategy for the given info set using the
-    /// given advantage model.
-    let getStrategy infoSetKey model legalPlays =
-        use _ = torch.no_grad()   // use model.eval() instead?
-        let wide =
-            (AdvantageModel.getAdvantage infoSetKey model)
-                .data<float32>()
-                |> DenseVector.ofSeq
+    /// Converts a wide vector (indexed by entire deck) to
+    /// a narrow vector (indexed by legal plays).
+    let toNarrow (legalPlays : _[]) (wide : Vector<_>) =
         assert(wide.Count = Card.allCards.Length)
         legalPlays
             |> Seq.map (
                 Card.toIndex >> Vector.get wide)
             |> DenseVector.ofSeq
-            |> matchRegrets
 
     /// Converts a narrow vector (indexed by legal plays) to
     /// a wide vector (indexed by entire deck).
-    let toWide (legalPlays : _[]) (narrowValues : Vector<_>) =
-        assert(narrowValues.Count = legalPlays.Length)
-        Seq.zip legalPlays narrowValues
+    let toWide (legalPlays : _[]) (narrow : Vector<_>) =
+        assert(narrow.Count = legalPlays.Length)
+        Seq.zip legalPlays narrow
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
+
+    /// Computes strategy for the given info set using the
+    /// given advantage model.
+    let get infoSetKey model legalPlays =
+        use _ = torch.no_grad()   // use model.eval() instead?
+        (AdvantageModel.getAdvantage infoSetKey model)
+            .data<float32>()
+            |> DenseVector.ofSeq
+            |> toNarrow legalPlays
+            |> matchRegrets
 
 module Traverse =
 
@@ -103,7 +107,7 @@ module Traverse =
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             let strategy =
-                Strategy.getStrategy infoSetKey models[activePlayer] legalPlays
+                Strategy.get infoSetKey models[activePlayer] legalPlays
 
                 // get utility of this info set
             let getUtility =

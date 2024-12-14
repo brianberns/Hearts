@@ -135,7 +135,7 @@ module Trainer =
                     |> Seq.toArray
             let strategy =
                 let infoSetKey = InfoSetKey.create hand deal
-                Strategy.getStrategy infoSetKey model legalPlays
+                Strategy.get infoSetKey model legalPlays
             strategy
                 |> Vector.sample settings.Random
                 |> Array.get legalPlays
