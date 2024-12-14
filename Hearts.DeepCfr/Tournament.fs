@@ -19,10 +19,13 @@ module Tournament =
                         else champion
                     seat, player)
                 |> Map
-        Game.playDeals
-            rng
-            settings.NumEvaluationDeals
-            playerMap
+        let score =
+            Game.playDeals
+                rng
+                settings.NumEvaluationDeals
+                playerMap
+        (ZeroSum.getPayoff score)[0]
+            / float32 settings.NumEvaluationDeals
 
     let randomPlayer =
 

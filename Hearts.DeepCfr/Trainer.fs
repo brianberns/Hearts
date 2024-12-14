@@ -155,15 +155,14 @@ module Trainer =
                 (seq { 0 .. ZeroSum.numPlayers - 1 })
 
             // evaluate model
-        let score =
+        let avgPayoff =
             let challenger = createChallenger stateMap[0].Model
             Tournament.run
                 (Random(0))   // use same deals each iteration
                 Database.player
                 challenger
-        printfn "\nTournament score:"
-        for (KeyValue(seat, points)) in score.ScoreMap do
-            printfn $"   {seat}: {points}"
+        settings.Writer.add_scalar(
+            $"advantage tournament", avgPayoff, iter)
 
         stateMap, Seq.concat stratSampleSeqs
 
@@ -306,12 +305,10 @@ module Trainer =
                 "Database", Database.player
             ]
         for name, champion in pairs do
-            let score =
+            let avgPayoff =
                 let challenger = createChallenger model
                 Tournament.run
                     settings.Random
                     champion
                     challenger
-            printfn $"\nTournament score vs. {name}:"
-            for (KeyValue(seat, points)) in score.ScoreMap do
-                printfn $"   {seat}: {points}"
+            printfn $"\nAverage payoff vs. {name}: {avgPayoff}"

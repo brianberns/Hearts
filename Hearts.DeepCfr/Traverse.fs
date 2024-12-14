@@ -18,22 +18,25 @@ module ZeroSum =
         if OpenDeal.currentPlayer deal = Seat.South then 0
         else 1
 
+    /// Gets the payoff for the given deal score.
+    let getPayoff score =
+        let southPayoff =
+            let otherAvg =
+                (score.ScoreMap
+                    |> Map.toSeq
+                    |> Seq.where (fun (seat, _) ->
+                        seat <> Seat.South)
+                    |> Seq.sumBy snd
+                    |> float32)
+                    / float32 (Seat.numSeats - 1)
+            otherAvg - float32 score[Seat.South]
+        [| southPayoff; -southPayoff |]
+
     /// Computes the payoff for the given deal, if it is
     /// complete.
     let tryGetPayoff deal =
         Game.tryUpdateScore deal Score.zero
-            |> Option.map (fun score ->
-                let southPayoff =
-                    let otherAvg =
-                        (score.ScoreMap
-                            |> Map.toSeq
-                            |> Seq.where (fun (seat, _) ->
-                                seat <> Seat.South)
-                            |> Seq.sumBy snd
-                            |> float32)
-                            / float32 (Seat.numSeats - 1)
-                    otherAvg - float32 score[Seat.South]
-                [| southPayoff; -southPayoff |])
+            |> Option.map getPayoff
 
 module Strategy =
 
