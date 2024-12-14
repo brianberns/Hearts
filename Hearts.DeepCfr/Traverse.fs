@@ -159,8 +159,6 @@ module Traverse =
         /// Gets the utility of the given info set (hand + deal)
         /// by sampling a single action.
         and getOneUtility hand deal _activePlayer legalPlays strategy =
-
-                // sample a single action according to the strategy
             let utilities, samples =
                 strategy
                     |> Vector.sample settings.Random
