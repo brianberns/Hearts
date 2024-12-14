@@ -38,7 +38,8 @@ module Trainer =
                 |> DenseVector.ofSeq
         assert(wide.Count = Card.allCards.Length)
         legalPlays
-            |> Seq.map (fun card -> wide[Card.toIndex card])
+            |> Seq.map (
+                Card.toIndex >> Vector.get wide)
             |> DenseVector.ofSeq
             |> InformationSet.getStrategy
 

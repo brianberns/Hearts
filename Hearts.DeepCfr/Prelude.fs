@@ -17,6 +17,10 @@ module Vector =
     open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.Distributions
 
+    /// Gets an element from a vector.
+    let get (vector : Vector<_>) index =
+        vector[index]
+
     /// Samples a strategy.
     let inline sample rng (strategy : Vector<_>) =
         let strategy' =
