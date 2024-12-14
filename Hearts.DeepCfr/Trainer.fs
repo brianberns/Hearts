@@ -4,154 +4,11 @@ open System
 open System.Diagnostics
 
 open MathNet.Numerics.LinearAlgebra
-open TorchSharp
 
 open PlayingCards
 open Hearts
 
 module Trainer =
-
-    /// Assume two-player, zero-sum game.
-    let private numPlayers = 2
-
-    /// Computes the payoff for the given deal, if it is
-    /// complete.
-    let private tryGetPayoff deal =
-        Game.tryUpdateScore deal Score.zero
-            |> Option.map (fun score ->
-                let southPayoff =
-                    let otherAvg =
-                        (score.ScoreMap
-                            |> Map.toSeq
-                            |> Seq.where (fun (seat, _) ->
-                                seat <> Seat.South)
-                            |> Seq.sumBy snd
-                            |> float32)
-                            / float32 (Seat.numSeats - 1)
-                    otherAvg - float32 score[Seat.South]
-                [| southPayoff; -southPayoff |])
-
-    /// Computes strategy for the given info set using the
-    /// given advantage model.
-    let private getStrategy infoSetKey model legalPlays =
-        use _ = torch.no_grad()   // use model.eval() instead?
-        let wide =
-            (AdvantageModel.getAdvantage infoSetKey model)
-                .data<float32>()
-                |> DenseVector.ofSeq
-        assert(wide.Count = Card.allCards.Length)
-        legalPlays
-            |> Seq.map (
-                Card.toIndex >> Vector.get wide)
-            |> DenseVector.ofSeq
-            |> InformationSet.getStrategy
-
-    /// Converts a narrow vector (indexed by legal plays) to
-    /// a wide vector (indexed by entire deck).
-    let private toWide (legalPlays : _[]) (narrowValues : Vector<_>) =
-        assert(narrowValues.Count = legalPlays.Length)
-        Seq.zip legalPlays narrowValues
-            |> Encoding.encodeCardValues
-            |> DenseVector.ofArray
-
-    /// Appends an item to the end of an array.
-    let private append items item =
-        [| yield! items; yield item |]
-
-    /// Evaluates the utility of the given deal.
-    let private traverse iter deal updatingPlayer (models : _[]) =
-
-        /// Top-level loop.
-        let rec loop deal =
-            match tryGetPayoff deal with
-                | Some payoff ->
-                    payoff, Array.empty   // game is over
-                | None ->
-                    loopNonTerminal deal
-
-        /// Recurses for non-terminal game state.
-        and loopNonTerminal deal =
-
-                // get info set for current state from this player's point of view
-            let activePlayer =
-                if OpenDeal.currentPlayer deal = Seat.South then 0
-                else 1
-            let hand = OpenDeal.currentHand deal
-            let infoSetKey = InfoSetKey.create hand deal.ClosedDeal
-
-                // get active player's current strategy for this info set
-            let legalPlays =
-                deal.ClosedDeal
-                    |> ClosedDeal.legalPlays hand
-                    |> Seq.toArray
-            let strategy =
-                getStrategy infoSetKey models[activePlayer] legalPlays
-
-                // get utility of this info set
-            let getUtility =
-                if activePlayer = updatingPlayer then getFullUtility
-                else getOneUtility
-            getUtility deal activePlayer infoSetKey legalPlays strategy
-
-        /// Adds the given play to the given deal and loops.
-        and addLoop deal play =
-            deal
-                |> OpenDeal.addPlay play
-                |> loop
-
-        /// Gets the full utility of the given info set.
-        and getFullUtility deal activePlayer infoSetKey legalPlays strategy =
-
-                // get utility of each action
-            let actionUtilities, samples =
-                let utilityArrays, sampleArrays =
-                    legalPlays
-                        |> Array.map (addLoop deal)
-                        |> Array.unzip
-                utilityArrays
-                    |> Seq.map (fun utilities ->
-                        utilities[activePlayer])
-                    |> DenseVector.ofSeq,
-                Array.concat sampleArrays
-
-                // utility of this info set is action utilities weighted by action probabilities
-            let utility = actionUtilities * strategy
-            let samples =
-                if legalPlays.Length > 1 then
-                    let wideRegrets =
-                        (actionUtilities - utility)
-                            |> toWide legalPlays
-                    AdvantageSample.create infoSetKey wideRegrets iter
-                        |> Choice1Of2
-                        |> append samples
-                else samples
-            let utilities =
-                Array.init numPlayers (fun i ->
-                    if i = activePlayer then utility
-                    else -utility)
-            utilities, samples
-
-        /// Gets the utility of the given info set by sampling
-        /// a single action.
-        and getOneUtility deal _activePlayer infoSetKey legalPlays strategy =
-
-                // sample a single action according to the strategy
-            let utilities, samples =
-                strategy
-                    |> Vector.sample settings.Random
-                    |> Array.get legalPlays
-                    |> addLoop deal
-            let samples =
-                if legalPlays.Length > 1 then
-                    let wideStrategy =
-                        toWide legalPlays strategy
-                    StrategySample.create infoSetKey wideStrategy iter
-                        |> Choice2Of2
-                        |> append samples
-                else samples
-            utilities, samples
-
-        loop deal |> snd
 
     /// Advantage state managed for each player.
     type private AdvantageState =
@@ -213,7 +70,7 @@ module Trainer =
                         |> Map.values
                         |> Seq.map (fun state -> state.Model)
                         |> Seq.toArray
-                yield! traverse
+                yield! Traverse.traverse
                     iter deal updatingPlayer models
         |]
 
@@ -278,7 +135,7 @@ module Trainer =
                     |> Seq.toArray
             let strategy =
                 let infoSetKey = InfoSetKey.create hand deal
-                getStrategy infoSetKey model legalPlays
+                Strategy.getStrategy infoSetKey model legalPlays
             strategy
                 |> Vector.sample settings.Random
                 |> Array.get legalPlays
@@ -296,7 +153,7 @@ module Trainer =
             Seq.mapFold
                 (trainPlayer iter)
                 stateMap
-                (seq { 0 .. numPlayers - 1 })
+                (seq { 0 .. ZeroSum.numPlayers - 1 })
 
             // evaluate model
         let score =
@@ -341,7 +198,7 @@ module Trainer =
             // create advantage state
         let advStateMap =
             Map [|
-                for player = 0 to numPlayers - 1 do
+                for player = 0 to ZeroSum.numPlayers - 1 do
                     player, AdvantageState.create ()
             |]
 
@@ -395,7 +252,7 @@ module Trainer =
                             strategy
                                 |> Array.map float32
                                 |> DenseVector.ofArray
-                                |> toWide legalPlays
+                                |> Strategy.toWide legalPlays
                         let infoSetKey =
                             InfoSetKey.create hand adjustedDeal
                         yield AdvantageSample.create infoSetKey regrets 0
