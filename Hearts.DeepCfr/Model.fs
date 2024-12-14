@@ -10,6 +10,7 @@ open FSharp.Core.Operators   // reclaim "float32" and other F# operators
 open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
+open Hearts
 
 /// Neural network that maps an input tensor to an output
 /// tensor.
@@ -29,8 +30,11 @@ module Network =
 /// An observed advantage event.
 type AdvantageSample =
     {
-        /// Key of info set.
-        InfoSetKey : InfoSetKey
+        /// Current player's hand.
+        Hand : Hand
+
+        /// Current deal.
+        Deal : ClosedDeal
 
         /// Observed regrets.
         Regrets : Vector<float32>
@@ -42,9 +46,11 @@ type AdvantageSample =
 module AdvantageSample =
 
     /// Creates an advantage sample.
-    let create infoSetKey regrets iteration =
+    let create hand deal (regrets : Vector<_>) iteration =
+        assert(regrets.Count = Network.outputSize)
         {
-            InfoSetKey = infoSetKey
+            Hand = hand
+            Deal = deal
             Regrets = regrets
             Iteration = iteration
         }
@@ -93,8 +99,8 @@ module AdvantageModel =
         }
 
     /// Gets the advantage for the given info set.
-    let getAdvantage infoSetKey model =
-        let encoded = Encoding.encode infoSetKey
+    let getAdvantage hand deal model =
+        let encoded = Encoding.encode hand deal
         tensor(encoded, device = settings.Device)
             --> model.Network
 
@@ -112,8 +118,7 @@ module AdvantageModel =
                         batch
                             |> Array.map (fun sample ->
                                 let input =
-                                    sample.InfoSetKey
-                                        |> Encoding.encode
+                                    Encoding.encode sample.Hand sample.Deal
                                 let target = sample.Regrets
                                 let iter =
                                     (sample.Iteration + 1)   // make 1-based
@@ -150,8 +155,11 @@ module AdvantageModel =
 /// An observed strategy event.
 type StrategySample =
     {
-        /// Key of info set.
-        InfoSetKey : InfoSetKey
+        /// Current player's hand.
+        Hand : Hand
+
+        /// Current deal.
+        Deal : ClosedDeal
 
         /// Observed strategy.
         Strategy : Vector<float32>
@@ -163,15 +171,12 @@ type StrategySample =
 module StrategySample =
 
     /// Creates a strategy sample.
-    let create infoSetKey strategy iteration =
+    let create hand deal (strategy : Vector<_>) iteration =
+        assert(strategy.Count = Network.outputSize)
         {
-            /// Key of info set.
-            InfoSetKey = infoSetKey
-
-            /// Observed strategy.
+            Hand = hand
+            Deal = deal
             Strategy = strategy
-
-            /// 0-based iteration number.
             Iteration = iteration
         }
 
@@ -230,8 +235,7 @@ module StrategyModel =
                         batch
                             |> Array.map (fun sample ->
                                 let input =
-                                    sample.InfoSetKey
-                                        |> Encoding.encode
+                                    Encoding.encode sample.Hand sample.Deal
                                 let target = sample.Strategy
                                 let iter =
                                     (sample.Iteration + 1)   // make 1-based
@@ -268,9 +272,8 @@ module StrategyModel =
         |]
 
     /// Gets the strategy for the given info set.
-    let getStrategy infoSetKey model =
-        (infoSetKey
-            |> Encoding.encode
+    let getStrategy hand deal model =
+        (Encoding.encode hand deal
             |> tensor)
             --> model.Network
             |> model.Softmax.forward

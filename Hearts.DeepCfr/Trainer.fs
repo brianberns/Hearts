@@ -134,8 +134,7 @@ module Trainer =
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             let strategy =
-                let infoSetKey = InfoSetKey.create hand deal
-                Strategy.get infoSetKey model legalPlays
+                Strategy.get hand deal model legalPlays
             strategy
                 |> Vector.sample settings.Random
                 |> Array.get legalPlays
@@ -253,9 +252,8 @@ module Trainer =
                                 |> Array.map float32
                                 |> DenseVector.ofArray
                                 |> Strategy.toWide legalPlays
-                        let infoSetKey =
-                            InfoSetKey.create hand adjustedDeal
-                        yield AdvantageSample.create infoSetKey regrets 0
+                        yield AdvantageSample.create
+                            hand deal.ClosedDeal regrets 0
                     | None -> ()
 
                 let deal =

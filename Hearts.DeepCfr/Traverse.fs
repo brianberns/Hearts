@@ -66,9 +66,9 @@ module Strategy =
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
-    let get infoSetKey model legalPlays =
+    let get hand deal model legalPlays =
         use _ = torch.no_grad()   // use model.eval() instead?
-        (AdvantageModel.getAdvantage infoSetKey model)
+        (AdvantageModel.getAdvantage hand deal model)
             .data<float32>()
             |> DenseVector.ofSeq
             |> toNarrow legalPlays
@@ -99,7 +99,6 @@ module Traverse =
                 if OpenDeal.currentPlayer deal = Seat.South then 0
                 else 1
             let hand = OpenDeal.currentHand deal
-            let infoSetKey = InfoSetKey.create hand deal.ClosedDeal
 
                 // get active player's current strategy for this info set
             let legalPlays =
@@ -107,13 +106,17 @@ module Traverse =
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             let strategy =
-                Strategy.get infoSetKey models[activePlayer] legalPlays
+                Strategy.get
+                    hand
+                    deal.ClosedDeal
+                    models[activePlayer]
+                    legalPlays
 
                 // get utility of this info set
             let getUtility =
                 if activePlayer = updatingPlayer then getFullUtility
                 else getOneUtility
-            getUtility deal activePlayer infoSetKey legalPlays strategy
+            getUtility hand deal activePlayer legalPlays strategy
 
         /// Adds the given play to the given deal and loops.
         and addLoop deal play =
@@ -122,7 +125,7 @@ module Traverse =
                 |> loop
 
         /// Gets the full utility of the given info set.
-        and getFullUtility deal activePlayer infoSetKey legalPlays strategy =
+        and getFullUtility hand deal activePlayer legalPlays strategy =
 
                 // get utility of each action
             let actionUtilities, samples =
@@ -143,7 +146,8 @@ module Traverse =
                     let wideRegrets =
                         (actionUtilities - utility)
                             |> Strategy.toWide legalPlays
-                    AdvantageSample.create infoSetKey wideRegrets iter
+                    AdvantageSample.create
+                        hand deal.ClosedDeal wideRegrets iter
                         |> Choice1Of2
                         |> append samples
                 else samples
@@ -155,7 +159,7 @@ module Traverse =
 
         /// Gets the utility of the given info set by sampling
         /// a single action.
-        and getOneUtility deal _activePlayer infoSetKey legalPlays strategy =
+        and getOneUtility hand deal _activePlayer legalPlays strategy =
 
                 // sample a single action according to the strategy
             let utilities, samples =
@@ -167,7 +171,8 @@ module Traverse =
                 if legalPlays.Length > 1 then
                     let wideStrategy =
                         Strategy.toWide legalPlays strategy
-                    StrategySample.create infoSetKey wideStrategy iter
+                    StrategySample.create
+                        hand deal.ClosedDeal wideStrategy iter
                         |> Choice2Of2
                         |> append samples
                 else samples

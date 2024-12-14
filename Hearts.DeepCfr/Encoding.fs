@@ -3,20 +3,6 @@
 open PlayingCards
 open Hearts
 
-type InfoSetKey =
-    {
-        Hand : Hand
-        Deal : ClosedDeal
-    }
-
-module InfoSetKey =
-
-    let create hand deal =
-        {
-            Hand = hand
-            Deal = deal
-        }
-
 module Card =
 
     let private minRank =
@@ -93,9 +79,7 @@ module Encoding =
             + (Suit.numSuits * (Seat.numSeats - 1))   // voids
             + Seat.numSeats                           // score
 
-    let encode infoSetKey =
-        let deal = infoSetKey.Deal
-        let hand = infoSetKey.Hand
+    let encode hand deal =
         let otherUnplayed = deal.UnplayedCards - hand
         let trick = ClosedDeal.currentTrick deal
         let player = Trick.currentPlayer trick
