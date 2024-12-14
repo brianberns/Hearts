@@ -6,6 +6,8 @@ open TorchSharp
 open PlayingCards
 open Hearts
 
+/// Model Hearts as a two-player, zero-sum game, instead of
+/// a cutthroat, multiplayer game.
 module ZeroSum =
 
     /// Assume two-player, zero-sum game.

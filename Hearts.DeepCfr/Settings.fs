@@ -9,8 +9,8 @@ type Settings =
         /// Random number generator.
         Random : Random
 
-        /// Compensation for n-1 players on the other team.
-        CutthroatCompensation : int
+        /// Compensation factor for n-1 players on the other team.
+        ZeroSumCompensation : int
 
         /// Size of a neural network hidden layer.
         HiddenSize : int
@@ -65,7 +65,7 @@ module Settings =
         torch.cuda.manual_seed_all(seed)
         {
             Random = Random(seed)
-            CutthroatCompensation = 9
+            ZeroSumCompensation = 9
             HiddenSize = Encoding.encodedLength * 2
             LearningRate = 1e-3
             NumAdvantageTrainEpochs = 30_000

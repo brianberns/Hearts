@@ -51,7 +51,7 @@ module Trainer =
         let nDeals =
             let factor =
                 if updatingPlayer = 0 then
-                    settings.CutthroatCompensation
+                    settings.ZeroSumCompensation
                 else 1
             factor * settings.NumTraversals
 
