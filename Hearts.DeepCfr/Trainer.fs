@@ -46,11 +46,6 @@ module Trainer =
             |> DenseVector.ofSeq
             |> InformationSet.getStrategy
 
-    let private getActiveUtilities activePlayer (utilities : float32[][])=
-        utilities
-            |> Seq.map (fun uts -> uts[activePlayer])
-            |> DenseVector.ofSeq
-
     /// Converts a narrow vector (indexed by legal plays) to
     /// a wide vector (indexed by entire deck).
     let private toWide (legalPlays : _[]) (narrowValues : Vector<_>) =
@@ -96,7 +91,7 @@ module Trainer =
             let getUtility =
                 if activePlayer = updatingPlayer then getFullUtility
                 else getOneUtility
-            getUtility deal infoSetKey legalPlays strategy activePlayer
+            getUtility deal activePlayer infoSetKey legalPlays strategy
 
         /// Adds the given play to the given deal and loops.
         and addLoop deal play =
@@ -105,15 +100,18 @@ module Trainer =
                 |> loop
 
         /// Gets the full utility of the given info set.
-        and getFullUtility deal infoSetKey legalPlays strategy activePlayer =
+        and getFullUtility deal activePlayer infoSetKey legalPlays strategy =
 
                 // get utility of each action
             let actionUtilities, samples =
-                let utilities, sampleArrays =
+                let utilityArrays, sampleArrays =
                     legalPlays
                         |> Array.map (addLoop deal)
                         |> Array.unzip
-                getActiveUtilities activePlayer utilities,
+                utilityArrays
+                    |> Seq.map (fun utilities ->
+                        utilities[activePlayer])
+                    |> DenseVector.ofSeq,
                 Array.concat sampleArrays
 
                 // utility of this info set is action utilities weighted by action probabilities
@@ -127,19 +125,18 @@ module Trainer =
                         |> Choice1Of2
                         |> append samples
                 else samples
-            let utility =
-                if activePlayer = 0 then
-                    [| utility; -utility |]
-                else
-                    [| -utility; utility |]
-            utility, samples
+            let utilities =
+                Array.init numPlayers (fun i ->
+                    if i = activePlayer then utility
+                    else -utility)
+            utilities, samples
 
         /// Gets the utility of the given info set by sampling
         /// a single action.
-        and getOneUtility deal infoSetKey legalPlays strategy activePlayer =
+        and getOneUtility deal _activePlayer infoSetKey legalPlays strategy =
 
                 // sample a single action according to the strategy
-            let utility, samples =
+            let utilities, samples =
                 strategy
                     |> Vector.sample settings.Random
                     |> Array.get legalPlays
@@ -152,7 +149,7 @@ module Trainer =
                         |> Choice2Of2
                         |> append samples
                 else samples
-            utility, samples
+            utilities, samples
 
         loop deal |> snd
 
