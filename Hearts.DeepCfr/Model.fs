@@ -92,17 +92,11 @@ module AdvantageModel =
             Loss = MSELoss()
         }
 
-    let mutable random = true
-
     /// Gets the advantage for the given info set.
     let getAdvantage infoSetKey model =
-        if random then
-            let encoded = Array.replicate Card.allCards.Length 1.0f
-            tensor(encoded)
-        else
-            let encoded = Encoding.encode infoSetKey
-            tensor(encoded, device = settings.Device)
-                --> model.Network
+        let encoded = Encoding.encode infoSetKey
+        tensor(encoded, device = settings.Device)
+            --> model.Network
 
     /// Trains the given model using the given samples.
     let train samples model =
