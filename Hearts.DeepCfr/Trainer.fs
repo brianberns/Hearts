@@ -159,7 +159,7 @@ module Trainer =
             let challenger = createChallenger stateMap[0].Model
             Tournament.run
                 (Random(0))   // use same deals each iteration
-                Tournament.randomPlayer
+                Database.player
                 challenger
         printfn "\nTournament score:"
         for (KeyValue(seat, points)) in score.ScoreMap do
