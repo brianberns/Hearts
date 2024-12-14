@@ -19,14 +19,17 @@ module Trainer =
     let private tryGetPayoff deal =
         Game.tryUpdateScore deal Score.zero
             |> Option.map (fun score ->
-                let otherAvg =
-                    (score.ScoreMap
-                        |> Map.toSeq
-                        |> Seq.where (fun (seat, _) -> seat <> Seat.South)
-                        |> Seq.sumBy snd
-                        |> float)
-                        / float (Seat.numSeats - 1)
-                otherAvg - float score[Seat.South])
+                let southPayoff =
+                    let otherAvg =
+                        (score.ScoreMap
+                            |> Map.toSeq
+                            |> Seq.where (fun (seat, _) ->
+                                seat <> Seat.South)
+                            |> Seq.sumBy snd
+                            |> float32)
+                            / float32 (Seat.numSeats - 1)
+                    otherAvg - float32 score[Seat.South]
+                [| southPayoff; -southPayoff |])
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
@@ -43,10 +46,9 @@ module Trainer =
             |> DenseVector.ofSeq
             |> InformationSet.getStrategy
 
-    /// Negates opponent's utilties (assuming a zero-zum game).
-    let private getActiveUtilities utilities =
+    let private getActiveUtilities activePlayer (utilities : float32[][])=
         utilities
-            |> Seq.map (~-)
+            |> Seq.map (fun uts -> uts[activePlayer])
             |> DenseVector.ofSeq
 
     /// Converts a narrow vector (indexed by legal plays) to
@@ -68,7 +70,7 @@ module Trainer =
         let rec loop deal =
             match tryGetPayoff deal with
                 | Some payoff ->
-                    float32 payoff, Array.empty   // game is over
+                    payoff, Array.empty   // game is over
                 | None ->
                     loopNonTerminal deal
 
@@ -94,7 +96,7 @@ module Trainer =
             let getUtility =
                 if activePlayer = updatingPlayer then getFullUtility
                 else getOneUtility
-            getUtility deal infoSetKey legalPlays strategy
+            getUtility deal infoSetKey legalPlays strategy activePlayer
 
         /// Adds the given play to the given deal and loops.
         and addLoop deal play =
@@ -103,7 +105,7 @@ module Trainer =
                 |> loop
 
         /// Gets the full utility of the given info set.
-        and getFullUtility deal infoSetKey legalPlays strategy =
+        and getFullUtility deal infoSetKey legalPlays strategy activePlayer =
 
                 // get utility of each action
             let actionUtilities, samples =
@@ -111,7 +113,7 @@ module Trainer =
                     legalPlays
                         |> Array.map (addLoop deal)
                         |> Array.unzip
-                getActiveUtilities utilities,
+                getActiveUtilities activePlayer utilities,
                 Array.concat sampleArrays
 
                 // utility of this info set is action utilities weighted by action probabilities
@@ -125,11 +127,16 @@ module Trainer =
                         |> Choice1Of2
                         |> append samples
                 else samples
+            let utility =
+                if activePlayer = 0 then
+                    [| utility; -utility |]
+                else
+                    [| -utility; utility |]
             utility, samples
 
         /// Gets the utility of the given info set by sampling
         /// a single action.
-        and getOneUtility deal infoSetKey legalPlays strategy =
+        and getOneUtility deal infoSetKey legalPlays strategy activePlayer =
 
                 // sample a single action according to the strategy
             let utility, samples =
@@ -145,7 +152,7 @@ module Trainer =
                         |> Choice2Of2
                         |> append samples
                 else samples
-            -utility, samples
+            utility, samples
 
         loop deal |> snd
 
