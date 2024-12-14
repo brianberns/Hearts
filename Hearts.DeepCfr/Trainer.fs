@@ -122,8 +122,8 @@ module Trainer =
                         (actionUtilities - utility)
                             |> toWide legalPlays
                     AdvantageSample.create infoSetKey wideRegrets iter
-                            |> Choice1Of2
-                            |> append samples
+                        |> Choice1Of2
+                        |> append samples
                 else samples
             utility, samples
 
