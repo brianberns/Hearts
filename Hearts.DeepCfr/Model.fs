@@ -98,7 +98,7 @@ module AdvantageModel =
             Loss = MSELoss()
         }
 
-    /// Gets the advantage for the given info set.
+    /// Gets the advantage for the given info set (hand + deal).
     let getAdvantage hand deal model =
         let encoded = Encoding.encode hand deal
         tensor(encoded, device = settings.Device)
@@ -271,7 +271,7 @@ module StrategyModel =
                 |]
         |]
 
-    /// Gets the strategy for the given info set.
+    /// Gets the strategy for the given info set (hand + deal).
     let getStrategy hand deal model =
         (Encoding.encode hand deal
             |> tensor)

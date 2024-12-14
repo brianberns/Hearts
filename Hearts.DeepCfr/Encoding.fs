@@ -79,7 +79,7 @@ module Encoding =
             + (Suit.numSuits * (Seat.numSeats - 1))   // voids
             + Seat.numSeats                           // score
 
-    let encode hand deal =
+    let encode (hand : Hand) deal =
         let otherUnplayed = deal.UnplayedCards - hand
         let trick = ClosedDeal.currentTrick deal
         let player = Trick.currentPlayer trick

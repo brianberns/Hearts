@@ -11,6 +11,11 @@ module ZeroSum =
     /// Assume two-player, zero-sum game.
     let numPlayers = 2
 
+    /// Gets the active zero-sum player in the given deal.
+    let getActivePlayer deal =
+        if OpenDeal.currentPlayer deal = Seat.South then 0
+        else 1
+
     /// Computes the payoff for the given deal, if it is
     /// complete.
     let tryGetPayoff deal =
@@ -64,8 +69,8 @@ module Strategy =
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    /// Computes strategy for the given info set using the
-    /// given advantage model.
+    /// Computes strategy for the given info set (hand + deal)
+    /// using the given advantage model.
     let get hand deal model legalPlays =
         use _ = torch.no_grad()   // use model.eval() instead?
         (AdvantageModel.getAdvantage hand deal model)
@@ -93,14 +98,7 @@ module Traverse =
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal =
-
-                // get info set for current state from this player's point of view
-            let activePlayer =
-                if OpenDeal.currentPlayer deal = Seat.South then 0
-                else 1
             let hand = OpenDeal.currentHand deal
-
-                // get active player's current strategy for this info set
             let legalPlays =
                 deal.ClosedDeal
                     |> ClosedDeal.legalPlays hand
@@ -108,7 +106,8 @@ module Traverse =
             if legalPlays.Length = 1 then
                 addLoop deal legalPlays[0]   // forced play
             else
-                    // get utility of this info set
+                    // get utility of active player's strategy
+                let activePlayer = ZeroSum.getActivePlayer deal
                 let strategy =
                     Strategy.get
                         hand
@@ -126,7 +125,7 @@ module Traverse =
                 |> OpenDeal.addPlay play
                 |> loop
 
-        /// Gets the full utility of the given info set.
+        /// Gets the full utility of the given info set (hand + deal).
         and getFullUtility hand deal activePlayer legalPlays strategy =
 
                 // get utility of each action
@@ -157,8 +156,8 @@ module Traverse =
                     else -utility)
             utilities, samples
 
-        /// Gets the utility of the given info set by sampling
-        /// a single action.
+        /// Gets the utility of the given info set (hand + deal)
+        /// by sampling a single action.
         and getOneUtility hand deal _activePlayer legalPlays strategy =
 
                 // sample a single action according to the strategy
