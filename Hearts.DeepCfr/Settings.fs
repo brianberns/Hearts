@@ -58,29 +58,76 @@ type Settings =
 [<AutoOpen>]
 module Settings =
 
+    let private writer =
+        let timespan = DateTime.Now - DateTime.Today
+        torch.utils.tensorboard.SummaryWriter(
+            $"runs/run%05d{int timespan.TotalSeconds}")
+
+    let private seed = 0
+
     /// Hyperparameters.
     let settings =
-        let seed = 0
+
         torch.manual_seed(seed) |> ignore
         torch.cuda.manual_seed_all(seed)
-        {
-            Random = Random(seed)
-            ZeroSumCompensation = 9
-            HiddenSize = Encoding.encodedLength * 2
-            LearningRate = 1e-3
-            NumAdvantageTrainEpochs = 30_000
-            AdvantageBatchSize = 10_000
-            NumAdvantageSamples = Int32.MaxValue
-            NumTraversals = 1000
-            NumIterations = 10
-            NumEvaluationDeals = 10_000
-            NumStrategyTrainEpochs = 30_000
-            StrategyBatchSize = 10_000
-            NumStrategySamples = Int32.MaxValue
-            Device = torch.CUDA
-            Writer =
-                let timespan = DateTime.Now - DateTime.Today
-                torch.utils.tensorboard.SummaryWriter(
-                    $"runs/run%05d{int timespan.TotalSeconds}")
-            Verbose = true
-        }
+        writer.add_text(
+            $"settings/seed", string seed, 0)
+
+        let settings =
+            {
+                Random = Random(seed)
+                ZeroSumCompensation = 9
+                HiddenSize = Encoding.encodedLength * 2
+                LearningRate = 1e-3
+                NumAdvantageTrainEpochs = 30_000
+                AdvantageBatchSize = 10_000
+                NumAdvantageSamples = Int32.MaxValue
+                NumTraversals = 1000
+                NumIterations = 10
+                NumEvaluationDeals = 10_000
+                NumStrategyTrainEpochs = 30_000
+                StrategyBatchSize = 10_000
+                NumStrategySamples = Int32.MaxValue
+                Device = torch.CUDA
+                Writer = writer
+                Verbose = true
+            }
+
+        writer.add_text(
+            $"settings/ZeroSumCompensation",
+            string settings.ZeroSumCompensation, 0)
+        writer.add_text(
+            $"settings/HiddenSize",
+            string settings.HiddenSize, 0)
+        writer.add_text(
+            $"settings/LearningRate",
+            string settings.LearningRate, 0)
+        writer.add_text(
+            $"settings/NumAdvantageTrainEpochs",
+            string settings.NumAdvantageTrainEpochs, 0)
+        writer.add_text(
+            $"settings/AdvantageBatchSize",
+            string settings.AdvantageBatchSize, 0)
+        writer.add_text(
+            $"settings/NumAdvantageSamples",
+            string settings.NumAdvantageSamples, 0)
+        writer.add_text(
+            $"settings/NumTraversals",
+            string settings.NumTraversals, 0)
+        writer.add_text(
+            $"settings/NumIterations",
+            string settings.NumIterations, 0)
+        writer.add_text(
+            $"settings/NumEvaluationDeals",
+            string settings.NumEvaluationDeals, 0)
+        writer.add_text(
+            $"settings/NumStrategyTrainEpochs",
+            string settings.NumStrategyTrainEpochs, 0)
+        writer.add_text(
+            $"settings/StrategyBatchSize",
+            string settings.StrategyBatchSize, 0)
+        writer.add_text(
+            $"settings/NumStrategySamples",
+            string settings.NumStrategySamples, 0)
+
+        settings
