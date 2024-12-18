@@ -126,7 +126,7 @@ module Trainer =
 
         stratSamples, stateMap
 
-    let private createChallenger model =
+    let private createChallenger getStrategy =
 
         let play hand deal =
             let legalPlays =
@@ -134,7 +134,7 @@ module Trainer =
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             let strategy =
-                Strategy.get hand deal model legalPlays
+                getStrategy hand deal legalPlays
             strategy
                 |> Vector.sample settings.Random
                 |> Array.get legalPlays
@@ -156,7 +156,9 @@ module Trainer =
 
             // evaluate model
         let avgPayoff =
-            let challenger = createChallenger stateMap[0].Model
+            let challenger =
+                createChallenger (
+                    Strategy.getFromAdvantage stateMap[0].Model)
             Tournament.run
                 (Random(0))   // use same deals each iteration
                 Database.player
@@ -179,11 +181,24 @@ module Trainer =
         let losses =
             StrategyModel.train resv.Items model
         if settings.Verbose then
-            printfn $"Trained model on {resv.Items.Count} samples"
+            printfn $"\nTrained model on {resv.Items.Count} samples"
 
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 "strategy loss", losses[epoch], epoch)
+
+            // evaluate model
+        let avgPayoff =
+            let challenger =
+                createChallenger (
+                    Strategy.getFromStrategy model)
+            Tournament.run
+                (Random(0))   // use same deals each iteration
+                Database.player
+                challenger
+        settings.Writer.add_scalar(
+            $"strategy tournament",
+            avgPayoff, settings.NumIterations)
 
         model
 
@@ -306,7 +321,8 @@ module Trainer =
             ]
         for name, champion in pairs do
             let avgPayoff =
-                let challenger = createChallenger model
+                let challenger = createChallenger (
+                    Strategy.getFromAdvantage model)
                 Tournament.run
                     settings.Random
                     champion

@@ -273,7 +273,7 @@ module StrategyModel =
 
     /// Gets the strategy for the given info set (hand + deal).
     let getStrategy hand deal model =
-        (Encoding.encode hand deal
-            |> tensor)
+        let encoded = Encoding.encode hand deal
+        tensor(encoded, device = settings.Device)
             --> model.Network
             |> model.Softmax.forward

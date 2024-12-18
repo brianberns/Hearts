@@ -24,6 +24,11 @@ module Tournament =
                 rng
                 settings.NumEvaluationDeals
                 playerMap
+        if settings.Verbose then
+            printfn "\nTournament:"
+            for (KeyValue(seat, points)) in score.ScoreMap do
+                printfn $"   {string seat}: {points}"
+            
         (ZeroSum.getPayoff score)[0]
             / float32 settings.NumEvaluationDeals
 

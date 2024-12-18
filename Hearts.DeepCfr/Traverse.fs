@@ -76,13 +76,22 @@ module Strategy =
 
     /// Computes strategy for the given info set (hand + deal)
     /// using the given advantage model.
-    let get hand deal model legalPlays =
+    let getFromAdvantage model hand deal legalPlays =
         use _ = torch.no_grad()   // use model.eval() instead?
         (AdvantageModel.getAdvantage hand deal model)
             .data<float32>()
             |> DenseVector.ofSeq
             |> toNarrow legalPlays
             |> matchRegrets
+
+    /// Computes strategy for the given info set (hand + deal)
+    /// using the given strategy model.
+    let getFromStrategy model hand deal legalPlays =
+        use _ = torch.no_grad()   // use model.eval() instead?
+        (StrategyModel.getStrategy hand deal model)
+            .data<float32>()
+            |> DenseVector.ofSeq
+            |> toNarrow legalPlays
 
 module Traverse =
 
@@ -114,10 +123,10 @@ module Traverse =
                     // get utility of active player's strategy
                 let activePlayer = ZeroSum.getActivePlayer deal
                 let strategy =
-                    Strategy.get
+                    Strategy.getFromAdvantage
+                        models[activePlayer]
                         hand
                         deal.ClosedDeal
-                        models[activePlayer]
                         legalPlays
                 let getUtility =
                     if activePlayer = updatingPlayer then getFullUtility
