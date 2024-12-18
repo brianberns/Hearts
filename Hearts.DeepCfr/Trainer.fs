@@ -98,11 +98,11 @@ module Trainer =
             printfn $"\nTraining player {updatingPlayer}"
 
             // generate training data for this player
-        let stopwatch = Stopwatch.StartNew()
         let advSamples, stratSamples =
             generateSamples iter updatingPlayer stateMap
         if settings.Verbose then
-            printfn $"   {advSamples.Length} advantage samples, {stratSamples.Length} strategy samples generated in {stopwatch.Elapsed}"
+            printfn $"   {advSamples.Length} advantage samples generated"
+            printfn $"   {stratSamples.Length} strategy samples generated"
 
             // train this player's model
         let state =
