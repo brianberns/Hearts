@@ -275,8 +275,8 @@ module StrategyModel =
                             // forward pass
                         use loss =
                             use outputs =
-                                (inputs --> model.Network)
-                                    |> model.Softmax.forward
+                                use temp = inputs --> model.Network
+                                model.Softmax.forward(temp)
                             use outputs' = iters * outputs   // favor later iterations
                             use targets' = iters * targets
                             model.Loss.forward(outputs', targets')
