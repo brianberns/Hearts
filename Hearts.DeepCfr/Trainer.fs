@@ -40,6 +40,7 @@ module Trainer =
 
         /// Resets the model of the given state.
         let resetModel state =
+            state.Model.Dispose()
             {
                 state with
                     Model = createModel ()

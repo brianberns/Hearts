@@ -1,5 +1,7 @@
 ﻿namespace Hearts.DeepCfr
 
+open System
+
 open TorchSharp
 open TorchSharp.Modules
 open type torch
@@ -74,6 +76,14 @@ type AdvantageModel =
         Loss : Loss
     }
 
+    member this.Dispose() =
+        this.Network.Dispose()
+        this.Optimizer.Dispose()
+        this.Loss.Dispose()
+
+    interface IDisposable with
+        member this.Dispose() = this.Dispose()
+
 module AdvantageModel =
 
     /// Creates an advantage model.
@@ -137,16 +147,16 @@ module AdvantageModel =
                     for inputs, targets, iters in tensors do
 
                             // forward pass
-                        let loss =
-                            let outputs = inputs --> model.Network
-                            model.Loss.forward(
-                                iters * outputs,   // favor later iterations
-                                iters * targets)
+                        use loss =
+                            use outputs = inputs --> model.Network
+                            use outputs' = iters * outputs   // favor later iterations
+                            use targets' = iters * targets
+                            model.Loss.forward(outputs', targets')
 
                             // backward pass and optimize
                         model.Optimizer.zero_grad()
                         loss.backward()
-                        model.Optimizer.step() |> ignore
+                        use _ = model.Optimizer.step()
 
                         loss.item<float32>()
                 |]
@@ -195,6 +205,15 @@ type StrategyModel =
         /// Softmax layer.
         Softmax : Softmax
     }
+
+    member this.Dispose() =
+        this.Network.Dispose()
+        this.Optimizer.Dispose()
+        this.Loss.Dispose()
+        this.Softmax.Dispose()
+
+    interface IDisposable with
+        member this.Dispose() = this.Dispose()
 
 module StrategyModel =
 
@@ -254,18 +273,18 @@ module StrategyModel =
                     for inputs, targets, iters in tensors do
 
                             // forward pass
-                        let loss =
-                            let outputs =
+                        use loss =
+                            use outputs =
                                 (inputs --> model.Network)
                                     |> model.Softmax.forward
-                            model.Loss.forward(
-                                iters * outputs,   // favor later iterations
-                                iters * targets)
+                            use outputs' = iters * outputs   // favor later iterations
+                            use targets' = iters * targets
+                            model.Loss.forward(outputs', targets')
 
                             // backward pass and optimize
                         model.Optimizer.zero_grad()
                         loss.backward()
-                        model.Optimizer.step() |> ignore
+                        use _ = model.Optimizer.step()
 
                         loss.item<float32>()
                 |]

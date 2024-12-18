@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "FastCfr.Test": {
+    "Hearts.DeepCfr": {
       "commandName": "Project",
       "environmentVariables": {
         "DOTNET_gcServer": "1"
