@@ -56,8 +56,8 @@ module Trainer =
                 else 1
             factor * settings.NumTraversals
 
-        Choice.unzip [|
-            for iDeal = 0 to nDeals - 1 do
+        Array.init nDeals id
+            |> Array.Parallel.collect (fun iDeal ->
                 let deal =
                     let deck = Deck.shuffle settings.Random
                     let dealer = enum<Seat> (iDeal % Seat.numSeats)
@@ -71,9 +71,9 @@ module Trainer =
                         |> Map.values
                         |> Seq.map (fun state -> state.Model)
                         |> Seq.toArray
-                yield! Traverse.traverse
-                    iter deal updatingPlayer models
-        |]
+                Traverse.traverse
+                    iter deal updatingPlayer models)
+            |> Choice.unzip
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train the given advantage model.
