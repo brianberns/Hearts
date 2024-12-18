@@ -57,7 +57,7 @@ module Trainer =
             factor * settings.NumTraversals
 
         Choice.unzip [|
-            for iDeal = 0 to nDeals do
+            for iDeal = 0 to nDeals - 1 do
                 let deal =
                     let deck = Deck.shuffle settings.Random
                     let dealer = enum<Seat> (iDeal % Seat.numSeats)
