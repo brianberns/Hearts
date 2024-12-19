@@ -121,7 +121,7 @@ module Trainer =
         let resv, losses =
             trainAdvantageModel state advSamples
         if updatingPlayer = 0 then
-            state.Model.Network.save($".\Models\AdvantageModel{iter}.pt")
+            state.Model.Network.save($".\Models\AdvantageModel%03d{iter}.pt")
                 |> ignore
         let stateMap =
             let state = { state with Reservoir = resv }
@@ -134,7 +134,7 @@ module Trainer =
             iter)
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
-                $"advantage loss/iter%04d{iter}/player{updatingPlayer}",
+                $"advantage loss/iter%03d{iter}/player{updatingPlayer}",
                 losses[epoch], epoch)
 
         stratSamples, stateMap
