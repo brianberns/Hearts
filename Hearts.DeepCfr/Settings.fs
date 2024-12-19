@@ -51,6 +51,9 @@ type Settings =
         /// Tensorboard writer.
         Writer : Modules.SummaryWriter
 
+        /// Path to directory where models will be saved.
+        ModelDirPath : string
+
         /// Verbose output?
         Verbose : bool
     }
@@ -91,9 +94,12 @@ module Settings =
                 StrategyBatchSize = 10_000
                 NumStrategySamples = 1_000_000
                 Device = torch.CUDA
+                ModelDirPath = "./Models"
                 Writer = writer
                 Verbose = true
             }
+        System.IO.Directory.CreateDirectory(settings.ModelDirPath)
+            |> ignore
 
         writer.add_text(
             $"settings/ZeroSumCompensation",

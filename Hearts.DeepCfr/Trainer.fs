@@ -2,6 +2,7 @@
 
 open System
 open System.Diagnostics
+open System.IO
 
 open MathNet.Numerics.LinearAlgebra
 
@@ -121,8 +122,11 @@ module Trainer =
         let resv, losses =
             trainAdvantageModel state advSamples
         if updatingPlayer = 0 then
-            state.Model.Network.save($".\Models\AdvantageModel%03d{iter}.pt")
-                |> ignore
+            Path.Combine(
+                settings.ModelDirPath,
+                $"AdvantageModel%03d{iter}.pt")
+                    |> state.Model.Network.save
+                    |> ignore
         let stateMap =
             let state = { state with Reservoir = resv }
             Map.add updatingPlayer state stateMap
@@ -260,8 +264,11 @@ module Trainer =
 
             // train the final strategy model
         let model = trainStrategyModel stratResv
-        model.Network.save(".\Models\StrategyModel.pt")
-            |> ignore
+        Path.Combine(
+            settings.ModelDirPath,
+            "StrategyModel.pt")
+                |> model.Network.save
+                |> ignore
         model
 
     let private createTrainingData numDeals =
