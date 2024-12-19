@@ -120,6 +120,9 @@ module Trainer =
                 |> AdvantageState.resetModel
         let resv, losses =
             trainAdvantageModel state advSamples
+        if updatingPlayer = 0 then
+            state.Model.Network.save($".\Models\AdvantageModel{iter}.pt")
+                |> ignore
         let stateMap =
             let state = { state with Reservoir = resv }
             Map.add updatingPlayer state stateMap
@@ -256,7 +259,10 @@ module Trainer =
                     advStateMap, stratResv)
 
             // train the final strategy model
-        trainStrategyModel stratResv
+        let model = trainStrategyModel stratResv
+        model.Network.save(".\Models\StrategyModel.pt")
+            |> ignore
+        model
 
     let private createTrainingData numDeals =
 
