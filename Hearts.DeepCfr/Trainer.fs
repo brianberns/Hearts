@@ -230,8 +230,7 @@ module Trainer =
                 |> Seq.where (fun parm -> parm.requires_grad)
                 |> Seq.sumBy (fun parm -> parm.numel())
         settings.Writer.add_text(
-            $"settings/AdvModelParmCount",
-            string nParms, 0)
+            $"settings/AdvModelParmCount", string nParms, 0)
         if settings.Verbose then
             printfn $"Model input size: {Network.inputSize}"
             printfn $"Model output size: {Network.outputSize}"
