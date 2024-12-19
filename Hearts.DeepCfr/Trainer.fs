@@ -56,8 +56,15 @@ module Trainer =
                 else 1
             factor * settings.NumTraversals
 
+        let collect =
+#if DEBUG
+            Array.collect
+#else
+            Array.Parallel.collect
+#endif
+
         Array.init nDeals id
-            |> Array.Parallel.collect (fun iDeal ->
+            |> collect (fun iDeal ->
                 let deal =
                     let deck =
                         lock settings.Random (fun () ->
