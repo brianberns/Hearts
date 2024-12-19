@@ -110,6 +110,7 @@ module AdvantageModel =
 
     /// Gets the advantage for the given info set (hand + deal).
     let getAdvantage hand deal model =
+        use _ = torch.no_grad()
         let encoded = Encoding.encode hand deal
         tensor(encoded, device = settings.Device)
             --> model.Network
@@ -141,26 +142,30 @@ module AdvantageModel =
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 
-        [|
-            for _ = 1 to settings.NumAdvantageTrainEpochs do
-                Array.last [|
-                    for inputs, targets, iters in tensors do
+        model.Network.train()
+        let losses =
+            [|
+                for _ = 1 to settings.NumAdvantageTrainEpochs do
+                    Array.last [|
+                        for inputs, targets, iters in tensors do
 
-                            // forward pass
-                        use loss =
-                            use outputs = inputs --> model.Network
-                            use outputs' = iters * outputs   // favor later iterations
-                            use targets' = iters * targets
-                            model.Loss.forward(outputs', targets')
+                                // forward pass
+                            use loss =
+                                use outputs = inputs --> model.Network
+                                use outputs' = iters * outputs   // favor later iterations
+                                use targets' = iters * targets
+                                model.Loss.forward(outputs', targets')
 
-                            // backward pass and optimize
-                        model.Optimizer.zero_grad()
-                        loss.backward()
-                        use _ = model.Optimizer.step()
+                                // backward pass and optimize
+                            model.Optimizer.zero_grad()
+                            loss.backward()
+                            use _ = model.Optimizer.step()
 
-                        loss.item<float32>()
-                |]
-        |]
+                            loss.item<float32>()
+                    |]
+            |]
+        model.Network.eval()
+        losses
 
 /// An observed strategy event.
 type StrategySample =
@@ -267,31 +272,36 @@ module StrategyModel =
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 
-        [|
-            for _ = 1 to settings.NumStrategyTrainEpochs do
-                Array.last [|
-                    for inputs, targets, iters in tensors do
+        model.Network.train()
+        let losses =
+            [|
+                for _ = 1 to settings.NumStrategyTrainEpochs do
+                    Array.last [|
+                        for inputs, targets, iters in tensors do
 
-                            // forward pass
-                        use loss =
-                            use outputs =
-                                use temp = inputs --> model.Network
-                                model.Softmax.forward(temp)
-                            use outputs' = iters * outputs   // favor later iterations
-                            use targets' = iters * targets
-                            model.Loss.forward(outputs', targets')
+                                // forward pass
+                            use loss =
+                                use outputs =
+                                    use temp = inputs --> model.Network
+                                    model.Softmax.forward(temp)
+                                use outputs' = iters * outputs   // favor later iterations
+                                use targets' = iters * targets
+                                model.Loss.forward(outputs', targets')
 
-                            // backward pass and optimize
-                        model.Optimizer.zero_grad()
-                        loss.backward()
-                        use _ = model.Optimizer.step()
+                                // backward pass and optimize
+                            model.Optimizer.zero_grad()
+                            loss.backward()
+                            use _ = model.Optimizer.step()
 
-                        loss.item<float32>()
-                |]
-        |]
+                            loss.item<float32>()
+                    |]
+            |]
+        model.Network.eval()
+        losses
 
     /// Gets the strategy for the given info set (hand + deal).
     let getStrategy hand deal model =
+        use _ = torch.no_grad()
         let encoded = Encoding.encode hand deal
         tensor(encoded, device = settings.Device)
             --> model.Network
