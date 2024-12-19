@@ -58,11 +58,13 @@ type Settings =
 [<AutoOpen>]
 module Settings =
 
+    /// Tensorboard log writer.
     let private writer =
         let timespan = DateTime.Now - DateTime.Today
         torch.utils.tensorboard.SummaryWriter(
             $"runs/run%05d{int timespan.TotalSeconds}")
 
+    /// RNG seed.
     let private seed = 0
 
     /// Hyperparameters.
