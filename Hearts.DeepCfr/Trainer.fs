@@ -59,7 +59,9 @@ module Trainer =
         Array.init nDeals id
             |> Array.Parallel.collect (fun iDeal ->
                 let deal =
-                    let deck = Deck.shuffle settings.Random
+                    let deck =
+                        lock settings.Random (fun () ->
+                            Deck.shuffle settings.Random)
                     let dealer = enum<Seat> (iDeal % Seat.numSeats)
                     OpenDeal.fromDeck
                         dealer
