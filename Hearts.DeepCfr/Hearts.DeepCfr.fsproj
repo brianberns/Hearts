@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Readme.md" />
     <None Include="Hearts.db">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
