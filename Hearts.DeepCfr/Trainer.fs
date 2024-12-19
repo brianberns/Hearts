@@ -227,6 +227,14 @@ module Trainer =
                 for player = 0 to ZeroSum.numPlayers - 1 do
                     player, AdvantageState.create ()
             |]
+        if settings.Verbose then
+            let nParms =
+                let advState =
+                    Seq.head advStateMap.Values
+                advState.Model.Network.parameters(true)
+                    |> Seq.where (fun parm -> parm.requires_grad)
+                    |> Seq.sumBy (fun parm -> parm.numel())
+            printfn $"Advantage model parameter count: {nParms}"
 
             // run the iterations
         let _, stratResv =
