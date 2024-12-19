@@ -209,7 +209,10 @@ module Trainer =
     let train () =
 
         if settings.Verbose then
-            printfn $"{settings}"
+            printfn $"Server garbage collection: {System.Runtime.GCSettings.IsServerGC}"
+            printfn $"Input size: {Network.inputSize}"
+            printfn $"Output size: {Network.outputSize}"
+            printfn $"Settings: {settings}"
 
             // create advantage state
         let advStateMap =
