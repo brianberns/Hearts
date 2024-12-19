@@ -217,8 +217,6 @@ module Trainer =
 
         if settings.Verbose then
             printfn $"Server garbage collection: {System.Runtime.GCSettings.IsServerGC}"
-            printfn $"Input size: {Network.inputSize}"
-            printfn $"Output size: {Network.outputSize}"
             printfn $"Settings: {settings}"
 
             // create advantage state
@@ -227,13 +225,16 @@ module Trainer =
                 for player = 0 to ZeroSum.numPlayers - 1 do
                     player, AdvantageState.create ()
             |]
+        let nParms =
+            advStateMap[0].Model.Network.parameters(true)
+                |> Seq.where (fun parm -> parm.requires_grad)
+                |> Seq.sumBy (fun parm -> parm.numel())
+        settings.Writer.add_text(
+            $"settings/AdvModelParmCount",
+            string nParms, 0)
         if settings.Verbose then
-            let nParms =
-                let advState =
-                    Seq.head advStateMap.Values
-                advState.Model.Network.parameters(true)
-                    |> Seq.where (fun parm -> parm.requires_grad)
-                    |> Seq.sumBy (fun parm -> parm.numel())
+            printfn $"Model input size: {Network.inputSize}"
+            printfn $"Model output size: {Network.outputSize}"
             printfn $"Advantage model parameter count: {nParms}"
 
             // run the iterations
