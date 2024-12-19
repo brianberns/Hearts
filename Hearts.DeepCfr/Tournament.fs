@@ -10,6 +10,7 @@ open Hearts.Web
 
 module Tournament =
 
+    /// Runs a tournament between two players.
     let run rng champion challenger =
         let playerMap =
             Enum.getValues<Seat>
@@ -32,14 +33,13 @@ module Tournament =
         (ZeroSum.getPayoff score)[0]
             / float32 settings.NumEvaluationDeals
 
+    /// Random Hearts player.
     let randomPlayer =
-
         let play hand deal =
             let legalPlays =
                 ClosedDeal.legalPlays hand deal
                     |> Seq.toArray
             legalPlays[settings.Random.Next(legalPlays.Length)]
-
         { Play = play }
 
 module Database =
