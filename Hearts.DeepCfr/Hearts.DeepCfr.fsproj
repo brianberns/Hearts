@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
-    <PackageReference Include="TorchSharp-cuda-windows" Version="0.103.1" />
+    <PackageReference Include="TorchSharp-cuda-windows" Version="0.105.0" />
   </ItemGroup>
 
   <ItemGroup>
