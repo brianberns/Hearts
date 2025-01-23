@@ -21,6 +21,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Hearts.FastCfr.LoadDatabase
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Hearts.DeepCfr", "Hearts.DeepCfr\Hearts.DeepCfr.fsproj", "{B2ACDF25-317F-4C2B-969E-E4C82CBA7FC2}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Hearts.DeepCfr.RunModel", "Hearts.DeepCfr.RunModel\Hearts.DeepCfr.RunModel.fsproj", "{C8166155-14B7-4450-9A81-D7A62D337C6D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,14 @@ Global
 		{B2ACDF25-317F-4C2B-969E-E4C82CBA7FC2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B2ACDF25-317F-4C2B-969E-E4C82CBA7FC2}.Release|x64.ActiveCfg = Release|Any CPU
 		{B2ACDF25-317F-4C2B-969E-E4C82CBA7FC2}.Release|x64.Build.0 = Release|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Debug|x64.Build.0 = Debug|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Release|x64.ActiveCfg = Release|Any CPU
+		{C8166155-14B7-4450-9A81-D7A62D337C6D}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

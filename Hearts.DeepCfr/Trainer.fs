@@ -143,7 +143,7 @@ module Trainer =
 
         stratSamples, stateMap
 
-    let private createChallenger getStrategy =
+    let createChallenger getStrategy =
 
         let play hand deal =
             let legalPlays =
