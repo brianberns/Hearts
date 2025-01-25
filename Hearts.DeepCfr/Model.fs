@@ -27,7 +27,7 @@ module Network =
     let inputSize = Encoding.encodedLength
 
     /// Length of neural network output.
-    let outputSize = Card.allCards.Length
+    let outputSize = Card.numCards
 
 /// An observed advantage event.
 type AdvantageSample =

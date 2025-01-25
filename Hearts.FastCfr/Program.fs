@@ -26,7 +26,7 @@ module Program =
         Trainer.train (rng.Next()) gameChunks
 
     let isSeat (seat : Seat) (infoSetKey : byte[]) =
-        let leaderIdx = Card.allCards.Length
+        let leaderIdx = Card.numCards
         let leader = infoSetKey[leaderIdx] |> int |> enum<Seat> 
         let nPlayed =
             infoSetKey

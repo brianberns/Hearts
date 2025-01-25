@@ -5,15 +5,24 @@ open Hearts
 
 module Card =
 
+    /// Rank of lowest card in the deck.
     let private minRank =
         Seq.min Enum.getValues<Rank>
 
+    /// Converts the given card to an integer, 0..N-1,
+    /// where N is number of cards in the deck.
     let toIndex (card : Card) =
-        (int card.Suit * Rank.numRanks)
-            + int card.Rank - int minRank
+        let index =
+            (int card.Suit * Rank.numRanks)
+                + int card.Rank - int minRank
+        assert(index >= 0)
+        assert(index < Card.numCards)
+        index
 
 module Encoding =
 
+    /// Encodes the given player's seat as a one-hot
+    /// vector in the total number of seats.
     let private encodePlayer player =
         [|
             for seat in Enum.getValues<Seat> do
@@ -21,6 +30,8 @@ module Encoding =
                 else 0.0f
         |]
 
+    /// Encodes the given (card, value) pairs as a
+    /// vector in the total number of cards.
     let encodeCardValues pairs =
         let valueMap =
             pairs
@@ -28,7 +39,7 @@ module Encoding =
                     Card.toIndex card, value)
                 |> Map
         [|
-            for index = 0 to Card.allCards.Length - 1 do
+            for index = 0 to Card.numCards - 1 do
                 valueMap
                     |> Map.tryFind index
                     |> Option.defaultValue 0.0f
@@ -71,11 +82,10 @@ module Encoding =
             |> Seq.toArray
 
     let encodedLength =
-        let nCards = Card.allCards.Length
         Seat.numSeats                                 // current player
-            + nCards                                  // current player's hand
-            + nCards                                  // other unplayed cards
-            + ((Seat.numSeats - 1) * nCards)          // current trick
+            + Card.numCards                           // current player's hand
+            + Card.numCards                           // other unplayed cards
+            + ((Seat.numSeats - 1) * Card.numCards)   // current trick
             + (Suit.numSuits * (Seat.numSeats - 1))   // voids
             + Seat.numSeats                           // score
 

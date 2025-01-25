@@ -17,7 +17,7 @@ module GameState =
     let getInfoSetKey (hand : Hand) deal =
 #if FABLE_COMPILER
         let stream = ResizeArray<byte>(
-                    Card.allCards.Length                          // unplayed cards
+                    Card.numCards                                 // unplayed cards
                         + 1                                       // trick leader
                         + (2 * (Seat.numSeats - 1))               // trick cards
                         + (Suit.numSuits * (Seat.numSeats - 1))   // voids
@@ -25,7 +25,7 @@ module GameState =
 #else
         use stream =
             new MemoryStream(
-                Card.allCards.Length                          // unplayed cards
+                Card.numCards                                 // unplayed cards
                     + 1                                       // trick leader
                     + (2 * (Seat.numSeats - 1))               // trick cards
                     + (Suit.numSuits * (Seat.numSeats - 1))   // voids

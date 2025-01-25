@@ -59,7 +59,7 @@ module Strategy =
     /// Converts a wide vector (indexed by entire deck) to
     /// a narrow vector (indexed by legal plays).
     let toNarrow (legalPlays : _[]) (wide : Vector<_>) =
-        assert(wide.Count = Card.allCards.Length)
+        assert(wide.Count = Card.numCards)
         legalPlays
             |> Seq.map (
                 Card.toIndex >> Vector.get wide)
