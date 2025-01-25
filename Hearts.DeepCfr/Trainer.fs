@@ -117,8 +117,10 @@ module Trainer =
 
             // train this player's model
         let state =
-            stateMap[updatingPlayer]
-                |> AdvantageState.resetModel
+            let state = stateMap[updatingPlayer]
+            if settings.ResetAdvantageModel then
+                AdvantageState.resetModel state
+            else state
         let resv, losses =
             trainAdvantageModel state advSamples
         if updatingPlayer = 0 then

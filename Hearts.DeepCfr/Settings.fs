@@ -30,6 +30,9 @@ type Settings =
         /// Number of deals to traverse during each iteration.
         NumTraversals : int
 
+        /// Reset model before training?
+        ResetAdvantageModel : bool
+
         /// Number of iterations to perform.
         NumIterations : int
 
@@ -88,6 +91,7 @@ module Settings =
                 AdvantageBatchSize = 10_000
                 NumAdvantageSamples = 1_000_000
                 NumTraversals = 1_000
+                ResetAdvantageModel = false
                 NumIterations = 25
                 NumEvaluationDeals = 10_000
                 NumStrategyTrainEpochs = 5_000
