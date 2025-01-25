@@ -31,7 +31,7 @@ module Encoding =
         |]
 
     /// Encodes the given (card, value) pairs as a
-    /// vector in the total number of cards.
+    /// vector in the deck size.
     let encodeCardValues pairs =
         let valueMap =
             pairs
@@ -45,11 +45,16 @@ module Encoding =
                     |> Option.defaultValue 0.0f
         |]
 
+    /// Encodes the given cards as a multi-hot vector
+    /// in the deck size.
     let private encodeCards cards =
         cards
             |> Seq.map (fun card -> card, 1.0f)
             |> encodeCardValues
 
+    /// Encodes each card in the given current trick as
+    /// a one-hot vector in the deck size and then concatenates
+    /// those vectors.
     let private encodeTrick trick =
         let cards =
             trick.Cards
@@ -66,6 +71,9 @@ module Encoding =
                     |> encodeCards
         |]
 
+    /// Encodes the given voids for the given player as
+    /// a multi-hot vector in the number of suits times
+    /// the number of seats.
     let private encodeVoids player voids =
         [|
             for suit in Enum.getValues<Suit> do
@@ -76,11 +84,15 @@ module Encoding =
                         else 0.0f
         |]
 
+    /// Encodes the given score as a vector in the number
+    /// of seats.
     let private encodeScore score =
+        assert(score.ScoreMap.Count = Seat.numSeats)
         score.ScoreMap.Values
             |> Seq.map float32
             |> Seq.toArray
 
+    /// Total encoded length of an info set (hand + deal).
     let encodedLength =
         Seat.numSeats                                 // current player
             + Card.numCards                           // current player's hand
@@ -89,6 +101,7 @@ module Encoding =
             + (Suit.numSuits * (Seat.numSeats - 1))   // voids
             + Seat.numSeats                           // score
 
+    /// Encodes the given info set as a vector.
     let encode (hand : Hand) deal =
         let otherUnplayed = deal.UnplayedCards - hand
         let trick = ClosedDeal.currentTrick deal
