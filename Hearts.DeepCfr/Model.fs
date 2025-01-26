@@ -64,7 +64,7 @@ module Tensor =
         tensor(array2D rows, device = settings.Device)
 
 /// Model used for learning advantages.
-type AdvantageModel() =
+type AdvantageModel() as this =
     inherit Network("AdvantageModel")
 
     let sequential =
@@ -78,6 +78,8 @@ type AdvantageModel() =
                 settings.HiddenSize,
                 Network.outputSize,
                 device = settings.Device))
+
+    do this.RegisterComponents()
 
     override _.forward(input) = 
         sequential.forward(input)
