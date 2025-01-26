@@ -23,16 +23,10 @@ module Trainer =
 
     module private AdvantageState =
 
-        /// Creates an advantage model.
-        let private createModel () =
-            AdvantageModel.create
-                settings.HiddenSize
-                settings.LearningRate
-
         /// Creates an advantage state.
         let create () =
             {
-                Model = createModel ()
+                Model = new AdvantageModel()
                 Reservoir =
                     Reservoir.create
                         settings.Random
@@ -44,7 +38,7 @@ module Trainer =
             state.Model.Dispose()
             {
                 state with
-                    Model = createModel ()
+                    Model = new AdvantageModel()
             }
 
     /// Generates training data for the given player.
@@ -127,7 +121,7 @@ module Trainer =
             Path.Combine(
                 settings.ModelDirPath,
                 $"AdvantageModel%03d{iter}.pt")
-                    |> state.Model.Network.save
+                    |> state.Model.save
                     |> ignore
         let stateMap =
             let state = { state with Reservoir = resv }
@@ -235,7 +229,7 @@ module Trainer =
                     player, AdvantageState.create ()
             |]
         let nParms =
-            advStateMap[0].Model.Network.parameters(true)
+            advStateMap[0].Model.parameters(true)
                 |> Seq.where (fun parm -> parm.requires_grad)
                 |> Seq.sumBy (fun parm -> parm.numel())
         settings.Writer.add_text(
@@ -343,10 +337,7 @@ module Trainer =
                 |> Seq.toArray
         printfn $"Number of samples: {samples.Length}"
 
-        let model =
-            AdvantageModel.create
-                settings.HiddenSize
-                settings.LearningRate
+        let model = new AdvantageModel()
         let losses = AdvantageModel.train samples model
         printfn $"Final loss {Array.last losses}"
 

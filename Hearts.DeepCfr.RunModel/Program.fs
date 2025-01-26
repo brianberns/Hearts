@@ -4,11 +4,8 @@ open System
 
 module Program =
 
-    let model =
-        AdvantageModel.create
-            settings.HiddenSize
-            settings.LearningRate
-    model.Network.load(@"C:\Users\brian\source\repos\Hearts\Hearts.DeepCfr\bin\Release\net8.0\Models\AdvantageModel022.pt")
+    let model = new AdvantageModel()
+    model.load(@"C:\Users\brian\source\repos\Hearts\Hearts.DeepCfr\bin\Release\net8.0\Models\AdvantageModel022.pt")
         |> ignore
 
     let challenger =

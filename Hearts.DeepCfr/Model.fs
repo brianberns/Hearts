@@ -64,59 +64,35 @@ module Tensor =
         tensor(array2D rows, device = settings.Device)
 
 /// Model used for learning advantages.
-type AdvantageModel =
-    {
-        /// Neural network.
-        Network : Network
+type AdvantageModel() =
+    inherit Network("AdvantageModel")
 
-        /// Training optimizer.
-        Optimizer : Optimizer
+    let sequential =
+        Sequential(
+            Linear(
+                Network.inputSize,
+                settings.HiddenSize,
+                device = settings.Device),
+            ReLU(),
+            Linear(
+                settings.HiddenSize,
+                Network.outputSize,
+                device = settings.Device))
 
-        /// Training loss function.
-        Loss : Loss
-    }
-
-    member this.Dispose() =
-        this.Network.Dispose()
-        this.Optimizer.Dispose()
-        this.Loss.Dispose()
-
-    interface IDisposable with
-        member this.Dispose() = this.Dispose()
+    override _.forward(input) = 
+        sequential.forward(input)
 
 module AdvantageModel =
-
-    /// Creates an advantage model.
-    let create hiddenSize learningRate =
-        let network =
-            Sequential(
-                Linear(
-                    Network.inputSize,
-                    hiddenSize,
-                    device = settings.Device),
-                ReLU(),
-                Linear(
-                    hiddenSize,
-                    Network.outputSize,
-                    device = settings.Device))
-        {
-            Network = network
-            Optimizer =
-                Adam(
-                    network.parameters(),
-                    lr = learningRate)
-            Loss = MSELoss()
-        }
 
     /// Gets the advantage for the given info set (hand + deal).
     let getAdvantage hand deal model =
         use _ = torch.no_grad()
         let encoded = Encoding.encode hand deal
         tensor(encoded, device = settings.Device)
-            --> model.Network
+            --> model
 
     /// Trains the given model using the given samples.
-    let train samples model =
+    let train samples (model : AdvantageModel) =
 
             // prepare training data
         let tensors =
@@ -142,7 +118,12 @@ module AdvantageModel =
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 
-        model.Network.train()
+        use optimizer =
+            Adam(
+                model.parameters(),
+                settings.LearningRate)
+        use loss = MSELoss()
+        model.train()
         let losses =
             [|
                 for _ = 1 to settings.NumAdvantageTrainEpochs do
@@ -151,20 +132,20 @@ module AdvantageModel =
 
                                 // forward pass
                             use loss =
-                                use outputs = inputs --> model.Network
+                                use outputs = inputs --> model
                                 use outputs' = iters * outputs   // favor later iterations
                                 use targets' = iters * targets
-                                model.Loss.forward(outputs', targets')
+                                loss.forward(outputs', targets')
 
                                 // backward pass and optimize
-                            model.Optimizer.zero_grad()
+                            optimizer.zero_grad()
                             loss.backward()
-                            use _ = model.Optimizer.step()
+                            use _ = optimizer.step()
 
                             loss.item<float32>()
                     |]
             |]
-        model.Network.eval()
+        model.eval()
         losses
 
 /// An observed strategy event.
