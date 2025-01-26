@@ -82,6 +82,10 @@ type AdvantageModel() =
     override _.forward(input) = 
         sequential.forward(input)
 
+    interface IDisposable with
+        member _.Dispose() =
+            sequential.Dispose()
+
 module AdvantageModel =
 
     /// Gets the advantage for the given info set (hand + deal).
