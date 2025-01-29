@@ -72,9 +72,17 @@ type AdvantageModel() as this =
     do this.RegisterComponents()
 
     override _.forward(encoding) =
-        encoding.Player
-            --> playerBranch
-            --> combined
+
+        use _ = torch.NewDisposeScope()
+
+        let playerOutput =
+            (encoding.Player --> playerBranch)
+                .sum(dim = 1)   // sum along sequence dimension
+
+        let result =
+            playerOutput --> combined
+
+        result.MoveToOuterDisposeScope()
 
 module AdvantageModel =
 
@@ -194,9 +202,17 @@ type StrategyModel() as this =
     member _.Softmax = softmax
 
     override _.forward(encoding) = 
-        encoding.Player
-            --> playerBranch
-            --> combined
+
+        use _ = torch.NewDisposeScope()
+
+        let playerOutput =
+            (encoding.Player --> playerBranch)
+                .sum(dim = 1)   // sum along sequence dimension
+
+        let result =
+            playerOutput --> combined
+
+        result.MoveToOuterDisposeScope()
 
 module StrategyModel =
 

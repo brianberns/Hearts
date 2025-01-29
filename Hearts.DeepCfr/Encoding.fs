@@ -80,8 +80,12 @@ module Encoding =
 
     module private Tensor =
 
+        /// Creates a [1, N] tensor from a row of N values.
         let ofRow (row : seq<int>) =
-            tensor(Seq.toArray row, device = settings.Device)
+            tensor(
+                Seq.toArray row,
+                device = settings.Device)
+                .unsqueeze(dim = 0)   // batch size = 1
 
     let private noIdx = -1
 
