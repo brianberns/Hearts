@@ -51,8 +51,8 @@ module Encoding =
 
     let create player hand otherUnplayed trick voids score =
         assert(length player = 1)
-        assert(length hand = Card.numCards)
-        assert(length otherUnplayed = Card.numCards)
+        assert(length hand = ClosedDeal.numCardsPerHand)
+        assert(length otherUnplayed = Card.numCards - ClosedDeal.numCardsPerHand)
         assert(length trick = Seat.numSeats - 1)
         assert(length voids = Seat.numSeats * Suit.numSuits)
         assert(length score = Seat.numSeats)

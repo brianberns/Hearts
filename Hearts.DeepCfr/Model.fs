@@ -61,10 +61,20 @@ type AdvantageModel() as this =
             2L * int64 Seat.numSeats,
             device = settings.Device)
 
+    let combined =
+        Sequential(
+            ReLU(),
+            Linear(
+                2L * int64 Seat.numSeats,
+                Card.numCards,
+                device = settings.Device))
+
     do this.RegisterComponents()
 
-    override _.forward(encoding) = 
-        playerBranch.forward(encoding.Player)
+    override _.forward(encoding) =
+        encoding.Player
+            --> playerBranch
+            --> combined
 
 module AdvantageModel =
 
@@ -169,6 +179,14 @@ type StrategyModel() as this =
             2L * int64 Seat.numSeats,
             device = settings.Device)
 
+    let combined =
+        Sequential(
+            ReLU(),
+            Linear(
+                2L * int64 Seat.numSeats,
+                Card.numCards,
+                device = settings.Device))
+
     let softmax = Softmax(dim = -1)
 
     do this.RegisterComponents()
@@ -176,7 +194,9 @@ type StrategyModel() as this =
     member _.Softmax = softmax
 
     override _.forward(encoding) = 
-        playerBranch.forward(encoding.Player)
+        encoding.Player
+            --> playerBranch
+            --> combined
 
 module StrategyModel =
 
