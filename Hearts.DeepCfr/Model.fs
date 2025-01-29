@@ -105,7 +105,7 @@ module AdvantageModel =
                     let encodings, targets, iters =
                         batch
                             |> Array.map (fun sample ->
-                                let input =
+                                let encoding =
                                     Encoding.encode sample.Hand sample.Deal
                                 let target = sample.Regrets
                                 let iter =
@@ -113,7 +113,7 @@ module AdvantageModel =
                                         |> float32
                                         |> sqrt
                                         |> Seq.singleton
-                                input, target, iter)
+                                encoding, target, iter)
                             |> Array.unzip3
                     Encoding.concat encodings,
                     Tensor.ofSeq targets,
@@ -229,7 +229,7 @@ module StrategyModel =
                     let encodings, targets, iters =
                         batch
                             |> Array.map (fun sample ->
-                                let input =
+                                let encoding =
                                     Encoding.encode sample.Hand sample.Deal
                                 let target = sample.Strategy
                                 let iter =
@@ -237,7 +237,7 @@ module StrategyModel =
                                         |> float32
                                         |> sqrt
                                         |> Seq.singleton
-                                input, target, iter)
+                                encoding, target, iter)
                             |> Array.unzip3
                     Encoding.concat encodings,
                     Tensor.ofSeq targets,
