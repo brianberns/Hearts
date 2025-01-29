@@ -1,5 +1,9 @@
 ﻿namespace Hearts.DeepCfr
 
+open TorchSharp
+open type torch
+open FSharp.Core.Operators   // reclaim "float32" and other F# operators
+
 open PlayingCards
 open Hearts
 
@@ -19,101 +23,133 @@ module Card =
         assert(index < Card.numCards)
         index
 
+type Encoding =
+    {
+        /// Current player. [B, 1] of int.
+        Player : Tensor
+
+        /// Current player's hand. [B, Card.numCards] of int.
+        Hand : Tensor
+
+        /// Other unplayed cards. [B, Card.numCards] of int.
+        OtherUnplayed : Tensor
+
+        /// Current trick. [B, Seat.numSeats - 1] of int.
+        Trick : Tensor
+
+        /// Known void suits for each other player. [B, Seat.numSeats * Suit.numSuits] of int.
+        Voids : Tensor
+
+        /// Each player's score. [B, Seat.numSeats] of int.
+        Score : Tensor
+    }
+
 module Encoding =
 
-    /// Encodes the given player's seat as a one-hot
-    /// vector in the total number of seats.
+    let private length (tensor : Tensor) =
+        Array.last tensor.shape |> int
+
+    let create player hand otherUnplayed trick voids score =
+        assert(length player = 1)
+        assert(length hand = Card.numCards)
+        assert(length otherUnplayed = Card.numCards)
+        assert(length trick = Seat.numSeats - 1)
+        assert(length voids = Seat.numSeats * Suit.numSuits)
+        assert(length score = Seat.numSeats)
+        {
+            Player = player
+            Hand = hand
+            OtherUnplayed = otherUnplayed
+            Trick = trick
+            Voids = voids
+            Score = score
+        }
+
+    let stack encodings =
+        let stackMap mapping =
+            encodings
+                |> Seq.map mapping
+                |> torch.stack
+        create
+            (stackMap _.Player)
+            (stackMap _.Hand)
+            (stackMap _.OtherUnplayed)
+            (stackMap _.Trick)
+            (stackMap _.Voids)
+            (stackMap _.Score)
+
+    module private Tensor =
+
+        let ofRow (row : seq<int>) =
+            tensor(Seq.toArray row, device = settings.Device)
+
+    let private noIdx = -1
+
+    /// Encodes the given player's seat.
     let private encodePlayer player =
-        [|
-            for seat in Enum.getValues<Seat> do
-                if seat = player then 1.0f
-                else 0.0f
-        |]
+        int player
+            |> Seq.singleton
+            |> Tensor.ofRow
 
-    /// Encodes the given (card, value) pairs as a
-    /// vector in the deck size.
-    let encodeCardValues pairs =
-        let valueMap =
-            pairs
-                |> Seq.map (fun (card, value) ->
-                    Card.toIndex card, value)
-                |> Map
-        [|
-            for index = 0 to Card.numCards - 1 do
-                valueMap
-                    |> Map.tryFind index
-                    |> Option.defaultValue 0.0f
-        |]
+    /// Encodes the given sequence of cards.
+    let private encodeCards maxNum cards =
+        let present =
+            [|
+                for card in cards do
+                    yield Card.toIndex card
+            |]
+        assert(present.Length <= maxNum)
+        let absent =
+            Seq.replicate (maxNum - present.Length) noIdx
+        Seq.append present absent
+            |> Tensor.ofRow
 
-    /// Encodes the given cards as a multi-hot vector
-    /// in the deck size.
-    let private encodeCards cards =
-        cards
-            |> Seq.map (fun card -> card, 1.0f)
-            |> encodeCardValues
+    let private encodeHand (hand : Hand) =
+        encodeCards ClosedDeal.numCardsPerHand hand
 
-    /// Encodes each card in the given current trick as
-    /// a one-hot vector in the deck size and then concatenates
-    /// those vectors.
+    let private encodeOtherUnplayed hand unplayedCards =
+        encodeCards
+            (Card.numCards - ClosedDeal.numCardsPerHand)
+            (Set.difference unplayedCards hand)
+
     let private encodeTrick trick =
-        let cards =
-            trick.Cards
-                |> List.rev
-                |> List.toArray
-        assert(cards.Length < Seat.numSeats)
-        [|
-            for iCard = 0 to Seat.numSeats - 2 do
-                yield!
-                    if iCard < cards.Length then
-                        Some cards[iCard]
-                    else None
-                    |> Option.toArray
-                    |> encodeCards
-        |]
+        encodeCards
+            (Seat.numSeats - 1)
+            (Seq.rev trick.Cards)
 
-    /// Encodes the given voids for the given player as
-    /// a multi-hot vector in the number of suits times
-    /// the number of seats.
-    let private encodeVoids player voids =
-        [|
-            for suit in Enum.getValues<Suit> do
+    /// Encodes the given voids.
+    let private encodeVoids voids =
+        let maxNum = Seat.numSeats * Suit.numSuits
+        let present =
+            [|
                 for seat in Enum.getValues<Seat> do
-                    if seat <> player then
+                    for suit in Enum.getValues<Suit> do
                         if Set.contains (seat, suit) voids then
-                            1.0f
-                        else 0.0f
-        |]
+                            let index =
+                                (Suit.numSuits * int seat) + int suit
+                            assert(index < maxNum)
+                            index
+            |]
+        assert(present.Length < maxNum)
+        let absent =
+            Seq.replicate (maxNum - present.Length) noIdx
+        Seq.append present absent
+            |> Tensor.ofRow
 
-    /// Encodes the given score as a vector in the number
-    /// of seats.
+    /// Encodes the given score.
     let private encodeScore score =
         assert(score.ScoreMap.Count = Seat.numSeats)
         score.ScoreMap.Values
-            |> Seq.map float32
-            |> Seq.toArray
-
-    /// Total encoded length of an info set (hand + deal).
-    let encodedLength =
-        Seat.numSeats                                 // current player
-            + Card.numCards                           // current player's hand
-            + Card.numCards                           // other unplayed cards
-            + ((Seat.numSeats - 1) * Card.numCards)   // current trick
-            + (Suit.numSuits * (Seat.numSeats - 1))   // voids
-            + Seat.numSeats                           // score
+            |> Tensor.ofRow
 
     /// Encodes the given info set as a vector.
     let encode (hand : Hand) deal =
-        let otherUnplayed = deal.UnplayedCards - hand
         let trick = ClosedDeal.currentTrick deal
         let player = Trick.currentPlayer trick
-        let encoded =
-            [|
-                yield! encodePlayer player             // current player
-                yield! encodeCards hand                // current player's hand
-                yield! encodeCards otherUnplayed       // other unplayed cards
-                yield! encodeTrick trick               // current trick
-                yield! encodeVoids player deal.Voids   // voids
-                yield! encodeScore deal.Score          // score
-            |]
-        assert(encoded.Length = encodedLength)
-        encoded
+        create
+            (encodePlayer player)
+            (encodeHand hand)
+            (encodeOtherUnplayed hand deal.UnplayedCards)
+            (encodeTrick trick)
+            (encodeVoids deal.Voids)
+            (encodeScore deal.Score)

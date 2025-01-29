@@ -12,8 +12,8 @@
     </None>
     <Compile Include="Prelude.fs" />
     <Compile Include="Reservoir.fs" />
-    <Compile Include="Encoding.fs" />
     <Compile Include="Settings.fs" />
+    <Compile Include="Encoding.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Tournament.fs" />

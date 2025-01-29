@@ -65,12 +65,27 @@ module Strategy =
                 Card.toIndex >> Vector.get wide)
             |> DenseVector.ofSeq
 
+    /// Encodes the given (card, value) pairs as a
+    /// vector in the deck size.
+    let private encodeCardValues pairs =
+        let valueMap =
+            pairs
+                |> Seq.map (fun (card, value) ->
+                    Card.toIndex card, value)
+                |> Map
+        [|
+            for index = 0 to Card.numCards - 1 do
+                valueMap
+                    |> Map.tryFind index
+                    |> Option.defaultValue 0.0f
+        |]
+
     /// Converts a narrow vector (indexed by legal plays) to
     /// a wide vector (indexed by entire deck).
     let toWide (legalPlays : _[]) (narrow : Vector<_>) =
         assert(narrow.Count = legalPlays.Length)
         Seq.zip legalPlays narrow
-            |> Encoding.encodeCardValues
+            |> encodeCardValues
             |> DenseVector.ofArray
 
     /// Computes strategy for the given info set (hand + deal)

@@ -187,10 +187,7 @@ module Trainer =
         if settings.Verbose then
             printfn $"\n*** Training strategy model ***"
 
-        let model =
-            StrategyModel.create
-                settings.HiddenSize
-                settings.LearningRate
+        let model = new StrategyModel()
         let losses =
             StrategyModel.train resv.Items model
         if settings.Verbose then
@@ -235,8 +232,6 @@ module Trainer =
         settings.Writer.add_text(
             $"settings/AdvModelParmCount", string nParms, 0)
         if settings.Verbose then
-            printfn $"Model input size: {Network.inputSize}"
-            printfn $"Model output size: {Network.outputSize}"
             printfn $"Advantage model parameter count: {nParms}"
 
             // run the iterations
@@ -263,7 +258,7 @@ module Trainer =
         Path.Combine(
             settings.ModelDirPath,
             "StrategyModel.pt")
-                |> model.Network.save
+                |> model.save
                 |> ignore
         model
 

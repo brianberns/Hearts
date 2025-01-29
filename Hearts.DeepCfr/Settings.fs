@@ -85,7 +85,7 @@ module Settings =
             {
                 Random = Random(seed)
                 ZeroSumCompensation = 9
-                HiddenSize = Encoding.encodedLength * 8
+                HiddenSize = 256
                 LearningRate = 2e-3
                 NumAdvantageTrainEpochs = 3_000
                 AdvantageBatchSize = 10_000

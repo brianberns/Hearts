@@ -14,20 +14,8 @@ open MathNet.Numerics.LinearAlgebra
 open PlayingCards
 open Hearts
 
-/// Neural network that maps an input tensor to an output
-/// tensor.
-type Network = Module<Tensor, Tensor>
-
 /// Loss function.
 type Loss = Loss<Tensor, Tensor, Tensor>
-
-module Network =
-
-    /// Length of neural network input.
-    let inputSize = Encoding.encodedLength
-
-    /// Length of neural network output.
-    let outputSize = Card.numCards
 
 /// An observed advantage event.
 type AdvantageSample =
@@ -49,7 +37,7 @@ module AdvantageSample =
 
     /// Creates an advantage sample.
     let create hand deal (regrets : Vector<_>) iteration =
-        assert(regrets.Count = Network.outputSize)
+        assert(regrets.Count = Card.numCards)
         {
             Hand = hand
             Deal = deal
@@ -65,37 +53,26 @@ module Tensor =
 
 /// Model used for learning advantages.
 type AdvantageModel() as this =
-    inherit Network("AdvantageModel")
+    inherit Module<Encoding, Tensor>("AdvantageModel")
 
-    let sequential =
-        Sequential(
-            Linear(
-                Network.inputSize,
-                settings.HiddenSize,
-                device = settings.Device),
-            ReLU(),
-            Linear(
-                settings.HiddenSize,
-                Network.outputSize,
-                device = settings.Device))
+    let playerBranch =
+        Embedding(
+            Seat.numSeats,
+            2L * int64 Seat.numSeats,
+            device = settings.Device)
 
     do this.RegisterComponents()
 
-    override _.forward(input) = 
-        sequential.forward(input)
-
-    interface IDisposable with
-        member _.Dispose() =
-            sequential.Dispose()
+    override _.forward(encoding) = 
+        playerBranch.forward(encoding.Player)
 
 module AdvantageModel =
 
     /// Gets the advantage for the given info set (hand + deal).
-    let getAdvantage hand deal model =
+    let getAdvantage hand deal (model : AdvantageModel) =
         use _ = torch.no_grad()
-        let encoded = Encoding.encode hand deal
-        tensor(encoded, device = settings.Device)
-            --> model
+        Encoding.encode hand deal
+            |> model.forward
 
     /// Trains the given model using the given samples.
     let train samples (model : AdvantageModel) =
@@ -107,7 +84,7 @@ module AdvantageModel =
                 |> Array.randomShuffle
                 |> Array.chunkBySize settings.AdvantageBatchSize
                 |> Array.map (fun batch ->
-                    let inputs, targets, iters =
+                    let encodings, targets, iters =
                         batch
                             |> Array.map (fun sample ->
                                 let input =
@@ -120,7 +97,7 @@ module AdvantageModel =
                                         |> Seq.singleton
                                 input, target, iter)
                             |> Array.unzip3
-                    Tensor.ofSeq inputs,
+                    Encoding.stack encodings,
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 
@@ -134,11 +111,11 @@ module AdvantageModel =
             [|
                 for _ = 1 to settings.NumAdvantageTrainEpochs do
                     Array.last [|
-                        for inputs, targets, iters in tensors do
+                        for encoding, targets, iters in tensors do
 
                                 // forward pass
                             use loss =
-                                use outputs = inputs --> model
+                                use outputs = model.forward(encoding)
                                 use outputs' = iters * outputs   // favor later iterations
                                 use targets' = iters * targets
                                 loss.forward(outputs', targets')
@@ -174,7 +151,7 @@ module StrategySample =
 
     /// Creates a strategy sample.
     let create hand deal (strategy : Vector<_>) iteration =
-        assert(strategy.Count = Network.outputSize)
+        assert(strategy.Count = Card.numCards)
         {
             Hand = hand
             Deal = deal
@@ -183,57 +160,28 @@ module StrategySample =
         }
 
 /// Model used for learning strategy.
-type StrategyModel =
-    {
-        /// Neural network.
-        Network : Network
+type StrategyModel() as this =
+    inherit Module<Encoding, Tensor>("StrategyModel")
 
-        /// Training optimizer.
-        Optimizer : Optimizer
+    let playerBranch =
+        Embedding(
+            Seat.numSeats,
+            2L * int64 Seat.numSeats,
+            device = settings.Device)
 
-        /// Training loss function.
-        Loss : Loss
+    let softmax = Softmax(dim = -1)
 
-        /// Softmax layer.
-        Softmax : Softmax
-    }
+    do this.RegisterComponents()
 
-    member this.Dispose() =
-        this.Network.Dispose()
-        this.Optimizer.Dispose()
-        this.Loss.Dispose()
-        this.Softmax.Dispose()
+    member _.Softmax = softmax
 
-    interface IDisposable with
-        member this.Dispose() = this.Dispose()
+    override _.forward(encoding) = 
+        playerBranch.forward(encoding.Player)
 
 module StrategyModel =
 
-    /// Creates a strategy model.
-    let create hiddenSize learningRate =
-        let network =
-            Sequential(
-                Linear(
-                    Network.inputSize,
-                    hiddenSize,
-                    device = settings.Device),
-                ReLU(),
-                Linear(
-                    hiddenSize,
-                    Network.outputSize,
-                    device = settings.Device))
-        {
-            Network = network
-            Optimizer =
-                Adam(
-                    network.parameters(),
-                    lr = learningRate)
-            Loss = MSELoss()
-            Softmax = Softmax(dim = -1)
-        }
-
     /// Trains the given model using the given samples.
-    let train samples model =
+    let train samples (model : StrategyModel) =
 
             // prepare training data
         let tensors =
@@ -242,7 +190,7 @@ module StrategyModel =
                 |> Array.randomShuffle
                 |> Array.chunkBySize settings.StrategyBatchSize
                 |> Array.map (fun batch ->
-                    let inputs, targets, iters =
+                    let encodings, targets, iters =
                         batch
                             |> Array.map (fun sample ->
                                 let input =
@@ -255,41 +203,45 @@ module StrategyModel =
                                         |> Seq.singleton
                                 input, target, iter)
                             |> Array.unzip3
-                    Tensor.ofSeq inputs,
+                    Encoding.stack encodings,
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 
-        model.Network.train()
+        use optimizer =
+            Adam(
+                model.parameters(),
+                settings.LearningRate)
+        use loss = MSELoss()
+        model.train()
         let losses =
             [|
                 for _ = 1 to settings.NumStrategyTrainEpochs do
                     Array.last [|
-                        for inputs, targets, iters in tensors do
+                        for encoding, targets, iters in tensors do
 
                                 // forward pass
                             use loss =
                                 use outputs =
-                                    use temp = inputs --> model.Network
+                                    use temp = model.forward(encoding)
                                     model.Softmax.forward(temp)
                                 use outputs' = iters * outputs   // favor later iterations
                                 use targets' = iters * targets
-                                model.Loss.forward(outputs', targets')
+                                loss.forward(outputs', targets')
 
                                 // backward pass and optimize
-                            model.Optimizer.zero_grad()
+                            optimizer.zero_grad()
                             loss.backward()
-                            use _ = model.Optimizer.step()
+                            use _ = optimizer.step()
 
                             loss.item<float32>()
                     |]
             |]
-        model.Network.eval()
+        model.eval()
         losses
 
     /// Gets the strategy for the given info set (hand + deal).
-    let getStrategy hand deal model =
+    let getStrategy hand deal (model : StrategyModel) =
         use _ = torch.no_grad()
-        let encoded = Encoding.encode hand deal
-        tensor(encoded, device = settings.Device)
-            --> model.Network
+        Encoding.encode hand deal
+            |> model.forward
             |> model.Softmax.forward
