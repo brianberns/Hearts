@@ -115,7 +115,7 @@ module AdvantageModel =
                                         |> Seq.singleton
                                 input, target, iter)
                             |> Array.unzip3
-                    Encoding.stack encodings,
+                    Encoding.concat encodings,
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 
@@ -239,7 +239,7 @@ module StrategyModel =
                                         |> Seq.singleton
                                 input, target, iter)
                             |> Array.unzip3
-                    Encoding.stack encodings,
+                    Encoding.concat encodings,
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 

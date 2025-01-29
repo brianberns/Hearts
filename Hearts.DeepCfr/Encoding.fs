@@ -65,18 +65,18 @@ module Encoding =
             Score = score
         }
 
-    let stack encodings =
-        let stackMap mapping =
+    let concat encodings =
+        let catMap mapping =
             encodings
-                |> Seq.map mapping
-                |> torch.stack
+                |> Array.map mapping
+                |> torch.cat
         create
-            (stackMap _.Player)
-            (stackMap _.Hand)
-            (stackMap _.OtherUnplayed)
-            (stackMap _.Trick)
-            (stackMap _.Voids)
-            (stackMap _.Score)
+            (catMap _.Player)
+            (catMap _.Hand)
+            (catMap _.OtherUnplayed)
+            (catMap _.Trick)
+            (catMap _.Voids)
+            (catMap _.Score)
 
     module private Tensor =
 
