@@ -25,37 +25,71 @@ module Card =
 
 type Encoding =
     {
-        /// Current player. [B, 1] of int.
+        /// Current player. [B, playerLength] of int.
         Player : Tensor
 
-        /// Current player's hand. [B, ClosedDeal.numCardsPerHand] of int.
+        /// Current player's hand. [B, handLength] of int.
+        /// </summary>
         Hand : Tensor
 
-        /// Other unplayed cards. [B, Card.numCards - ClosedDeal.numCardsPerHand] of int.
+        /// Unplayed cards not in the current player's hand. [B, otherUnplayedLength] of int.
         OtherUnplayed : Tensor
 
-        /// Current trick. [B, Seat.numSeats - 1] of int.
+        /// Current unfinished trick. [B, trickLength] of int.
         Trick : Tensor
 
-        /// Known void suits for each other player. [B, Seat.numSeats * Suit.numSuits] of int.
+        /// Known void suits for each player. [B, voidsLength] of int.
         Voids : Tensor
 
-        /// Each player's score. [B, Seat.numSeats] of int.
+        /// Each player's score. [B, scoreLength] of int.
         Score : Tensor
     }
 
 module Encoding =
 
+    /// Current player.
+    let playerLength = 1
+
+    /// Maximum number of cards in a hand.
+    let handLength = ClosedDeal.numCardsPerHand
+
+    /// Maximum number of unplayed cards not in the
+    /// current player's hand.
+    let otherUnplayedLength =
+        Card.numCards - ClosedDeal.numCardsPerHand
+
+    /// Maximum length of an unfinished trick.
+    let trickLength = Seat.numSeats - 1
+
+    /// Maxium number of known void suits.
+    let voidsLength = Seat.numSeats * Suit.numSuits
+
+    /// Each player's score.
+    let scoreLength = Seat.numSeats
+
     let private length (tensor : Tensor) =
         Array.last tensor.shape |> int
 
     let create player hand otherUnplayed trick voids score =
-        assert(length player = 1)
-        assert(length hand = ClosedDeal.numCardsPerHand)
-        assert(length otherUnplayed = Card.numCards - ClosedDeal.numCardsPerHand)
-        assert(length trick = Seat.numSeats - 1)
-        assert(length voids = Seat.numSeats * Suit.numSuits)
-        assert(length score = Seat.numSeats)
+        assert(
+            [
+                player
+                hand
+                otherUnplayed
+                trick
+                voids
+                score
+            ]
+                |> Seq.map (fun (tensor : Tensor) ->
+                    tensor.shape[0])
+                |> Seq.distinct
+                |> Seq.length = 1)
+        assert(length player = playerLength)
+        assert(length hand = handLength)
+        assert(length otherUnplayed = otherUnplayedLength)
+        assert(length trick = trickLength)
+        assert(length voids = voidsLength)
+        assert(length score = scoreLength)
         {
             Player = player
             Hand = hand

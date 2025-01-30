@@ -116,29 +116,29 @@ type AdvantageModel() as this =
 
         let playerOutput =
             (encoding.Player --> playerBranch)
-                .sum(dim = 1)   // sum along sequence dimension
+                .squeeze(dim = 1)   // exactly one current player
 
             // [B, 6] -> [B, 6, embedding] -> [B, sum of embeddings]
         let handOutput =
             (encoding.Hand --> handBranch)
-                .sum(dim = 1)   // sum along sequence dimension
+                .sum(dim = 1)   // sum of card vectors (unordered)
 
         let otherUnplayedOutput =
             (encoding.OtherUnplayed --> otherUnplayedBranch)
-                .sum(dim = 1)   // sum along sequence dimension
+                .sum(dim = 1)   // sum of card vectors (unordered)
 
             // [B, 3] -> [B, 3, embedding] -> [B, 3 concatenated embeddings]
         let batchSize = encoding.Trick.shape[0]
         let trickOutput =
             (encoding.Trick --> trickBranch)
-                .view(batchSize, -1)
+                .view(batchSize, -1)   // concatenate card vectors (ordered)
         assert(
-            let a = int64 (Seat.numSeats - 1)
-            let b = int64 Card.numCards
             trickOutput.shape =
                 [|
                     batchSize
-                    int64 (Seat.numSeats - 1) * int64 settings.HiddenSize
+                    int64 (
+                        Encoding.trickLength
+                            * trickOutputSize)
                 |])
 
         let combinedInput =
