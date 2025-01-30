@@ -1,5 +1,6 @@
 ﻿namespace Hearts.DeepCfr
 
+open TorchSharp
 open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
@@ -91,6 +92,7 @@ module Strategy =
     /// Computes strategy for the given info set (hand + deal)
     /// using the given advantage model.
     let getFromAdvantage (model : AdvantageModel) hand deal legalPlays =
+        use _ = torch.NewDisposeScope()
         (AdvantageModel.getAdvantage hand deal model)
             .data<float32>()
             |> DenseVector.ofSeq
@@ -100,6 +102,7 @@ module Strategy =
     /// Computes strategy for the given info set (hand + deal)
     /// using the given strategy model.
     let getFromStrategy model hand deal legalPlays =
+        use _ = torch.NewDisposeScope()
         (StrategyModel.getStrategy hand deal model)
             .data<float32>()
             |> DenseVector.ofSeq
