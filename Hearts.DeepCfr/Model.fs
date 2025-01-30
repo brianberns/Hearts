@@ -90,14 +90,23 @@ type AdvantageModel() as this =
             padding_idx = Card.numCards,   // missing card -> zero vector
             device = settings.Device)
 
+    let voidsInputSize = Encoding.voidsLength + 1   // Encoding.voidsLength -> missing index
+    let voidsOutputSize = settings.HiddenSize
+    let voidsBranch =
+        Embedding(
+            voidsInputSize,
+            trickOutputSize,
+            padding_idx = Encoding.voidsLength,   // missing index -> zero vector
+            device = settings.Device)
+
     let combinedInputSize =
         playerOutputSize
             + handOutputSize
             + otherUnplayedOutputSize
-            + ((Seat.numSeats - 1) * trickOutputSize)
+            + (Encoding.trickLength * trickOutputSize)
+            + voidsOutputSize
     let combined =
         Sequential(
-            ReLU(),
             Linear(
                 combinedInputSize,
                 settings.HiddenSize,
@@ -121,17 +130,17 @@ type AdvantageModel() as this =
             // [B, 6] -> [B, 6, embedding] -> [B, sum of embeddings]
         let handOutput =
             (encoding.Hand --> handBranch)
-                .sum(dim = 1)   // sum of card vectors (unordered)
+                .sum(dim = 1)   // sum of unordered card vectors
 
         let otherUnplayedOutput =
             (encoding.OtherUnplayed --> otherUnplayedBranch)
-                .sum(dim = 1)   // sum of card vectors (unordered)
+                .sum(dim = 1)   // sum of unordered card vectors
 
             // [B, 3] -> [B, 3, embedding] -> [B, 3 concatenated embeddings]
         let batchSize = encoding.Trick.shape[0]
         let trickOutput =
             (encoding.Trick --> trickBranch)
-                .view(batchSize, -1)   // concatenate card vectors (ordered)
+                .view(batchSize, -1)   // concatenate card vectors in order
         assert(
             trickOutput.shape =
                 [|
@@ -141,6 +150,10 @@ type AdvantageModel() as this =
                             * trickOutputSize)
                 |])
 
+        let voidsOutput =
+            (encoding.Voids --> voidsBranch)
+                .sum(dim = 1)   // sum of unordered (seat, suit) vectors
+
         let combinedInput =
             torch.cat(
                 [|
@@ -148,6 +161,7 @@ type AdvantageModel() as this =
                     handOutput
                     otherUnplayedOutput
                     trickOutput
+                    voidsOutput
                 |],
                 dim = 1)
         let result =
