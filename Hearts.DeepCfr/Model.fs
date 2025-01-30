@@ -55,29 +55,38 @@ module Tensor =
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
 
-    let playerSize = 2 * int Seat.numSeats
+    let playerOutputSize = 2 * int Seat.numSeats
     let playerBranch =
         Embedding(
             Seat.numSeats,
-            playerSize,
+            playerOutputSize,
             device = settings.Device)
 
-    let handSize = settings.HiddenSize
+    let handOutputSize = settings.HiddenSize
     let handBranch =
         Embedding(
             int64 (Card.numCards + 1),     // Card.numCards -> missing card
-            handSize,
+            handOutputSize,
             padding_idx = Card.numCards,   // missing card -> zero vector
             device = settings.Device)
 
-    let combinedSize =
-        playerSize
-            + handSize
+    let otherUnplayedOutputSize = settings.HiddenSize
+    let otherUnplayedBranch =
+        Embedding(
+            int64 (Card.numCards + 1),     // Card.numCards -> missing card
+            otherUnplayedOutputSize,
+            padding_idx = Card.numCards,   // missing card -> zero vector
+            device = settings.Device)
+
+    let combinedInputSize =
+        playerOutputSize
+            + handOutputSize
+            + otherUnplayedOutputSize
     let combined =
         Sequential(
             ReLU(),
             Linear(
-                combinedSize,
+                combinedInputSize,
                 settings.HiddenSize,
                 device = settings.Device),
             ReLU(),
@@ -100,11 +109,16 @@ type AdvantageModel() as this =
             (encoding.Hand --> handBranch)
                 .sum(dim = 1)   // sum along sequence dimension
 
+        let otherUnplayedOutput =
+            (encoding.OtherUnplayed --> otherUnplayedBranch)
+                .sum(dim = 1)   // sum along sequence dimension
+
         let combinedInput =
             torch.cat(
                 [|
                     playerOutput
                     handOutput
+                    otherUnplayedOutput
                 |],
                 dim = 1)
         let result =
