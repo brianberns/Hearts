@@ -99,12 +99,20 @@ type AdvantageModel() as this =
             padding_idx = Encoding.voidsLength,   // missing index -> zero vector
             device = settings.Device)
 
+    let scoreOutputSize = playerOutputSize
+    let scoreBranch =
+        Linear(
+            Encoding.scoreLength,
+            scoreOutputSize,
+            device = settings.Device)
+
     let combinedInputSize =
         playerOutputSize
             + handOutputSize
             + otherUnplayedOutputSize
             + (Encoding.trickLength * trickOutputSize)
             + voidsOutputSize
+            + scoreOutputSize
     let combined =
         Sequential(
             Linear(
@@ -154,6 +162,9 @@ type AdvantageModel() as this =
             (encoding.Voids --> voidsBranch)
                 .sum(dim = 1)   // sum of unordered (seat, suit) vectors
 
+        let scoreOutput =
+            encoding.Score.float() --> scoreBranch
+
         let combinedInput =
             torch.cat(
                 [|
@@ -162,6 +173,7 @@ type AdvantageModel() as this =
                     otherUnplayedOutput
                     trickOutput
                     voidsOutput
+                    scoreOutput
                 |],
                 dim = 1)
         let result =
