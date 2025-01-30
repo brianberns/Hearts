@@ -62,10 +62,11 @@ type AdvantageModel() as this =
             playerOutputSize,
             device = settings.Device)
 
+    let cardInputSize = Card.numCards + 1   // Card.numCards index -> missing card
     let handOutputSize = settings.HiddenSize
     let handBranch =
         Embedding(
-            int64 (Card.numCards + 1),     // Card.numCards -> missing card
+            cardInputSize,
             handOutputSize,
             padding_idx = Card.numCards,   // missing card -> zero vector
             device = settings.Device)
@@ -73,7 +74,7 @@ type AdvantageModel() as this =
     let otherUnplayedOutputSize = settings.HiddenSize
     let otherUnplayedBranch =
         Embedding(
-            int64 (Card.numCards + 1),     // Card.numCards -> missing card
+            cardInputSize,
             otherUnplayedOutputSize,
             padding_idx = Card.numCards,   // missing card -> zero vector
             device = settings.Device)
