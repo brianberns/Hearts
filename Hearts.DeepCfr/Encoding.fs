@@ -28,10 +28,10 @@ type Encoding =
         /// Current player. [B, 1] of int.
         Player : Tensor
 
-        /// Current player's hand. [B, Card.numCards] of int.
+        /// Current player's hand. [B, ClosedDeal.numCardsPerHand] of int.
         Hand : Tensor
 
-        /// Other unplayed cards. [B, Card.numCards] of int.
+        /// Other unplayed cards. [B, Card.numCards - ClosedDeal.numCardsPerHand] of int.
         OtherUnplayed : Tensor
 
         /// Current trick. [B, Seat.numSeats - 1] of int.
