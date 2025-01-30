@@ -81,7 +81,8 @@ module Encoding =
                 score
             ]
                 |> Seq.map (fun (tensor : Tensor) ->
-                    tensor.shape[0])
+                    assert(tensor.shape.Length = 2)
+                    tensor.shape[0])   // batch size
                 |> Seq.distinct
                 |> Seq.length = 1)
         assert(length player = playerLength)
