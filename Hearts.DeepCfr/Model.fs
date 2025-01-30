@@ -55,17 +55,34 @@ module Tensor =
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
 
+    let playerSize = 2 * int Seat.numSeats
     let playerBranch =
         Embedding(
             Seat.numSeats,
-            2L * int64 Seat.numSeats,
+            playerSize,
             device = settings.Device)
 
+    let handSize = settings.HiddenSize
+    let handBranch =
+        Embedding(
+            int64 (Card.numCards + 1),     // Card.numCards -> missing card
+            handSize,
+            padding_idx = Card.numCards,   // missing card -> zero vector
+            device = settings.Device)
+
+    let combinedSize =
+        playerSize
+            + handSize
     let combined =
         Sequential(
             ReLU(),
             Linear(
-                2L * int64 Seat.numSeats,
+                combinedSize,
+                settings.HiddenSize,
+                device = settings.Device),
+            ReLU(),
+            Linear(
+                settings.HiddenSize,
                 Card.numCards,
                 device = settings.Device))
 
@@ -79,8 +96,19 @@ type AdvantageModel() as this =
             (encoding.Player --> playerBranch)
                 .sum(dim = 1)   // sum along sequence dimension
 
+        let handOutput =
+            (encoding.Hand --> handBranch)
+                .sum(dim = 1)   // sum along sequence dimension
+
+        let combinedInput =
+            torch.cat(
+                [|
+                    playerOutput
+                    handOutput
+                |],
+                dim = 1)
         let result =
-            playerOutput --> combined
+            combinedInput --> combined
 
         result.MoveToOuterDisposeScope()
 

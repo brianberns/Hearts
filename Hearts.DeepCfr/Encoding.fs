@@ -87,8 +87,6 @@ module Encoding =
                 device = settings.Device)
                 .unsqueeze(dim = 0)   // batch size = 1
 
-    let private noIdx = -1
-
     /// Encodes the given player's seat.
     let private encodePlayer player =
         int player
@@ -104,7 +102,9 @@ module Encoding =
             |]
         assert(present.Length <= maxNum)
         let absent =
-            Seq.replicate (maxNum - present.Length) noIdx
+            Seq.replicate
+                (maxNum - present.Length)
+                Card.numCards
         Seq.append present absent
             |> Tensor.ofRow
 
@@ -136,7 +136,7 @@ module Encoding =
             |]
         assert(present.Length < maxNum)
         let absent =
-            Seq.replicate (maxNum - present.Length) noIdx
+            Seq.replicate (maxNum - present.Length) maxNum
         Seq.append present absent
             |> Tensor.ofRow
 
