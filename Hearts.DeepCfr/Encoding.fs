@@ -116,16 +116,14 @@ module Encoding =
     module private Tensor =
 
         /// Creates a [1, N] tensor from a row of N values.
-        let ofRow (row : seq<int>) =
-            tensor(
-                Seq.toArray row,
-                device = settings.Device)
+        let ofRow (row : int[]) =
+            tensor(row, device = settings.Device)
                 .unsqueeze(dim = 0)   // batch size = 1
 
     /// Encodes the given player's seat.
     let private encodePlayer player =
         int player
-            |> Seq.singleton
+            |> Array.singleton
             |> Tensor.ofRow
 
     /// Encodes the given sequence of cards.
@@ -137,10 +135,10 @@ module Encoding =
             |]
         assert(present.Length <= maxNum)
         let absent =
-            Seq.replicate
+            Array.replicate
                 (maxNum - present.Length)
                 Card.numCards
-        Seq.append present absent
+        Array.append present absent
             |> Tensor.ofRow
 
     let private encodeHand (hand : Hand) =
@@ -171,14 +169,15 @@ module Encoding =
             |]
         assert(present.Length < maxNum)
         let absent =
-            Seq.replicate (maxNum - present.Length) maxNum
-        Seq.append present absent
+            Array.replicate (maxNum - present.Length) maxNum
+        Array.append present absent
             |> Tensor.ofRow
 
     /// Encodes the given score.
     let private encodeScore score =
         assert(score.ScoreMap.Count = Seat.numSeats)
         score.ScoreMap.Values
+            |> Seq.toArray
             |> Tensor.ofRow
 
     /// Encodes the given info set (hand + deal).
