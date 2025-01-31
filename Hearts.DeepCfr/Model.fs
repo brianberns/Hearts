@@ -1,9 +1,6 @@
 ﻿namespace Hearts.DeepCfr
 
-open System
-
 open TorchSharp
-open TorchSharp.Modules
 open type torch
 open type torch.nn
 open type torch.optim
@@ -13,9 +10,6 @@ open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
 open Hearts
-
-/// Loss function.
-type Loss = Loss<Tensor, Tensor, Tensor>
 
 /// An observed advantage event.
 type AdvantageSample =
