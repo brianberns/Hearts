@@ -181,7 +181,7 @@ module Encoding =
         score.ScoreMap.Values
             |> Tensor.ofRow
 
-    /// Encodes the given info set as a vector.
+    /// Encodes the given info set (hand + deal).
     let encode (hand : Hand) deal =
         let trick = ClosedDeal.currentTrick deal
         let player = Trick.currentPlayer trick
