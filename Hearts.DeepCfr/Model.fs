@@ -49,22 +49,23 @@ module Tensor =
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
 
-        // map player index to embedded vector
-    let playerOutputSize = 2 * int Seat.numSeats
-    let playerBranch =
+    /// Creates a card embedding with the given number of
+    /// dimensions.
+    let cardEmbedding (nDim : int) =
+        let cardInputSize = Card.numCards + 1
         Embedding(
-            Seat.numSeats,
-            playerOutputSize,
-            device = settings.Device)
-
-    let cardInputSize = Card.numCards + 1   // Card.numCards index -> missing card
-    let cardEmbedding (dim : int) =
-        Embedding(
-            cardInputSize,
-            dim,
+            cardInputSize, nDim,
             padding_idx = Card.numCards,   // missing card -> zero vector
             device = settings.Device),
-        dim
+        nDim
+
+        // map player index to embedded vector
+    let playerBranch, playerOutputSize =
+        let nDim = 2 * int Seat.numSeats
+        Embedding(
+            Seat.numSeats, nDim,
+            device = settings.Device),
+        nDim
 
     let handBranch, handOutputSize =
         cardEmbedding settings.HiddenSize
@@ -75,29 +76,29 @@ type AdvantageModel() as this =
     let trickBranch, trickOutputSize =
         cardEmbedding settings.HiddenSize
 
-    let voidsInputSize = Encoding.voidsLength + 1   // Encoding.voidsLength -> missing index
-    let voidsOutputSize = settings.HiddenSize
-    let voidsBranch =
+    let voidsBranch, voidsOutputSize =
+        let voidsInputSize = Encoding.voidsLength + 1
+        let nDim = settings.HiddenSize
         Embedding(
-            voidsInputSize,
-            trickOutputSize,
+            voidsInputSize, nDim,
             padding_idx = Encoding.voidsLength,   // missing index -> zero vector
-            device = settings.Device)
+            device = settings.Device),
+        nDim
 
-    let scoreOutputSize = playerOutputSize
-    let scoreBranch =
+    let scoreBranch, scoreOutputSize =
+        let nDim = playerOutputSize
         Linear(
-            Encoding.scoreLength,
-            scoreOutputSize,
-            device = settings.Device)
+            Encoding.scoreLength, nDim,
+            device = settings.Device),
+        nDim
 
     let combinedInputSize =
-        playerOutputSize
-            + handOutputSize
-            + otherUnplayedOutputSize
-            + (Encoding.trickLength * trickOutputSize)
-            + voidsOutputSize
-            + scoreOutputSize
+        playerOutputSize                                 // singleton
+            + handOutputSize                             // summed
+            + otherUnplayedOutputSize                    // summed
+            + (Encoding.trickLength * trickOutputSize)   // concatenated
+            + voidsOutputSize                            // summed
+            + scoreOutputSize                            // linear
     let combined =
         Sequential(
             Linear(
