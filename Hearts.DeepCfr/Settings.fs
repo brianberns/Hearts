@@ -76,6 +76,7 @@ module Settings =
     /// Hyperparameters.
     let settings =
 
+            // initialize torch RNG's
         torch.manual_seed(seed) |> ignore
         torch.cuda.manual_seed_all(seed)
         writer.add_text(
