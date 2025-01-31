@@ -21,10 +21,10 @@ module Vector =
     let get (vector : Vector<_>) index =
         vector[index]
 
-    /// Samples a strategy.
-    let inline sample rng (strategy : Vector<_>) =
-        let strategy' =
-            strategy
+    /// Samples a vector.
+    let inline sample rng (vector : Vector<_>) =
+        let vector' =
+            vector
                 |> Seq.map float
                 |> Seq.toArray
-        Categorical.Sample(rng, strategy')
+        Categorical.Sample(rng, vector')
