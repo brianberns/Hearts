@@ -103,6 +103,9 @@ module Settings =
                 Writer = writer
                 Verbose = true
             }
+
+        torch.set_default_device(settings.Device)
+
         System.IO.Directory.CreateDirectory(settings.ModelDirPath)
             |> ignore
 

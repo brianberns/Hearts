@@ -43,7 +43,7 @@ module Tensor =
      
     /// Converts the given rows to a tensor.
     let ofSeq (rows : seq<#seq<float32>>) =
-        tensor(array2D rows, device = settings.Device)
+        tensor(array2D rows)
 
 type SkipConnection(inner : Module<Tensor, Tensor>) as this =
     inherit Module<Tensor, Tensor>($"{inner.GetName()}Skip")
@@ -80,38 +80,23 @@ type AdvantageModel() as this =
         let nEmbeddingDim = 2 * nDim
         let model =
             Sequential(
-
                 Embedding(
                     cardInputSize,
                     nEmbeddingDim,
-                    padding_idx = Card.numCards,   // missing card -> zero vector
-                    device = settings.Device),
+                    padding_idx = Card.numCards),   // missing card -> zero vector
 
-                Linear(
-                    nEmbeddingDim,
-                    nDim,
-                    device = settings.Device),
+                Linear(nEmbeddingDim, nDim),
                 ReLU(),
-
-                SkipConnection(
-                    Linear(
-                        nDim, nDim,
-                        device = settings.Device)),
+                SkipConnection(Linear(nDim, nDim)),
                 ReLU(),
-
-                SkipConnection(
-                    Linear(
-                        nDim, nDim,
-                        device = settings.Device)),
+                SkipConnection(Linear(nDim, nDim)),
                 ReLU())
         Branch.create model nDim
 
     let playerBranch =
         let nDim = 2 * int Seat.numSeats
         let model =
-            Embedding(
-                Seat.numSeats, nDim,
-                device = settings.Device)
+            Embedding(Seat.numSeats, nDim)
         Branch.create model nDim
 
     let handBranch = cardBranch settings.HiddenSize
@@ -126,16 +111,12 @@ type AdvantageModel() as this =
         let model =
             Embedding(
                 voidsInputSize, nDim,
-                padding_idx = Encoding.voidsLength,   // missing index -> zero vector
-                device = settings.Device)
+                padding_idx = Encoding.voidsLength)   // missing index -> zero vector
         Branch.create model nDim
 
     let scoreBranch =
         let nDim = playerBranch.OutputSize
-        let model =
-            Linear(
-                Encoding.scoreLength, nDim,
-                device = settings.Device)
+        let model = Linear(Encoding.scoreLength, nDim)
         Branch.create model nDim
 
     let combinedInputSize =
@@ -147,39 +128,17 @@ type AdvantageModel() as this =
             + voidsBranch.OutputSize           // summed
             + scoreBranch.OutputSize           // linear
     let combined =
+        let nDim = settings.HiddenSize
         Sequential(
-
-            Linear(
-                combinedInputSize,
-                settings.HiddenSize,
-                device = settings.Device),
+            Linear(combinedInputSize, nDim),
             ReLU(),
-
-            SkipConnection(
-                Linear(
-                    settings.HiddenSize,
-                    settings.HiddenSize,
-                    device = settings.Device)),
+            SkipConnection(Linear(nDim,nDim)),
             ReLU(),
-
-            SkipConnection(
-                Linear(
-                    settings.HiddenSize,
-                    settings.HiddenSize,
-                    device = settings.Device)),
+            SkipConnection(Linear(nDim, nDim)),
             ReLU(),
-
-            SkipConnection(
-                Linear(
-                    settings.HiddenSize,
-                    settings.HiddenSize,
-                    device = settings.Device)),
+            SkipConnection(Linear(nDim,nDim)),
             ReLU(),
-
-            Linear(
-                settings.HiddenSize,
-                Card.numCards,
-                device = settings.Device))
+            Linear(nDim, Card.numCards))
 
     do this.RegisterComponents()
 
@@ -343,16 +302,14 @@ type StrategyModel() as this =
     let playerBranch =
         Embedding(
             Seat.numSeats,
-            2L * int64 Seat.numSeats,
-            device = settings.Device)
+            2L * int64 Seat.numSeats)
 
     let combined =
         Sequential(
             ReLU(),
             Linear(
                 2L * int64 Seat.numSeats,
-                Card.numCards,
-                device = settings.Device))
+                Card.numCards))
 
     let softmax = Softmax(dim = -1)
 
