@@ -72,14 +72,7 @@ module Encoding =
 
     let create player hand otherUnplayed trick voids score =
         assert(
-            [
-                player
-                hand
-                otherUnplayed
-                trick
-                voids
-                score
-            ]
+            [ player; hand; otherUnplayed; trick; voids; score ]
                 |> Seq.map (fun (tensor : Tensor) ->
                     assert(tensor.shape.Length = 2)
                     tensor.shape[0])   // batch size
