@@ -45,6 +45,14 @@ module Tensor =
     let ofSeq (rows : seq<#seq<float32>>) =
         tensor(array2D rows, device = settings.Device)
 
+type SkipConnection(inner : Module<Tensor, Tensor>) as this =
+    inherit Module<Tensor, Tensor>($"{inner.GetName()}Skip")
+
+    do this.register_module("inner", inner)
+
+    override _.forward(input) =
+        (input --> inner) + input
+
 type Branch =
     {
         Model : Module<Tensor, Tensor>
@@ -63,15 +71,23 @@ module Branch =
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
 
+    let SkipConnection(inner) = new SkipConnection(inner)
+
     /// Creates a card embedding with the given number of
     /// dimensions.
     let cardBranch (nDim : int) =
         let cardInputSize = Card.numCards + 1
         let model =
-            Embedding(
-                cardInputSize, nDim,
-                padding_idx = Card.numCards,   // missing card -> zero vector
-                device = settings.Device)
+            Sequential(
+                Embedding(
+                    cardInputSize, nDim,
+                    padding_idx = Card.numCards,   // missing card -> zero vector
+                    device = settings.Device),
+                SkipConnection(
+                    Linear(
+                        nDim, nDim,
+                        device = settings.Device)),
+                ReLU())
         Branch.create model nDim
 
     let playerBranch =
