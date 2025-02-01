@@ -41,6 +41,25 @@ module Branch =
             OutputSize = outputSize
         }
 
+// https://github.com/dotnet/TorchSharp/issues/1438
+[<AutoOpen>]
+type Modules =
+
+    static member Embedding(nIn, nOut, ?padding_idx) =
+        torch.nn.Embedding(
+            nIn, nOut,
+            ?padding_idx = padding_idx,
+            device = torch.get_default_device())
+
+    static member Linear(nIn, nOut) =
+        torch.nn.Linear(
+            nIn, nOut,
+            device = torch.get_default_device())
+
+    static member SkipConnection(inner) =
+        new SkipConnection(inner)
+
+
 /// An observed advantage event.
 type AdvantageSample =
     {
@@ -72,8 +91,6 @@ module AdvantageSample =
 /// Model used for learning advantages.
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
-
-    let SkipConnection(inner) = new SkipConnection(inner)
 
     /// Creates a card embedding with the given number of
     /// dimensions.
@@ -112,7 +129,7 @@ type AdvantageModel() as this =
         let model =
             Sequential(
                 Embedding(
-                    voidsInputSize, nDim,
+                    voidsInputSize, nEmbeddingDim,
                     padding_idx = Encoding.voidsLength),   // missing index -> zero vector
                 Linear(nEmbeddingDim, nDim),
                 ReLU(),
