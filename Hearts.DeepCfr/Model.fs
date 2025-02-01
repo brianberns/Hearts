@@ -108,15 +108,24 @@ type AdvantageModel() as this =
     let voidsBranch =
         let voidsInputSize = Encoding.voidsLength + 1
         let nDim = settings.HiddenSize
+        let nEmbeddingDim = 2 * nDim
         let model =
-            Embedding(
-                voidsInputSize, nDim,
-                padding_idx = Encoding.voidsLength)   // missing index -> zero vector
+            Sequential(
+                Embedding(
+                    voidsInputSize, nDim,
+                    padding_idx = Encoding.voidsLength),   // missing index -> zero vector
+                Linear(nEmbeddingDim, nDim),
+                ReLU(),
+                SkipConnection(Linear(nDim, nDim)),
+                ReLU())
         Branch.create model nDim
 
     let scoreBranch =
         let nDim = playerBranch.OutputSize
-        let model = Linear(Encoding.scoreLength, nDim)
+        let model =
+            Sequential(
+                Linear(Encoding.scoreLength, nDim),
+                ReLU())
         Branch.create model nDim
 
     let combinedInputSize =
