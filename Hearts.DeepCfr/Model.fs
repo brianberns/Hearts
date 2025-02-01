@@ -79,10 +79,24 @@ type AdvantageModel() as this =
         let cardInputSize = Card.numCards + 1
         let model =
             Sequential(
+
                 Embedding(
                     cardInputSize, nDim,
                     padding_idx = Card.numCards,   // missing card -> zero vector
                     device = settings.Device),
+
+                SkipConnection(
+                    Linear(
+                        nDim, nDim,
+                        device = settings.Device)),
+                ReLU(),
+
+                SkipConnection(
+                    Linear(
+                        nDim, nDim,
+                        device = settings.Device)),
+                ReLU(),
+
                 SkipConnection(
                     Linear(
                         nDim, nDim,
@@ -132,11 +146,34 @@ type AdvantageModel() as this =
             + scoreBranch.OutputSize           // linear
     let combined =
         Sequential(
+
             Linear(
                 combinedInputSize,
                 settings.HiddenSize,
                 device = settings.Device),
             ReLU(),
+
+            SkipConnection(
+                Linear(
+                    settings.HiddenSize,
+                    settings.HiddenSize,
+                    device = settings.Device)),
+            ReLU(),
+
+            SkipConnection(
+                Linear(
+                    settings.HiddenSize,
+                    settings.HiddenSize,
+                    device = settings.Device)),
+            ReLU(),
+
+            SkipConnection(
+                Linear(
+                    settings.HiddenSize,
+                    settings.HiddenSize,
+                    device = settings.Device)),
+            ReLU(),
+
             Linear(
                 settings.HiddenSize,
                 Card.numCards,
