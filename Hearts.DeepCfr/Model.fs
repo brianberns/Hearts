@@ -77,18 +77,20 @@ type AdvantageModel() as this =
     /// dimensions.
     let cardBranch (nDim : int) =
         let cardInputSize = Card.numCards + 1
+        let nEmbeddingDim = 2 * nDim
         let model =
             Sequential(
 
                 Embedding(
-                    cardInputSize, nDim,
+                    cardInputSize,
+                    nEmbeddingDim,
                     padding_idx = Card.numCards,   // missing card -> zero vector
                     device = settings.Device),
 
-                SkipConnection(
-                    Linear(
-                        nDim, nDim,
-                        device = settings.Device)),
+                Linear(
+                    nEmbeddingDim,
+                    nDim,
+                    device = settings.Device),
                 ReLU(),
 
                 SkipConnection(
