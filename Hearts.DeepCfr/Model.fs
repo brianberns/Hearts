@@ -84,10 +84,6 @@ type AdvantageModel() as this =
     override _.forward(input) = 
         sequential.forward(input)
 
-    interface IDisposable with
-        member _.Dispose() =
-            sequential.Dispose()
-
 module AdvantageModel =
 
     /// Gets the advantage for the given info set (hand + deal).
@@ -203,9 +199,6 @@ type StrategyModel =
         this.Optimizer.Dispose()
         this.Loss.Dispose()
         this.Softmax.Dispose()
-
-    interface IDisposable with
-        member this.Dispose() = this.Dispose()
 
 module StrategyModel =
 
