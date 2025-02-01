@@ -45,60 +45,75 @@ module Tensor =
     let ofSeq (rows : seq<#seq<float32>>) =
         tensor(array2D rows, device = settings.Device)
 
+type Branch =
+    {
+        Model : Module<Tensor, Tensor>
+        OutputSize : int
+    }
+
+module Branch =
+
+    let create model outputSize =
+        {
+            Model = model
+            OutputSize = outputSize
+        }
+
 /// Model used for learning advantages.
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
 
     /// Creates a card embedding with the given number of
     /// dimensions.
-    let cardEmbedding (nDim : int) =
+    let cardBranch (nDim : int) =
         let cardInputSize = Card.numCards + 1
-        Embedding(
-            cardInputSize, nDim,
-            padding_idx = Card.numCards,   // missing card -> zero vector
-            device = settings.Device),
-        nDim
+        let model =
+            Embedding(
+                cardInputSize, nDim,
+                padding_idx = Card.numCards,   // missing card -> zero vector
+                device = settings.Device)
+        Branch.create model nDim
 
-        // map player index to embedded vector
-    let playerBranch, playerOutputSize =
+    let playerBranch =
         let nDim = 2 * int Seat.numSeats
-        Embedding(
-            Seat.numSeats, nDim,
-            device = settings.Device),
-        nDim
+        let model =
+            Embedding(
+                Seat.numSeats, nDim,
+                device = settings.Device)
+        Branch.create model nDim
 
-    let handBranch, handOutputSize =
-        cardEmbedding settings.HiddenSize
+    let handBranch = cardBranch settings.HiddenSize
 
-    let otherUnplayedBranch, otherUnplayedOutputSize =
-        cardEmbedding settings.HiddenSize
+    let otherUnplayedBranch = cardBranch settings.HiddenSize
 
-    let trickBranch, trickOutputSize =
-        cardEmbedding settings.HiddenSize
+    let trickBranch = cardBranch settings.HiddenSize
 
-    let voidsBranch, voidsOutputSize =
+    let voidsBranch =
         let voidsInputSize = Encoding.voidsLength + 1
         let nDim = settings.HiddenSize
-        Embedding(
-            voidsInputSize, nDim,
-            padding_idx = Encoding.voidsLength,   // missing index -> zero vector
-            device = settings.Device),
-        nDim
+        let model =
+            Embedding(
+                voidsInputSize, nDim,
+                padding_idx = Encoding.voidsLength,   // missing index -> zero vector
+                device = settings.Device)
+        Branch.create model nDim
 
-    let scoreBranch, scoreOutputSize =
-        let nDim = playerOutputSize
-        Linear(
-            Encoding.scoreLength, nDim,
-            device = settings.Device),
-        nDim
+    let scoreBranch =
+        let nDim = playerBranch.OutputSize
+        let model =
+            Linear(
+                Encoding.scoreLength, nDim,
+                device = settings.Device)
+        Branch.create model nDim
 
     let combinedInputSize =
-        playerOutputSize                                 // singleton
-            + handOutputSize                             // summed
-            + otherUnplayedOutputSize                    // summed
-            + (Encoding.trickLength * trickOutputSize)   // concatenated
-            + voidsOutputSize                            // summed
-            + scoreOutputSize                            // linear
+        playerBranch.OutputSize                // singleton
+            + handBranch.OutputSize            // summed
+            + otherUnplayedBranch.OutputSize   // summed
+            + (Encoding.trickLength
+                * trickBranch.OutputSize)      // concatenated
+            + voidsBranch.OutputSize           // summed
+            + scoreBranch.OutputSize           // linear
     let combined =
         Sequential(
             Linear(
@@ -118,22 +133,26 @@ type AdvantageModel() as this =
         use _ = torch.NewDisposeScope()
 
         let playerOutput =
-            (encoding.Player --> playerBranch)
+            (encoding.Player
+                --> playerBranch.Model)
                 .squeeze(dim = 1)   // exactly one current player
 
             // [B, 6] -> [B, 6, embedding] -> [B, sum of embeddings]
         let handOutput =
-            (encoding.Hand --> handBranch)
+            (encoding.Hand
+                --> handBranch.Model)
                 .sum(dim = 1)   // sum of unordered card vectors
 
         let otherUnplayedOutput =
-            (encoding.OtherUnplayed --> otherUnplayedBranch)
+            (encoding.OtherUnplayed
+                --> otherUnplayedBranch.Model)
                 .sum(dim = 1)   // sum of unordered card vectors
 
             // [B, 3] -> [B, 3, embedding] -> [B, 3 concatenated embeddings]
         let batchSize = encoding.Trick.shape[0]
         let trickOutput =
-            (encoding.Trick --> trickBranch)
+            (encoding.Trick
+                --> trickBranch.Model)
                 .view(batchSize, -1)   // concatenate card vectors in order
         assert(
             trickOutput.shape =
@@ -141,15 +160,17 @@ type AdvantageModel() as this =
                     batchSize
                     int64 (
                         Encoding.trickLength
-                            * trickOutputSize)
+                            * trickBranch.OutputSize)
                 |])
 
         let voidsOutput =
-            (encoding.Voids --> voidsBranch)
+            (encoding.Voids
+                --> voidsBranch.Model)
                 .sum(dim = 1)   // sum of unordered (seat, suit) vectors
 
         let scoreOutput =
-            encoding.Score.float() --> scoreBranch
+            encoding.Score.float()
+                --> scoreBranch.Model
 
         let combinedInput =
             torch.cat(
