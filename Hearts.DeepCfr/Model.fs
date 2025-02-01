@@ -11,6 +11,36 @@ open MathNet.Numerics.LinearAlgebra
 open PlayingCards
 open Hearts
 
+type Module = Module<Tensor, Tensor>
+
+module Tensor =
+     
+    /// Converts the given rows to a tensor.
+    let ofSeq (rows : seq<#seq<float32>>) =
+        tensor(array2D rows)
+
+type SkipConnection(inner : Module) as this =
+    inherit Module($"{inner.GetName()}Skip")
+
+    do this.register_module("inner", inner)
+
+    override _.forward(input) =
+        (input --> inner) + input
+
+type Branch =
+    {
+        Model : Module
+        OutputSize : int
+    }
+
+module Branch =
+
+    let create model outputSize =
+        {
+            Model = model
+            OutputSize = outputSize
+        }
+
 /// An observed advantage event.
 type AdvantageSample =
     {
@@ -39,34 +69,6 @@ module AdvantageSample =
             Iteration = iteration
         }
 
-module Tensor =
-     
-    /// Converts the given rows to a tensor.
-    let ofSeq (rows : seq<#seq<float32>>) =
-        tensor(array2D rows)
-
-type SkipConnection(inner : Module<Tensor, Tensor>) as this =
-    inherit Module<Tensor, Tensor>($"{inner.GetName()}Skip")
-
-    do this.register_module("inner", inner)
-
-    override _.forward(input) =
-        (input --> inner) + input
-
-type Branch =
-    {
-        Model : Module<Tensor, Tensor>
-        OutputSize : int
-    }
-
-module Branch =
-
-    let create model outputSize =
-        {
-            Model = model
-            OutputSize = outputSize
-        }
-
 /// Model used for learning advantages.
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
@@ -81,10 +83,8 @@ type AdvantageModel() as this =
         let model =
             Sequential(
                 Embedding(
-                    cardInputSize,
-                    nEmbeddingDim,
+                    cardInputSize, nEmbeddingDim,
                     padding_idx = Card.numCards),   // missing card -> zero vector
-
                 Linear(nEmbeddingDim, nDim),
                 ReLU(),
                 SkipConnection(Linear(nDim, nDim)),
