@@ -61,7 +61,7 @@ module Encoding =
     /// Maximum length of an unfinished trick.
     let trickLength = Seat.numSeats - 1
 
-    /// Maxium number of known void suits.
+    /// Maximum number of known void suits.
     let voidsLength = Seat.numSeats * Suit.numSuits
 
     /// Each player's score.
