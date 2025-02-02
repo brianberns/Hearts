@@ -27,6 +27,29 @@ type SkipConnection(inner : Module) as this =
     override _.forward(input) =
         (input --> inner) + input
 
+// https://copilot.microsoft.com/chats/aDA4xBmW2ssysdLZnZqyN
+type OneHot(length : int) =
+    inherit Module("OneHot")
+    // Pre-cache the one-hot vectors including the padding vector at the end.
+    let oneHotVectors =
+        // Create identity matrix for one-hot vectors.
+        let eye = torch.eye(length, device = torch.CPU)
+        // Create padding vector of zeros.
+        let padding = torch.zeros(1L, length, device = torch.CPU)
+        // Concatenate to form the lookup tensor.
+        torch.cat([| eye; padding |], dim=0)
+
+    override this.forward(input: Tensor) =
+        // Replace indices equal to 'length' with 'length' (padding index).
+        let adjustedIndices =
+            input.where(input.eq(torch.tensor(length, device = torch.CPU)), torch.full_like(input, length))
+        // Flatten indices for batch indexing.
+        let flatIndices = adjustedIndices.flatten()
+        // Gather one-hot vectors using the flattened indices.
+        let gathered = oneHotVectors.index_select(0L, flatIndices)
+        // Reshape back to the original input shape plus the one-hot dimension.
+        gathered.view([| yield! adjustedIndices.shape; length |])
+
 type Branch =
     {
         Model : Module
@@ -59,6 +82,8 @@ type Modules =
     static member SkipConnection(inner) =
         new SkipConnection(inner)
 
+    static member OneHot(nDim) =
+        new OneHot(nDim)
 
 /// An observed advantage event.
 type AdvantageSample =
@@ -92,79 +117,43 @@ module AdvantageSample =
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
 
-    /// Creates a card embedding with the given number of
-    /// dimensions.
-    let cardBranch (nDim : int) =
-        let cardInputSize = Card.numCards + 1
-        let nEmbeddingDim = 2 * nDim
-        let model =
-            Sequential(
-                Embedding(
-                    cardInputSize, nEmbeddingDim,
-                    padding_idx = Card.numCards),   // missing card -> zero vector
-                Linear(nEmbeddingDim, nDim),
-                ReLU(),
-                SkipConnection(Linear(nDim, nDim)),
-                ReLU(),
-                SkipConnection(Linear(nDim, nDim)),
-                ReLU())
+    let cardBranch =
+        let nDim = Card.numCards
+        let model = OneHot(nDim)
         Branch.create model nDim
 
     let playerBranch =
-        let nDim = 2 * int Seat.numSeats
-        let model =
-            Embedding(Seat.numSeats, nDim)
+        let nDim = Seat.numSeats
+        let model = OneHot(nDim)
         Branch.create model nDim
 
-    let handBranch = cardBranch settings.HiddenSize
+    let handBranch = cardBranch
 
-    let otherUnplayedBranch = cardBranch settings.HiddenSize
+    let otherUnplayedBranch = cardBranch
 
-    let trickBranch = cardBranch settings.HiddenSize
+    let trickBranch = cardBranch
 
     let voidsBranch =
-        let voidsInputSize = Encoding.voidsLength + 1
-        let nDim = settings.HiddenSize
-        let nEmbeddingDim = 2 * nDim
-        let model =
-            Sequential(
-                Embedding(
-                    voidsInputSize, nEmbeddingDim,
-                    padding_idx = Encoding.voidsLength),   // missing index -> zero vector
-                Linear(nEmbeddingDim, nDim),
-                ReLU(),
-                SkipConnection(Linear(nDim, nDim)),
-                ReLU())
-        Branch.create model nDim
-
-    let scoreBranch =
-        let nDim = playerBranch.OutputSize
-        let model =
-            Sequential(
-                Linear(Encoding.scoreLength, nDim),
-                ReLU())
+        let nDim = Encoding.voidsLength
+        let model = OneHot(nDim)
         Branch.create model nDim
 
     let combinedInputSize =
-        playerBranch.OutputSize                // singleton
-            + handBranch.OutputSize            // summed
-            + otherUnplayedBranch.OutputSize   // summed
-            + (Encoding.trickLength
-                * trickBranch.OutputSize)      // concatenated
-            + voidsBranch.OutputSize           // summed
-            + scoreBranch.OutputSize           // linear
+        Seat.numSeats                                 // current player
+            + Card.numCards                           // current player's hand
+            + Card.numCards                           // other unplayed cards
+            + ((Seat.numSeats - 1) * Card.numCards)   // current trick
+            + (Suit.numSuits * Seat.numSeats)         // voids
+            + Seat.numSeats                           // score
     let combined =
-        let nDim = settings.HiddenSize
         Sequential(
-            Linear(combinedInputSize, nDim),
+            Linear(
+                combinedInputSize,
+                settings.HiddenSize),
             ReLU(),
-            SkipConnection(Linear(nDim,nDim)),
-            ReLU(),
-            SkipConnection(Linear(nDim, nDim)),
-            ReLU(),
-            SkipConnection(Linear(nDim,nDim)),
-            ReLU(),
-            Linear(nDim, Card.numCards))
+            Linear(
+                settings.HiddenSize,
+                Card.numCards))
 
     do this.RegisterComponents()
 
@@ -208,10 +197,6 @@ type AdvantageModel() as this =
                 --> voidsBranch.Model)
                 .sum(dim = 1)   // sum of unordered (seat, suit) vectors
 
-        let scoreOutput =
-            encoding.Score.float()
-                --> scoreBranch.Model
-
         let combinedInput =
             torch.cat(
                 [|
@@ -220,9 +205,9 @@ type AdvantageModel() as this =
                     otherUnplayedOutput
                     trickOutput
                     voidsOutput
-                    scoreOutput
+                    encoding.Score.float()
                 |],
-                dim = 1)
+                dim = 1).``to``(torch.CUDA)
         let result =
             combinedInput --> combined
 

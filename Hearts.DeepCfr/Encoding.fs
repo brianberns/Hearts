@@ -110,7 +110,7 @@ module Encoding =
 
         /// Creates a [1, N] tensor from a row of N values.
         let ofRow (row : int[]) =
-            tensor(row).unsqueeze(dim = 0)   // batch size = 1
+            tensor(row, device = torch.CPU).unsqueeze(dim = 0)   // batch size = 1
 
     /// Encodes the given player's seat.
     let private encodePlayer player =
