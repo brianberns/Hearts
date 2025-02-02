@@ -27,28 +27,26 @@ type SkipConnection(inner : Module) as this =
     override _.forward(input) =
         (input --> inner) + input
 
-// https://copilot.microsoft.com/chats/aDA4xBmW2ssysdLZnZqyN
-type OneHot(length : int) =
+// https://chat.deepseek.com/a/chat/s/f40e2c39-94ce-4078-9214-d540c3aa4278
+type OneHot(numClasses : int) =
     inherit Module("OneHot")
-    // Pre-cache the one-hot vectors including the padding vector at the end.
-    let oneHotVectors =
-        // Create identity matrix for one-hot vectors.
-        let eye = torch.eye(length, device = torch.CPU)
-        // Create padding vector of zeros.
-        let padding = torch.zeros(1L, length, device = torch.CPU)
-        // Concatenate to form the lookup tensor.
-        torch.cat([| eye; padding |], dim=0)
 
-    override this.forward(input: Tensor) =
-        // Replace indices equal to 'length' with 'length' (padding index).
-        let adjustedIndices =
-            input.where(input.eq(torch.tensor(length, device = torch.CPU)), torch.full_like(input, length))
-        // Flatten indices for batch indexing.
-        let flatIndices = adjustedIndices.flatten()
-        // Gather one-hot vectors using the flattened indices.
-        let gathered = oneHotVectors.index_select(0L, flatIndices)
-        // Reshape back to the original input shape plus the one-hot dimension.
-        gathered.view([| yield! adjustedIndices.shape; length |])
+    // Pre-cache the one-hot vectors, including the padding vector
+    let oneHotVectors =
+        let eye = torch.eye(numClasses, dtype = torch.float32, device = torch.CPU) // Identity matrix for one-hot vectors
+        let paddingVector = torch.zeros([| int64 numClasses |], dtype = torch.float32, device = torch.CPU) // Padding vector
+        torch.cat([| eye; paddingVector.unsqueeze(0) |], dim = 0) // Concatenate padding vector
+
+    override this.forward(input) =
+        // Flatten the input tensor for indexing
+        let flatInput = input.flatten()
+
+        // Use the input indices to index into the pre-cached one-hot vectors
+        let flatOutput = oneHotVectors.index_select(0, flatInput)
+
+        // Reshape the output to [batch_size, sequence_length, numClasses]
+        let outputShape = [| input.shape.[0]; input.shape.[1]; numClasses |]
+        flatOutput.view(outputShape)
 
 type Branch =
     {
