@@ -85,8 +85,8 @@ module Game =
                     |> toScore
             gameScore + dealScore
 
-    /// Updates the given game score, including shoot
-    /// reward, if possible.
+    /// Updates the given game score, including shoot reward, if
+    /// the final score of the given deal is inevitable.
     let tryUpdateScore deal gameScore =
         option {
             let! inevitable = OpenDeal.tryFindInevitable deal
