@@ -5,7 +5,7 @@ open System.IO
 
 open TorchSharp
 
-/// Hyperparameters.
+/// Hyperparameters and other globals.
 type Settings =
     {
         /// Random number generator seed.
@@ -69,16 +69,17 @@ type Settings =
 [<AutoOpen>]
 module Settings =
 
-    /// Hyperparameters.
+    /// RNG seed.
+    let private seed = 0
+
+    /// TensorBoard log writer.
+    let private writer =
+        let timespan = DateTime.Now - DateTime.Today
+        torch.utils.tensorboard.SummaryWriter(
+            $"runs/run%05d{int timespan.TotalSeconds}")
+
+    /// Hyperparameters and other globals.
     let settings =
-
-        let seed = 0
-
-        let writer =
-            let timespan = DateTime.Now - DateTime.Today
-            torch.utils.tensorboard.SummaryWriter(
-                $"runs/run%05d{int timespan.TotalSeconds}")
-
         {
             Seed = seed
             Random = Random(seed)
