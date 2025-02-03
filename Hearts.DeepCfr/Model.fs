@@ -27,27 +27,6 @@ type SkipConnection(inner : Module) as this =
     override _.forward(input) =
         (input --> inner) + input
 
-// https://chat.deepseek.com/a/chat/s/f40e2c39-94ce-4078-9214-d540c3aa4278
-type OneHot(numClasses : int) =
-    inherit Module("OneHot")
-
-    // Pre-cache the one-hot vectors, including the padding vector
-    let oneHotVectors =
-        let eye = torch.eye(numClasses, dtype = torch.float32, device = torch.CPU) // Identity matrix for one-hot vectors
-        let paddingVector = torch.zeros([| int64 numClasses |], dtype = torch.float32, device = torch.CPU) // Padding vector
-        torch.cat([| eye; paddingVector.unsqueeze(0) |], dim = 0) // Concatenate padding vector
-
-    override this.forward(input) =
-        // Flatten the input tensor for indexing
-        let flatInput = input.flatten()
-
-        // Use the input indices to index into the pre-cached one-hot vectors
-        let flatOutput = oneHotVectors.index_select(0, flatInput)
-
-        // Reshape the output to [batch_size, sequence_length, numClasses]
-        let outputShape = [| input.shape.[0]; input.shape.[1]; numClasses |]
-        flatOutput.view(outputShape)
-
 type Branch =
     {
         Model : Module
@@ -79,9 +58,6 @@ type Modules =
 
     static member SkipConnection(inner) =
         new SkipConnection(inner)
-
-    static member OneHot(nDim) =
-        new OneHot(nDim)
 
 /// An observed advantage event.
 type AdvantageSample =
@@ -117,12 +93,12 @@ type AdvantageModel() as this =
 
     let cardBranch =
         let nDim = Card.numCards
-        let model = OneHot(nDim)
+        let model = Embedding(int64 nDim + 1L, nDim, nDim)
         Branch.create model nDim
 
     let playerBranch =
         let nDim = Seat.numSeats
-        let model = OneHot(nDim)
+        let model = Embedding(int64 nDim + 1L, nDim, nDim)
         Branch.create model nDim
 
     let handBranch = cardBranch
@@ -133,7 +109,7 @@ type AdvantageModel() as this =
 
     let voidsBranch =
         let nDim = Encoding.voidsLength
-        let model = OneHot(nDim)
+        let model = Embedding(int64 nDim + 1L, nDim, nDim)
         Branch.create model nDim
 
     let combinedInputSize =
@@ -205,7 +181,7 @@ type AdvantageModel() as this =
                     voidsOutput
                     encoding.Score.float()
                 |],
-                dim = 1).``to``(torch.CUDA)
+                dim = 1)
         let result =
             combinedInput --> combined
 
