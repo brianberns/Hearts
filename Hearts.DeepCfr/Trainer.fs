@@ -287,7 +287,9 @@ module Trainer =
                 match strategyOpt with
                     | Some strategy ->
                         let regrets =
+                            let mean = Array.average strategy
                             strategy
+                                |> Array.map (fun x -> x - mean)
                                 |> Array.map float32
                                 |> DenseVector.ofArray
                                 |> Strategy.toWide legalPlays
