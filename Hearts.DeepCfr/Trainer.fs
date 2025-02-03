@@ -292,7 +292,7 @@ module Trainer =
                                 |> DenseVector.ofArray
                                 |> Strategy.toWide legalPlays
                         yield AdvantageSample.create
-                            hand deal.ClosedDeal regrets 0
+                            hand adjustedDeal regrets 0
                     | None -> ()
 
                 let deal =
