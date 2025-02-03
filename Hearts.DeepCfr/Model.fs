@@ -91,7 +91,7 @@ module AdvantageSample =
 type AdvantageModel() as this =
     inherit Module<Encoding, Tensor>("AdvantageModel")
 
-    let cardBranch =
+    let createCardBranch () =
         let nDim = Card.numCards
         let model = Embedding(int64 nDim + 1L, nDim, nDim)
         Branch.create model nDim
@@ -101,11 +101,11 @@ type AdvantageModel() as this =
         let model = Embedding(int64 nDim + 1L, nDim, nDim)
         Branch.create model nDim
 
-    let handBranch = cardBranch
+    let handBranch = createCardBranch ()
 
-    let otherUnplayedBranch = cardBranch
+    let otherUnplayedBranch = createCardBranch ()
 
-    let trickBranch = cardBranch
+    let trickBranch = createCardBranch ()
 
     let voidsBranch =
         let nDim = Encoding.voidsLength
