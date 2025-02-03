@@ -312,11 +312,12 @@ module Trainer =
             }
 
         seq {
-            for _ = 1 to numDeals do
+            for iDeal = 1 to numDeals do
                 let deal =
                     let deck = Deck.shuffle settings.Random
+                    let dealer = enum<Seat> (iDeal % Seat.numSeats)
                     OpenDeal.fromDeck
-                        Seat.South
+                        dealer
                         ExchangeDirection.Hold
                         deck
                         |> OpenDeal.startPlay
