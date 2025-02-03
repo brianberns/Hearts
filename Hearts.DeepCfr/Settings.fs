@@ -1,11 +1,16 @@
 ﻿namespace Hearts.DeepCfr
 
 open System
+open System.IO
+
 open TorchSharp
 
 /// Hyperparameters.
 type Settings =
     {
+        /// Random number generator seed.
+        Seed : int
+
         /// Random number generator.
         Random : Random
 
@@ -51,7 +56,7 @@ type Settings =
         /// Device to use for training models.
         Device : torch.Device
 
-        /// Tensorboard writer.
+        /// TensorBoard log writer.
         Writer : Modules.SummaryWriter
 
         /// Path to directory where models will be saved.
@@ -64,86 +69,82 @@ type Settings =
 [<AutoOpen>]
 module Settings =
 
-    /// Tensorboard log writer.
-    let private writer =
-        let timespan = DateTime.Now - DateTime.Today
-        torch.utils.tensorboard.SummaryWriter(
-            $"runs/run%05d{int timespan.TotalSeconds}")
-
-    /// RNG seed.
-    let private seed = 0
-
     /// Hyperparameters.
     let settings =
 
-            // initialize torch RNG's
-        torch.manual_seed(seed) |> ignore
-        torch.cuda.manual_seed_all(seed)
-        writer.add_text(
-            $"settings/seed", string seed, 0)
+        let seed = 0
 
-        let settings =
-            {
-                Random = Random(seed)
-                ZeroSumCompensation = 9
-                HiddenSize = 576
-                LearningRate = 2e-3
-                NumAdvantageTrainEpochs = 3_000
-                AdvantageBatchSize = 10_000
-                NumAdvantageSamples = 1_000_000
-                NumTraversals = 1_000
-                ResetAdvantageModel = true
-                NumIterations = 25
-                NumEvaluationDeals = 10_000
-                NumStrategyTrainEpochs = 5_000
-                StrategyBatchSize = 10_000
-                NumStrategySamples = 1_000_000
-                Device = torch.CUDA
-                ModelDirPath = "./Models"
-                Writer = writer
-                Verbose = true
-            }
+        let writer =
+            let timespan = DateTime.Now - DateTime.Today
+            torch.utils.tensorboard.SummaryWriter(
+                $"runs/run%05d{int timespan.TotalSeconds}")
 
+        {
+            Seed = seed
+            Random = Random(seed)
+            ZeroSumCompensation = 9
+            HiddenSize = 576
+            LearningRate = 2e-3
+            NumAdvantageTrainEpochs = 3_000
+            AdvantageBatchSize = 10_000
+            NumAdvantageSamples = 1_000_000
+            NumTraversals = 1_000
+            ResetAdvantageModel = true
+            NumIterations = 25
+            NumEvaluationDeals = 10_000
+            NumStrategyTrainEpochs = 5_000
+            StrategyBatchSize = 10_000
+            NumStrategySamples = 1_000_000
+            Device = torch.CUDA
+            ModelDirPath = "./Models"
+            Writer = writer
+            Verbose = true
+        }
+
+    do
+            // initialize torch
+        torch.manual_seed(settings.Seed) |> ignore
+        torch.cuda.manual_seed_all(settings.Seed)
         torch.set_default_device(settings.Device)
 
-        System.IO.Directory.CreateDirectory(settings.ModelDirPath)
+        Directory.CreateDirectory(settings.ModelDirPath)
             |> ignore
 
-        writer.add_text(
+        settings.Writer.add_text(
+            $"settings/Seed", string settings.Seed, 0)
+        settings.Writer.add_text(
             $"settings/ZeroSumCompensation",
             string settings.ZeroSumCompensation, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/NumAdvantageTrainEpochs",
             string settings.NumAdvantageTrainEpochs, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/AdvantageBatchSize",
             string settings.AdvantageBatchSize, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/NumAdvantageSamples",
             string settings.NumAdvantageSamples, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/NumTraversals",
             string settings.NumTraversals, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/NumIterations",
             string settings.NumIterations, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/NumEvaluationDeals",
             string settings.NumEvaluationDeals, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/NumStrategyTrainEpochs",
             string settings.NumStrategyTrainEpochs, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/StrategyBatchSize",
             string settings.StrategyBatchSize, 0)
-        writer.add_text(
+        settings.Writer.add_text(
             $"settings/NumStrategySamples",
             string settings.NumStrategySamples, 0)
-
-        settings

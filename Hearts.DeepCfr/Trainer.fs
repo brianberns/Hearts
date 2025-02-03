@@ -173,7 +173,7 @@ module Trainer =
                 createChallenger (
                     Strategy.getFromAdvantage stateMap[0].Model)
             Tournament.run
-                (Random(0))   // use same deals each iteration
+                (Random(settings.Seed + 1))   // use same deals each iteration
                 Database.player
                 challenger
         settings.Writer.add_scalar(
