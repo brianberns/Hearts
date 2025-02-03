@@ -338,6 +338,10 @@ module Trainer =
         let model = new AdvantageModel()
         let losses = AdvantageModel.train samples model
         printfn $"Final loss {Array.last losses}"
+        for epoch = 0 to losses.Length - 1 do
+            settings.Writer.add_scalar(
+                $"advantage loss/iter%03d{0}/player{0}",
+                losses[epoch], epoch)
 
         let pairs =
             [
