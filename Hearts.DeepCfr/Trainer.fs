@@ -331,11 +331,6 @@ module Trainer =
         printfn $"{settings}"
         printfn $"numDeals: {numDeals}"
 
-        let samples =
-            createTrainingData numDeals
-                |> Seq.toArray
-        printfn $"Number of samples: {samples.Length}"
-
         let model = new AdvantageModel()
         let nParms =
             model.parameters(true)
@@ -345,6 +340,11 @@ module Trainer =
             $"settings/AdvModelParmCount", string nParms, 0)
         if settings.Verbose then
             printfn $"Advantage model parameter count: {nParms}"
+
+        let samples =
+            createTrainingData numDeals
+                |> Seq.toArray
+        printfn $"Number of samples: {samples.Length}"
 
         let losses = AdvantageModel.train samples model
         printfn $"Final loss {Array.last losses}"
