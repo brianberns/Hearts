@@ -93,7 +93,7 @@ type AdvantageModel() as this =
 
     let cardBranch =
         let nDim = Card.numCards
-        let nOut = 1 * nDim
+        let nOut = 2 * nDim
         let model =
             Embedding(
                 int64 nDim + 1L,
@@ -102,7 +102,7 @@ type AdvantageModel() as this =
 
     let playerBranch =
         let nDim = Seat.numSeats
-        let nOut = 1 * nDim
+        let nOut = 2 * nDim
         let model =
             Embedding(
                 int64 nDim + 1L,
@@ -117,7 +117,7 @@ type AdvantageModel() as this =
 
     let voidsBranch =
         let nDim = Encoding.voidsLength
-        let nOut = 1 * nDim
+        let nOut = 2 * nDim
         let model =
             Embedding(
                 int64 nDim + 1L,
@@ -135,6 +135,10 @@ type AdvantageModel() as this =
         Sequential(
             Linear(
                 combinedInputSize,
+                settings.HiddenSize),
+            ReLU(),
+            Linear(
+                settings.HiddenSize,
                 settings.HiddenSize),
             ReLU(),
             Linear(
