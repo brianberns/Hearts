@@ -93,13 +93,21 @@ type AdvantageModel() as this =
 
     let cardBranch =
         let nDim = Card.numCards
-        let model = Embedding(int64 nDim + 1L, nDim, nDim)
-        Branch.create model nDim
+        let nOut = 1 * nDim
+        let model =
+            Embedding(
+                int64 nDim + 1L,
+                nOut, nDim)
+        Branch.create model nOut
 
     let playerBranch =
         let nDim = Seat.numSeats
-        let model = Embedding(int64 nDim + 1L, nDim, nDim)
-        Branch.create model nDim
+        let nOut = 1 * nDim
+        let model =
+            Embedding(
+                int64 nDim + 1L,
+                nOut, nDim)
+        Branch.create model nOut
 
     let handBranch = cardBranch
 
@@ -109,16 +117,20 @@ type AdvantageModel() as this =
 
     let voidsBranch =
         let nDim = Encoding.voidsLength
-        let model = Embedding(int64 nDim + 1L, nDim, nDim)
-        Branch.create model nDim
+        let nOut = 1 * nDim
+        let model =
+            Embedding(
+                int64 nDim + 1L,
+                nOut, nDim)
+        Branch.create model nOut
 
     let combinedInputSize =
-        Seat.numSeats                                 // current player
-            + Card.numCards                           // current player's hand
-            + Card.numCards                           // other unplayed cards
-            + ((Seat.numSeats - 1) * Card.numCards)   // current trick
-            + (Suit.numSuits * Seat.numSeats)         // voids
-            + Seat.numSeats                           // score
+        playerBranch.OutputSize
+            + handBranch.OutputSize
+            + otherUnplayedBranch.OutputSize
+            + Encoding.trickLength * trickBranch.OutputSize
+            + voidsBranch.OutputSize
+            + Seat.numSeats   // score
     let combined =
         Sequential(
             Linear(
