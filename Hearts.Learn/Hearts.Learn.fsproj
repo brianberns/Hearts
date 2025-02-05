@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="Readme.md" />
+    <None Include="Hearts.db">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Compile Include="Prelude.fs" />
+    <Compile Include="Encoding.fs" />
+    <Compile Include="Settings.fs" />
+    <Compile Include="Model.fs" />
+    <Compile Include="Traverse.fs" />
+    <Compile Include="Tournament.fs" />
+    <Compile Include="Trainer.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
+    <PackageReference Include="TorchSharp-cuda-windows" Version="0.105.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hearts.FastCfr\Hearts.FastCfr.fsproj" />
+    <ProjectReference Include="..\Hearts.Web\Server\Hearts.Web.Server.fsproj" />
+    <ProjectReference Include="..\Hearts\Hearts.fsproj" />
+    <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
+  </ItemGroup>
+
+</Project>

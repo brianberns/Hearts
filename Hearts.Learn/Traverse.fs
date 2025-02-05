@@ -1,0 +1,188 @@
+﻿namespace Hearts.Learn
+
+open MathNet.Numerics.LinearAlgebra
+
+open PlayingCards
+open Hearts
+
+/// Model Hearts as a two-player, zero-sum game, instead of
+/// a cutthroat, multiplayer game.
+module ZeroSum =
+
+    /// Assume two-player, zero-sum game.
+    let numPlayers = 2
+
+    /// Gets the active zero-sum player in the given deal.
+    let getActivePlayer deal =
+        if OpenDeal.currentPlayer deal = Seat.South then 0
+        else 1
+
+    /// Gets the payoff for the given deal score.
+    let getPayoff score =
+        let southPayoff =
+            let otherAvg =
+                (score.ScoreMap
+                    |> Map.toSeq
+                    |> Seq.where (fun (seat, _) ->
+                        seat <> Seat.South)
+                    |> Seq.sumBy snd
+                    |> float32)
+                    / float32 (Seat.numSeats - 1)
+            otherAvg - float32 score[Seat.South]
+        [| southPayoff; -southPayoff |]
+
+    /// Computes the payoff for the given deal, if it is
+    /// complete.
+    let tryGetPayoff deal =
+        Game.tryUpdateScore deal Score.zero
+            |> Option.map getPayoff
+
+module Strategy =
+
+    /// Computes strategy from the given per-action regrets.
+    /// A strategy is normalized so that its elements sum
+    /// to 1.0 (to represent action probabilities).
+    let private matchRegrets regrets =
+
+            // find highest-value action
+        let idx = Vector.maxIndex regrets
+
+            // scale if possible, or choose highest-value action
+        if regrets[idx] > 0.0f then
+            let clamped = Vector.map (max 0.0f) regrets   // clamp negative regrets
+            clamped / Vector.sum clamped
+        else
+            DenseVector.init regrets.Count (fun i ->
+                if i = idx then 1.0f
+                else 0.0f)
+
+    /// Converts a wide vector (indexed by entire deck) to
+    /// a narrow vector (indexed by legal plays).
+    let toNarrow (legalPlays : _[]) (wide : Vector<_>) =
+        assert(wide.Count = Card.numCards)
+        legalPlays
+            |> Seq.map (
+                Card.toIndex >> Vector.get wide)
+            |> DenseVector.ofSeq
+
+    /// Converts a narrow vector (indexed by legal plays) to
+    /// a wide vector (indexed by entire deck).
+    let toWide (legalPlays : _[]) (narrow : Vector<_>) =
+        assert(narrow.Count = legalPlays.Length)
+        Seq.zip legalPlays narrow
+            |> Encoding.encodeCardValues
+            |> DenseVector.ofArray
+
+    /// Computes strategy for the given info set (hand + deal)
+    /// using the given advantage model.
+    let getFromAdvantage (model : AdvantageModel) hand deal legalPlays =
+        (AdvantageModel.getAdvantage hand deal model)
+            .data<float32>()
+            |> DenseVector.ofSeq
+            |> toNarrow legalPlays
+            |> matchRegrets
+
+    /// Computes strategy for the given info set (hand + deal)
+    /// using the given strategy model.
+    let getFromStrategy model hand deal legalPlays =
+        (StrategyModel.getStrategy hand deal model)
+            .data<float32>()
+            |> DenseVector.ofSeq
+            |> toNarrow legalPlays
+
+module Traverse =
+
+    /// Appends an item to the end of an array.
+    let private append items item =
+        [| yield! items; yield item |]
+
+    /// Evaluates the utility of the given deal.
+    let traverse iter deal updatingPlayer (models : _[]) =
+
+        /// Top-level loop.
+        let rec loop deal =
+            match ZeroSum.tryGetPayoff deal with
+                | Some payoff ->
+                    payoff, Array.empty   // game is over
+                | None ->
+                    loopNonTerminal deal
+
+        /// Recurses for non-terminal game state.
+        and loopNonTerminal deal =
+            let hand = OpenDeal.currentHand deal
+            let legalPlays =
+                deal.ClosedDeal
+                    |> ClosedDeal.legalPlays hand
+                    |> Seq.toArray
+            if legalPlays.Length = 1 then
+                addLoop deal legalPlays[0]   // forced play
+            else
+                    // get utility of active player's strategy
+                let activePlayer = ZeroSum.getActivePlayer deal
+                let strategy =
+                    Strategy.getFromAdvantage
+                        models[activePlayer]
+                        hand
+                        deal.ClosedDeal
+                        legalPlays
+                let getUtility =
+                    if activePlayer = updatingPlayer then getFullUtility
+                    else getOneUtility
+                getUtility hand deal activePlayer legalPlays strategy
+
+        /// Adds the given play to the given deal and loops.
+        and addLoop deal play =
+            deal
+                |> OpenDeal.addPlay play
+                |> loop
+
+        /// Gets the full utility of the given info set (hand + deal).
+        and getFullUtility hand deal activePlayer legalPlays strategy =
+
+                // get utility of each action
+            let actionUtilities, samples =
+                let utilityArrays, sampleArrays =
+                    legalPlays
+                        |> Array.map (addLoop deal)
+                        |> Array.unzip
+                utilityArrays
+                    |> Seq.map (fun utilities ->
+                        utilities[activePlayer])
+                    |> DenseVector.ofSeq,
+                Array.concat sampleArrays
+
+                // utility of this info set is action utilities weighted by action probabilities
+            let utility = actionUtilities * strategy
+            let samples =
+                let wideRegrets =
+                    (actionUtilities - utility)
+                        |> Strategy.toWide legalPlays
+                AdvantageSample.create
+                    hand deal.ClosedDeal wideRegrets iter
+                    |> Choice1Of2
+                    |> append samples
+            let utilities =
+                Array.init ZeroSum.numPlayers (fun i ->
+                    if i = activePlayer then utility
+                    else -utility)
+            utilities, samples
+
+        /// Gets the utility of the given info set (hand + deal)
+        /// by sampling a single action.
+        and getOneUtility hand deal _activePlayer legalPlays strategy =
+            let utilities, samples =
+                strategy
+                    |> lock settings.Random (fun () ->
+                        Vector.sample settings.Random)
+                    |> Array.get legalPlays
+                    |> addLoop deal
+            let samples =
+                let wideStrategy =
+                    Strategy.toWide legalPlays strategy
+                StrategySample.create
+                    hand deal.ClosedDeal wideStrategy iter
+                    |> Choice2Of2
+                    |> append samples
+            utilities, samples
+
+        loop deal |> snd
