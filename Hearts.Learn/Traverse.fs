@@ -82,14 +82,6 @@ module Strategy =
             |> toNarrow legalPlays
             |> matchRegrets
 
-    /// Computes strategy for the given info set (hand + deal)
-    /// using the given strategy model.
-    let getFromStrategy model hand deal legalPlays =
-        (StrategyModel.getStrategy hand deal model)
-            .data<float32>()
-            |> DenseVector.ofSeq
-            |> toNarrow legalPlays
-
 module Traverse =
 
     /// Appends an item to the end of an array.
