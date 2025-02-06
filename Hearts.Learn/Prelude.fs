@@ -1,16 +1,4 @@
-﻿namespace Hearts.DeepCfr
-
-module Choice =
-
-    /// Unzips an array of choices.
-    let unzip choices =
-        let opts =
-            choices
-                |> Array.map (function
-                    | Choice1Of2 ch -> Some ch, None
-                    | Choice2Of2 ch -> None, Some ch)
-        Array.choose fst opts,
-        Array.choose snd opts
+﻿namespace Hearts.Learn
 
 module Vector =
 

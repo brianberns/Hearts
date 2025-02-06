@@ -1,4 +1,4 @@
-﻿namespace Hearts.DeepCfr
+﻿namespace Hearts.Learn
 
 module Program =
 
