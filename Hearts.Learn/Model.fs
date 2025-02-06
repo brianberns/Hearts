@@ -89,7 +89,6 @@ module AdvantageModel =
             // prepare training data
         let tensors =
             samples
-                |> Seq.toArray
                 |> Array.randomShuffle
                 |> Array.chunkBySize settings.AdvantageBatchSize
                 |> Array.map (fun batch ->

@@ -89,7 +89,7 @@ module Traverse =
         [| yield! items; yield item |]
 
     /// Evaluates the utility of the given deal.
-    let traverse iter deal updatingPlayer (models : _[]) =
+    let traverse deal model =
 
         /// Top-level loop.
         let rec loop deal =
@@ -113,13 +113,11 @@ module Traverse =
                 let activePlayer = ZeroSum.getActivePlayer deal
                 let strategy =
                     Strategy.getFromAdvantage
-                        models[activePlayer]
-                        hand
-                        deal.ClosedDeal
-                        legalPlays
+                        model hand deal.ClosedDeal legalPlays
                 let getUtility =
-                    if activePlayer = updatingPlayer then getFullUtility
-                    else getOneUtility
+                    lock settings.Random (fun () ->
+                        if settings.Random.Next(2) = 0 then getFullUtility
+                        else getOneUtility)
                 getUtility hand deal activePlayer legalPlays strategy
 
         /// Adds the given play to the given deal and loops.
@@ -150,8 +148,7 @@ module Traverse =
                     (actionUtilities - utility)
                         |> Strategy.toWide legalPlays
                 AdvantageSample.create
-                    hand deal.ClosedDeal wideRegrets iter
-                    |> Choice1Of2
+                    hand deal.ClosedDeal wideRegrets
                     |> append samples
             let utilities =
                 Array.init ZeroSum.numPlayers (fun i ->
@@ -171,9 +168,8 @@ module Traverse =
             let samples =
                 let wideStrategy =
                     Strategy.toWide legalPlays strategy
-                StrategySample.create
-                    hand deal.ClosedDeal wideStrategy iter
-                    |> Choice2Of2
+                AdvantageSample.create
+                    hand deal.ClosedDeal wideStrategy
                     |> append samples
             utilities, samples
 

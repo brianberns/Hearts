@@ -11,45 +11,8 @@ open Hearts
 
 module Trainer =
 
-    /// Advantage state managed for each player.
-    type private AdvantageState =
-        {
-            /// Player's model.
-            Model : AdvantageModel
-
-            /// Player's reservoir.
-            Reservoir : Reservoir<AdvantageSample>
-        }
-
-    module private AdvantageState =
-
-        /// Creates an advantage state.
-        let create () =
-            {
-                Model = new AdvantageModel()
-                Reservoir =
-                    Reservoir.create
-                        settings.Random
-                        settings.NumAdvantageSamples
-            }
-
-        /// Resets the model of the given state.
-        let resetModel state =
-            state.Model.Dispose()
-            {
-                state with
-                    Model = new AdvantageModel()
-            }
-
-    /// Generates training data for the given player.
-    let private generateSamples iter updatingPlayer stateMap =
-
-        let nDeals =
-            let factor =
-                if updatingPlayer = 0 then
-                    settings.ZeroSumCompensation
-                else 1
-            factor * settings.NumTraversals
+    /// Generates training data using the given model.
+    let private generateSamples model =
 
         let collect =
 #if DEBUG
@@ -58,7 +21,7 @@ module Trainer =
             Array.Parallel.collect
 #endif
 
-        Array.init nDeals id
+        Array.init settings.NumTraversals id
             |> collect (fun iDeal ->
                 let deal =
                     let deck =
@@ -70,74 +33,45 @@ module Trainer =
                         ExchangeDirection.Hold
                         deck
                         |> OpenDeal.startPlay
-                let models =
-                    stateMap
-                        |> Map.values
-                        |> Seq.map (fun state -> state.Model)
-                        |> Seq.toArray
-                Traverse.traverse
-                    iter deal updatingPlayer models)
-            |> Choice.unzip
+                Traverse.traverse deal model)
 
-    /// Adds the given samples to the given reservoir and then
-    /// uses the reservoir to train the given advantage model.
-    let private trainAdvantageModel state newSamples =
-
-        let resv =
-            Reservoir.addMany newSamples state.Reservoir
+    /// Trains the given advantage model using the given samples.
+    let private trainAdvantageModel samples model =
 
         let stopwatch = Stopwatch.StartNew()
-        let losses =
-            AdvantageModel.train resv.Items state.Model
+        let losses = AdvantageModel.train samples model
         if settings.Verbose then
             stopwatch.Stop()
-            printfn $"   Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
+            printfn $"   Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
+        losses
 
-        resv, losses
+    /// Trains a new model using the given model.
+    let private updateModel iter model =
 
-    /// Trains a player.
-    let private trainPlayer iter stateMap updatingPlayer =
-
-        if settings.Verbose then
-            printfn $"\nTraining player {updatingPlayer}"
-
-            // generate training data for this player
+            // generate training data from existing model
         let stopwatch = Stopwatch.StartNew()
-        let advSamples, stratSamples =
-            generateSamples iter updatingPlayer stateMap
+        let samples = generateSamples model
         if settings.Verbose then
-            printfn $"   {advSamples.Length} advantage samples, {stratSamples.Length} strategy samples generated in {stopwatch.Elapsed}"
+            printfn $"   {samples.Length} samples generated in {stopwatch.Elapsed}"
 
-            // train this player's model
-        let state =
-            let state = stateMap[updatingPlayer]
-            if settings.ResetAdvantageModel then
-                AdvantageState.resetModel state
-            else state
-        let resv, losses =
-            trainAdvantageModel state advSamples
-        if updatingPlayer = 0 then
-            Path.Combine(
-                settings.ModelDirPath,
-                $"AdvantageModel%03d{iter}.pt")
-                    |> state.Model.save
-                    |> ignore
-        let stateMap =
-            let state = { state with Reservoir = resv }
-            Map.add updatingPlayer state stateMap
+            // train a new model
+        model.Dispose()
+        let model = new AdvantageModel()
+        let losses = trainAdvantageModel samples model
+        Path.Combine(
+            settings.ModelDirPath,
+            $"AdvantageModel%03d{iter}.pt")
+                |> model.save
+                |> ignore
 
             // log inputs and losses
-        settings.Writer.add_scalar(
-            $"advantage reservoir/player{updatingPlayer}",
-            float32 resv.Items.Count,
-            iter)
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
-                $"advantage loss/iter%03d{iter}/player{updatingPlayer}",
+                $"advantage loss/iter%03d{iter}",
                 losses[epoch], epoch)
 
-        stratSamples, stateMap
+        model
 
     let createChallenger getStrategy =
 
@@ -155,63 +89,25 @@ module Trainer =
         { Play = play }
 
     /// Trains a single iteration.
-    let private trainIteration iter stateMap =
+    let private trainIteration iter model =
 
         if settings.Verbose then
             printfn $"\n*** Iteration {iter} ***"
 
-            // train each player's model
-        let stratSampleSeqs, stateMap =
-            Seq.mapFold
-                (trainPlayer iter)
-                stateMap
-                (seq { 0 .. ZeroSum.numPlayers - 1 })
+            // train a new model
+        let model = updateModel iter model
 
             // evaluate model
         let avgPayoff =
             let challenger =
                 createChallenger (
-                    Strategy.getFromAdvantage stateMap[0].Model)
+                    Strategy.getFromAdvantage model)
             Tournament.run
                 (Random(0))   // use same deals each iteration
                 Database.player
                 challenger
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, iter)
-
-        stateMap, Seq.concat stratSampleSeqs
-
-    /// Trains a strategy model using the given samples.
-    let private trainStrategyModel (resv : Reservoir<_>) =
-
-        if settings.Verbose then
-            printfn $"\n*** Training strategy model ***"
-
-        let model =
-            StrategyModel.create
-                settings.HiddenSize
-                settings.LearningRate
-        let losses =
-            StrategyModel.train resv.Items model
-        if settings.Verbose then
-            printfn $"\nTrained model on {resv.Items.Count} samples"
-
-        for epoch = 0 to losses.Length - 1 do
-            settings.Writer.add_scalar(
-                "strategy loss", losses[epoch], epoch)
-
-            // evaluate model
-        let avgPayoff =
-            let challenger =
-                createChallenger (
-                    Strategy.getFromStrategy model)
-            Tournament.run
-                (Random(0))   // use same deals each iteration
-                Database.player
-                challenger
-        settings.Writer.add_scalar(
-            $"strategy tournament",
-            avgPayoff, settings.NumIterations)
 
         model
 
@@ -222,14 +118,10 @@ module Trainer =
             printfn $"Server garbage collection: {System.Runtime.GCSettings.IsServerGC}"
             printfn $"Settings: {settings}"
 
-            // create advantage state
-        let advStateMap =
-            Map [|
-                for player = 0 to ZeroSum.numPlayers - 1 do
-                    player, AdvantageState.create ()
-            |]
+            // create initial model
+        let model = new AdvantageModel()
         let nParms =
-            advStateMap[0].Model.parameters(true)
+            model.parameters(true)
                 |> Seq.where (fun parm -> parm.requires_grad)
                 |> Seq.sumBy (fun parm -> parm.numel())
         settings.Writer.add_text(
@@ -240,30 +132,15 @@ module Trainer =
             printfn $"Advantage model parameter count: {nParms}"
 
             // run the iterations
-        let _, stratResv =
-            let stratResv =
-                Reservoir.create
-                    settings.Random
-                    settings.NumStrategySamples
+        let model =
             let iterNums = seq { 0 .. settings.NumIterations - 1 }
-            ((advStateMap, stratResv), iterNums)
-                ||> Seq.fold (fun (advStateMap, stratResv) iter ->
-                    let advStateMap, stratSamples =
-                        trainIteration iter advStateMap
-                    let stratResv =
-                        Reservoir.addMany stratSamples stratResv
-                    settings.Writer.add_scalar(
-                        $"strategy reservoir",
-                        float32 stratResv.Items.Count,
-                        iter)
-                    advStateMap, stratResv)
-
-            // train the final strategy model
-        let model = trainStrategyModel stratResv
+            (model, iterNums)
+                ||> Seq.fold (fun model iter ->
+                    trainIteration iter model)
         Path.Combine(
             settings.ModelDirPath,
             "StrategyModel.pt")
-                |> model.Network.save
+                |> model.save
                 |> ignore
         model
 
@@ -297,7 +174,7 @@ module Trainer =
                                 |> DenseVector.ofArray
                                 |> Strategy.toWide legalPlays
                         yield AdvantageSample.create
-                            hand deal.ClosedDeal regrets 0
+                            hand deal.ClosedDeal regrets
                     | None -> ()
 
                 let deal =
