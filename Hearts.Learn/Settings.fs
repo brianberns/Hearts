@@ -15,6 +15,9 @@ type Settings =
         /// Optimizer learning rate.
         LearningRate : float
 
+        /// Likelihood of following all branches, from 0.0 to 1.0.
+        BranchRate : float
+
         /// Number of epochs to use when training advantage models.
         NumAdvantageTrainEpochs : int
 
@@ -71,6 +74,7 @@ module Settings =
                 Random = Random(seed)
                 HiddenSize = Encoding.encodedLength * 8
                 LearningRate = 2e-3
+                BranchRate = 0.5
                 NumAdvantageTrainEpochs = 1_000
                 AdvantageBatchSize = 10_000
                 NumAdvantageSamples = 1_000_000
@@ -91,6 +95,9 @@ module Settings =
         writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
+        writer.add_text(
+            $"settings/BranchRate",
+            string settings.BranchRate, 0)
         writer.add_text(
             $"settings/NumAdvantageTrainEpochs",
             string settings.NumAdvantageTrainEpochs, 0)

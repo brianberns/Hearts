@@ -108,11 +108,13 @@ module Traverse =
                 let strategy =
                     Strategy.getFromAdvantage
                         model hand deal.ClosedDeal legalPlays
-                let getUtility =
-                    lock settings.Random (fun () ->
-                        if settings.Random.Next(2) = 0 then getFullUtility
-                        else getOneUtility)
-                getUtility hand player deal legalPlays strategy
+                let rnd =
+                    lock settings.Random
+                        settings.Random.NextDouble
+                if rnd <= settings.BranchRate then
+                    getFullUtility hand player deal legalPlays strategy
+                else
+                    getOneUtility deal legalPlays strategy
 
         /// Adds the given play to the given deal and loops.
         and addLoop deal play =
@@ -129,8 +131,7 @@ module Traverse =
                     legalPlays
                         |> Array.map (addLoop deal)
                         |> Array.unzip
-                utilityArrays
-                    |> DenseMatrix.ofColumnArrays,
+                DenseMatrix.ofColumnArrays utilityArrays,
                 Array.concat sampleArrays
             assert(actionUtilities.ColumnCount = legalPlays.Length)
             assert(actionUtilities.RowCount = Seat.numSeats)
@@ -150,18 +151,10 @@ module Traverse =
 
         /// Gets the utility of the given info set (hand + deal)
         /// by sampling a single action.
-        and getOneUtility hand _player deal legalPlays strategy =
-            let utilities, samples =
-                lock settings.Random (fun () ->
-                    Vector.sample settings.Random strategy)
-                    |> Array.get legalPlays
-                    |> addLoop deal
-            let samples =
-                let wideStrategy =
-                    Strategy.toWide legalPlays strategy
-                AdvantageSample.create
-                    hand deal.ClosedDeal wideStrategy
-                    |> append samples
-            utilities, samples
+        and getOneUtility deal legalPlays strategy =
+            lock settings.Random (fun () ->
+                Vector.sample settings.Random strategy)
+                |> Array.get legalPlays
+                |> addLoop deal
 
         loop deal |> snd
