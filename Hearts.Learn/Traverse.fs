@@ -130,7 +130,7 @@ module Traverse =
                         |> Array.map (addLoop deal)
                         |> Array.unzip
                 utilityArrays
-                    |> DenseMatrix.ofRowArrays,
+                    |> DenseMatrix.ofColumnArrays,
                 Array.concat sampleArrays
             assert(actionUtilities.ColumnCount = legalPlays.Length)
             assert(actionUtilities.RowCount = Seat.numSeats)
@@ -140,7 +140,8 @@ module Traverse =
             assert(utility.Count = Seat.numSeats)
             let samples =
                 let wideRegrets =
-                    (actionUtilities.Row(int player) - utility)
+                    let idx = int player
+                    (actionUtilities.Row(idx) - utility[idx])
                         |> Strategy.toWide legalPlays
                 AdvantageSample.create
                     hand deal.ClosedDeal wideRegrets
