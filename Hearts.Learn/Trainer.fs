@@ -53,7 +53,7 @@ module Trainer =
         let stopwatch = Stopwatch.StartNew()
         let samples = generateSamples model
         if settings.Verbose then
-            printfn $"   {samples.Length} samples generated in {stopwatch.Elapsed}"
+            printfn $"\n   {samples.Length} samples generated in {stopwatch.Elapsed}"
 
             // train a new model
         model.Dispose()
