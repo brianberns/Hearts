@@ -5,31 +5,25 @@ open MathNet.Numerics.LinearAlgebra
 open PlayingCards
 open Hearts
 
-/// Model Hearts as a two-player, zero-sum game, instead of
-/// a cutthroat, multiplayer game.
+/// Model Hearts as a zero-sum game.
 module ZeroSum =
 
-    /// Assume two-player, zero-sum game.
-    let numPlayers = 2
-
-    /// Gets the active zero-sum player in the given deal.
-    let getActivePlayer deal =
-        if OpenDeal.currentPlayer deal = Seat.South then 0
-        else 1
-
-    /// Gets the payoff for the given deal score.
+    /// Gets the payoff for the given deal score from each
+    /// player's point of view.
     let getPayoff score =
-        let southPayoff =
-            let otherAvg =
-                (score.ScoreMap
-                    |> Map.toSeq
-                    |> Seq.where (fun (seat, _) ->
-                        seat <> Seat.South)
-                    |> Seq.sumBy snd
-                    |> float32)
-                    / float32 (Seat.numSeats - 1)
-            otherAvg - float32 score[Seat.South]
-        [| southPayoff; -southPayoff |]
+        let points = score.ScoreMap.Values
+        assert(points.Count = Seat.numSeats)
+        let sum = Seq.sum points
+        let payoff =
+            [|
+                for pt in points do
+                    let otherAvg =
+                        float32 (sum - pt)
+                            / float32 (Seat.numSeats - 1)
+                    otherAvg - float32 pt
+            |]
+        assert(Seq.sum payoff = 0.0f)
+        payoff
 
     /// Computes the payoff for the given deal, if it is
     /// complete.
@@ -95,7 +89,7 @@ module Traverse =
         let rec loop deal =
             match ZeroSum.tryGetPayoff deal with
                 | Some payoff ->
-                    payoff, Array.empty   // game is over
+                    payoff, Array.empty   // deal is over
                 | None ->
                     loopNonTerminal deal
 
@@ -109,8 +103,8 @@ module Traverse =
             if legalPlays.Length = 1 then
                 addLoop deal legalPlays[0]   // forced play
             else
-                    // get utility of active player's strategy
-                let activePlayer = ZeroSum.getActivePlayer deal
+                    // get utility of current player's strategy
+                let player = OpenDeal.currentPlayer deal
                 let strategy =
                     Strategy.getFromAdvantage
                         model hand deal.ClosedDeal legalPlays
@@ -118,7 +112,7 @@ module Traverse =
                     lock settings.Random (fun () ->
                         if settings.Random.Next(2) = 0 then getFullUtility
                         else getOneUtility)
-                getUtility hand deal activePlayer legalPlays strategy
+                getUtility hand player deal legalPlays strategy
 
         /// Adds the given play to the given deal and loops.
         and addLoop deal play =
@@ -127,7 +121,7 @@ module Traverse =
                 |> loop
 
         /// Gets the full utility of the given info set (hand + deal).
-        and getFullUtility hand deal activePlayer legalPlays strategy =
+        and getFullUtility hand player deal legalPlays strategy =
 
                 // get utility of each action
             let actionUtilities, samples =
@@ -136,29 +130,26 @@ module Traverse =
                         |> Array.map (addLoop deal)
                         |> Array.unzip
                 utilityArrays
-                    |> Seq.map (fun utilities ->
-                        utilities[activePlayer])
-                    |> DenseVector.ofSeq,
+                    |> DenseMatrix.ofRowArrays,
                 Array.concat sampleArrays
+            assert(actionUtilities.ColumnCount = legalPlays.Length)
+            assert(actionUtilities.RowCount = Seat.numSeats)
 
                 // utility of this info set is action utilities weighted by action probabilities
             let utility = actionUtilities * strategy
+            assert(utility.Count = Seat.numSeats)
             let samples =
                 let wideRegrets =
-                    (actionUtilities - utility)
+                    (actionUtilities.Row(int player) - utility)
                         |> Strategy.toWide legalPlays
                 AdvantageSample.create
                     hand deal.ClosedDeal wideRegrets
                     |> append samples
-            let utilities =
-                Array.init ZeroSum.numPlayers (fun i ->
-                    if i = activePlayer then utility
-                    else -utility)
-            utilities, samples
+            utility.ToArray(), samples
 
         /// Gets the utility of the given info set (hand + deal)
         /// by sampling a single action.
-        and getOneUtility hand deal _activePlayer legalPlays strategy =
+        and getOneUtility hand _player deal legalPlays strategy =
             let utilities, samples =
                 strategy
                     |> lock settings.Random (fun () ->
