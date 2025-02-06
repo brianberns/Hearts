@@ -152,9 +152,8 @@ module Traverse =
         /// by sampling a single action.
         and getOneUtility hand _player deal legalPlays strategy =
             let utilities, samples =
-                strategy
-                    |> lock settings.Random (fun () ->
-                        Vector.sample settings.Random)
+                lock settings.Random (fun () ->
+                    Vector.sample settings.Random strategy)
                     |> Array.get legalPlays
                     |> addLoop deal
             let samples =
