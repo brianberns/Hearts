@@ -21,15 +21,6 @@ module Card =
 
 module Encoding =
 
-    /// Encodes the given player's seat as a one-hot
-    /// vector in the total number of seats.
-    let private encodePlayer player =
-        [|
-            for seat in Enum.getValues<Seat> do
-                if seat = player then 1.0f
-                else 0.0f
-        |]
-
     /// Encodes the given (card, value) pairs as a
     /// vector in the deck size.
     let encodeCardValues pairs =
@@ -71,34 +62,32 @@ module Encoding =
                     |> encodeCards
         |]
 
-    /// Encodes the given voids for the given player as
-    /// a multi-hot vector in the number of suits times
-    /// the number of seats.
+    /// Encodes the given voids as a multi-hot vector in the
+    /// number of suits times the number of seats.
     let private encodeVoids player voids =
         [|
             for suit in Enum.getValues<Suit> do
-                for seat in Enum.getValues<Seat> do
-                    if seat <> player then
-                        if Set.contains (seat, suit) voids then
-                            1.0f
-                        else 0.0f
+                for seat in Seat.cycle player do
+                    if Set.contains (seat, suit) voids then
+                        1.0f
+                    else 0.0f
         |]
 
     /// Encodes the given score as a vector in the number
     /// of seats.
-    let private encodeScore score =
+    let private encodeScore player score =
         assert(score.ScoreMap.Count = Seat.numSeats)
-        score.ScoreMap.Values
-            |> Seq.map float32
-            |> Seq.toArray
+        [|
+            for seat in Seat.cycle player do
+                float32 score.ScoreMap[seat]
+        |]
 
     /// Total encoded length of an info set (hand + deal).
     let encodedLength =
-        Seat.numSeats                                 // current player
-            + Card.numCards                           // current player's hand
+        Card.numCards                                 // current player's hand
             + Card.numCards                           // other unplayed cards
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
-            + (Suit.numSuits * (Seat.numSeats - 1))   // voids
+            + (Suit.numSuits * Seat.numSeats)         // voids
             + Seat.numSeats                           // score
 
     /// Encodes the given info set as a vector.
@@ -108,12 +97,11 @@ module Encoding =
         let player = Trick.currentPlayer trick
         let encoded =
             [|
-                yield! encodePlayer player             // current player
                 yield! encodeCards hand                // current player's hand
                 yield! encodeCards otherUnplayed       // other unplayed cards
                 yield! encodeTrick trick               // current trick
                 yield! encodeVoids player deal.Voids   // voids
-                yield! encodeScore deal.Score          // score
+                yield! encodeScore player deal.Score   // score
             |]
         assert(encoded.Length = encodedLength)
         encoded
