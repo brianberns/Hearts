@@ -42,7 +42,7 @@ module Trainer =
         let losses = AdvantageModel.train samples model
         if settings.Verbose then
             stopwatch.Stop()
-            printfn $"   Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
+            printfn $"Trained model in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
         losses
 
@@ -53,7 +53,7 @@ module Trainer =
         let stopwatch = Stopwatch.StartNew()
         let samples = generateSamples model
         if settings.Verbose then
-            printfn $"\n   {samples.Length} samples generated in {stopwatch.Elapsed}"
+            printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
             // train a new model
         model.Dispose()

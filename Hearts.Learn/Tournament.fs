@@ -12,11 +12,12 @@ module Tournament =
 
     /// Runs a tournament between two players.
     let run rng champion challenger =
+        let challengerSeat = Seat.South
         let playerMap =
             Enum.getValues<Seat>
                 |> Seq.map (fun seat ->
                     let player =
-                        if seat = Seat.South then challenger
+                        if seat = challengerSeat then challenger
                         else champion
                     seat, player)
                 |> Map
@@ -25,13 +26,17 @@ module Tournament =
                 rng
                 settings.NumEvaluationDeals
                 playerMap
+        let payoff =
+            (ZeroSum.getPayoff score)[int challengerSeat]
+                / float32 settings.NumEvaluationDeals
+
         if settings.Verbose then
             printfn "\nTournament:"
             for (KeyValue(seat, points)) in score.ScoreMap do
                 printfn $"   {string seat}: {points}"
-            
-        (ZeroSum.getPayoff score)[0]
-            / float32 settings.NumEvaluationDeals
+            printfn $"   Payoff: %0.5f{payoff}"
+
+        payoff
 
     /// Random Hearts player.
     let randomPlayer =
