@@ -28,7 +28,7 @@ module Tournament =
         if settings.Verbose then
             printfn "\nTournament:"
             for (KeyValue(seat, points)) in score.ScoreMap do
-                printfn $"   %5s{string seat}: {points}"
+                printfn $"   %-6s{string seat}: {points}"
             printfn $"   Payoff: %0.5f{payoff}"
 
         payoff
