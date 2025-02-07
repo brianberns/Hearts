@@ -79,20 +79,13 @@ module DealView =
                     let closedHandView = closedHandViews[iUser]
                     OpenHandView.revealAnim closedHandView openHandView
 
-                    // animate remaining deck removal
-                let animRemove =
-                    backs[24..]
-                        |> Array.map (fun back ->
-                            Animation.create back Remove)
-                        |> Animation.Parallel
-
                     // assemble complete animation
                 [|
                     anim1
                     anim2
                     anim3
                     anim0
-                    animReveal; animRemove
+                    animReveal
                 |] |> Animation.Serial 
 
                 // run the deal start animation
