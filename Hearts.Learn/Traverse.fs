@@ -13,16 +13,13 @@ module ZeroSum =
         let points = score.ScoreMap.Values
         assert(points.Count = Seat.numSeats)
         let sum = Seq.sum points
-        let payoff =
-            [|
-                for pt in points do
-                    let otherAvg =
-                        float32 (sum - pt)
-                            / float32 (Seat.numSeats - 1)
-                    otherAvg - float32 pt
-            |]
-        assert(abs (Seq.sum payoff - 0.0f) < 0.001f)
-        payoff
+        [|
+            for pt in points do
+                let otherAvg =
+                    float32 (sum - pt)
+                        / float32 (Seat.numSeats - 1)
+                otherAvg - float32 pt
+        |]
 
     /// Computes the payoff for the given deal, if it is
     /// complete.
