@@ -352,5 +352,8 @@ fable_modules
 /Hearts.Web/Server/Hearts.db
 /Hearts.Learn/Hearts.db
 
+# Models
+*.pt
+
 # Python virtual environment
 /venv
