@@ -48,9 +48,10 @@ module Trickster =
     // open Trickster.cloud
     // open TestBots
 
-    let private toString (cards : seq<Card>) =
+    let private toString cards =
         cards
-            |> Seq.map _.String
+            |> Seq.map (fun (card : Card) ->
+                $"{card.Rank.Char}{card.Suit.Letter}")
             |> String.concat ""
 
     /// Trickster Hearts bot.
@@ -66,63 +67,65 @@ module Trickster =
 
         let play (hand : Hand) deal =
 
-            let players =
-                [|
-                    let curPlayer =
-                        ClosedDeal.currentPlayer deal
-                    let cardsTakenMap =
-                        deal
-                            |> ClosedDeal.tricks
-                            |> Seq.collect Trick.plays
-                            |> Seq.groupBy fst
-                            |> Seq.map (fun (seat, plays) ->
-                                seat, Seq.map snd plays)
-                            |> Map
-                    for seat in Seat.cycle curPlayer do
-                        let hand =
-                            if seat = curPlayer then
-                                toString hand
-                            else ""
-                        let cardsTaken =
-                            cardsTakenMap
-                                |> Map.tryFind seat
-                                |> Option.map toString
-                                |> Option.defaultValue ""
-                        TestBots.TestPlayer(
-                            hand = hand,
-                            handScore = deal.Score[seat],
-                            cardsTaken = cardsTaken)
-                |]
+            let legalPlays =
+                ClosedDeal.legalPlays hand deal
+                    |> set
+            if legalPlays.Count = 1 then
+                Seq.head legalPlays
+            else
 
-            let trick =
-                ClosedDeal.currentTrick deal
-                    |> Trick.plays
-                    |> Seq.map snd
-                    |> toString
+                let players =
+                    [|
+                        let curPlayer =
+                            ClosedDeal.currentPlayer deal
+                        let cardsTakenMap =
+                            deal
+                                |> ClosedDeal.tricks
+                                |> Seq.collect Trick.plays
+                                |> Seq.groupBy fst
+                                |> Seq.map (fun (seat, plays) ->
+                                    seat, Seq.map snd plays)
+                                |> Map
+                        for seat in Seat.cycle curPlayer do
+                            let hand =
+                                if seat = curPlayer then
+                                    toString hand
+                                else ""
+                            let cardsTaken =
+                                cardsTakenMap
+                                    |> Map.tryFind seat
+                                    |> Option.map toString
+                                    |> Option.defaultValue ""
+                            TestBots.TestPlayer(
+                                hand = hand,
+                                handScore = deal.Score[seat],
+                                cardsTaken = cardsTaken)
+                    |]
 
-            let notLegal =
-                let legal =
-                    ClosedDeal.legalPlays hand deal
-                        |> set
-                toString (hand - legal)
+                let trick =
+                    ClosedDeal.currentTrick deal
+                        |> Trick.plays
+                        |> Seq.map snd
+                        |> toString
 
-            let cardState =
-                TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
-                    bot,
-                    players,
-                    trick,
-                    notLegal)
+                let notLegal = toString (hand - legalPlays)
 
-            let card =
-                bot.SuggestNextCard(cardState)
-            let rank = enum<Rank>(int card.rank)
-            let suit =
-                match card.suit with
-                    | Trickster.cloud.Suit.Clubs -> Suit.Clubs
-                    | Trickster.cloud.Suit.Diamonds -> Suit.Diamonds
-                    | Trickster.cloud.Suit.Hearts -> Suit.Hearts
-                    | Trickster.cloud.Suit.Spades -> Suit.Spades
-                    | _ -> failwith "Unexpected"
-            Card(rank, suit)
+                let cardState =
+                    TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
+                        bot,
+                        players,
+                        trick,
+                        notLegal)
+
+                let card = bot.SuggestNextCard(cardState)
+                let rank = enum<Rank>(int card.rank)
+                let suit =
+                    match card.suit with
+                        | Trickster.cloud.Suit.Clubs -> Suit.Clubs
+                        | Trickster.cloud.Suit.Diamonds -> Suit.Diamonds
+                        | Trickster.cloud.Suit.Hearts -> Suit.Hearts
+                        | Trickster.cloud.Suit.Spades -> Suit.Spades
+                        | _ -> failwith "Unexpected"
+                Card(rank, suit)
 
         { Play = play }
