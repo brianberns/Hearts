@@ -22,7 +22,7 @@ module ZeroSum =
                             / float32 (Seat.numSeats - 1)
                     otherAvg - float32 pt
             |]
-        assert(Seq.sum payoff = 0.0f)
+        assert(abs (Seq.sum payoff - 0.0f) < 0.001f)
         payoff
 
     /// Computes the payoff for the given deal, if it is
