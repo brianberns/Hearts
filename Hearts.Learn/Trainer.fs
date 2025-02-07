@@ -4,8 +4,6 @@ open System
 open System.Diagnostics
 open System.IO
 
-open MathNet.Numerics.LinearAlgebra
-
 open PlayingCards
 open Hearts
 
@@ -104,7 +102,7 @@ module Trainer =
                     Strategy.getFromAdvantage model)
             Tournament.run
                 (Random(0))   // use same deals each iteration
-                Database.player
+                Tournament.randomPlayer
                 challenger
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, iter)
@@ -143,92 +141,3 @@ module Trainer =
                 |> model.save
                 |> ignore
         model
-
-    let private createTrainingData numDeals =
-
-        let conn = Hearts.Web.Database.connect "."
-
-        let rec loop deal =
-            seq {
-                let hand =
-                    let seat = OpenDeal.currentPlayer deal
-                    deal.UnplayedCardMap[seat]
-                let legalPlays =
-                    ClosedDeal.legalPlays hand deal.ClosedDeal
-                        |> Seq.toArray
-                let adjustedDeal =
-                    Hearts.FastCfr.ClosedDeal.adjustDeal
-                        Seat.South
-                        deal.ClosedDeal
-                let strategyOpt =
-                    if legalPlays.Length = 1 then None
-                    else
-                        adjustedDeal
-                            |> Hearts.FastCfr.GameState.getInfoSetKey hand
-                            |> Hearts.Web.Database.tryGetStrategy conn
-                match strategyOpt with
-                    | Some strategy ->
-                        let regrets =
-                            strategy
-                                |> Array.map float32
-                                |> DenseVector.ofArray
-                                |> Strategy.toWide legalPlays
-                        yield AdvantageSample.create
-                            hand deal.ClosedDeal regrets
-                    | None -> ()
-
-                let deal =
-                    let card =
-                        let index =
-                            match strategyOpt with
-                                | Some strategy ->
-                                    MathNet.Numerics.Distributions.Categorical.Sample(
-                                        settings.Random,
-                                        strategy)
-                                | None -> 0
-                        legalPlays[index]
-                    OpenDeal.addPlay card deal
-                match Game.tryUpdateScore deal Score.zero with
-                    | Some _ -> ()
-                    | None -> yield! loop deal
-            }
-
-        seq {
-            for _ = 1 to numDeals do
-                let deal =
-                    let deck = Deck.shuffle settings.Random
-                    OpenDeal.fromDeck
-                        Seat.South
-                        ExchangeDirection.Hold
-                        deck
-                        |> OpenDeal.startPlay
-                yield! loop deal
-        }
-
-    let trainDirect numDeals =
-
-        printfn $"{settings}"
-        printfn $"numDeals: {numDeals}"
-        let samples =
-            createTrainingData numDeals
-                |> Seq.toArray
-        printfn $"Number of samples: {samples.Length}"
-
-        let model = new AdvantageModel()
-        let losses = AdvantageModel.train samples model
-        printfn $"Final loss {Array.last losses}"
-
-        let pairs =
-            [
-                "Random", Tournament.randomPlayer
-                "Database", Database.player
-            ]
-        for name, champion in pairs do
-            let avgPayoff =
-                let challenger = createChallenger (
-                    Strategy.getFromAdvantage model)
-                Tournament.run
-                    settings.Random
-                    champion
-                    challenger
-            printfn $"\nAverage payoff vs. {name}: {avgPayoff}"
