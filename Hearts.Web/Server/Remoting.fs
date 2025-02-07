@@ -1,5 +1,7 @@
 ﻿namespace Hearts.Web
 
+open System.IO
+
 open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
@@ -8,12 +10,15 @@ open Hearts.Learn
 
 module Model =
 
-    let private model =
+    /// Connects to Hearts model.
+    let connect dir =
         let model = new AdvantageModel()
-        model.load("AdvantageModel.pt") |> ignore
+        let path = Path.Combine(dir, "AdvantageModel.pt")
+        model.load(path) |> ignore
         model
 
-    let getStrategy hand deal =
+    /// Finds the strategy for the given info set.
+    let getStrategy model hand deal =
         let legalPlays =
             deal
                 |> ClosedDeal.legalPlays hand
@@ -25,17 +30,18 @@ module Remoting =
 
     /// Hearts API.
     let private heartsApi dir =
+        let model = Model.connect dir
         {
             GetPlayIndex =
                 fun hand deal ->
                     async {
-                        let strategy = Model.getStrategy hand deal
+                        let strategy = Model.getStrategy model hand deal
                         return Vector.sample settings.Random strategy
                     }
             GetStrategy =
                 fun hand deal ->
                     async {
-                        let strategy = Model.getStrategy hand deal
+                        let strategy = Model.getStrategy model hand deal
                         return strategy.ToArray()
                             |> Array.map float
                     }
