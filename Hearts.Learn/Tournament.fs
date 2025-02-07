@@ -48,7 +48,7 @@ module Trickster =
     // open Trickster.cloud
     // open TestBots
 
-    let toString (cards : seq<Card>) =
+    let private toString (cards : seq<Card>) =
         cards
             |> Seq.map _.String
             |> String.concat ""
@@ -58,7 +58,8 @@ module Trickster =
 
         let bot =
             let options =
-                Trickster.cloud.HeartsOptions()
+                Trickster.cloud.HeartsOptions(
+                    passing = Trickster.cloud.HeartsPassing.None)
             Trickster.Bots.HeartsBot(
                 options,
                 Trickster.cloud.Suit.Unknown)
@@ -83,7 +84,10 @@ module Trickster =
                                 toString hand
                             else ""
                         let cardsTaken =
-                            toString cardsTakenMap[seat]
+                            cardsTakenMap
+                                |> Map.tryFind seat
+                                |> Option.map toString
+                                |> Option.defaultValue ""
                         TestBots.TestPlayer(
                             hand = hand,
                             handScore = deal.Score[seat],

@@ -102,7 +102,7 @@ module Trainer =
                     Strategy.getFromAdvantage model)
             Tournament.run
                 (Random(0))   // use same deals each iteration
-                Tournament.randomPlayer
+                Trickster.player
                 challenger
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, iter)
