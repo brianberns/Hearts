@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TricksterHeartsBot", "..\Tr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestHeartsBot", "..\TricksterHeartsBot\TestHeartsBot\TestHeartsBot.csproj", "{D8737109-6A82-4672-8356-E573FD44AA54}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Hearts.Model", "Hearts.Model\Hearts.Model.fsproj", "{DF040674-940F-4411-AFF1-DA8F0235E2FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -91,6 +93,14 @@ Global
 		{D8737109-6A82-4672-8356-E573FD44AA54}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D8737109-6A82-4672-8356-E573FD44AA54}.Release|x64.ActiveCfg = Release|Any CPU
 		{D8737109-6A82-4672-8356-E573FD44AA54}.Release|x64.Build.0 = Release|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Debug|x64.Build.0 = Debug|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Release|x64.ActiveCfg = Release|Any CPU
+		{DF040674-940F-4411-AFF1-DA8F0235E2FC}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
