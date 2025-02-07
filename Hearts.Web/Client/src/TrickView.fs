@@ -13,9 +13,7 @@ module TrickView =
     let private playPosMap =
         Position.seatMap [
             Seat.West,  (45, 50)
-#if !MINI
             Seat.North, (50, 45)
-#endif
             Seat.East,  (55, 50)
             Seat.South, (50, 55)
         ]
@@ -35,9 +33,7 @@ module TrickView =
     let private finishPosMap =
         Position.seatMap [
             Seat.West,  (15, 70)
-#if !MINI
             Seat.North, (30, 15)
-#endif
             Seat.East,  (85, 30)
             Seat.South, (70, 85)
         ]
@@ -46,9 +42,7 @@ module TrickView =
     let private finishOffsetMap =
         Position.seatMap [
             Seat.West,  (-5,  0)
-#if !MINI
             Seat.North, ( 0, -5)
-#endif
             Seat.East,  ( 5,  0)
             Seat.South, ( 0,  5)
         ]

@@ -71,7 +71,6 @@ module CardView =
     /// literals.)
     let private srcMap =
         [
-#if !MINI
             Card.fromString "2C", importDefault "./assets/card_images/2C.svg"
             Card.fromString "2D", importDefault "./assets/card_images/2D.svg"
             Card.fromString "2H", importDefault "./assets/card_images/2H.svg"
@@ -106,49 +105,36 @@ module CardView =
             Card.fromString "8D", importDefault "./assets/card_images/8D.svg"
             Card.fromString "8H", importDefault "./assets/card_images/8H.svg"
             Card.fromString "8S", importDefault "./assets/card_images/8S.svg"
-#endif
 
             Card.fromString "9C", importDefault "./assets/card_images/9C.svg"
-#if !MINI
             Card.fromString "9D", importDefault "./assets/card_images/9D.svg"
-#endif
             Card.fromString "9H", importDefault "./assets/card_images/9H.svg"
             Card.fromString "9S", importDefault "./assets/card_images/9S.svg"
 
             Card.fromString "TC", importDefault "./assets/card_images/TC.svg"
-#if !MINI
             Card.fromString "TD", importDefault "./assets/card_images/TD.svg"
-#endif
             Card.fromString "TH", importDefault "./assets/card_images/TH.svg"
             Card.fromString "TS", importDefault "./assets/card_images/TS.svg"
 
             Card.fromString "JC", importDefault "./assets/card_images/JC.svg"
-#if !MINI
             Card.fromString "JD", importDefault "./assets/card_images/JD.svg"
-#endif
             Card.fromString "JH", importDefault "./assets/card_images/JH.svg"
             Card.fromString "JS", importDefault "./assets/card_images/JS.svg"
 
             Card.fromString "QC", importDefault "./assets/card_images/QC.svg"
-#if !MINI
             Card.fromString "QD", importDefault "./assets/card_images/QD.svg"
-#endif
             Card.fromString "QH", importDefault "./assets/card_images/QH.svg"
             Card.fromString "QS", importDefault "./assets/card_images/QS.svg"
 
             Card.fromString "KC", importDefault "./assets/card_images/KC.svg"
-#if !MINI
             Card.fromString "KD", importDefault "./assets/card_images/KD.svg"
-#endif
             Card.fromString "KH", importDefault "./assets/card_images/KH.svg"
             Card.fromString "KS", importDefault "./assets/card_images/KS.svg"
 
-#if !MINI
             Card.fromString "AC", importDefault "./assets/card_images/AC.svg"
             Card.fromString "AD", importDefault "./assets/card_images/AD.svg"
             Card.fromString "AH", importDefault "./assets/card_images/AH.svg"
             Card.fromString "AS", importDefault "./assets/card_images/AS.svg"
-#endif
         ] |> Map
 
     /// Creates a view of the given card.

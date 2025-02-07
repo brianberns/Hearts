@@ -50,9 +50,7 @@ module Deal =
     let private gameScoreMap =
         Map [
             Seat.West,  ~~"#wGameScore"
-#if !MINI
             Seat.North, ~~"#nGameScore"
-#endif
             Seat.East,  ~~"#eGameScore"
             Seat.South, ~~"#sGameScore"
         ]
@@ -61,9 +59,7 @@ module Deal =
     let private gamesWonMap =
         Map [
             Seat.West,  ~~"#wGamesWon"
-#if !MINI
             Seat.North, ~~"#nGamesWon"
-#endif
             Seat.East,  ~~"#eGamesWon"
             Seat.South, ~~"#sGamesWon"
         ]

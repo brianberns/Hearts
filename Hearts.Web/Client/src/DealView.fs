@@ -31,11 +31,7 @@ module DealView =
 
     /// Creates a closed hand view of the given card backs.
     let private closedView offset (backs : _[]) =
-#if MINI
-        let numPlayers = 3
-#else
         let numPlayers = 4
-#endif
         Seq.init ClosedDeal.numCardsPerHand (fun i ->
             backs[numPlayers * i + offset])
             |> ClosedHandView.ofCardViews
@@ -55,20 +51,14 @@ module DealView =
             let! backs = getCardBacks surface
             let closed1 = closedView 0 backs
             let closed2 = closedView 1 backs
-#if MINI
-            let closed0 = closedView 2 backs   // dealer receives cards last
-#else
             let closed3 = closedView 2 backs
             let closed0 = closedView 3 backs   // dealer receives cards last
-#endif
             let closedHandViews =
                 [|
                     closed0
                     closed1
                     closed2
-#if !MINI
                     closed3
-#endif
                 |]
 
                 // create open hand view for user
@@ -82,9 +72,7 @@ module DealView =
                 let seat iPlayer = Seat.incr iPlayer dealer
                 let anim1 = HandView.dealAnim (seat 1) closed1
                 let anim2 = HandView.dealAnim (seat 2) closed2
-#if !MINI
                 let anim3 = HandView.dealAnim (seat 3) closed3
-#endif
                 let anim0 = HandView.dealAnim (seat 0) closed0
 
                     // animate user's hand reveal
@@ -103,9 +91,7 @@ module DealView =
                 [|
                     anim1
                     anim2
-#if !MINI
                     anim3
-#endif
                     anim0
                     animReveal; animRemove
                 |] |> Animation.Serial 
@@ -151,9 +137,7 @@ module DealView =
             let! closedHandViewPairs =
                 [
                     Seat.West
-#if !MINI
                     Seat.North
-#endif
                     Seat.East
                 ]
                     |> Seq.map closedViewPair
@@ -180,9 +164,7 @@ module DealView =
     let private dealScoreElemMap =
         Map [
             Seat.West,  ~~"#wDealScore"
-#if !MINI
             Seat.North, ~~"#nDealScore"
-#endif
             Seat.East,  ~~"#eDealScore"
             Seat.South, ~~"#sDealScore"
         ]
@@ -191,9 +173,7 @@ module DealView =
     let private suitElemMap =
         Map [
             Suit.Clubs,    ~~"#deckClubs"
-#if !MINI
             Suit.Diamonds, ~~"#deckDiamonds"
-#endif
             Suit.Hearts,   ~~"#deckHearts"
             Suit.Spades,   ~~"#deckSpades"
         ]
