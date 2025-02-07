@@ -31,9 +31,8 @@ module DealView =
 
     /// Creates a closed hand view of the given card backs.
     let private closedView offset (backs : _[]) =
-        let numPlayers = 4
         Seq.init ClosedDeal.numCardsPerHand (fun i ->
-            backs[numPlayers * i + offset])
+            backs[Seat.numSeats * i + offset])
             |> ClosedHandView.ofCardViews
 
     /// Creates an open hand view of the user's cards.
