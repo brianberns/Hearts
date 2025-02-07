@@ -26,7 +26,7 @@ module Remoting =
     /// Hearts API.
     let private heartsApi dir =
         {
-            GetPlay =
+            GetPlayIndex =
                 fun hand deal ->
                     async {
                         let strategy = Model.getStrategy hand deal

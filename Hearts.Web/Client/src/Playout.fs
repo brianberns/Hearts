@@ -6,7 +6,6 @@ open Fable.Core
 
 open PlayingCards
 open Hearts
-open Hearts.FastCfr
 
 module Playout =
 
@@ -37,17 +36,14 @@ module Playout =
                         console.log($"   {Seat.toString seat}: {points} point(s)")
 
                 | None when legalPlays.Length > 1 ->
-                    let infoSetKey =
-                        GameState.getInfoSetKey hand deal.ClosedDeal
-                    match! Remoting.getStrategy infoSetKey with
-                        | Some strategy ->
-                            let pairs =
-                                Array.zip legalPlays strategy
-                                    |> Seq.sortByDescending snd
-                            console.log("Hint:")
-                            for (card : Card), prob in pairs do
-                                console.log($"   {card}: %.1f{100. * prob}%%")
-                        | None -> console.log("No hint available")
+                    let! strategy =
+                        Remoting.getStrategy hand deal.ClosedDeal
+                    let pairs =
+                        Array.zip legalPlays strategy
+                            |> Seq.sortByDescending snd
+                    console.log("Hint:")
+                    for (card : Card), prob in pairs do
+                        console.log($"   {card}: %.1f{100. * prob}%%")
 
                 | _ -> ()
         } |> Async.StartImmediate
