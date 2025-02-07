@@ -57,7 +57,7 @@ caption {
 
 #void {
     position: absolute;
-    left: 23%;
+    left: 73%;
     top: 75%;
     text-align: center;
 }
@@ -80,7 +80,7 @@ caption {
 #more {
     position: absolute;
     left: 80%;
-    top: 84%;
+    top: 2%;
 }
 
 .♦ {
@@ -143,10 +143,4 @@ caption {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-}
-
-.note {
-    text-align: center;
-    font-size: small;
-    font-style: italic;
 }
