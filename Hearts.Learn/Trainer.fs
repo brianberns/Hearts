@@ -188,17 +188,16 @@ module Trainer =
                     | None -> yield! loop deal
             }
 
-        seq {
-            for _ = 1 to numDeals do
-                let deal =
-                    let deck = Deck.shuffle settings.Random
-                    OpenDeal.fromDeck
-                        Seat.South
-                        ExchangeDirection.Hold
-                        deck
-                        |> OpenDeal.startPlay
-                yield! loop deal
-        }
+        Array.init numDeals (fun _ ->
+            Deck.shuffle settings.Random)
+            |> Array.Parallel.collect (fun deck ->
+                OpenDeal.fromDeck
+                    Seat.South
+                    ExchangeDirection.Hold
+                    deck
+                    |> OpenDeal.startPlay
+                    |> loop
+                    |> Seq.toArray)
 
     let trainDirect numDeals =
 
