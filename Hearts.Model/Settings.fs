@@ -56,7 +56,7 @@ module Settings =
             $"runs/run%05d{int timespan.TotalSeconds}")
 
     /// RNG seed.
-    let private seed = 0
+    let seed = 0
 
     /// Hyperparameters.
     let settings =

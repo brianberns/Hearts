@@ -88,7 +88,7 @@ module Trainer =
                 createChallenger (
                     Strategy.getFromAdvantage model)
             Tournament.run
-                (Random(0))   // use same deals each iteration
+                (Random(Settings.seed + 1))   // use same deals each iteration
                 Trickster.player
                 challenger
         settings.Writer.add_scalar(
