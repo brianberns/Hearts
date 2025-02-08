@@ -4,10 +4,6 @@ open System
 
 module Program =
 
-    let run () =
-        let model = Trainer.train ()
-        ()
-
     Console.OutputEncoding <- System.Text.Encoding.UTF8
-    run ()
+    Trainer.train () |> ignore
     // Trainer.trainDirect 20_000
