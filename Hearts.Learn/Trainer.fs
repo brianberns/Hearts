@@ -220,8 +220,10 @@ module Trainer =
 
         let challenger = createChallenger (
             Strategy.getFromAdvantage model)
-        Tournament.run
-            settings.Random
-            Trickster.player
-            challenger
-                |> ignore
+        let avgPayoff =
+            Tournament.run
+                settings.Random
+                Trickster.player
+                challenger
+        settings.Writer.add_scalar(
+            $"advantage tournament", avgPayoff, 0)
