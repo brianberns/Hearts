@@ -119,17 +119,10 @@ module Trainer =
         evaluate 0 model
 
             // run the iterations
-        let model =
-            let iterNums = seq { 1 .. settings.NumIterations }
-            (model, iterNums)
-                ||> Seq.fold (fun model iter ->
-                    trainIteration iter model)
-        Path.Combine(
-            settings.ModelDirPath,
-            "StrategyModel.pt")
-                |> model.save
-                |> ignore
-        model
+        let iterNums = seq { 1 .. settings.NumIterations }
+        (model, iterNums)
+            ||> Seq.fold (fun model iter ->
+                trainIteration iter model)
 
     let private createTrainingData numDeals =
 
