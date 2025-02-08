@@ -92,33 +92,3 @@ module Game =
                 |> Option.map (applyShootReward gameScore)
                 |> Option.defaultValue (gameScore + dealScore)
         }
-
-    /// Creates and plays one deal.
-    let playDeal rng dealer (playerMap : Map<_, _>) gameScore =
-
-        let rec loop deal gameScore =
-            let deal =
-                let card =
-                    let seat = OpenDeal.currentPlayer deal
-                    let hand = deal.UnplayedCardMap[seat]
-                    playerMap[seat].Play hand deal.ClosedDeal
-                OpenDeal.addPlay card deal
-            match tryUpdateScore deal gameScore with
-                | Some gameScore -> gameScore
-                | None -> loop deal gameScore
-
-        let deal =
-            let deck = Deck.shuffle rng
-            OpenDeal.fromDeck
-                dealer
-                ExchangeDirection.Hold
-                deck
-                |> OpenDeal.startPlay
-        loop deal gameScore
-
-    /// Plays the given number of deals.
-    let playDeals rng numDeals playerMap =
-        (Score.zero, seq { 0 .. numDeals - 1})
-            ||> Seq.fold (fun gameScore iDeal ->
-                let dealer = enum<Seat> (iDeal % Seat.numSeats)
-                playDeal rng dealer playerMap gameScore)

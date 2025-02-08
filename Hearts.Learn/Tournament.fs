@@ -4,7 +4,55 @@ open PlayingCards
 open Hearts
 open Hearts.Model
 
+module OpenDeal =
+
+    /// Plays the given number of deals in parallel.
+    let generate rng numDeals playFun =
+
+        let map =
+#if DEBUG
+            Array.map
+#else
+            Array.Parallel.map
+#endif
+
+        Array.init numDeals id
+            |> map (fun iDeal ->
+                let deal =
+                    let deck =
+                        lock rng (fun () ->
+                            Deck.shuffle rng)
+                    let dealer = enum<Seat> (iDeal % Seat.numSeats)
+                    OpenDeal.fromDeck
+                        dealer
+                        ExchangeDirection.Hold
+                        deck
+                        |> OpenDeal.startPlay
+                playFun deal)
+
 module Tournament =
+
+    /// Creates and plays one deal.
+    let playDeal (playerMap : Map<_, _>) deal =
+
+        let rec loop deal score =
+            let deal =
+                let card =
+                    let seat = OpenDeal.currentPlayer deal
+                    let hand = deal.UnplayedCardMap[seat]
+                    playerMap[seat].Play hand deal.ClosedDeal
+                OpenDeal.addPlay card deal
+            match Game.tryUpdateScore deal score with
+                | Some score -> score
+                | None -> loop deal score
+
+        loop deal Score.zero
+
+    /// Plays the given number of deals.
+    let playDeals rng numDeals playerMap =
+        OpenDeal.generate rng numDeals (
+            playDeal playerMap)
+            |> Seq.reduce (+)
 
     /// Runs a tournament between two players.
     let run rng champion challenger =
@@ -18,8 +66,7 @@ module Tournament =
                     seat, player)
                 |> Map
         let score =
-            Game.playDeals
-                rng
+            playDeals rng
                 settings.NumEvaluationDeals
                 playerMap
         let payoff =
@@ -33,15 +80,6 @@ module Tournament =
             printfn $"   Payoff: %0.5f{payoff}"
 
         payoff
-
-    /// Random Hearts player.
-    let randomPlayer =
-        let play hand deal =
-            let legalPlays =
-                ClosedDeal.legalPlays hand deal
-                    |> Seq.toArray
-            legalPlays[settings.Random.Next(legalPlays.Length)]
-        { Play = play }
 
 module Trickster =
 
