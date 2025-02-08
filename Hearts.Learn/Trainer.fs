@@ -124,7 +124,8 @@ module Trainer =
             ||> Seq.fold (fun model iter ->
                 trainIteration iter model)
 
-    let private createTrainingData numDeals =
+    /// Generates training data using a standard player.
+    let private generateTrainingData numDeals =
 
         let rec loop deal =
             seq {
@@ -174,25 +175,37 @@ module Trainer =
             (loop >> Seq.toArray)
                 |> Array.concat
 
+    /// Trains a model directly.
     let trainDirect numDeals =
 
         printfn $"{settings}"
-        printfn $"numDeals: {numDeals}"
+        printfn $"Number of deals: {numDeals}"
+
+            // generate training data
         let samples =
-            createTrainingData numDeals
+            generateTrainingData numDeals
                 |> Seq.toArray
         printfn $"Number of samples: {samples.Length}"
 
+            // train model
         let model = new AdvantageModel()
         let losses = trainAdvantageModel samples model
-        printfn $"Final loss {Array.last losses}"
 
             // log losses
+        printfn $"Final loss {Array.last losses}"
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 $"advantage loss",
                 losses[epoch], epoch)
 
+            // save trained model
+        Path.Combine(
+            settings.ModelDirPath,
+            $"AdvantageModel.pt")
+                |> model.save
+                |> ignore
+
+            // evaluate trained model
         let challenger = createChallenger (
             Strategy.getFromAdvantage model)
         let avgPayoff =
