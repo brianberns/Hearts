@@ -38,7 +38,6 @@ module Trainer =
 
     /// Trains the given advantage model using the given samples.
     let private trainAdvantageModel samples model =
-
         let stopwatch = Stopwatch.StartNew()
         let losses = AdvantageModel.train samples model
         if settings.Verbose then
@@ -66,7 +65,7 @@ module Trainer =
                 |> model.save
                 |> ignore
 
-            // log inputs and losses
+            // log losses
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{iter}",
@@ -211,14 +210,19 @@ module Trainer =
         printfn $"Number of samples: {samples.Length}"
 
         let model = new AdvantageModel()
-        let losses = AdvantageModel.train samples model
+        let losses = trainAdvantageModel samples model
         printfn $"Final loss {Array.last losses}"
 
-        let avgPayoff =
-            let challenger = createChallenger (
-                Strategy.getFromAdvantage model)
-            Tournament.run
-                settings.Random
-                Trickster.player
-                challenger
-        printfn $"\nAverage payoff vs. Trickster: {avgPayoff}"
+            // log losses
+        for epoch = 0 to losses.Length - 1 do
+            settings.Writer.add_scalar(
+                $"advantage loss",
+                losses[epoch], epoch)
+
+        let challenger = createChallenger (
+            Strategy.getFromAdvantage model)
+        Tournament.run
+            settings.Random
+            Trickster.player
+            challenger
+                |> ignore
