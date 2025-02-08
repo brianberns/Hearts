@@ -1,4 +1,4 @@
-﻿namespace Hearts.Learn
+﻿namespace Hearts.Model
 
 open System
 open TorchSharp

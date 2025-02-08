@@ -2,6 +2,7 @@
 
 open PlayingCards
 open Hearts
+open Hearts.Model
 
 module Tournament =
 

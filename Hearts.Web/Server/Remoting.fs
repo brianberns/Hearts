@@ -6,7 +6,7 @@ open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
 open Hearts
-open Hearts.Learn
+open Hearts.Model
 
 module Model =
 

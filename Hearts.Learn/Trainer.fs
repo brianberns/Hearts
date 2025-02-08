@@ -6,6 +6,7 @@ open System.IO
 
 open PlayingCards
 open Hearts
+open Hearts.Model
 
 module Trainer =
 

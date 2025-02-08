@@ -3,6 +3,7 @@
 open MathNet.Numerics.LinearAlgebra
 
 open Hearts
+open Hearts.Model
 
 /// Model Hearts as a zero-sum game.
 module ZeroSum =
