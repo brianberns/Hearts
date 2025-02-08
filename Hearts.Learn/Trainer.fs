@@ -12,8 +12,8 @@ open Hearts.Model
 
 module Trainer =
 
-    /// Generates training data using the given model.
-    let private generateSamples model =
+    /// Plays the given number of deals in parallel.
+    let private generate numDeals playFun =
 
         let collect =
 #if DEBUG
@@ -34,7 +34,12 @@ module Trainer =
                         ExchangeDirection.Hold
                         deck
                         |> OpenDeal.startPlay
-                Traverse.traverse deal model)
+                playFun deal)
+
+    /// Generates training data using the given model.
+    let private generateSamples model =
+        generate settings.NumTraversals (fun deal ->
+            Traverse.traverse deal model)
 
     /// Trains the given advantage model using the given samples.
     let private trainAdvantageModel samples model =
@@ -188,16 +193,8 @@ module Trainer =
                     | None -> yield! loop deal
             }
 
-        Array.init numDeals (fun _ ->
-            Deck.shuffle settings.Random)
-            |> Array.Parallel.collect (fun deck ->
-                OpenDeal.fromDeck
-                    Seat.South
-                    ExchangeDirection.Hold
-                    deck
-                    |> OpenDeal.startPlay
-                    |> loop
-                    |> Seq.toArray)
+        generate numDeals (
+            loop >> Seq.toArray)
 
     let trainDirect numDeals =
 
