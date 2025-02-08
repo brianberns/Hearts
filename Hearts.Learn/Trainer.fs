@@ -22,7 +22,7 @@ module Trainer =
             Array.Parallel.collect
 #endif
 
-        Array.init settings.NumTraversals id
+        Array.init numDeals id
             |> collect (fun iDeal ->
                 let deal =
                     let deck =
