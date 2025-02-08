@@ -5,14 +5,9 @@ open PlayingCards
 /// A location occupied by a player.
 type Seat =
     | West  = 0
-#if MINI
-    | East  = 1
-    | South = 2
-#else
     | North = 1
     | East  = 2
     | South = 3
-#endif
 
 module Seat =
 
@@ -21,20 +16,13 @@ module Seat =
         Enum.getValues<Seat>.Length
 
     /// Converts the given seat to a character.
-    let toChar seat =
-#if MINI
-        "WES"[int seat]
-#else
-        "WNES"[int seat]
-#endif
+    let toChar seat = "WNES"[int seat]
 
 #if FABLE_COMPILER
     /// Display name.
     let toString = function
         | Seat.West -> "West"
-#if !MINI
         | Seat.North -> "North"
-#endif
         | Seat.East -> "East"
         | Seat.South -> "South"
         | _ -> failwith "Unexpected seat"
@@ -43,9 +31,7 @@ module Seat =
     /// Converts the given character to a seat.
     let fromChar = function
         | 'W' -> Seat.West
-#if !MINI
         | 'N' -> Seat.North
-#endif
         | 'E' -> Seat.East
         | 'S' -> Seat.South
         | _ -> failwith "Unexpected seat"

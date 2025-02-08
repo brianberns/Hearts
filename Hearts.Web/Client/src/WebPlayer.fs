@@ -16,30 +16,29 @@ module Remoting =
             |> Remoting.buildProxy<IHeartsApi>
 
     /// Chooses an action for the given info set.
-    let getActionIndex key =
+    let getActionIndex hand deal =
         async {
-            match! Async.Catch(api.GetPlayIndex(key)) with
-                | Choice1Of2 indexOpt -> return indexOpt
+            match! Async.Catch(api.GetPlayIndex hand deal) with
+                | Choice1Of2 index -> return index
                 | Choice2Of2 exn ->
                     failwith exn.Message   // is there a better way to handle this?
-                    return None
+                    return -1
         }
 
     /// Gets the strategy for the given info set.
-    let getStrategy key =
+    let getStrategy hand deal =
         async {
-            match! Async.Catch(api.GetStrategy(key)) with
-                | Choice1Of2 strategyOpt -> return strategyOpt
+            match! Async.Catch(api.GetStrategy hand deal) with
+                | Choice1Of2 strategy -> return strategy
                 | Choice2Of2 exn ->
                     failwith exn.Message   // is there a better way to handle this?
-                    return None
+                    return Array.empty
         }
 
 /// Plays Hearts by calling a remote server.
 module WebPlayer =
 
     open Hearts
-    open Hearts.FastCfr
 
     /// Plays a card in the given deal.
     let makePlay (deal : OpenDeal) =
@@ -56,14 +55,7 @@ module WebPlayer =
             | 1 -> async { return legalPlays[0] }
             | _ ->
                 async {
-                    let infoSetKey =
-                        deal.ClosedDeal
-                            |> ClosedDeal.adjustDeal Seat.South
-                            |> GameState.getInfoSetKey hand
-                    let! iActionOpt =
-                        Remoting.getActionIndex infoSetKey
-                    return
-                        iActionOpt
-                            |> Option.map (Array.get legalPlays)
-                            |> Option.defaultValue legalPlays[0]
+                    let! iAction =
+                        Remoting.getActionIndex hand deal.ClosedDeal
+                    return legalPlays[iAction]
                 }

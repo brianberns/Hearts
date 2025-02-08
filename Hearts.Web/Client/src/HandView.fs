@@ -13,7 +13,7 @@ module HandView =
     let private getLeft numCards iCard =
 
         /// Target distance between adjacent cards in the hand.
-        let delta = 2.5
+        let delta = 1.8
 
         /// Left-shift from center of hand.
         let shift = 0.5 * float (numCards - 1) * delta
@@ -34,11 +34,9 @@ module HandView =
     /// Center position of each hand.
     let private centerPosMap =
         Position.seatMap [
-            Seat.West,  (12, 50)
-#if !MINI
+            Seat.West,  (20, 50)
             Seat.North, (50, 16)
-#endif
-            Seat.East,  (88, 50)
+            Seat.East,  (80, 50)
             Seat.South, (50, 83)
         ]
 
@@ -123,9 +121,7 @@ module OpenHandView =
                         | Suit.Spades   -> 4   // black
                         | Suit.Hearts   -> 3   // red
                         | Suit.Clubs    -> 2   // black
-#if !MINI
                         | Suit.Diamonds -> 1   // red
-#endif
                         | _ -> failwith "Unexpected"
                 iSuit, card.Rank)
             |> Seq.map CardView.ofCard

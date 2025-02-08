@@ -40,7 +40,7 @@ module PersistentState =
     /// Initial persistent state.
     let private initial =
         {
-            VersionNum = 1
+            VersionNum = 2
             GamesWon = Score.zero
             GameScore = Score.zero
             RandomState = Random().State   // start with arbitrary seed
@@ -56,14 +56,21 @@ module PersistentState =
         WebStorage.localStorage[key]
             <- Json.serialize persState
 
+    /// Save's initial state on client.
+    let private createInitial () =
+        save initial
+        initial
+
     /// Answers the current state.
     let get () =
         let json = WebStorage.localStorage[key] 
         if isNull json then
-            save initial
-            initial
+            createInitial ()
         else
-            Json.parseAs<PersistentState>(json)
+            let state = Json.parseAs<PersistentState>(json)
+            if state.VersionNum < initial.VersionNum then   // ignore obsolete state
+                createInitial ()
+            else state
 
 type PersistentState with
 

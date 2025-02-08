@@ -7,13 +7,6 @@
 
   <ItemGroup>
     <None Include="Readme.md" />
-    <None Include="Hearts.db">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <Compile Include="Prelude.fs" />
-    <Compile Include="Encoding.fs" />
-    <Compile Include="Settings.fs" />
-    <Compile Include="Model.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Tournament.fs" />
     <Compile Include="Trainer.fs" />
@@ -26,8 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Hearts.FastCfr\Hearts.FastCfr.fsproj" />
-    <ProjectReference Include="..\Hearts.Web\Server\Hearts.Web.Server.fsproj" />
+    <ProjectReference Include="..\..\TricksterHeartsBot\TricksterHeartsBot\TricksterHeartsBot.csproj" />
+    <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
     <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
   </ItemGroup>

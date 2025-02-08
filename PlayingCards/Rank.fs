@@ -2,7 +2,6 @@
 
 /// The rank of a card.
 type Rank =
-#if !MINI
     | Two   =  2
     | Three =  3
     | Four  =  4
@@ -10,15 +9,12 @@ type Rank =
     | Six   =  6
     | Seven =  7
     | Eight =  8
-#endif
     | Nine  =  9
     | Ten   = 10
     | Jack  = 11
     | Queen = 12
     | King  = 13
-#if !MINI
     | Ace   = 14   // because Ace > King in most games
-#endif
 
 module Rank =
 
@@ -36,9 +32,7 @@ module Rank =
         | 'J' -> Rank.Jack
         | 'Q' -> Rank.Queen
         | 'K' -> Rank.King
-#if !MINI
         | 'A' -> Rank.Ace
-#endif
         | (c : char) ->
             let n = int c - int '0'
             if n >= 2 && n <= 9 then

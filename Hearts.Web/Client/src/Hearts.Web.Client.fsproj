@@ -3,10 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>TRACE;FABLE_COMPILER;MINI</DefineConstants>
+    <DefineConstants>TRACE;FABLE_COMPILER</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DefineConstants>TRACE;FABLE_COMPILER;MINI</DefineConstants>
+    <DefineConstants>TRACE;FABLE_COMPILER</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\..\PlayingCards\Prelude.fs" />
@@ -22,9 +22,6 @@
     <Compile Include="..\..\..\Hearts\Exchange.fs" />
     <Compile Include="..\..\..\Hearts\OpenDeal.fs" />
     <Compile Include="..\..\..\Hearts\Game.fs" />
-	<Compile Include="..\..\..\..\FastCfr\FastCfr\GameState.fs" />
-	<Compile Include="..\..\..\Hearts.FastCfr\GameState.fs" />
-	<Compile Include="..\..\..\Hearts.FastCfr\ClosedDeal.fs" />
     <Compile Include="..\..\Shared\SharedTypes.fs" />
     <Compile Include="WebPlayer.fs" />
     <Compile Include="JQuery.fs" />

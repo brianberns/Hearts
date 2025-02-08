@@ -8,36 +8,21 @@ open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
 open Hearts
+open Hearts.Model
 
 module Trainer =
 
     /// Generates training data using the given model.
     let private generateSamples model =
-
-        let collect =
-#if DEBUG
-            Array.collect
-#else
-            Array.Parallel.collect
-#endif
-
-        Array.init settings.NumTraversals id
-            |> collect (fun iDeal ->
-                let deal =
-                    let deck =
-                        lock settings.Random (fun () ->
-                            Deck.shuffle settings.Random)
-                    let dealer = enum<Seat> (iDeal % Seat.numSeats)
-                    OpenDeal.fromDeck
-                        dealer
-                        ExchangeDirection.Hold
-                        deck
-                        |> OpenDeal.startPlay
+        OpenDeal.generate
+            settings.Random
+            settings.NumTraversals
+            (fun deal ->
                 Traverse.traverse deal model)
+                |> Array.concat
 
     /// Trains the given advantage model using the given samples.
     let private trainAdvantageModel samples model =
-
         let stopwatch = Stopwatch.StartNew()
         let losses = AdvantageModel.train samples model
         if settings.Verbose then
@@ -65,7 +50,7 @@ module Trainer =
                 |> model.save
                 |> ignore
 
-            // log inputs and losses
+            // log losses
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{iter}",
@@ -88,27 +73,26 @@ module Trainer =
 
         { Play = play }
 
-    /// Trains a single iteration.
-    let private trainIteration iter model =
-
-        if settings.Verbose then
-            printfn $"\n*** Iteration {iter} ***"
-
-            // train a new model
-        let model = updateModel iter model
-
-            // evaluate model
+    /// Evaluates the given model by playing it against
+    /// a standard.
+    let private evaluate iter model =
         let avgPayoff =
             let challenger =
                 createChallenger (
                     Strategy.getFromAdvantage model)
             Tournament.run
-                (Random(0))   // use same deals each iteration
-                Database.player
+                (Random(Settings.seed + 1))   // use same deals each iteration
+                Trickster.player
                 challenger
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, iter)
 
+    /// Trains a single iteration.
+    let private trainIteration iter model =
+        if settings.Verbose then
+            printfn $"\n*** Iteration {iter} ***"
+        let model = updateModel iter model
+        evaluate iter model
         model
 
     /// Trains for the given number of iterations.
@@ -131,9 +115,12 @@ module Trainer =
             printfn $"Model output size: {Network.outputSize}"
             printfn $"Advantage model parameter count: {nParms}"
 
+            // evaluate initial model
+        evaluate 0 model
+
             // run the iterations
         let model =
-            let iterNums = seq { 0 .. settings.NumIterations - 1 }
+            let iterNums = seq { 1 .. settings.NumIterations }
             (model, iterNums)
                 ||> Seq.fold (fun model iter ->
                     trainIteration iter model)
@@ -146,64 +133,53 @@ module Trainer =
 
     let private createTrainingData numDeals =
 
-        let conn = Hearts.Web.Database.connect "."
-
         let rec loop deal =
             seq {
-                let hand =
-                    let seat = OpenDeal.currentPlayer deal
-                    deal.UnplayedCardMap[seat]
-                let legalPlays =
-                    ClosedDeal.legalPlays hand deal.ClosedDeal
-                        |> Seq.toArray
-                let adjustedDeal =
-                    Hearts.FastCfr.ClosedDeal.adjustDeal
-                        Seat.South
-                        deal.ClosedDeal
-                let strategyOpt =
-                    if legalPlays.Length = 1 then None
+                let play, sampleOpt =
+                    let hand =
+                        let seat = OpenDeal.currentPlayer deal
+                        deal.UnplayedCardMap[seat]
+                    let legalPlays =
+                        ClosedDeal.legalPlays hand deal.ClosedDeal
+                            |> Seq.toArray
+                    if legalPlays.Length = 1 then
+                        Array.exactlyOne legalPlays,
+                        None
                     else
-                        adjustedDeal
-                            |> Hearts.FastCfr.GameState.getInfoSetKey hand
-                            |> Hearts.Web.Database.tryGetStrategy conn
-                match strategyOpt with
-                    | Some strategy ->
+                        let play =
+                            Trickster.player.Play hand deal.ClosedDeal
                         let regrets =
+                            let strategy =
+                                [|
+                                    for card in legalPlays do
+                                        if card = play then 1.0f
+                                        else 0.0f
+                                |]
+                            let mean = Array.average strategy
                             strategy
-                                |> Array.map float32
+                                |> Array.map (fun x -> x - mean)
                                 |> DenseVector.ofArray
                                 |> Strategy.toWide legalPlays
-                        yield AdvantageSample.create
+                        play,
+                        AdvantageSample.create
                             hand deal.ClosedDeal regrets
+                            |> Some
+
+                match sampleOpt with
+                    | Some sample -> yield sample
                     | None -> ()
 
-                let deal =
-                    let card =
-                        let index =
-                            match strategyOpt with
-                                | Some strategy ->
-                                    MathNet.Numerics.Distributions.Categorical.Sample(
-                                        settings.Random,
-                                        strategy)
-                                | None -> 0
-                        legalPlays[index]
-                    OpenDeal.addPlay card deal
+                let deal = OpenDeal.addPlay play deal
                 match Game.tryUpdateScore deal Score.zero with
                     | Some _ -> ()
                     | None -> yield! loop deal
             }
 
-        seq {
-            for _ = 1 to numDeals do
-                let deal =
-                    let deck = Deck.shuffle settings.Random
-                    OpenDeal.fromDeck
-                        Seat.South
-                        ExchangeDirection.Hold
-                        deck
-                        |> OpenDeal.startPlay
-                yield! loop deal
-        }
+        OpenDeal.generate
+            settings.Random
+            numDeals
+            (loop >> Seq.toArray)
+                |> Array.concat
 
     let trainDirect numDeals =
 
@@ -215,20 +191,21 @@ module Trainer =
         printfn $"Number of samples: {samples.Length}"
 
         let model = new AdvantageModel()
-        let losses = AdvantageModel.train samples model
+        let losses = trainAdvantageModel samples model
         printfn $"Final loss {Array.last losses}"
 
-        let pairs =
-            [
-                "Random", Tournament.randomPlayer
-                "Database", Database.player
-            ]
-        for name, champion in pairs do
-            let avgPayoff =
-                let challenger = createChallenger (
-                    Strategy.getFromAdvantage model)
-                Tournament.run
-                    settings.Random
-                    champion
-                    challenger
-            printfn $"\nAverage payoff vs. {name}: {avgPayoff}"
+            // log losses
+        for epoch = 0 to losses.Length - 1 do
+            settings.Writer.add_scalar(
+                $"advantage loss",
+                losses[epoch], epoch)
+
+        let challenger = createChallenger (
+            Strategy.getFromAdvantage model)
+        let avgPayoff =
+            Tournament.run
+                settings.Random
+                Trickster.player
+                challenger
+        settings.Writer.add_scalar(
+            $"advantage tournament", avgPayoff, 0)

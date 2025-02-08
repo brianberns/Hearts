@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Hearts.db">
+    <None Include="AdvantageModel.pt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Compile Include="..\Shared\SharedTypes.fs" />
@@ -22,7 +22,7 @@
     <PackageReference Include="Suave" Version="2.6.2">
       <ExcludeAssets>runtime</ExcludeAssets>
 	</PackageReference>
-    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
+    <ProjectReference Include="..\..\Hearts.Model\Hearts.Model.fsproj" />
 	<PackageReference Update="FSharp.Core">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>

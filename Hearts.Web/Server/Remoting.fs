@@ -1,64 +1,50 @@
 ﻿namespace Hearts.Web
 
-open System
-open System.Data.SQLite
 open System.IO
-
-open MathNet.Numerics.Distributions
 
 open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
-module Database =
+open Hearts
+open Hearts.Model
 
-    /// Connects to Hearts database.
+module Model =
+
+    /// Connects to Hearts model.
     let connect dir =
-        let path = Path.Combine(dir, "Hearts.db")
-        let connStr = $"DataSource={path};Version=3;"
-        let conn = new SQLiteConnection(connStr)
-        conn.Open()
-        conn
+        let model = new AdvantageModel()
+        let path = Path.Combine(dir, "AdvantageModel.pt")
+        model.load(path) |> ignore
+        model
 
-    /// Finds the strategy for the given key, if any.
-    let tryGetStrategy conn (key : byte[]) =
-        use cmd =   // each invocation has its own command to support multithreading
-            new SQLiteCommand(
-                "select Probabilities \
-                from Strategy \
-                where Key = @Key",
-                conn)
-        cmd.Parameters.AddWithValue("Key", key)
-            |> ignore
-        let value = cmd.ExecuteScalar()
-        if isNull value then None
-        else
-            value :?> byte[]
-                |> Seq.chunkBySize 2   // number of bytes in a Half
-                |> Seq.map (BitConverter.ToHalf >> float)
+    /// Finds the strategy for the given info set.
+    let getStrategy model hand deal =
+        let legalPlays =
+            deal
+                |> ClosedDeal.legalPlays hand
                 |> Seq.toArray
-                |> Some
+        Strategy.getFromAdvantage
+            model hand deal legalPlays
 
 module Remoting =
 
     /// Hearts API.
     let private heartsApi dir =
-        let conn = Database.connect dir
-        let rng = Random(0)
+        let model = Model.connect dir
         {
             GetPlayIndex =
-                fun key ->
+                fun hand deal ->
                     async {
-                        return
-                            match Database.tryGetStrategy conn key with
-                                | Some strategy ->
-                                    Some (Categorical.Sample(rng, strategy))
-                                | None ->
-                                    printfn $"No strategy for %A{key}"
-                                    None
+                        let strategy = Model.getStrategy model hand deal
+                        return Vector.sample settings.Random strategy
                     }
             GetStrategy =
-                fun key -> async {
-                    return Database.tryGetStrategy conn key }
+                fun hand deal ->
+                    async {
+                        let strategy = Model.getStrategy model hand deal
+                        return strategy.ToArray()
+                            |> Array.map float
+                    }
         }
 
     /// Build API.
