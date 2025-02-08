@@ -73,16 +73,9 @@ module Trainer =
 
         { Play = play }
 
-    /// Trains a single iteration.
-    let private trainIteration iter model =
-
-        if settings.Verbose then
-            printfn $"\n*** Iteration {iter} ***"
-
-            // train a new model
-        let model = updateModel iter model
-
-            // evaluate model
+    /// Evaluates the given model by playing it against
+    /// a standard.
+    let private evaluate iter model =
         let avgPayoff =
             let challenger =
                 createChallenger (
@@ -94,6 +87,12 @@ module Trainer =
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, iter)
 
+    /// Trains a single iteration.
+    let private trainIteration iter model =
+        if settings.Verbose then
+            printfn $"\n*** Iteration {iter} ***"
+        let model = updateModel iter model
+        evaluate iter model
         model
 
     /// Trains for the given number of iterations.
@@ -116,9 +115,12 @@ module Trainer =
             printfn $"Model output size: {Network.outputSize}"
             printfn $"Advantage model parameter count: {nParms}"
 
+            // evaluate initial model
+        evaluate 0 model
+
             // run the iterations
         let model =
-            let iterNums = seq { 0 .. settings.NumIterations - 1 }
+            let iterNums = seq { 1 .. settings.NumIterations }
             (model, iterNums)
                 ||> Seq.fold (fun model iter ->
                     trainIteration iter model)
