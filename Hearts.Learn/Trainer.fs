@@ -4,6 +4,8 @@ open System
 open System.Diagnostics
 open System.IO
 
+open MathNet.Numerics.LinearAlgebra
+
 open PlayingCards
 open Hearts
 open Hearts.Model
@@ -142,3 +144,81 @@ module Trainer =
                 |> model.save
                 |> ignore
         model
+
+    let private createTrainingData numDeals =
+
+        let rec loop deal =
+            seq {
+                let play, sampleOpt =
+                    let hand =
+                        let seat = OpenDeal.currentPlayer deal
+                        deal.UnplayedCardMap[seat]
+                    let legalPlays =
+                        ClosedDeal.legalPlays hand deal.ClosedDeal
+                            |> Seq.toArray
+                    if legalPlays.Length = 1 then
+                        Array.exactlyOne legalPlays,
+                        None
+                    else
+                        let play =
+                            Trickster.player.Play hand deal.ClosedDeal
+                        let regrets =
+                            let strategy =
+                                [|
+                                    for card in legalPlays do
+                                        if card = play then 1.0f
+                                        else 0.0f
+                                |]
+                            let mean = Array.average strategy
+                            strategy
+                                |> Array.map (fun x -> x - mean)
+                                |> DenseVector.ofArray
+                                |> Strategy.toWide legalPlays
+                        play,
+                        AdvantageSample.create
+                            hand deal.ClosedDeal regrets
+                            |> Some
+
+                match sampleOpt with
+                    | Some sample -> yield sample
+                    | None -> ()
+
+                let deal = OpenDeal.addPlay play deal
+                match Game.tryUpdateScore deal Score.zero with
+                    | Some _ -> ()
+                    | None -> yield! loop deal
+            }
+
+        seq {
+            for _ = 1 to numDeals do
+                let deal =
+                    let deck = Deck.shuffle settings.Random
+                    OpenDeal.fromDeck
+                        Seat.South
+                        ExchangeDirection.Hold
+                        deck
+                        |> OpenDeal.startPlay
+                yield! loop deal
+        }
+
+    let trainDirect numDeals =
+
+        printfn $"{settings}"
+        printfn $"numDeals: {numDeals}"
+        let samples =
+            createTrainingData numDeals
+                |> Seq.toArray
+        printfn $"Number of samples: {samples.Length}"
+
+        let model = new AdvantageModel()
+        let losses = AdvantageModel.train samples model
+        printfn $"Final loss {Array.last losses}"
+
+        let avgPayoff =
+            let challenger = createChallenger (
+                Strategy.getFromAdvantage model)
+            Tournament.run
+                settings.Random
+                Trickster.player
+                challenger
+        printfn $"\nAverage payoff vs. Trickster: {avgPayoff}"
