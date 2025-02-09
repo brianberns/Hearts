@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Hearts.Learn": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
+    }
+  }
+}
