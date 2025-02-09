@@ -5,6 +5,14 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);MINI</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);MINI</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="Prelude.fs" />
     <Compile Include="Rank.fs" />
