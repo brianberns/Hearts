@@ -84,7 +84,15 @@ module Trainer =
                 |> state.Model.save
                 |> ignore
 
-            // log losses
+            // log samples and losses
+        settings.Writer.add_scalar(
+            $"advantage samples",
+            float32 samples.Length,
+            iter)
+        settings.Writer.add_scalar(
+            $"advantage reservoir",
+            float32 state.Reservoir.Items.Count,
+            iter)
         for epoch = 0 to losses.Length - 1 do
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{iter}",
