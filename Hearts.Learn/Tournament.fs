@@ -1,5 +1,7 @@
 ﻿namespace Hearts.Learn
 
+open System
+
 open PlayingCards
 open Hearts
 open Hearts.Model
@@ -7,7 +9,7 @@ open Hearts.Model
 module OpenDeal =
 
     /// Plays the given number of deals in parallel.
-    let generate rng numDeals playFun =
+    let generate (rng : Random) numDeals playFun =
 
         let map =
 #if DEBUG

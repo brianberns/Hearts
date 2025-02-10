@@ -6,7 +6,6 @@ open System.IO
 
 open MathNet.Numerics.LinearAlgebra
 
-open PlayingCards
 open Hearts
 open Hearts.Model
 
@@ -95,7 +94,8 @@ module Trainer =
 
         state
 
-    let createChallenger getStrategy =
+    /// Creates a Hearts player using the given model.
+    let createPlayer model =
 
         let play hand deal =
             let legalPlays =
@@ -103,24 +103,22 @@ module Trainer =
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             let strategy =
-                getStrategy hand deal legalPlays
+                Strategy.getFromAdvantage model
+                    hand deal legalPlays
             strategy
                 |> Vector.sample settings.Random
                 |> Array.get legalPlays
 
         { Play = play }
 
-    /// Evaluates the given model by playing it against
-    /// a standard.
+    /// Evaluates the given model by playing it against a
+    /// standard.
     let private evaluate iter model =
         let avgPayoff =
-            let challenger =
-                createChallenger (
-                    Strategy.getFromAdvantage model)
             Tournament.run
-                (Random(Settings.seed + 1))   // use same deals each iteration
+                (Random(Settings.seed + 1))   // use repeatable test set, not seen during training
                 Trickster.player
-                challenger
+                (createPlayer model)
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, iter)
 
@@ -245,12 +243,10 @@ module Trainer =
                 |> ignore
 
             // evaluate trained model
-        let challenger = createChallenger (
-            Strategy.getFromAdvantage model)
         let avgPayoff =
             Tournament.run
                 settings.Random
                 Trickster.player
-                challenger
+                (createPlayer model)
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, 0)
