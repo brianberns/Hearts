@@ -63,10 +63,8 @@ module Direct =
     /// Trains a model directly.
     let train numDeals =
 
-        printfn $"{settings}"
-        printfn $"Number of deals: {numDeals}"
-
             // generate training data
+        printfn $"Number of deals: {numDeals}"
         let samples =
             generateTrainingData numDeals
                 |> Seq.toArray

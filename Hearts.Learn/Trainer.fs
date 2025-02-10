@@ -131,10 +131,6 @@ module Trainer =
     /// Trains for the given number of iterations.
     let train () =
 
-        if settings.Verbose then
-            printfn $"Server garbage collection: {System.Runtime.GCSettings.IsServerGC}"
-            printfn $"Settings: {settings}"
-
             // create initial state
         let state = AdvantageState.create ()
         let nParms =
