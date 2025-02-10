@@ -10,5 +10,5 @@ module Program =
         printfn $"Server garbage collection: {System.Runtime.GCSettings.IsServerGC}"
         printfn $"Settings: {settings}"
 
-    // Trainer.train () |> ignore
-    Direct.train 20_000
+    Trainer.train () |> ignore
+    // Direct.train 20_000
