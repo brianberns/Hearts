@@ -1,5 +1,6 @@
 ﻿namespace Hearts.Web
 
+open System
 open System.IO
 
 open Fable.Remoting.Server
@@ -30,13 +31,14 @@ module Remoting =
 
     /// Hearts API.
     let private heartsApi dir =
+        let rng = Random(0)
         let model = Model.connect dir
         {
             GetPlayIndex =
                 fun hand deal ->
                     async {
                         let strategy = Model.getStrategy model hand deal
-                        return Vector.sample settings.Random strategy
+                        return Vector.sample rng strategy
                     }
             GetStrategy =
                 fun hand deal ->

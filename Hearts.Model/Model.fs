@@ -26,13 +26,13 @@ type AdvantageModel() as this =
         Sequential(
             Linear(
                 Network.inputSize,
-                settings.HiddenSize,
-                device = settings.Device),
+                Settings.hiddenSize,
+                device = Settings.device),
             ReLU(),
             Linear(
-                settings.HiddenSize,
+                Settings.hiddenSize,
                 Network.outputSize,
-                device = settings.Device))
+                device = Settings.device))
 
     do this.RegisterComponents()
 
@@ -45,5 +45,5 @@ module AdvantageModel =
     let getAdvantage hand deal model =
         use _ = torch.no_grad()
         let encoded = Encoding.encode hand deal
-        tensor(encoded, device = settings.Device)
+        tensor(encoded, device = Settings.device)
             --> model
