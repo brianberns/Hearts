@@ -148,7 +148,7 @@ module Trainer =
         if settings.Verbose then
             printfn $"Model input size: {Network.inputSize}"
             printfn $"Model output size: {Network.outputSize}"
-            printfn $"Advantage model parameter count: {nParms}"
+            printfn $"Model parameter count: {nParms}"
 
             // evaluate initial model
         evaluate 0 state.Model
