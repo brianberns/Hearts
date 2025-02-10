@@ -3,10 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>TRACE;FABLE_COMPILER</DefineConstants>
+    <DefineConstants>TRACE;FABLE_COMPILER;MINI</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DefineConstants>TRACE;FABLE_COMPILER</DefineConstants>
+    <DefineConstants>TRACE;FABLE_COMPILER;MINI</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\..\PlayingCards\Prelude.fs" />
