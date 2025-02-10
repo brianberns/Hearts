@@ -65,6 +65,7 @@ module Trainer =
             stopwatch.Stop()
             printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
+        { state with Reservoir = resv },
         losses
 
     /// Trains a new model using the given model.
@@ -77,8 +78,9 @@ module Trainer =
             printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
             // train a new model
-        let state = AdvantageState.resetModel state
-        let losses = trainAdvantageModel samples state
+        let state, losses =
+            AdvantageState.resetModel state
+                |> trainAdvantageModel samples
         Path.Combine(
             settings.ModelDirPath,
             $"AdvantageModel%03d{iter}.pt")
