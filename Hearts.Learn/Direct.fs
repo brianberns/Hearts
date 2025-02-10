@@ -7,7 +7,7 @@ open MathNet.Numerics.LinearAlgebra
 open Hearts
 open Hearts.Model
 
-module Trainer =
+module Direct =
 
     /// Generates training data using a standard player.
     let private generateTrainingData numDeals =
@@ -61,7 +61,7 @@ module Trainer =
                 |> Array.concat
 
     /// Trains a model directly.
-    let trainDirect numDeals =
+    let train numDeals =
 
         printfn $"{settings}"
         printfn $"Number of deals: {numDeals}"

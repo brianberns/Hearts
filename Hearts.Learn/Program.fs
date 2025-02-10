@@ -6,4 +6,4 @@ module Program =
 
     Console.OutputEncoding <- System.Text.Encoding.UTF8
     Trainer.train () |> ignore
-    // Trainer.trainDirect 20_000
+    // Direct.train 20_000
