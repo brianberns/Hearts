@@ -22,10 +22,13 @@
     <PackageReference Include="Suave" Version="2.6.2">
       <ExcludeAssets>runtime</ExcludeAssets>
 	</PackageReference>
-    <ProjectReference Include="..\..\Hearts.Model\Hearts.Model.fsproj" />
 	<PackageReference Update="FSharp.Core">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Hearts.Learn\Hearts.Learn.fsproj" />
   </ItemGroup>
 
 </Project>
