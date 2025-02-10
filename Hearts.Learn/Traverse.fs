@@ -35,7 +35,7 @@ module Traverse =
         [| yield! items; yield item |]
 
     /// Evaluates the utility of the given deal.
-    let traverse deal model =
+    let traverse iter deal model =
 
         /// Top-level loop.
         let rec loop deal =
@@ -97,7 +97,7 @@ module Traverse =
                     (actionUtilities.Row(idx) - utility[idx])
                         |> Strategy.toWide legalPlays
                 AdvantageSample.create
-                    hand deal.ClosedDeal wideRegrets
+                    hand deal.ClosedDeal wideRegrets iter
                     |> append samples
             utility.ToArray(), samples
 

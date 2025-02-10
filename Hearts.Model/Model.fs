@@ -34,17 +34,22 @@ type AdvantageSample =
 
         /// Observed regrets.
         Regrets : Vector<float32>
+
+        /// 1-based iteration number.
+        Iteration : int
     }
 
 module AdvantageSample =
 
     /// Creates an advantage sample.
-    let create hand deal (regrets : Vector<_>) =
+    let create hand deal (regrets : Vector<_>) iteration =
         assert(regrets.Count = Network.outputSize)
+        assert(iteration > 0)
         {
             Hand = hand
             Deal = deal
             Regrets = regrets
+            Iteration = iteration
         }
 
 module Tensor =
@@ -89,19 +94,26 @@ module AdvantageModel =
             // prepare training data
         let tensors =
             samples
+                |> Seq.toArray
                 |> Array.randomShuffle
                 |> Array.chunkBySize settings.AdvantageBatchSize
                 |> Array.map (fun batch ->
-                    let inputs, targets =
+                    let inputs, targets, iters =
                         batch
                             |> Array.map (fun sample ->
                                 let input =
                                     Encoding.encode sample.Hand sample.Deal
                                 let target = sample.Regrets
-                                input, target)
-                            |> Array.unzip
+                                let iter =
+                                    sample.Iteration
+                                        |> float32
+                                        |> sqrt
+                                        |> Seq.singleton
+                                input, target, iter)
+                            |> Array.unzip3
                     Tensor.ofSeq inputs,
-                    Tensor.ofSeq targets)
+                    Tensor.ofSeq targets,
+                    Tensor.ofSeq iters)
 
         use optimizer =
             Adam(
@@ -113,12 +125,14 @@ module AdvantageModel =
             [|
                 for _ = 1 to settings.NumAdvantageTrainEpochs do
                     Array.last [|
-                        for inputs, targets in tensors do
+                        for inputs, targets, iters in tensors do
 
                                 // forward pass
                             use loss =
                                 use outputs = inputs --> model
-                                loss.forward(outputs, targets)
+                                use outputs' = iters * outputs   // favor later iterations
+                                use targets' = iters * targets
+                                loss.forward(outputs', targets')
 
                                 // backward pass and optimize
                             optimizer.zero_grad()

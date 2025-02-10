@@ -12,42 +12,77 @@ open Hearts.Model
 
 module Trainer =
 
+    /// Advantage state managed for each player.
+    type private AdvantageState =
+        {
+            /// Player's model.
+            Model : AdvantageModel
+
+            /// Player's reservoir.
+            Reservoir : Reservoir<AdvantageSample>
+        }
+
+    module private AdvantageState =
+
+        /// Creates an advantage state.
+        let create () =
+            {
+                Model = new AdvantageModel()
+                Reservoir =
+                    Reservoir.create
+                        settings.Random
+                        settings.NumAdvantageSamples
+            }
+
+        /// Resets the model of the given state.
+        let resetModel state =
+            state.Model.Dispose()
+            {
+                state with
+                    Model = new AdvantageModel()
+            }
+
     /// Generates training data using the given model.
-    let private generateSamples model =
+    let private generateSamples iter model =
         OpenDeal.generate
             settings.Random
             settings.NumTraversals
             (fun deal ->
-                Traverse.traverse deal model)
+                Traverse.traverse iter deal model)
                 |> Array.concat
 
-    /// Trains the given advantage model using the given samples.
-    let private trainAdvantageModel samples model =
+    /// Adds the given samples to the given reservoir and then
+    /// uses the reservoir to train the given model.
+    let private trainAdvantageModel samples state =
+
+        let resv =
+            Reservoir.addMany samples state.Reservoir
+
         let stopwatch = Stopwatch.StartNew()
-        let losses = AdvantageModel.train samples model
+        let losses =
+            AdvantageModel.train resv.Items state.Model
         if settings.Verbose then
             stopwatch.Stop()
-            printfn $"Trained model in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
+            printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
         losses
 
     /// Trains a new model using the given model.
-    let private updateModel iter model =
+    let private updateModel iter state =
 
             // generate training data from existing model
         let stopwatch = Stopwatch.StartNew()
-        let samples = generateSamples model
+        let samples = generateSamples iter state.Model
         if settings.Verbose then
             printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
             // train a new model
-        model.Dispose()
-        let model = new AdvantageModel()
-        let losses = trainAdvantageModel samples model
+        let state = AdvantageState.resetModel state
+        let losses = trainAdvantageModel samples state
         Path.Combine(
             settings.ModelDirPath,
             $"AdvantageModel%03d{iter}.pt")
-                |> model.save
+                |> state.Model.save
                 |> ignore
 
             // log losses
@@ -56,7 +91,7 @@ module Trainer =
                 $"advantage loss/iter%03d{iter}",
                 losses[epoch], epoch)
 
-        model
+        state
 
     let createChallenger getStrategy =
 
@@ -88,12 +123,12 @@ module Trainer =
             $"advantage tournament", avgPayoff, iter)
 
     /// Trains a single iteration.
-    let private trainIteration iter model =
+    let private trainIteration iter state =
         if settings.Verbose then
             printfn $"\n*** Iteration {iter} ***"
-        let model = updateModel iter model
-        evaluate iter model
-        model
+        let state = updateModel iter state
+        evaluate iter state.Model
+        state
 
     /// Trains for the given number of iterations.
     let train () =
@@ -102,10 +137,10 @@ module Trainer =
             printfn $"Server garbage collection: {System.Runtime.GCSettings.IsServerGC}"
             printfn $"Settings: {settings}"
 
-            // create initial model
-        let model = new AdvantageModel()
+            // create initial state
+        let state = AdvantageState.create ()
         let nParms =
-            model.parameters(true)
+            state.Model.parameters(true)
                 |> Seq.where (fun parm -> parm.requires_grad)
                 |> Seq.sumBy (fun parm -> parm.numel())
         settings.Writer.add_text(
@@ -116,13 +151,15 @@ module Trainer =
             printfn $"Advantage model parameter count: {nParms}"
 
             // evaluate initial model
-        evaluate 0 model
+        evaluate 0 state.Model
 
             // run the iterations
         let iterNums = seq { 1 .. settings.NumIterations }
-        (model, iterNums)
-            ||> Seq.fold (fun model iter ->
-                trainIteration iter model)
+        let state =
+            (state, iterNums)
+                ||> Seq.fold (fun state iter ->
+                    trainIteration iter state)
+        state.Model
 
     /// Generates training data using a standard player.
     let private generateTrainingData numDeals =
@@ -156,7 +193,7 @@ module Trainer =
                                 |> Strategy.toWide legalPlays
                         play,
                         AdvantageSample.create
-                            hand deal.ClosedDeal regrets
+                            hand deal.ClosedDeal regrets 1
                             |> Some
 
                 match sampleOpt with
@@ -189,7 +226,7 @@ module Trainer =
 
             // train model
         let model = new AdvantageModel()
-        let losses = trainAdvantageModel samples model
+        let losses = AdvantageModel.train samples model
 
             // log losses
         printfn $"Final loss {Array.last losses}"
