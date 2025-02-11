@@ -19,6 +19,9 @@ module Trainer =
             Reservoir : Reservoir<AdvantageSample>
         }
 
+        interface IDisposable with
+            member this.Dispose() = this.Model.Dispose()
+
     module private AdvantageState =
 
         /// Creates an advantage state.
