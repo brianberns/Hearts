@@ -38,7 +38,7 @@ type Settings =
         /// Number of deals to evaluate model.
         NumEvaluationDeals : int
 
-        /// Device to use for training models.
+        /// Device to use for training and running models.
         Device : torch.Device
 
         /// Tensorboard writer.
