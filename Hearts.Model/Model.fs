@@ -44,6 +44,7 @@ module AdvantageModel =
     /// Gets the advantage for the given info set (hand + deal).
     let getAdvantage hand deal model =
         use _ = torch.no_grad()
-        let encoded = Encoding.encode hand deal
-        tensor(encoded, device = Settings.device)
-            --> model
+        use input =
+            let encoded = Encoding.encode hand deal
+            tensor(encoded, device = Settings.device)
+        input --> model

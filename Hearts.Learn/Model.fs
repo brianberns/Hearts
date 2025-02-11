@@ -76,6 +76,7 @@ module AdvantageModel =
                     Tensor.ofSeq targets,
                     Tensor.ofSeq iters)
 
+            // train model
         use optimizer =
             Adam(
                 model.parameters(),
@@ -104,4 +105,11 @@ module AdvantageModel =
                     |]
             |]
         model.eval()
+
+            // cleanup
+        for inputs, targets, iters in tensors do
+            inputs.Dispose()
+            targets.Dispose()
+            iters.Dispose()
+
         losses
