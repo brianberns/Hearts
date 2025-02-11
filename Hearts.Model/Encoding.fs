@@ -19,6 +19,9 @@ module Card =
         assert(index < Card.numCards)
         index
 
+/// Encoded value.
+type Encoding = float32[]
+
 module Encoding =
 
     /// Encodes the given (card, value) pairs as a
@@ -90,8 +93,8 @@ module Encoding =
             + (Suit.numSuits * Seat.numSeats)         // voids
             + Seat.numSeats                           // score
 
-    /// Encodes the given info set as a vector.
-    let encode (hand : Hand) deal =
+    /// Encodes the given info set (hand + deal) as a vector.
+    let encode (hand : Hand) deal : Encoding =
         let otherUnplayed = deal.UnplayedCards - hand
         let trick = ClosedDeal.currentTrick deal
         let player = Trick.currentPlayer trick

@@ -8,18 +8,14 @@ open FSharp.Core.Operators   // reclaim "float32" and other F# operators
 
 open MathNet.Numerics.LinearAlgebra
 
-open PlayingCards
-open Hearts
 open Hearts.Model
 
 /// An observed advantage event.
 type AdvantageSample =
     {
-        /// Current player's hand.
-        Hand : Hand
-
-        /// Current deal.
-        Deal : ClosedDeal
+        /// Information available to the player at the time
+        /// of the event (hand + deal).
+        InfoSet : Encoding
 
         /// Observed regrets.
         Regrets : Vector<float32>
@@ -35,8 +31,7 @@ module AdvantageSample =
         assert(regrets.Count = Network.outputSize)
         assert(iteration > 0)
         {
-            Hand = hand
-            Deal = deal
+            InfoSet = Encoding.encode hand deal
             Regrets = regrets
             Iteration = iteration
         }
@@ -62,8 +57,7 @@ module AdvantageModel =
                     let inputs, targets, iters =
                         batch
                             |> Array.map (fun sample ->
-                                let input =
-                                    Encoding.encode sample.Hand sample.Deal
+                                let input = sample.InfoSet
                                 let target = sample.Regrets
                                 let iter =
                                     sample.Iteration
