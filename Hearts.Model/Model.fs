@@ -12,29 +12,34 @@ type Network = Module<Tensor, Tensor>
 
 module Network =
 
-    /// Length of neural network input.
+    /// Size of neural network input.
     let inputSize = Encoding.encodedLength
 
-    /// Length of neural network output.
+    /// Size of a neural network hidden layer.
+    let hiddenSize = Encoding.encodedLength * 8
+
+    /// Size of neural network output.
     let outputSize = Card.numCards
 
 /// Model used for learning advantages.
-type AdvantageModel() as this =
+type AdvantageModel(device) as this =
     inherit Network("AdvantageModel")
 
     let sequential =
         Sequential(
             Linear(
                 Network.inputSize,
-                Settings.hiddenSize,
-                device = Settings.device),
+                Network.hiddenSize,
+                device = device),
             ReLU(),
             Linear(
-                Settings.hiddenSize,
+                Network.hiddenSize,
                 Network.outputSize,
-                device = Settings.device))
+                device = device))
 
     do this.RegisterComponents()
+
+    member _.Device = device
 
     override _.forward(input) = 
         sequential.forward(input)
@@ -42,9 +47,9 @@ type AdvantageModel() as this =
 module AdvantageModel =
 
     /// Gets the advantage for the given info set (hand + deal).
-    let getAdvantage hand deal model =
+    let getAdvantage hand deal (model : AdvantageModel) =
         use _ = torch.no_grad()
         use input =
             let encoded = Encoding.encode hand deal
-            tensor(encoded, device = Settings.device)
+            tensor(encoded, device = model.Device)
         input --> model

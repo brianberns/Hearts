@@ -13,7 +13,8 @@ module Model =
 
     /// Connects to Hearts model.
     let connect dir =
-        let model = new AdvantageModel()
+        let model =
+            new AdvantageModel(TorchSharp.torch.CPU)
         let path = Path.Combine(dir, "AdvantageModel.pt")
         model.load(path) |> ignore
         model

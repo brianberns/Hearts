@@ -71,7 +71,7 @@ module Direct =
         printfn $"Number of samples: {samples.Length}"
 
             // train model
-        let model = new AdvantageModel()
+        let model = new AdvantageModel(settings.Device)
         let losses = AdvantageModel.train samples model
 
             // log losses

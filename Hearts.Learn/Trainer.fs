@@ -27,7 +27,8 @@ module Trainer =
         /// Creates an advantage state.
         let create () =
             {
-                Model = new AdvantageModel()
+                Model =
+                    new AdvantageModel(settings.Device)
                 Reservoir =
                     Reservoir.create
                         settings.Random
@@ -39,7 +40,7 @@ module Trainer =
             state.Model.Dispose()
             {
                 state with
-                    Model = new AdvantageModel()
+                    Model = new AdvantageModel(settings.Device)
             }
 
     /// Generates training data using the given model.

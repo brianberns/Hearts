@@ -3,8 +3,6 @@
 open System
 open TorchSharp
 
-open Hearts
-
 /// Hyperparameters.
 type Settings =
     {
@@ -74,7 +72,7 @@ module Settings =
         let settings =
             {
                 Random = Random(seed)
-                HiddenSize = Model.Settings.hiddenSize
+                HiddenSize = Hearts.Model.Network.hiddenSize
                 LearningRate = 2e-3
                 BranchRate = 1.0 / 4.0
                 NumAdvantageTrainEpochs = 1_000
@@ -83,7 +81,7 @@ module Settings =
                 NumTraversals = 1000
                 NumIterations = 25
                 NumEvaluationDeals = 100_000
-                Device = Model.Settings.device
+                Device = torch.CUDA
                 ModelDirPath = "./Models"
                 Writer = writer
                 Verbose = true
