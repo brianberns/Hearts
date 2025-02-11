@@ -20,20 +20,25 @@ type AdvantageSample =
         /// Observed regrets.
         Regrets : Vector<float32>
 
-        /// 1-based iteration number.
-        Iteration : int
+        /// Weight of this sample, as determined by 1-based
+        /// iteration number.
+        Weight : float32
     }
 
 module AdvantageSample =
 
     /// Creates an advantage sample.
-    let create hand deal (regrets : Vector<_>) iteration =
-        assert(regrets.Count = Network.outputSize)
+    let create hand deal regrets iteration =
+        assert(Vector.length regrets = Network.outputSize)
         assert(iteration > 0)
+        assert(iteration <= settings.NumIterations)
         {
             InfoSet = Encoding.encode hand deal
             Regrets = regrets
-            Iteration = iteration
+            Weight =
+                iteration
+                    |> float32
+                    |> sqrt
         }
 
 module Tensor =
@@ -57,14 +62,9 @@ module AdvantageModel =
                     let inputs, targets, iters =
                         batch
                             |> Array.map (fun sample ->
-                                let input = sample.InfoSet
-                                let target = sample.Regrets
-                                let iter =
-                                    sample.Iteration
-                                        |> float32
-                                        |> sqrt
-                                        |> Seq.singleton
-                                input, target, iter)
+                                sample.InfoSet,
+                                sample.Regrets,
+                                Seq.singleton sample.Weight)
                             |> Array.unzip3
                     Tensor.ofSeq inputs,
                     Tensor.ofSeq targets,
