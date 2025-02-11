@@ -41,19 +41,13 @@ module AdvantageSample =
                     |> sqrt
         }
 
-module Tensor =
-     
-    /// Converts the given rows to a tensor.
-    let ofSeq (rows : seq<#seq<float32>>) =
-        tensor(array2D rows, device = settings.Device)
-
 module AdvantageModel =
 
     /// Trains the given model using the given samples.
     let train samples (model : AdvantageModel) =
 
             // prepare training data
-        let tensors =
+        let data =
             samples
                 |> Seq.toArray
                 |> Array.randomShuffle
@@ -66,9 +60,9 @@ module AdvantageModel =
                                 sample.Regrets,
                                 Seq.singleton sample.Weight)
                             |> Array.unzip3
-                    Tensor.ofSeq inputs,
-                    Tensor.ofSeq targets,
-                    Tensor.ofSeq iters)
+                    array2D inputs,
+                    array2D targets,
+                    array2D iters)
 
             // train model
         use optimizer =
@@ -81,7 +75,12 @@ module AdvantageModel =
             [|
                 for _ = 1 to settings.NumAdvantageTrainEpochs do
                     Array.last [|
-                        for inputs, targets, iters in tensors do
+                        for inputArray, targetArray, iterArray in data do
+
+                                // move to GPU
+                            use inputs = tensor(inputArray, device = settings.Device)
+                            use targets = tensor(targetArray, device = settings.Device)
+                            use iters = tensor(iterArray, device = settings.Device)
 
                                 // forward pass
                             use loss =
@@ -99,11 +98,5 @@ module AdvantageModel =
                     |]
             |]
         model.eval()
-
-            // cleanup
-        for inputs, targets, iters in tensors do
-            inputs.Dispose()
-            targets.Dispose()
-            iters.Dispose()
 
         losses
