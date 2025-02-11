@@ -9,9 +9,6 @@ type Settings =
         /// Random number generator.
         Random : Random
 
-        /// Size of a neural network hidden layer.
-        HiddenSize : int
-
         /// Optimizer learning rate.
         LearningRate : float
 
@@ -72,7 +69,6 @@ module Settings =
         let settings =
             {
                 Random = Random(seed)
-                HiddenSize = Hearts.Model.Network.hiddenSize
                 LearningRate = 2e-3
                 BranchRate = 1.0 / 4.0
                 NumAdvantageTrainEpochs = 1_000
@@ -91,7 +87,7 @@ module Settings =
 
         writer.add_text(
             $"settings/HiddenSize",
-            string settings.HiddenSize, 0)
+            string Hearts.Model.Network.hiddenSize, 0)
         writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
