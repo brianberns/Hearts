@@ -34,7 +34,7 @@ module Strategy =
 
     /// Converts a narrow vector (indexed by legal plays) to
     /// a wide vector (indexed by entire deck).
-    let toWide (legalPlays : _[]) (narrow : Vector<_>) =
+    let toWide (legalPlays : _[]) (narrow : Vector<float32>) =
         assert(narrow.Count = legalPlays.Length)
         Seq.zip legalPlays narrow
             |> Encoding.encodeCardValues

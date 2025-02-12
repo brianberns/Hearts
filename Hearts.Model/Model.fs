@@ -51,5 +51,7 @@ module AdvantageModel =
         use _ = torch.no_grad()
         use input =
             let encoded = Encoding.encode hand deal
-            tensor(encoded, device = model.Device)
+            tensor(
+                encoded, device = model.Device,
+                dtype = ScalarType.Float32)
         input --> model

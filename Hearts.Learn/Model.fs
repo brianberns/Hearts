@@ -78,9 +78,16 @@ module AdvantageModel =
                         for inputArray, targetArray, iterArray in data do
 
                                 // move to GPU
-                            use inputs = tensor(inputArray, device = settings.Device)
-                            use targets = tensor(targetArray, device = settings.Device)
-                            use iters = tensor(iterArray, device = settings.Device)
+                            use inputs =
+                                tensor(
+                                    inputArray, device = settings.Device,
+                                    dtype = ScalarType.Float32)
+                            use targets =
+                                tensor(
+                                    targetArray, device = settings.Device)
+                            use iters =
+                                tensor(
+                                    iterArray, device = settings.Device)
 
                                 // forward pass
                             use loss =

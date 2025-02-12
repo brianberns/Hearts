@@ -19,14 +19,14 @@ module Card =
         assert(index < Card.numCards)
         index
 
-/// Encoded value.
-type Encoding = float32[]
+/// Encoded value for input to a model.
+type Encoding = byte[]
 
 module Encoding =
 
     /// Encodes the given (card, value) pairs as a
     /// vector in the deck size.
-    let encodeCardValues pairs =
+    let inline encodeCardValues pairs =
         let valueMap =
             pairs
                 |> Seq.map (fun (card, value) ->
@@ -36,14 +36,15 @@ module Encoding =
             for index = 0 to Card.numCards - 1 do
                 valueMap
                     |> Map.tryFind index
-                    |> Option.defaultValue 0.0f
+                    |> Option.defaultValue
+                        LanguagePrimitives.GenericZero   // encode to input type
         |]
 
     /// Encodes the given cards as a multi-hot vector
     /// in the deck size.
     let private encodeCards cards =
         cards
-            |> Seq.map (fun card -> card, 1.0f)
+            |> Seq.map (fun card -> card, 1uy)
             |> encodeCardValues
 
     /// Encodes each card in the given current trick as
@@ -72,8 +73,8 @@ module Encoding =
             for suit in Enum.getValues<Suit> do
                 for seat in Seat.cycle player do
                     if Set.contains (seat, suit) voids then
-                        1.0f
-                    else 0.0f
+                        1uy
+                    else 0uy
         |]
 
     /// Encodes the given score as a vector in the number
@@ -82,7 +83,11 @@ module Encoding =
         assert(score.ScoreMap.Count = Seat.numSeats)
         [|
             for seat in Seat.cycle player do
-                float32 score.ScoreMap[seat]
+                assert(
+                    Seq.forall (fun pt ->
+                        pt <= int System.Byte.MaxValue)
+                            score.ScoreMap.Values)
+                byte score.ScoreMap[seat]
         |]
 
     /// Total encoded length of an info set (hand + deal).
