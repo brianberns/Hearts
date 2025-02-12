@@ -16,7 +16,7 @@ module Network =
     let inputSize = Encoding.encodedLength
 
     /// Size of a neural network hidden layer.
-    let hiddenSize = Encoding.encodedLength
+    let hiddenSize = Encoding.encodedLength * 8
 
     /// Size of neural network output.
     let outputSize = Card.numCards
