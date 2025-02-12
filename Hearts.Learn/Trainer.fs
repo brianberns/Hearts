@@ -153,6 +153,7 @@ module Trainer =
             $"settings/AdvModelParmCount", string nParms, 0)
         if settings.Verbose then
             printfn $"Model input size: {Network.inputSize}"
+            printfn $"Model hidden size: {Network.hiddenSize}"
             printfn $"Model output size: {Network.outputSize}"
             printfn $"Model parameter count: {nParms}"
 
