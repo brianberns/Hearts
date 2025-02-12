@@ -16,13 +16,13 @@ module Network =
     let inputSize = Encoding.encodedLength
 
     /// Size of a neural network hidden layer.
-    let hiddenSize = Encoding.encodedLength * 8
+    let hiddenSize = Encoding.encodedLength
 
     /// Size of neural network output.
     let outputSize = Card.numCards
 
 /// Model used for learning advantages.
-type AdvantageModel(device) as this =
+type AdvantageModel(device : torch.Device) as this =
     inherit Network("AdvantageModel")
 
     let sequential =
@@ -37,7 +37,9 @@ type AdvantageModel(device) as this =
                 Network.outputSize,
                 device = device))
 
-    do this.RegisterComponents()
+    do
+        this.RegisterComponents()
+        this.``to``(device) |> ignore   // make sure module itself is on the right device
 
     member _.Device = device
 
