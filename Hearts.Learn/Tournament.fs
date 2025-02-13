@@ -14,7 +14,7 @@ module OpenDeal =
 #if DEBUG
             Array.map
 #else
-            Array.Parallel.map
+            Array.map   // https://github.com/dotnet/TorchSharp/issues/1445
 #endif
 
         Array.init numDeals id
