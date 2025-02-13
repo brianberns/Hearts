@@ -9,16 +9,8 @@ module OpenDeal =
 
     /// Plays the given number of deals in parallel.
     let generate (rng : Random) numDeals playFun =
-
-        let map =
-#if DEBUG
-            Array.map
-#else
-            Array.map   // https://github.com/dotnet/TorchSharp/issues/1445
-#endif
-
         Array.init numDeals id
-            |> map (fun iDeal ->
+            |> Array.Parallel.map (fun iDeal ->
                 let deal =
                     let deck =
                         lock rng (fun () ->
