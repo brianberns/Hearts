@@ -72,14 +72,7 @@ module Direct =
 
             // train model
         let model = new AdvantageModel(settings.Device)
-        let losses = AdvantageModel.train samples model
-
-            // log losses
-        printfn $"Final loss {Array.last losses}"
-        for epoch = 0 to losses.Length - 1 do
-            settings.Writer.add_scalar(
-                $"advantage loss",
-                losses[epoch], epoch)
+        AdvantageModel.train 0 samples model
 
             // save trained model
         Path.Combine(

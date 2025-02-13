@@ -54,20 +54,19 @@ module Trainer =
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train the given model.
-    let private trainAdvantageModel samples state =
+    let private trainAdvantageModel iter samples state =
 
         let resv =
             Reservoir.addMany samples state.Reservoir
 
         let stopwatch = Stopwatch.StartNew()
-        let losses =
-            AdvantageModel.train resv.Items state.Model
+        AdvantageModel.train
+            iter resv.Items state.Model
         if settings.Verbose then
             stopwatch.Stop()
             printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
-        { state with Reservoir = resv },
-        losses
+        { state with Reservoir = resv }
 
     /// Trains a new model using the given model.
     let private updateModel iter state =
@@ -79,9 +78,9 @@ module Trainer =
             printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
             // train a new model
-        let state, losses =
+        let state =
             AdvantageState.resetModel state
-                |> trainAdvantageModel samples
+                |> trainAdvantageModel iter samples
         Path.Combine(
             settings.ModelDirPath,
             $"AdvantageModel%03d{iter}.pt")
@@ -97,10 +96,6 @@ module Trainer =
             $"advantage reservoir",
             float32 state.Reservoir.Items.Count,
             iter)
-        for epoch = 0 to losses.Length - 1 do
-            settings.Writer.add_scalar(
-                $"advantage loss/iter%03d{iter}",
-                losses[epoch], epoch)
 
         state
 

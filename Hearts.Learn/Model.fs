@@ -44,7 +44,7 @@ module AdvantageSample =
 module AdvantageModel =
 
     /// Trains the given model using the given samples.
-    let train samples (model : AdvantageModel) =
+    let train iter samples (model : AdvantageModel) =
 
             // prepare training data
         let data =
@@ -71,39 +71,38 @@ module AdvantageModel =
                 settings.LearningRate)
         use loss = MSELoss()
         model.train()
-        let losses =
-            [|
-                for _ = 1 to settings.NumAdvantageTrainEpochs do
-                    Array.last [|
-                        for inputArray, targetArray, iterArray in data do
+        for epoch = 1 to settings.NumAdvantageTrainEpochs do
+            let loss =
+                Array.last [|
+                    for inputArray, targetArray, iterArray in data do
 
-                                // move to GPU
-                            use inputs =
-                                tensor(
-                                    inputArray, device = settings.Device,
-                                    dtype = ScalarType.Float32)
-                            use targets =
-                                tensor(
-                                    targetArray, device = settings.Device)
-                            use iters =
-                                tensor(
-                                    iterArray, device = settings.Device)
+                            // move to GPU
+                        use inputs =
+                            tensor(
+                                inputArray, device = settings.Device,
+                                dtype = ScalarType.Float32)
+                        use targets =
+                            tensor(
+                                targetArray, device = settings.Device)
+                        use iters =
+                            tensor(
+                                iterArray, device = settings.Device)
 
-                                // forward pass
-                            use loss =
-                                use outputs = inputs --> model
-                                use outputs' = iters * outputs   // favor later iterations
-                                use targets' = iters * targets
-                                loss.forward(outputs', targets')
+                            // forward pass
+                        use loss =
+                            use outputs = inputs --> model
+                            use outputs' = iters * outputs   // favor later iterations
+                            use targets' = iters * targets
+                            loss.forward(outputs', targets')
 
-                                // backward pass and optimize
-                            optimizer.zero_grad()
-                            loss.backward()
-                            use _ = optimizer.step()
+                            // backward pass and optimize
+                        optimizer.zero_grad()
+                        loss.backward()
+                        use _ = optimizer.step()
 
-                            loss.item<float32>()
-                    |]
-            |]
+                        loss.item<float32>()
+                |]
+            settings.Writer.add_scalar(
+                $"advantage loss/iter%03d{iter}",
+                loss, epoch)
         model.eval()
-
-        losses
