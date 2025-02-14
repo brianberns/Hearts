@@ -10,7 +10,7 @@ open Hearts.Model
 module Direct =
 
     /// Generates training data using a standard player.
-    let private generateTrainingData numDeals =
+    let private generateTrainingData (player : Player) numDeals =
 
         let rec loop deal =
             seq {
@@ -25,8 +25,7 @@ module Direct =
                         Array.exactlyOne legalPlays,
                         None
                     else
-                        let play =
-                            Trickster.player.Play hand deal.ClosedDeal
+                        let play = player.Play hand deal.ClosedDeal
                         let regrets =
                             let strategy =
                                 [|
@@ -66,7 +65,7 @@ module Direct =
             // generate training data
         printfn $"Number of deals: {numDeals}"
         let samples =
-            generateTrainingData numDeals
+            generateTrainingData Trickster.player numDeals
                 |> Seq.toArray
         printfn $"Number of samples: {samples.Length}"
 
