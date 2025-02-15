@@ -61,43 +61,41 @@ module AdvantageModel =
                 array2D targets,
                 array2D iters)
 
-    /// Trains the given model using the given batches of
-    /// data.
-    let private trainBatches model batches
+    /// Trains the given model on the given batch of data.
+    let private trainBatch
+        model
+        (inputBatch, targetBatch, iterBatch)
         (criterion : Loss<Tensor, Tensor, Tensor>)
         (optimizer : Optimizer) =
-        Array.last [|
-            for inputBatch, targetBatch, iterBatch in batches do
 
-                    // move to GPU
-                use inputs =
-                    tensor(
-                        (inputBatch : byte array2d),
-                        device = settings.Device,
-                        dtype = ScalarType.Float32)
-                use targets =
-                    tensor(
-                        (targetBatch : float32 array2d),
-                        device = settings.Device)
-                use iters =
-                    tensor(
-                        (iterBatch : float32 array2d),
-                        device = settings.Device)
+            // move to GPU
+        use inputs =
+            tensor(
+                (inputBatch : byte array2d),
+                device = settings.Device,
+                dtype = ScalarType.Float32)
+        use targets =
+            tensor(
+                (targetBatch : float32 array2d),
+                device = settings.Device)
+        use iters =
+            tensor(
+                (iterBatch : float32 array2d),
+                device = settings.Device)
 
-                    // forward pass
-                use loss =
-                    use outputs = inputs --> model
-                    use outputs' = iters * outputs   // favor later iterations
-                    use targets' = iters * targets
-                    criterion.forward(outputs', targets')
+            // forward pass
+        use loss =
+            use outputs = inputs --> model
+            use outputs' = iters * outputs   // favor later iterations
+            use targets' = iters * targets
+            criterion.forward(outputs', targets')
 
-                    // backward pass and optimize
-                optimizer.zero_grad()
-                loss.backward()
-                use _ = optimizer.step()
+            // backward pass and optimize
+        optimizer.zero_grad()
+        loss.backward()
+        use _ = optimizer.step()
 
-                loss.item<float32>()
-        |]
+        loss.item<float32>()
 
     /// Trains the given model using the given samples.
     let train iter samples (model : AdvantageModel) =
@@ -114,7 +112,10 @@ module AdvantageModel =
         model.train()
         for epoch = 1 to settings.NumAdvantageTrainEpochs do
             let loss =
-                trainBatches model batches criterion optimizer
+                Array.last [|
+                    for batch in batches do
+                        trainBatch model batch criterion optimizer
+                |]
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{iter}",
                 loss, epoch)
