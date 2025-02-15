@@ -43,65 +43,78 @@ module AdvantageSample =
 
 module AdvantageModel =
 
+    /// Breaks the given samples into batches.
+    let private createBatches samples =
+        samples
+            |> Seq.toArray
+            |> Array.randomShuffle
+            |> Array.chunkBySize settings.AdvantageBatchSize
+            |> Array.map (fun batch ->
+                let inputs, targets, iters =
+                    batch
+                        |> Array.map (fun sample ->
+                            sample.InfoSet,
+                            sample.Regrets,
+                            Seq.singleton sample.Weight)
+                        |> Array.unzip3
+                array2D inputs,
+                array2D targets,
+                array2D iters)
+
+    /// Trains the given model using the given batches of
+    /// data.
+    let private trainBatches model batches
+        (criterion : Loss<Tensor, Tensor, Tensor>)
+        (optimizer : Optimizer) =
+        Array.last [|
+            for inputBatch, targetBatch, iterBatch in batches do
+
+                    // move to GPU
+                use inputs =
+                    tensor(
+                        (inputBatch : byte array2d),
+                        device = settings.Device,
+                        dtype = ScalarType.Float32)
+                use targets =
+                    tensor(
+                        (targetBatch : float32 array2d),
+                        device = settings.Device)
+                use iters =
+                    tensor(
+                        (iterBatch : float32 array2d),
+                        device = settings.Device)
+
+                    // forward pass
+                use loss =
+                    use outputs = inputs --> model
+                    use outputs' = iters * outputs   // favor later iterations
+                    use targets' = iters * targets
+                    criterion.forward(outputs', targets')
+
+                    // backward pass and optimize
+                optimizer.zero_grad()
+                loss.backward()
+                use _ = optimizer.step()
+
+                loss.item<float32>()
+        |]
+
     /// Trains the given model using the given samples.
     let train iter samples (model : AdvantageModel) =
 
             // prepare training data
-        let data =
-            samples
-                |> Seq.toArray
-                |> Array.randomShuffle
-                |> Array.chunkBySize settings.AdvantageBatchSize
-                |> Array.map (fun batch ->
-                    let inputs, targets, iters =
-                        batch
-                            |> Array.map (fun sample ->
-                                sample.InfoSet,
-                                sample.Regrets,
-                                Seq.singleton sample.Weight)
-                            |> Array.unzip3
-                    array2D inputs,
-                    array2D targets,
-                    array2D iters)
+        let batches = createBatches samples
 
             // train model
         use optimizer =
             Adam(
                 model.parameters(),
                 settings.LearningRate)
-        use loss = MSELoss()
+        use criterion = MSELoss()
         model.train()
         for epoch = 1 to settings.NumAdvantageTrainEpochs do
             let loss =
-                Array.last [|
-                    for inputArray, targetArray, iterArray in data do
-
-                            // move to GPU
-                        use inputs =
-                            tensor(
-                                inputArray, device = settings.Device,
-                                dtype = ScalarType.Float32)
-                        use targets =
-                            tensor(
-                                targetArray, device = settings.Device)
-                        use iters =
-                            tensor(
-                                iterArray, device = settings.Device)
-
-                            // forward pass
-                        use loss =
-                            use outputs = inputs --> model
-                            use outputs' = iters * outputs   // favor later iterations
-                            use targets' = iters * targets
-                            loss.forward(outputs', targets')
-
-                            // backward pass and optimize
-                        optimizer.zero_grad()
-                        loss.backward()
-                        use _ = optimizer.step()
-
-                        loss.item<float32>()
-                |]
+                trainBatches model batches criterion optimizer
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{iter}",
                 loss, epoch)
