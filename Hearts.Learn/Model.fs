@@ -21,7 +21,7 @@ type AdvantageSample =
         Regrets : Vector<float32>
 
         /// Weight of this sample, as determined by 1-based
-        /// iteration number.
+        /// iteration number. Later iterations have more weight.
         Weight : float32
     }
 
@@ -36,29 +36,46 @@ module AdvantageSample =
             InfoSet = Encoding.encode hand deal
             Regrets = regrets
             Weight =
-                iteration
-                    |> float32
+                float32 iteration
                     |> sqrt
         }
 
 module AdvantageModel =
 
+    /// A chunk of training data that fits on the GPU.
     type private SubBatch =
         {
+            /// Encoded input rows.
             Inputs : byte array2d
+
+            /// Target result rows.
             Targets : float32 array2d
-            Iterations : float32 array2d
+
+            /// Weight of each row.
+            Weights : float32 array2d
         }
 
     module private SubBatch =
 
-        let create inputs targets iters =
-            {
-                Inputs = array2D inputs
-                Targets = array2D targets
-                Iterations = array2D iters
-            }
+        /// Creates a sub-batch.
+        let create inputs targets weights =
+            let subbatch =
+                {
+                    Inputs = array2D inputs
+                    Targets = array2D targets
+                    Weights = array2D weights
+                }
+            assert(
+                [
+                    subbatch.Inputs.GetLength(0)
+                    subbatch.Targets.GetLength(0)
+                    subbatch.Weights.GetLength(0)
+                ]
+                    |> Seq.distinct
+                    |> Seq.length = 1)
+            subbatch
 
+    /// A batch of training data.
     type private Batch = SubBatch[]
 
     /// Breaks the given samples into batches.
@@ -73,64 +90,73 @@ module AdvantageModel =
                     / settings.AdvantageSubBatchSize)
             |> Array.map (
                 Array.map (fun samples ->
-                    let inputs, targets, iters =
+                    let inputs, targets, weights =
                         samples
                             |> Array.map (fun sample ->
                                 sample.InfoSet,
                                 sample.Regrets,
                                 Seq.singleton sample.Weight)
                             |> Array.unzip3
-                    SubBatch.create inputs targets iters))
+                    SubBatch.create inputs targets weights))
+
+    /// Trains the given model on the given sub-batch of
+    /// data.
+    let private trainSubBatch model subbatch
+        (criterion : Loss<Tensor, Tensor, Tensor>) =
+
+            // move to GPU
+        use inputs =
+            tensor(
+                subbatch.Inputs,
+                device = settings.Device,
+                dtype = ScalarType.Float32)
+        use targets =
+            tensor(
+                subbatch.Targets,
+                device = settings.Device)
+        use weights =
+            tensor(
+                subbatch.Weights,
+                device = settings.Device)
+
+            // forward pass
+        use loss =
+
+            use rawLoss =
+                use outputs = inputs --> model
+                use outputs' = weights * outputs
+                use targets' = weights * targets
+                criterion.forward(outputs', targets')
+
+                // scale loss
+            let scale =
+                float32 (subbatch.Inputs.GetLength(0))
+                    / float32 settings.AdvantageBatchSize
+            rawLoss * scale
+
+            // backward pass
+        loss.backward()
+
+        loss.item<float32>()
 
     /// Trains the given model on the given batch of data
     /// using gradient accumulation.
     /// https://chat.deepseek.com/a/chat/s/2f688262-70d6-4fb9-a05e-c230fa871f83
-    let private trainBatch
-        model
-        (batch : Batch)
-        (criterion : Loss<Tensor, Tensor, Tensor>)
+    let private trainBatch model (batch : Batch) criterion
         (optimizer : Optimizer) =
 
+            // clear gradients
+        optimizer.zero_grad()
+
+            // train sub-batches
         let loss =
             Array.last [|
                 for subbatch in batch do
-
-                        // move to GPU
-                    use inputs =
-                        tensor(
-                            subbatch.Inputs,
-                            device = settings.Device,
-                            dtype = ScalarType.Float32)
-                    use targets =
-                        tensor(
-                            subbatch.Targets,
-                            device = settings.Device)
-                    use iters =
-                        tensor(
-                            subbatch.Iterations,
-                            device = settings.Device)
-
-                        // forward pass
-                    use loss =
-                        use outputs = inputs --> model
-                        use outputs' = iters * outputs   // favor later iterations
-                        use targets' = iters * targets
-                        criterion.forward(outputs', targets')
-
-                        // backward pass
-                    use scaledLoss =
-                        let scale =
-                            float32 (subbatch.Inputs.GetLength(0))
-                                / float32 settings.AdvantageBatchSize
-                        loss * scale
-                    scaledLoss.backward()
-
-                    loss.item<float32>()
+                    trainSubBatch model subbatch criterion
             |]
 
             // optimize
         use _ = optimizer.step()
-        optimizer.zero_grad()
 
         loss
 
