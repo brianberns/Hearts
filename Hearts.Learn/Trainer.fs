@@ -87,7 +87,7 @@ module Trainer =
                 |> state.Model.save
                 |> ignore
 
-            // log samples and losses
+            // log samples
         settings.Writer.add_scalar(
             $"advantage samples",
             float32 samples.Length,
