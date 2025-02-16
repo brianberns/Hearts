@@ -36,6 +36,9 @@ type Settings =
         /// Number of deals to evaluate model.
         NumEvaluationDeals : int
 
+        /// Evaluate the initial (random) model?
+        EvaluateInitialModel : bool
+
         /// Device to use for training and running models.
         Device : torch.Device
 
@@ -81,6 +84,7 @@ module Settings =
                 NumTraversals = 1000
                 NumIterations = 25
                 NumEvaluationDeals = 100_000
+                EvaluateInitialModel = true
                 Device = torch.CUDA
                 ModelDirPath = "./Models"
                 Writer = writer

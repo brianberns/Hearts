@@ -161,8 +161,9 @@ module Trainer =
             printfn $"Model output size: {Network.outputSize}"
             printfn $"Model parameter count: {nParms}"
 
-            // evaluate initial model
-        evaluate 0 state.Model
+            // evaluate initial model?
+        if settings.EvaluateInitialModel then
+            evaluate 0 state.Model
 
             // run the iterations
         let iterNums = seq { 1 .. settings.NumIterations }
