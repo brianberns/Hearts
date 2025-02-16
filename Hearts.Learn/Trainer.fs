@@ -45,11 +45,26 @@ module Trainer =
 
     /// Generates training data using the given model.
     let private generateSamples iter model =
+
+        let mutable count = 0   // ugly, but just for logging
+        let lockable = new obj()
+
         OpenDeal.generate
             settings.Random
             settings.NumTraversals
             (fun deal ->
-                Traverse.traverse iter deal model)
+
+                let samples =
+                    Traverse.traverse iter deal model
+
+                lock lockable (fun () ->
+                    count <- count + 1
+                    settings.Writer.add_scalar(
+                        $"advantage samples/iter%03d{iter}",
+                        float32 samples.Length,
+                        count))
+
+                samples)
                 |> Array.concat
 
     /// Adds the given samples to the given reservoir and then
@@ -86,12 +101,6 @@ module Trainer =
             $"AdvantageModel%03d{iter}.pt")
                 |> state.Model.save
                 |> ignore
-
-            // log samples
-        settings.Writer.add_scalar(
-            $"advantage samples",
-            float32 samples.Length,
-            iter)
         settings.Writer.add_scalar(
             $"advantage reservoir",
             float32 state.Reservoir.Items.Count,
