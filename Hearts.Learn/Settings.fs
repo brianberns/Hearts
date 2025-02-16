@@ -21,6 +21,9 @@ type Settings =
         /// Batch size to use when training advantage models.
         AdvantageBatchSize : int
 
+        /// Sub-batch size to use when training advantage models.
+        AdvantageSubBatchSize : int
+
         /// Number of advantage samples to keep.
         NumAdvantageSamples : int
 
@@ -73,6 +76,7 @@ module Settings =
                 BranchRate = 1.0 / 4.0
                 NumAdvantageTrainEpochs = 1_000
                 AdvantageBatchSize = 500_000
+                AdvantageSubBatchSize = 10_000
                 NumAdvantageSamples = 8_000_000
                 NumTraversals = 1000
                 NumIterations = 25
@@ -103,6 +107,9 @@ module Settings =
         writer.add_text(
             $"settings/AdvantageBatchSize",
             string settings.AdvantageBatchSize, 0)
+        writer.add_text(
+            $"settings/AdvantageSubBatchSize",
+            string settings.AdvantageSubBatchSize, 0)
         writer.add_text(
             $"settings/NumTraversals",
             string settings.NumTraversals, 0)

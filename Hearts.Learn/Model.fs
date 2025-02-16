@@ -43,59 +43,96 @@ module AdvantageSample =
 
 module AdvantageModel =
 
+    type private SubBatch =
+        {
+            Inputs : byte array2d
+            Targets : float32 array2d
+            Iterations : float32 array2d
+        }
+
+    module private SubBatch =
+
+        let create inputs targets iters =
+            {
+                Inputs = array2D inputs
+                Targets = array2D targets
+                Iterations = array2D iters
+            }
+
+    type private Batch = SubBatch[]
+
     /// Breaks the given samples into batches.
-    let private createBatches samples =
+    let private createBatches samples : Batch[] =
         samples
             |> Seq.toArray
             |> Array.randomShuffle
-            |> Array.chunkBySize settings.AdvantageBatchSize
-            |> Array.map (fun batch ->
-                let inputs, targets, iters =
-                    batch
-                        |> Array.map (fun sample ->
-                            sample.InfoSet,
-                            sample.Regrets,
-                            Seq.singleton sample.Weight)
-                        |> Array.unzip3
-                array2D inputs,
-                array2D targets,
-                array2D iters)
+            |> Array.chunkBySize     // e.g. sub-batches of 10,000 rows each
+                settings.AdvantageSubBatchSize
+            |> Array.chunkBySize (   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
+                settings.AdvantageBatchSize
+                    / settings.AdvantageSubBatchSize)
+            |> Array.map (
+                Array.map (fun samples ->
+                    let inputs, targets, iters =
+                        samples
+                            |> Array.map (fun sample ->
+                                sample.InfoSet,
+                                sample.Regrets,
+                                Seq.singleton sample.Weight)
+                            |> Array.unzip3
+                    SubBatch.create inputs targets iters))
 
-    /// Trains the given model on the given batch of data.
+    /// Trains the given model on the given batch of data
+    /// using gradient accumulation.
+    /// https://chat.deepseek.com/a/chat/s/2f688262-70d6-4fb9-a05e-c230fa871f83
     let private trainBatch
         model
-        (inputBatch, targetBatch, iterBatch)
+        (batch : Batch)
         (criterion : Loss<Tensor, Tensor, Tensor>)
         (optimizer : Optimizer) =
 
-            // move to GPU
-        use inputs =
-            tensor(
-                (inputBatch : byte array2d),
-                device = settings.Device,
-                dtype = ScalarType.Float32)
-        use targets =
-            tensor(
-                (targetBatch : float32 array2d),
-                device = settings.Device)
-        use iters =
-            tensor(
-                (iterBatch : float32 array2d),
-                device = settings.Device)
+        let loss =
+            Array.last [|
+                for subbatch in batch do
 
-            // forward pass
-        use loss =
-            use outputs = inputs --> model
-            use outputs' = iters * outputs   // favor later iterations
-            use targets' = iters * targets
-            criterion.forward(outputs', targets')
+                        // move to GPU
+                    use inputs =
+                        tensor(
+                            subbatch.Inputs,
+                            device = settings.Device,
+                            dtype = ScalarType.Float32)
+                    use targets =
+                        tensor(
+                            subbatch.Targets,
+                            device = settings.Device)
+                    use iters =
+                        tensor(
+                            subbatch.Iterations,
+                            device = settings.Device)
 
-            // backward pass and optimize
-        optimizer.zero_grad()
-        loss.backward()
+                        // forward pass
+                    use loss =
+                        use outputs = inputs --> model
+                        use outputs' = iters * outputs   // favor later iterations
+                        use targets' = iters * targets
+                        criterion.forward(outputs', targets')
+
+                        // backward pass
+                    use scaledLoss =
+                        let scale =
+                            float32 (subbatch.Inputs.GetLength(0))
+                                / float32 settings.AdvantageBatchSize
+                        loss * scale
+                    scaledLoss.backward()
+
+                    loss.item<float32>()
+            |]
+
+            // optimize
         use _ = optimizer.step()
+        optimizer.zero_grad()
 
-        loss.item<float32>()
+        loss
 
     /// Trains the given model using the given samples.
     let train iter samples (model : AdvantageModel) =
