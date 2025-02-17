@@ -38,22 +38,24 @@ module Traverse =
     let traverse iter deal model =
 
         /// Top-level loop.
-        let rec loop deal =
+        let rec loop deal depth =
+            assert(depth
+                = ClosedDeal.numCardsPlayed deal.ClosedDeal)
             match ZeroSum.tryGetPayoff deal with
                 | Some payoff ->
                     payoff, Array.empty   // deal is over
                 | None ->
-                    loopNonTerminal deal
+                    loopNonTerminal deal depth
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal deal =
+        and loopNonTerminal deal depth =
             let hand = OpenDeal.currentHand deal
             let legalPlays =
                 deal.ClosedDeal
                     |> ClosedDeal.legalPlays hand
                     |> Seq.toArray
             if legalPlays.Length = 1 then
-                addLoop deal legalPlays[0]   // forced play
+                addLoop deal depth legalPlays[0]   // forced play
             else
                     // get utility of current player's strategy
                 let player = OpenDeal.currentPlayer deal
@@ -63,25 +65,28 @@ module Traverse =
                 let rnd =
                     lock settings.Random
                         settings.Random.NextDouble
-                if rnd <= settings.BranchRate then
-                    getFullUtility hand player deal legalPlays strategy
+                let threshold =
+                    settings.SampleDecaySpeed
+                        / (settings.SampleDecaySpeed + float depth)
+                if rnd <= threshold then
+                    getFullUtility
+                        hand player deal depth legalPlays strategy
                 else
-                    getOneUtility deal legalPlays strategy
+                    getOneUtility deal depth legalPlays strategy
 
         /// Adds the given play to the given deal and loops.
-        and addLoop deal play =
-            deal
-                |> OpenDeal.addPlay play
-                |> loop
+        and addLoop deal depth play =
+            let deal = OpenDeal.addPlay play deal
+            loop deal (depth + 1)
 
         /// Gets the full utility of the given info set (hand + deal).
-        and getFullUtility hand player deal legalPlays strategy =
+        and getFullUtility hand player deal depth legalPlays strategy =
 
                 // get utility of each action
             let actionUtilities, samples =
                 let utilityArrays, sampleArrays =
                     legalPlays
-                        |> Array.map (addLoop deal)
+                        |> Array.map (addLoop deal depth)
                         |> Array.unzip
                 DenseMatrix.ofColumnArrays utilityArrays,
                 Array.concat sampleArrays
@@ -103,10 +108,10 @@ module Traverse =
 
         /// Gets the utility of the given info set (hand + deal)
         /// by sampling a single action.
-        and getOneUtility deal legalPlays strategy =
+        and getOneUtility deal depth legalPlays strategy =
             lock settings.Random (fun () ->
                 Vector.sample settings.Random strategy)
                 |> Array.get legalPlays
-                |> addLoop deal
+                |> addLoop deal depth
 
-        loop deal |> snd
+        loop deal 0 |> snd

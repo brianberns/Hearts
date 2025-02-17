@@ -12,8 +12,9 @@ type Settings =
         /// Optimizer learning rate.
         LearningRate : float
 
-        /// Likelihood of following all branches, from 0.0 to 1.0.
-        BranchRate : float
+        /// Sample decay speed.
+        /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
+        SampleDecaySpeed : float
 
         /// Number of epochs to use when training advantage models.
         NumAdvantageTrainEpochs : int
@@ -76,7 +77,7 @@ module Settings =
             {
                 Random = Random(seed)
                 LearningRate = 2e-3
-                BranchRate = 1.0 / 4.0
+                SampleDecaySpeed = 2.8
                 NumAdvantageTrainEpochs = 500
                 AdvantageBatchSize = 500_000
                 AdvantageSubBatchSize = 10_000
@@ -84,7 +85,7 @@ module Settings =
                 NumTraversals = 1000
                 NumIterations = 25
                 NumEvaluationDeals = 100_000
-                EvaluateInitialModel = true
+                EvaluateInitialModel = false
                 Device = torch.CUDA
                 ModelDirPath = "./Models"
                 Writer = writer
@@ -100,8 +101,8 @@ module Settings =
             $"settings/LearningRate",
             string settings.LearningRate, 0)
         writer.add_text(
-            $"settings/BranchRate",
-            string settings.BranchRate, 0)
+            $"settings/SampleDecaySpeed",
+            string settings.SampleDecaySpeed, 0)
         writer.add_text(
             $"settings/NumAdvantageTrainEpochs",
             string settings.NumAdvantageTrainEpochs, 0)
