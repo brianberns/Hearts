@@ -4,6 +4,8 @@ open System
 open System.Diagnostics
 open System.IO
 
+open TorchSharp
+
 open Hearts
 open Hearts.Model
 
@@ -25,10 +27,9 @@ module Trainer =
     module private AdvantageState =
 
         /// Creates an advantage state.
-        let create () =
+        let create device =
             {
-                Model =
-                    new AdvantageModel(settings.Device)
+                Model = new AdvantageModel(device)
                 Reservoir =
                     Reservoir.create
                         settings.Random
@@ -36,18 +37,20 @@ module Trainer =
             }
 
         /// Resets the model of the given state.
-        let resetModel state =
+        let resetModel device state =
             state.Model.Dispose()
             {
                 state with
-                    Model = new AdvantageModel(settings.Device)
+                    Model = new AdvantageModel(device)
             }
 
     /// Generates training data using the given model.
-    let private generateSamples iter model =
+    let private generateSamples iter (model : AdvantageModel) =
 
-        let mutable count = 0   // ugly, but just for logging
+        let mutable count = 0     // ugly, but just for logging
         let lockable = new obj()
+
+        model.MoveTo(torch.CPU)   // faster inference on CPU
 
         OpenDeal.generate
             settings.Random
@@ -92,9 +95,11 @@ module Trainer =
         if settings.Verbose then
             printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
-            // train a new model
+            // train a new model on GPU
         let state =
-            AdvantageState.resetModel state
+            state
+                |> AdvantageState.resetModel
+                    settings.Device
                 |> trainAdvantageModel iter samples
         Path.Combine(
             settings.ModelDirPath,
@@ -127,7 +132,10 @@ module Trainer =
 
     /// Evaluates the given model by playing it against a
     /// standard.
-    let private evaluate iter model =
+    let private evaluate iter (model : AdvantageModel) =
+
+        model.MoveTo(torch.CPU)               // faster inference on CPU
+
         let avgPayoff =
             Tournament.run
                 (Random(Settings.seed + 1))   // use repeatable test set, not seen during training
@@ -148,7 +156,7 @@ module Trainer =
     let train () =
 
             // create initial state
-        let state = AdvantageState.create ()
+        let state = AdvantageState.create torch.CPU
         let nParms =
             state.Model.parameters(true)
                 |> Seq.where (fun parm -> parm.requires_grad)

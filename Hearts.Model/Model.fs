@@ -25,6 +25,8 @@ module Network =
 type AdvantageModel(device : torch.Device) as this =
     inherit Network("AdvantageModel")
 
+    let mutable curDevice = device
+
     let sequential =
         Sequential(
             Linear(
@@ -39,9 +41,14 @@ type AdvantageModel(device : torch.Device) as this =
 
     do
         this.RegisterComponents()
-        this.``to``(device) |> ignore   // make sure module itself is on the right device
+        this.MoveTo(device)   // make sure module itself is on the right device
 
-    member _.Device = device
+    member _.MoveTo(device) =
+        lock this (fun () ->
+            curDevice <- device
+            this.``to``(device) |> ignore)
+
+    member _.Device = curDevice
 
     override _.forward(input) = 
         sequential.forward(input)
