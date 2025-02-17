@@ -42,9 +42,10 @@ module Strategy =
 
     /// Computes strategy for the given info set (hand + deal)
     /// using the given advantage model.
-    let getFromAdvantage (model : AdvantageModel) hand deal legalPlays =
-        (AdvantageModel.getAdvantage hand deal model)
-            .data<float32>()
+    let getFromAdvantage model hand deal legalPlays =
+        use advantage =
+            AdvantageModel.getAdvantage hand deal model
+        advantage.data<float32>()
             |> DenseVector.ofSeq
             |> toNarrow legalPlays
             |> matchRegrets
