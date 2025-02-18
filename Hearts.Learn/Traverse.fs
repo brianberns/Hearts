@@ -63,8 +63,8 @@ module Traverse =
                     Strategy.getFromAdvantage
                         model hand deal.ClosedDeal legalPlays
                 let rnd =
-                    lock settings.Random
-                        settings.Random.NextDouble
+                    lock settings.Random (fun () ->
+                        settings.Random.NextDouble())
                 let threshold =
                     settings.SampleDecaySpeed
                         / (settings.SampleDecaySpeed + float depth)

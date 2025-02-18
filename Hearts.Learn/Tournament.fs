@@ -9,19 +9,18 @@ module OpenDeal =
 
     /// Plays the given number of deals in parallel.
     let generate (rng : Random) numDeals playFun =
-        Array.init numDeals id
-            |> Array.Parallel.map (fun iDeal ->
-                let deal =
-                    let deck =
-                        lock rng (fun () ->
-                            Deck.shuffle rng)
-                    let dealer = enum<Seat> (iDeal % Seat.numSeats)
-                    OpenDeal.fromDeck
-                        dealer
-                        ExchangeDirection.Hold
-                        deck
-                        |> OpenDeal.startPlay
-                playFun deal)
+        Array.init numDeals (fun iDeal ->
+            let deck = Deck.shuffle rng
+            let dealer =
+                enum<Seat> (iDeal % Seat.numSeats)
+            deck, dealer)
+            |> Array.Parallel.map (fun (deck, dealer) ->
+                OpenDeal.fromDeck
+                    dealer
+                    ExchangeDirection.Hold
+                    deck
+                    |> OpenDeal.startPlay
+                    |> playFun)
 
 module Tournament =
 
