@@ -124,9 +124,8 @@ module Trainer =
             let strategy =
                 Strategy.getFromAdvantage model
                     hand deal legalPlays
-            strategy
-                |> lock settings.Random (fun () ->
-                    Vector.sample settings.Random)
+            lock settings.Random (fun () ->
+                Vector.sample settings.Random strategy)
                 |> Array.get legalPlays
 
         { Play = play }
