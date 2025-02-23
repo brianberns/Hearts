@@ -11,6 +11,9 @@ open Hearts.Model
 
 module Model =
 
+    /// Performance tweak.
+    let private _noGrade = TorchSharp.torch.no_grad()
+
     /// Connects to Hearts model.
     let connect dir =
         let model =
@@ -34,6 +37,7 @@ module Remoting =
     let private heartsApi dir =
         let rng = Random(0)
         let model = Model.connect dir
+        assert(not model.training)
         {
             GetPlayIndex =
                 fun hand deal ->
