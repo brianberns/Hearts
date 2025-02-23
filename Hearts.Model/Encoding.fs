@@ -71,7 +71,9 @@ module Encoding =
     let private encodeVoids player voids =
         [|
             for suit in Enum.getValues<Suit> do
-                for seat in Seat.cycle player do
+                let seats =
+                    Seat.cycle player |> Seq.skip 1
+                for seat in seats do
                     if Set.contains (seat, suit) voids then
                         1uy
                     else 0uy
@@ -95,18 +97,18 @@ module Encoding =
         Card.numCards                                 // current player's hand
             + Card.numCards                           // other unplayed cards
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
-            + (Suit.numSuits * Seat.numSeats)         // voids
+            + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
             + Seat.numSeats                           // score
 
     /// Encodes the given info set (hand + deal) as a vector.
     let encode (hand : Hand) deal : Encoding =
-        let otherUnplayed = deal.UnplayedCards - hand
+        let unseen = deal.UnplayedCards - hand
         let trick = ClosedDeal.currentTrick deal
         let player = Trick.currentPlayer trick
         let encoded =
             [|
                 yield! encodeCards hand                // current player's hand
-                yield! encodeCards otherUnplayed       // other unplayed cards
+                yield! encodeCards unseen              // unplayed cards not in current player's hand
                 yield! encodeTrick trick               // current trick
                 yield! encodeVoids player deal.Voids   // voids
                 yield! encodeScore player deal.Score   // score
