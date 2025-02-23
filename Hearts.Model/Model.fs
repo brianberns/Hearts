@@ -34,6 +34,7 @@ type AdvantageModel(device : torch.Device) as this =
                 Network.hiddenSize,
                 device = device),
             ReLU(),
+            Dropout(),
             Linear(
                 Network.hiddenSize,
                 Network.outputSize,
