@@ -37,7 +37,7 @@ module Remoting =
     let private heartsApi dir =
         let rng = Random(0)
         let model = Model.connect dir
-        assert(not model.training)
+        model.eval()
         {
             GetPlayIndex =
                 fun hand deal ->
