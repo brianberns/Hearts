@@ -40,7 +40,7 @@ module PersistentState =
     /// Initial persistent state.
     let private initial =
         {
-            VersionNum = 2
+            VersionNum = 3   // low rank: 7
             GamesWon = Score.zero
             GameScore = Score.zero
             RandomState = Random().State   // start with arbitrary seed
