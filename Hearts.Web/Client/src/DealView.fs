@@ -221,9 +221,9 @@ module DealView =
             let hand = OpenDeal.currentHand deal
             for card in Card.allCards do
                 let text =
-                    if hand.Contains(card) then "ⓢ"
+                    if hand.Contains(card) then "🔵"
                     elif deal.ClosedDeal.UnplayedCards.Contains(card) then ""
-                    else "🞬"
+                    else "■"
                 (~~($"#{getCardCellId card}")).text(text)
         else
             deckView.hide()
@@ -236,7 +236,7 @@ module DealView =
                 if seat <> Seat.User then
                     for suit in Enum.getValues<Suit> do
                         let text =
-                            if deal.ClosedDeal.Voids.Contains(seat, suit) then "🞬"
+                            if deal.ClosedDeal.Voids.Contains(seat, suit) then "■"
                             else ""
                         (~~($"#{getVoidCellId seat suit}")).text(text)
         else
