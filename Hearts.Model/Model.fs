@@ -16,7 +16,7 @@ module Network =
     let inputSize = Encoding.encodedLength
 
     /// Size of a neural network hidden layer.
-    let hiddenSize = Encoding.encodedLength * 8
+    let hiddenSize = Encoding.encodedLength * 4
 
     /// Size of neural network output.
     let outputSize = Card.numCards
@@ -29,12 +29,21 @@ type AdvantageModel(device : torch.Device) as this =
 
     let sequential =
         Sequential(
+
             Linear(
                 Network.inputSize,
                 Network.hiddenSize,
                 device = device),
             ReLU(),
             Dropout(),
+
+            Linear(
+                Network.hiddenSize,
+                Network.hiddenSize,
+                device = device),
+            ReLU(),
+            Dropout(),
+
             Linear(
                 Network.hiddenSize,
                 Network.outputSize,
