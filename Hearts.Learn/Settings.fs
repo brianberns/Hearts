@@ -12,9 +12,10 @@ type Settings =
         /// Optimizer learning rate.
         LearningRate : float
 
-        /// Sample decay speed.
+        /// Sample decay control. Greater values cause greater
+        /// branching.
         /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
-        SampleDecaySpeed : float
+        SampleDecay : float
 
         /// Number of epochs to use when training advantage models.
         NumAdvantageTrainEpochs : int
@@ -77,7 +78,7 @@ module Settings =
             {
                 Random = Random(seed)
                 LearningRate = 2e-3
-                SampleDecaySpeed = 2.8
+                SampleDecay = 2.8
                 NumAdvantageTrainEpochs = 500
                 AdvantageBatchSize = 500_000
                 AdvantageSubBatchSize = 10_000
@@ -101,8 +102,8 @@ module Settings =
             $"settings/LearningRate",
             string settings.LearningRate, 0)
         writer.add_text(
-            $"settings/SampleDecaySpeed",
-            string settings.SampleDecaySpeed, 0)
+            $"settings/SampleDecay",
+            string settings.SampleDecay, 0)
         writer.add_text(
             $"settings/NumAdvantageTrainEpochs",
             string settings.NumAdvantageTrainEpochs, 0)

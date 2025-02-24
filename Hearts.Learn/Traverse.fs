@@ -66,8 +66,8 @@ module Traverse =
                     lock settings.Random (fun () ->
                         settings.Random.NextDouble())
                 let threshold =
-                    settings.SampleDecaySpeed
-                        / (settings.SampleDecaySpeed + float depth)
+                    settings.SampleDecay
+                        / (settings.SampleDecay + float depth)
                 if rnd <= threshold then
                     getFullUtility
                         hand player deal depth legalPlays strategy
