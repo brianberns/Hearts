@@ -78,7 +78,7 @@ module Settings =
             {
                 Random = Random(seed)
                 LearningRate = 2e-3
-                SampleDecaySpeed = 2.8
+                SampleDecay = 2.8
                 NumAdvantageTrainEpochs = 500
                 AdvantageBatchSize = 500_000
                 AdvantageSubBatchSize = 10_000
