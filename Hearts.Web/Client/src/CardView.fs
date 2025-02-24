@@ -96,12 +96,12 @@ module CardView =
             Card.fromString "6D", importDefault "./assets/card_images/6D.svg"
             Card.fromString "6H", importDefault "./assets/card_images/6H.svg"
             Card.fromString "6S", importDefault "./assets/card_images/6S.svg"
+#endif
 
             Card.fromString "7C", importDefault "./assets/card_images/7C.svg"
             Card.fromString "7D", importDefault "./assets/card_images/7D.svg"
             Card.fromString "7H", importDefault "./assets/card_images/7H.svg"
             Card.fromString "7S", importDefault "./assets/card_images/7S.svg"
-#endif
 
             Card.fromString "8C", importDefault "./assets/card_images/8C.svg"
             Card.fromString "8D", importDefault "./assets/card_images/8D.svg"
