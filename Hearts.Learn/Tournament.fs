@@ -1,25 +1,12 @@
 ﻿namespace Hearts.Learn
 
 open System
-open System.Threading.Tasks
 
 open PlayingCards
 open Hearts
+open Hearts.Model
 
 module OpenDeal =
-
-    /// Maps in parallel with control over max degree of parallelism.
-    /// (This seems to be necessary when running a PyTorch model on
-    /// the CPU.)
-    let private parallelMap maxDegreeOfParallelism mapping (array : _[]) =
-        let result = Array.zeroCreate array.Length
-        let options =
-            ParallelOptions(
-                MaxDegreeOfParallelism = maxDegreeOfParallelism)
-        Parallel.For(0, array.Length, options, fun i ->
-            result[i] <- mapping array[i])
-                |> ignore
-        result
 
     /// Plays the given number of deals in parallel.
     let generate (rng : Random) numDeals playFun =
@@ -28,7 +15,7 @@ module OpenDeal =
             let dealer =
                 enum<Seat> (iDeal % Seat.numSeats)
             deck, dealer)
-            |> parallelMap Environment.ProcessorCount
+            |> Array.mapParallel Environment.ProcessorCount   // controlling max degree of parallelism seems to be necessary when running a PyTorch model on the CPU
                 (fun (deck, dealer) ->
                     OpenDeal.fromDeck
                         dealer
