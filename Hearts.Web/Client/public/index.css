@@ -26,6 +26,33 @@ caption {
     font-size: smaller;
 }
 
+.seat {
+}
+
+#seat-west {
+    position: absolute;
+    left: 3%;
+    top: 50%;
+}
+
+#seat-north {
+    position: absolute;
+    left: 48%;
+    top: 2%;
+}
+
+#seat-east {
+    position: absolute;
+    left: 92%;
+    top: 50%;
+}
+
+#seat-south {
+    position: absolute;
+    left: 48%;
+    top: 94%;
+}
+
 #score {
     position: absolute;
     left: 2%;
