@@ -221,7 +221,7 @@ module DealView =
             let hand = OpenDeal.currentHand deal
             for card in Card.allCards do
                 let text =
-                    if hand.Contains(card) then "🔵"
+                    if hand.Contains(card) then "🞊"
                     elif deal.ClosedDeal.UnplayedCards.Contains(card) then ""
                     else "■"
                 (~~($"#{getCardCellId card}")).text(text)
