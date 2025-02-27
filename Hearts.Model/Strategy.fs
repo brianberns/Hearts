@@ -6,6 +6,10 @@ open PlayingCards
 
 module Strategy =
 
+    /// Creates a random strategy of the given length.
+    let random n =
+        DenseVector.create n (1.0f / float32 n)
+
     /// Computes strategy from the given per-action regrets.
     /// A strategy is normalized so that its elements sum
     /// to 1.0 (to represent action probabilities).

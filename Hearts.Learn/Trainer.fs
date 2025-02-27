@@ -11,35 +11,36 @@ open TorchSharp
 open Hearts
 open Hearts.Model
 
-module Trainer =
+/// Advantage state.
+type AdvantageState =
+    {
+        /// Current model.
+        ModelOpt : Option<AdvantageModel>
 
-    /// Advantage state.
-    type AdvantageState =
-        {
-            /// Current model.
-            ModelOpt : Option<AdvantageModel>
+        /// Reservoir of training data.
+        Reservoir : Reservoir<AdvantageSample>
+    }
 
-            /// Reservoir of training data.
-            Reservoir : Reservoir<AdvantageSample>
-        }
+    interface IDisposable with
 
         /// Cleanup.
-        interface IDisposable with
-            member this.Dispose() =
-                this.ModelOpt
-                    |> Option.iter _.Dispose()
+        member this.Dispose() =
+            this.ModelOpt
+                |> Option.iter _.Dispose()
 
-    module AdvantageState =
+module AdvantageState =
 
-        /// Creates an initial advantage state.
-        let create device =
-            {
-                ModelOpt = None
-                Reservoir =
-                    Reservoir.create
-                        settings.Random
-                        settings.NumAdvantageSamples
-            }
+    /// Creates an initial advantage state.
+    let create device =
+        {
+            ModelOpt = None
+            Reservoir =
+                Reservoir.create
+                    settings.Random
+                    settings.NumAdvantageSamples
+        }
+
+module Trainer =
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
@@ -47,18 +48,19 @@ module Trainer =
         let mutable count = 0     // ugly, but just for logging
         let lockable = new obj()
 
-        modelOpt                  // faster inference on CPU
+            // move model to CPU for faster inference
+        modelOpt
             |> Option.iter (fun (model : AdvantageModel) ->
                 model.MoveTo(torch.CPU))
 
+            // function to get strategy for a given info set
         let getStrategy =
             match modelOpt with
                 | Some model ->
                     Strategy.getFromAdvantage model
                 | None ->
                     fun _ _ legalPlays ->
-                        let n = legalPlays.Length
-                        DenseVector.create n (1.0f / float32 n)
+                        Strategy.random legalPlays.Length
 
         OpenDeal.generate
             settings.Random
