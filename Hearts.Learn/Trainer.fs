@@ -51,22 +51,18 @@ module Trainer =
             |> Option.iter (fun (model : AdvantageModel) ->
                 model.MoveTo(torch.CPU))
 
-        let rng = settings.Random
         let getStrategy =
             match modelOpt with
                 | Some model ->
                     Strategy.getFromAdvantage model
                 | None ->
                     fun _ _ legalPlays ->
-                        let idx =
-                            lock rng (fun () ->
-                                rng.Next(legalPlays.Length))
-                        DenseVector.init
-                            legalPlays.Length
-                            (fun i ->
-                                if i = idx then 1.0f else 0.0f)
+                        let n = legalPlays.Length
+                        DenseVector.create n (1.0f / float32 n)
 
-        OpenDeal.generate rng settings.NumTraversals
+        OpenDeal.generate
+            settings.Random
+            settings.NumTraversals
             (fun deal ->
 
                 let samples =
