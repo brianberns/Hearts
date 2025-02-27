@@ -35,7 +35,7 @@ module Traverse =
         [| yield! items; yield item |]
 
     /// Evaluates the utility of the given deal.
-    let traverse iter deal model =
+    let traverse iter deal getStrategy =
 
         /// Top-level loop.
         let rec loop deal depth =
@@ -59,9 +59,9 @@ module Traverse =
             else
                     // get utility of current player's strategy
                 let player = OpenDeal.currentPlayer deal
-                let strategy =
-                    Strategy.getFromAdvantage
-                        model hand deal.ClosedDeal legalPlays
+                let strategy : Vector<float32> =
+                    getStrategy
+                        hand deal.ClosedDeal legalPlays
                 let rnd =
                     lock settings.Random (fun () ->
                         settings.Random.NextDouble())

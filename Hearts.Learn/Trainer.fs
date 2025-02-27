@@ -4,6 +4,8 @@ open System
 open System.Diagnostics
 open System.IO
 
+open MathNet.Numerics.LinearAlgebra
+
 open TorchSharp
 
 open Hearts
@@ -12,53 +14,63 @@ open Hearts.Model
 module Trainer =
 
     /// Advantage state.
-    type private AdvantageState =
+    type AdvantageState =
         {
             /// Current model.
-            Model : AdvantageModel
+            ModelOpt : Option<AdvantageModel>
 
             /// Reservoir of training data.
             Reservoir : Reservoir<AdvantageSample>
         }
 
+        /// Cleanup.
         interface IDisposable with
-            member this.Dispose() = this.Model.Dispose()
+            member this.Dispose() =
+                this.ModelOpt
+                    |> Option.iter _.Dispose()
 
-    module private AdvantageState =
+    module AdvantageState =
 
-        /// Creates an advantage state.
+        /// Creates an initial advantage state.
         let create device =
             {
-                Model = new AdvantageModel(device)
+                ModelOpt = None
                 Reservoir =
                     Reservoir.create
                         settings.Random
                         settings.NumAdvantageSamples
             }
 
-        /// Resets the model of the given state.
-        let resetModel device state =
-            state.Model.Dispose()
-            {
-                state with
-                    Model = new AdvantageModel(device)
-            }
-
     /// Generates training data using the given model.
-    let private generateSamples iter (model : AdvantageModel) =
+    let private generateSamples iter modelOpt =
 
         let mutable count = 0     // ugly, but just for logging
         let lockable = new obj()
 
-        model.MoveTo(torch.CPU)   // faster inference on CPU
+        modelOpt                  // faster inference on CPU
+            |> Option.iter (fun (model : AdvantageModel) ->
+                model.MoveTo(torch.CPU))
 
-        OpenDeal.generate
-            settings.Random
-            settings.NumTraversals
+        let rng = settings.Random
+        let getStrategy =
+            match modelOpt with
+                | Some model ->
+                    Strategy.getFromAdvantage model
+                | None ->
+                    fun _ _ legalPlays ->
+                        let idx =
+                            lock rng (fun () ->
+                                rng.Next(legalPlays.Length))
+                        DenseVector.init
+                            legalPlays.Length
+                            (fun i ->
+                                if i = idx then 1.0f else 0.0f)
+
+        OpenDeal.generate rng settings.NumTraversals
             (fun deal ->
 
                 let samples =
-                    Traverse.traverse iter deal model
+                    Traverse.traverse iter deal getStrategy
 
                 lock lockable (fun () ->
                     count <- count + 1
@@ -71,41 +83,47 @@ module Trainer =
                 |> Array.concat
 
     /// Adds the given samples to the given reservoir and then
-    /// uses the reservoir to train the given model.
+    /// uses the reservoir to train a new model.
     let private trainAdvantageModel iter samples state =
 
+            // cache new training data
         let resv =
             Reservoir.addMany samples state.Reservoir
 
+            // train new model
         let stopwatch = Stopwatch.StartNew()
-        AdvantageModel.train
-            iter resv.Items state.Model
+        let model = new AdvantageModel(settings.Device)
+        AdvantageModel.train iter resv.Items model
+        stopwatch.Stop()
         if settings.Verbose then
-            stopwatch.Stop()
             printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
-        { state with Reservoir = resv }
+
+        {
+            Reservoir = resv
+            ModelOpt = Some model
+        }
 
     /// Trains a new model using the given model.
     let private updateModel iter state =
 
             // generate training data from existing model
         let stopwatch = Stopwatch.StartNew()
-        let samples = generateSamples iter state.Model
+        let samples =
+            generateSamples iter state.ModelOpt
         if settings.Verbose then
             printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
             // train a new model on GPU
         let state =
-            state
-                |> AdvantageState.resetModel
-                    settings.Device
-                |> trainAdvantageModel iter samples
-        Path.Combine(
-            settings.ModelDirPath,
-            $"AdvantageModel%03d{iter}.pt")
-                |> state.Model.save
-                |> ignore
+            trainAdvantageModel iter samples state
+        state.ModelOpt
+            |> Option.iter (fun model ->
+                Path.Combine(
+                    settings.ModelDirPath,
+                    $"AdvantageModel%03d{iter}.pt")
+                        |> model.save
+                        |> ignore)
         settings.Writer.add_scalar(
             $"advantage reservoir",
             float32 state.Reservoir.Items.Count,
@@ -149,7 +167,8 @@ module Trainer =
         if settings.Verbose then
             printfn $"\n*** Iteration {iter} ***"
         let state = updateModel iter state
-        evaluate iter state.Model
+        state.ModelOpt
+            |> Option.iter (evaluate iter)
         state
 
     /// Trains for the given number of iterations.
@@ -157,26 +176,13 @@ module Trainer =
 
             // create initial state
         let state = AdvantageState.create torch.CPU
-        let nParms =
-            state.Model.parameters(true)
-                |> Seq.where (fun parm -> parm.requires_grad)
-                |> Seq.sumBy (fun parm -> parm.numel())
-        settings.Writer.add_text(
-            $"settings/AdvModelParmCount", string nParms, 0)
         if settings.Verbose then
             printfn $"Model input size: {Network.inputSize}"
             printfn $"Model hidden size: {Network.hiddenSize}"
             printfn $"Model output size: {Network.outputSize}"
-            printfn $"Model parameter count: {nParms}"
-
-            // evaluate initial model?
-        if settings.EvaluateInitialModel then
-            evaluate 0 state.Model
 
             // run the iterations
         let iterNums = seq { 1 .. settings.NumIterations }
-        let state =
-            (state, iterNums)
-                ||> Seq.fold (fun state iter ->
-                    trainIteration iter state)
-        state.Model
+        (state, iterNums)
+            ||> Seq.fold (fun state iter ->
+                trainIteration iter state)
