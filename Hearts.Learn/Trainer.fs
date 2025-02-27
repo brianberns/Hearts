@@ -11,13 +11,13 @@ open Hearts.Model
 
 module Trainer =
 
-    /// Advantage state managed for each player.
+    /// Advantage state.
     type private AdvantageState =
         {
-            /// Player's model.
+            /// Current model.
             Model : AdvantageModel
 
-            /// Player's reservoir.
+            /// Reservoir of training data.
             Reservoir : Reservoir<AdvantageSample>
         }
 
