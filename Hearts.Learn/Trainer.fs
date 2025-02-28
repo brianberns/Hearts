@@ -30,7 +30,7 @@ type AdvantageState =
 
 module AdvantageState =
 
-    /// Creates an initial advantage state.
+    /// Initial advantage state.
     let empty =
         {
             ModelOpt = None
