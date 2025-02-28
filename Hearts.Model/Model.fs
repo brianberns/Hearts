@@ -21,11 +21,22 @@ module Network =
     /// Size of neural network output.
     let outputSize = Card.numCards
 
+type SkipConnection(inner : Network) as this =
+    inherit Network($"{inner.GetName()}Skip")
+
+    do this.register_module("inner", inner)
+
+    override _.forward(input) =
+        use x = input --> inner
+        x + input
+
 /// Model used for learning advantages.
 type AdvantageModel(device : torch.Device) as this =
     inherit Network("AdvantageModel")
 
     let mutable curDevice = device
+
+    let SkipConnection(inner) = new SkipConnection(inner)
 
     let sequential =
         Sequential(
@@ -37,12 +48,14 @@ type AdvantageModel(device : torch.Device) as this =
             ReLU(),
             Dropout(),
 
-            Linear(
-                Network.hiddenSize,
-                Network.hiddenSize,
-                device = device),
-            ReLU(),
-            Dropout(),
+            SkipConnection(
+                Sequential(
+                    Linear(
+                        Network.hiddenSize,
+                        Network.hiddenSize,
+                        device = device),
+                    ReLU(),
+                    Dropout())),
 
             Linear(
                 Network.hiddenSize,
