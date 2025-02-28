@@ -31,7 +31,7 @@ type AdvantageState =
 module AdvantageState =
 
     /// Creates an initial advantage state.
-    let create device =
+    let empty =
         {
             ModelOpt = None
             Reservoir =
@@ -172,8 +172,6 @@ module Trainer =
     /// Trains for the given number of iterations.
     let train () =
 
-            // create initial state
-        let state = AdvantageState.create torch.CPU
         if settings.Verbose then
             printfn $"Model input size: {Network.inputSize}"
             printfn $"Model hidden size: {Network.hiddenSize}"
@@ -181,6 +179,6 @@ module Trainer =
 
             // run the iterations
         let iterNums = seq { 1 .. settings.NumIterations }
-        (state, iterNums)
+        (AdvantageState.empty, iterNums)
             ||> Seq.fold (fun state iter ->
                 trainIteration iter state)
