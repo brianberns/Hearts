@@ -2,11 +2,9 @@
 
 /// The rank of a card.
 type Rank =
-#if !MINI
     | Two   =  2
     | Three =  3
     | Four  =  4
-#endif
     | Five  =  5
     | Six   =  6
     | Seven =  7
