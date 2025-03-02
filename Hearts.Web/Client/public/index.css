@@ -31,7 +31,7 @@ caption {
 
 #seat-west {
     position: absolute;
-    left: 3%;
+    left: 1%;
     top: 50%;
 }
 
@@ -43,7 +43,7 @@ caption {
 
 #seat-east {
     position: absolute;
-    left: 92%;
+    left: 96%;
     top: 50%;
 }
 
