@@ -155,7 +155,8 @@ module Deal =
                             console.log($"Dealer is {Seat.toString dealer}")
                         let deal =
                             Deck.shuffle rng
-                                |> OpenDeal.fromDeck dealer ExchangeDirection.Hold
+                                |> OpenDeal.fromDeck
+                                    dealer persState.ExchangeDirection
                                 |> OpenDeal.startPlay
                         let persState =
                             { persState with

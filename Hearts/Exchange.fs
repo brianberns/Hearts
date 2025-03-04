@@ -4,25 +4,32 @@ open PlayingCards
 
 /// Direction in which cards are passed prior to playout.
 type ExchangeDirection =
-    | Left = 1
-    | Right = -1
+    | Left = 0
+    | Right = 1
     | Across = 2
-    | Hold = 0
+    | Hold = 3
 
 module ExchangeDirection =
 
-    /// Next exchange direction, according to Hearts rules (not numerically).
-    let next = function
-        | ExchangeDirection.Left -> ExchangeDirection.Right
-        | ExchangeDirection.Right -> ExchangeDirection.Across
-        | ExchangeDirection.Across -> ExchangeDirection.Hold
-        | ExchangeDirection.Hold -> ExchangeDirection.Left
-        | _ -> failwith "Unexpected"
+    /// Total number of exchange directions.
+    let numDirections =
+        Enum.getValues<ExchangeDirection>.Length
+
+    /// Exchange direction after the given exchange direction.
+    let next (dir : ExchangeDirection) =
+        (int dir + 1) % numDirections
+            |> enum<ExchangeDirection>
 
     /// Applies the given exchange direction to the given seat.
-    let apply seat (dir : ExchangeDirection) =
-        assert(dir <> ExchangeDirection.Hold)
-        seat |> Seat.incr (int dir)
+    let apply seat dir =
+        let n =
+            match dir with
+                | ExchangeDirection.Hold -> 0
+                | ExchangeDirection.Left -> 1
+                | ExchangeDirection.Across -> 2
+                | ExchangeDirection.Right -> 3
+                | _ -> failwith "Unexpected direction"
+        seat |> Seat.incr n
 
 /// Cards passed from one player to another.
 type Exchange =

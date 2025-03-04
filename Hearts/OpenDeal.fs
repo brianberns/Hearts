@@ -88,7 +88,8 @@ module OpenDeal =
                 UnplayedCardMap = cardMap
         }
 
-    /// Starts play in the given deal.
+    /// Receives passed cards (if any) and starts play in the
+    /// given deal.
     let startPlay deal =
         assert(deal.Exchange |> Exchange.isComplete)
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
@@ -163,9 +164,10 @@ module OpenDeal =
 
             // applies only at trick boundaries
         let isApplicable =
-            deal.ClosedDeal.CurrentTrickOpt
-                |> Option.map (fun trick -> trick.Cards.IsEmpty)
-                |> Option.defaultValue true
+            Exchange.isComplete deal.Exchange
+                && deal.ClosedDeal.CurrentTrickOpt
+                    |> Option.map (fun trick -> trick.Cards.IsEmpty)
+                    |> Option.defaultValue true   // end of deal
         if isApplicable then
 
                 // deal is actually complete?
