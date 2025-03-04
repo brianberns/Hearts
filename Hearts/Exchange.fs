@@ -34,6 +34,8 @@ module Pass =
     /// Number of cards passed by each player.
     let numCards = 3
 
+    let empty : Pass = Set.empty
+
     let isComplete (pass : Pass) =
         assert(pass.Count <= numCards)
         pass.Count = numCards
@@ -68,7 +70,7 @@ module Exchange =
             ExchangeDirection = dir
             CurrentPassOpt =
                 if dir = ExchangeDirection.Hold then None
-                else Some Set.empty
+                else Some Pass.empty
             CompletePasses = List.empty
         }
 
@@ -118,7 +120,7 @@ module Exchange =
                     curPass :: exchange.CompletePasses
                 let curPassOpt =
                     if completePasses.Length < Seat.numSeats then
-                        Some curPass
+                        Some Pass.empty
                     else None
                 curPassOpt, completePasses
             else
