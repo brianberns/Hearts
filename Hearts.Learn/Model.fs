@@ -13,9 +13,8 @@ open Hearts.Model
 /// An observed advantage event.
 type AdvantageSample =
     {
-        /// Information available to the player at the time
-        /// of the event (hand + deal).
-        InfoSet : Encoding
+        /// Encoded info set (hand + deal).
+        Encoding : Encoding
 
         /// Observed regrets.
         Regrets : Vector<float32>
@@ -33,7 +32,7 @@ module AdvantageSample =
         assert(iteration > 0)
         assert(iteration <= settings.NumIterations)
         {
-            InfoSet = Encoding.encode hand deal
+            Encoding = Encoding.encode hand deal
             Regrets = regrets
             Weight =
                 float32 iteration
@@ -93,7 +92,7 @@ module AdvantageModel =
                     let inputs, targets, weights =
                         samples
                             |> Array.map (fun sample ->
-                                sample.InfoSet,
+                                sample.Encoding,
                                 sample.Regrets,
                                 Seq.singleton sample.Weight)
                             |> Array.unzip3

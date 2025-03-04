@@ -210,7 +210,7 @@ module OpenDeal =
                             assert(rank <> card.Rank)
                             rank < card.Rank)
 
-                        // player's cards are all winners?
+                    // player's cards are all winners?
                 let hand = deal.UnplayedCardMap[player]
                 if hand |> Seq.forall isWinner then
                     let points =
