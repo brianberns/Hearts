@@ -40,6 +40,7 @@ module Pass =
 
     let add card (pass : Pass) : Pass =
         assert(pass.Count < numCards)
+        assert(pass.Contains(card) |> not)
         pass.Add(card)
 
 /// All cards passed.
