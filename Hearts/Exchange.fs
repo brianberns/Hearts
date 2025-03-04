@@ -16,7 +16,7 @@ module ExchangeDirection =
         Enum.getValues<ExchangeDirection>.Length
 
     /// Applies the given exchange direction to the given seat.
-    let apply seat (dir : ExchangeDirection) =
+    let apply seat dir =
         let n =
             match dir with
                 | ExchangeDirection.Hold -> 0
