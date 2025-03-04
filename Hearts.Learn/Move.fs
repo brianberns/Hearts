@@ -47,14 +47,19 @@ module OpenDeal =
                     (iDeal % ExchangeDirection.numDirections)
             deck, dealer, dir)
             |> map (fun (deck, dealer, dir) ->
-                OpenDeal.fromDeck
-                    dealer dir deck
-                    |> playFun)
+                let deal =
+                    let deal = OpenDeal.fromDeck dealer dir deck
+                    if Exchange.isHold deal.Exchange then   // can start play immediately?
+                        OpenDeal.startPlay deal
+                    else deal
+                playFun deal)
 
     /// Makes the given move in the given deal.
     let addMove moveType move deal =
-        let addCard =
-            match moveType with
-                | Pass -> OpenDeal.addPass
-                | Play -> OpenDeal.addPlay
-        addCard move deal
+        match moveType with
+            | Pass ->
+                let deal = OpenDeal.addPass move deal
+                if Exchange.isComplete deal.Exchange then
+                    OpenDeal.startPlay deal
+                else deal
+            | Play -> OpenDeal.addPlay move deal
