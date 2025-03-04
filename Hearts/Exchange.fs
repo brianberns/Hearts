@@ -27,6 +27,22 @@ module ExchangeDirection =
         seat |> Seat.incr n
 
 /// Cards passed from one player to another.
+type Pass = Set<Card>
+
+module Pass =
+
+    /// Number of cards passed by each player.
+    let numCards = 3
+
+    let isComplete (pass : Pass) =
+        assert(pass.Count <= numCards)
+        pass.Count = numCards
+
+    let add card (pass : Pass) : Pass =
+        assert(pass.Count < numCards)
+        pass.Add(card)
+
+/// All cards passed.
 type Exchange =
     {
         /// Dealer passes last.
@@ -35,9 +51,11 @@ type Exchange =
         /// Card exchange direction.
         ExchangeDirection : ExchangeDirection
 
-        /// Cards passed by each player in reverse chronological
-        /// order.
-        Passes : List<Set<Card>>
+        /// Current pass, if any.
+        CurrentPassOpt : Option<Pass>
+
+        /// Complete passes in reverse chronological order.
+        CompletePasses : List<Pass>
     }
 
 module Exchange =
@@ -47,46 +65,75 @@ module Exchange =
         {
             Dealer = dealer
             ExchangeDirection = dir
-            Passes = List.empty
+            CurrentPassOpt =
+                if dir = ExchangeDirection.Hold then None
+                else Some Set.empty
+            CompletePasses = List.empty
         }
 
     /// No exchange?
     let isHold exchange =
         exchange.ExchangeDirection = ExchangeDirection.Hold
 
-    /// Number of cards passed by each player.
-    let numCards = 3
+    /// An exchange is complete when it is a hold hand, or all
+    /// players have passed the full number of cards.
+    let isComplete exchange =
+        assert(
+            isHold exchange
+                || exchange.CurrentPassOpt.IsSome
+                || exchange.CompletePasses.Length = Seat.numSeats)
+        assert(
+            exchange.CompletePasses
+                |> Seq.forall (fun pass ->
+                    pass.Count = Pass.numCards))
+        exchange.CurrentPassOpt.IsNone
 
     /// Whose turn is it to pass cards in the given exchange?
     let currentPasser exchange =
-        assert(exchange |> isHold |> not)
-        assert(exchange.Passes.Length < Seat.numSeats)
+        assert(isHold exchange |> not)
+        assert(isComplete exchange |> not)
         exchange.Dealer
-            |> Seat.incr (exchange.Passes.Length + 1)
+            |> Seat.incr (exchange.CompletePasses.Length + 1)
 
-    /// Adds current passer's cards to the given exchange.
-    let addPass cards exchange =
-        assert(exchange |> isHold |> not)
-        assert(exchange.Passes.Length < Seat.numSeats)
-        assert(cards |> Set.count = numCards)
+    /// Adds the given card to the given exchange.
+    let addPass card exchange =
+        assert(isHold exchange |> not)
+        assert(isComplete exchange |> not)
+
+            // get current pass
+        let curPass =
+            match exchange.CurrentPassOpt with
+                | Some curPass ->
+                    assert(curPass.Count < Pass.numCards)
+                    curPass
+                | None -> failwith "Unexpected"
+
+            // add given card to pass
+        let curPassOpt, completePasses =
+            let curPass = Pass.add card curPass
+            assert(curPass.Count <= Pass.numCards)
+            if curPass.Count = Pass.numCards then
+                let completePasses =
+                    curPass :: exchange.CompletePasses
+                let curPassOpt =
+                    if completePasses.Length < Seat.numSeats then
+                        Some curPass
+                    else None
+                curPassOpt, completePasses
+            else
+                Some curPass, exchange.CompletePasses
+
         {
             exchange with
-                Passes = cards :: exchange.Passes
+                CurrentPassOpt = curPassOpt
+                CompletePasses = completePasses
         }
 
     /// Cards passed by each player in the given exchange, in
     /// chronological order.
     let seatPasses exchange =
-        assert(exchange |> isHold |> not)
+        assert(isHold exchange |> not)
+        assert(isComplete exchange)
         let seats = exchange.Dealer.Next |> Seat.cycle
-        let passes = exchange.Passes |> List.rev
+        let passes = exchange.CompletePasses |> List.rev
         Seq.zip seats passes
-
-    /// An exchange is complete when it is a hold hand, or all
-    /// players have passed cards.
-    let isComplete exchange =
-        assert(
-            exchange |> isHold |> not
-                || exchange.Passes.IsEmpty)
-        isHold exchange
-            || exchange.Passes.Length = Seat.numSeats

@@ -48,40 +48,41 @@ module OpenDeal =
             |> Map
             |> fromHands dealer dir
 
-    /// Passes the given cards in the given deal.
-    let addPass cards deal =
-        assert(cards |> Set.count = Exchange.numCards)
+    /// Passes the given card in the given deal.
+    let addPass card deal =
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
 
-            // remove outgoing cards from passer's hand
-        let cardMap = deal.UnplayedCardMap
-        let passer =
-            deal.Exchange |> Exchange.currentPasser
-        assert(cardMap[passer].Count = ClosedDeal.numCardsPerHand)
-        let unplayedCards = cardMap[passer]
-        assert(Set.intersect unplayedCards cards = cards)
-        let unplayedCards = Set.difference unplayedCards cards
-        let cardMap = cardMap |> Map.add passer unplayedCards
+            // remove outgoing card from passer's hand
+        let cardMap =
+            let passer = Exchange.currentPasser deal.Exchange
+            let cardMap = deal.UnplayedCardMap
+            let unplayedCards =
+                assert(cardMap[passer].Contains(card))
+                cardMap[passer] |> Set.remove card
+            cardMap |> Map.add passer unplayedCards
 
         {
             deal with
                 Exchange =
-                    deal.Exchange |> Exchange.addPass cards
+                    deal.Exchange |> Exchange.addPass card
                 UnplayedCardMap = cardMap
         }
 
     /// Receives cards from the given passer in the given deal.
-    let private receivePass passer cards deal =
+    let private receivePass passer (cards : Pass) deal =
 
             // add incoming cards to receiver's hand
-        let cardMap = deal.UnplayedCardMap
-        let receiver =
-            deal.Exchange.ExchangeDirection
-                |> ExchangeDirection.apply passer
-        let unplayedCards = cardMap[receiver]
-        assert(Set.intersect unplayedCards cards |> Set.isEmpty)
-        let unplayedCards = Set.union unplayedCards cards
-        let cardMap = cardMap |> Map.add receiver unplayedCards
+        let cardMap =
+            let receiver =
+                deal.Exchange.ExchangeDirection
+                    |> ExchangeDirection.apply passer
+            let cardMap = deal.UnplayedCardMap
+            let unplayedCards =
+                assert(
+                    Set.intersect cardMap[receiver] cards
+                        |> Set.isEmpty)
+                Set.union cardMap[receiver] cards
+            cardMap |> Map.add receiver unplayedCards
 
         {
             deal with
@@ -102,7 +103,7 @@ module OpenDeal =
                     deal.UnplayedCardMap
                         |> Map.forall (fun _ cards ->
                             cards.Count =
-                                ClosedDeal.numCardsPerHand - Exchange.numCards))
+                                ClosedDeal.numCardsPerHand - Pass.numCards))
                 let seatPasses =
                     deal.Exchange
                         |> Exchange.seatPasses
