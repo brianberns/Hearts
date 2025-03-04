@@ -1,37 +1,7 @@
 ﻿namespace Hearts.Learn
 
-open System
-
 open PlayingCards
 open Hearts
-open Hearts.Model
-
-module OpenDeal =
-
-    /// Plays the given number of deals in parallel.
-    let generate (rng : Random) numDeals playFun =
-
-        let map =
-#if DEBUG
-            Array.map
-#else
-                // controlling max degree of parallelism seems to be necessary when running a PyTorch model on the CPU
-            Array.mapParallel Environment.ProcessorCount
-#endif
-
-        Array.init numDeals (fun iDeal ->
-            let deck = Deck.shuffle rng
-            let dealer =
-                enum<Seat> (iDeal % Seat.numSeats)
-            let dir =
-                enum<ExchangeDirection>
-                    (iDeal % ExchangeDirection.numDirections)
-            deck, dealer, dir)
-            |> map
-                (fun (deck, dealer, dir) ->
-                    OpenDeal.fromDeck
-                        dealer dir deck
-                        |> playFun)
 
 module Tournament =
 
