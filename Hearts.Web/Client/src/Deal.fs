@@ -199,7 +199,7 @@ module Deal =
                     let persState' =
                         { persState with
                             GameScore = gameScore
-                            Dealer = persState.Dealer.Next
+                            Dealer = Seat.next persState.Dealer
                             DealOpt = None }
                     if winners.IsEmpty then
                         PersistentState.save persState'

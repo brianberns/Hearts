@@ -16,7 +16,8 @@ module Seat =
         Enum.getValues<Seat>.Length
 
     /// Converts the given seat to a character.
-    let toChar seat = "WNES"[int seat]
+    let toChar (seat : Seat) =
+        "WNES"[int seat]
 
 #if FABLE_COMPILER
     /// Display name.
@@ -59,13 +60,3 @@ module Seat =
         assert(idx >= 0)
         assert(idx < numSeats)
         idx
-
-[<AutoOpen>]
-module SeatExt =
-    type Seat with
-
-        /// Character representation of this seat.
-        member seat.Char = seat |> Seat.toChar
-
-        /// Seat that plays after this seat.
-        member seat.Next = seat |> Seat.next
