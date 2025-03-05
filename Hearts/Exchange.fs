@@ -2,30 +2,6 @@
 
 open PlayingCards
 
-/// Direction in which cards are passed prior to playout.
-type ExchangeDirection =
-    | Left = 0
-    | Right = 1
-    | Across = 2
-    | Hold = 3
-
-module ExchangeDirection =
-
-    /// Total number of exchange directions.
-    let numDirections =
-        Enum.getValues<ExchangeDirection>.Length
-
-    /// Applies the given exchange direction to the given seat.
-    let apply seat dir =
-        let n =
-            match dir with
-                | ExchangeDirection.Hold -> 0
-                | ExchangeDirection.Left -> 1
-                | ExchangeDirection.Across -> 2
-                | ExchangeDirection.Right -> 3
-                | _ -> failwith "Unexpected"
-        seat |> Seat.incr n
-
 /// Cards passed from one player to another.
 type Pass = Set<Card>
 
@@ -48,11 +24,8 @@ module Pass =
 /// All cards passed.
 type Exchange =
     {
-        /// Dealer passes last.
-        Dealer : Seat
-
-        /// Card exchange direction.
-        ExchangeDirection : ExchangeDirection
+        /// Current deal.
+        Deal : ClosedDeal
 
         /// Current pass, if any.
         CurrentPassOpt : Option<Pass>
@@ -61,21 +34,26 @@ type Exchange =
         CompletePasses : List<Pass>
     }
 
+    /// Player who dealt this deal.
+    member this.Dealer = this.Deal.Dealer
+
+    /// Card exchange direction.
+    member this.ExchangeDirection = this.Deal.ExchangeDirection
+
 module Exchange =
 
     /// Creates an empty exchange.
-    let create dealer dir =
+    let create deal =
         {
-            Dealer = dealer
-            ExchangeDirection = dir
+            Deal = deal
             CurrentPassOpt =
-                if dir = ExchangeDirection.Hold then None
+                if deal.ExchangeDirection = ExchangeDirection.Hold then None
                 else Some Pass.empty
             CompletePasses = List.empty
         }
 
     /// No exchange?
-    let isHold exchange =
+    let isHold (exchange : Exchange) =
         exchange.ExchangeDirection = ExchangeDirection.Hold
 
     /// An exchange is complete when it is a hold hand, or all
@@ -96,7 +74,7 @@ module Exchange =
         assert(isHold exchange |> not)
         assert(isComplete exchange |> not)
         exchange.Dealer
-            |> Seat.incr (exchange.CompletePasses.Length + 1)
+            |> Seat.incr (exchange.CompletePasses.Length + 1)   // dealer passes last
 
     /// Adds the given card to the given exchange.
     let addPass card exchange =

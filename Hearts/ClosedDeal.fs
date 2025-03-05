@@ -2,11 +2,41 @@
 
 open PlayingCards
 
+/// Direction in which cards are passed prior to playout.
+type ExchangeDirection =
+    | Left = 0
+    | Right = 1
+    | Across = 2
+    | Hold = 3
+
+module ExchangeDirection =
+
+    /// Total number of exchange directions.
+    let numDirections =
+        Enum.getValues<ExchangeDirection>.Length
+
+    /// Applies the given exchange direction to the given seat.
+    let apply seat dir =
+        let n =
+            match dir with
+                | ExchangeDirection.Hold -> 0
+                | ExchangeDirection.Left -> 1
+                | ExchangeDirection.Across -> 2
+                | ExchangeDirection.Right -> 3
+                | _ -> failwith "Unexpected"
+        seat |> Seat.incr n
+
 /// A deal is a round of play within a game. A closed deal contains
 /// no information about how unplayed cards are distributed among
 /// the players. Cards played during a deal are grouped into tricks.
 type ClosedDeal =
     {
+        /// Player who dealt this deal.
+        Dealer : Seat
+
+        /// Card exchange direction.
+        ExchangeDirection : ExchangeDirection
+
         /// Current active trick, if play is in progress. No
         /// trick is active during an exchange, nor after the
         /// last card of the deal is played.
@@ -30,9 +60,11 @@ type ClosedDeal =
 
 module ClosedDeal =
 
-    /// Initial state of all closed deals.
-    let initial =
+    /// Creates a closed deal.
+    let create dealer dir =
         {
+            Dealer = dealer
+            ExchangeDirection = dir
             CurrentTrickOpt = None
             CompletedTricks = List.empty
             UnplayedCards = set Card.allCards
@@ -211,12 +243,13 @@ module ClosedDeal =
             else voids
 
         {
-            CurrentTrickOpt = curTrickOpt
-            CompletedTricks = completedTricks
-            HeartsBroken = heartsBroken
-            UnplayedCards = unplayedCards
-            Voids = voids
-            Score = score
+            deal with
+                CurrentTrickOpt = curTrickOpt
+                CompletedTricks = completedTricks
+                HeartsBroken = heartsBroken
+                UnplayedCards = unplayedCards
+                Voids = voids
+                Score = score
         }
 
     /// Tricks in the given deal, in chronological order, including the

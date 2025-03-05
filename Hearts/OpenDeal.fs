@@ -2,17 +2,20 @@
 
 open PlayingCards
 
+/// An open deal contains all information about a deal,
+/// including private information, such as each player's
+/// hand.
 type OpenDeal =
     {
         /// Cards passed by each player.
         Exchange : Exchange
 
-        /// Base deal.
-        ClosedDeal : ClosedDeal
-
         /// Each player's unplayed cards.
         UnplayedCardMap : Map<Seat, Hand>
     }
+
+    /// Public deal.
+    member this.ClosedDeal = this.Exchange.Deal
 
 module OpenDeal =
 
@@ -27,8 +30,9 @@ module OpenDeal =
                     |> Seq.length
             nCards = Card.numCards)
         {
-            Exchange = Exchange.create dealer dir
-            ClosedDeal = ClosedDeal.initial
+            Exchange =
+                ClosedDeal.create dealer dir
+                    |> Exchange.create
             UnplayedCardMap = handMap
         }
 
@@ -49,7 +53,7 @@ module OpenDeal =
             |> fromHands dealer dir
 
     /// Passes the given card in the given deal.
-    let addPass card deal =
+    let addPass card (deal : OpenDeal) =
         assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
 
             // remove outgoing card from passer's hand
@@ -89,6 +93,10 @@ module OpenDeal =
                 UnplayedCardMap = cardMap
         }
 
+    /// Updates the given exchange with the given deal.
+    let private withDeal exchange deal =
+        { exchange with Deal = deal }
+
     /// Receives passed cards (if any) and starts play in the
     /// given deal.
     let startPlay deal =
@@ -122,10 +130,13 @@ module OpenDeal =
                 |> Seq.find (fun (_, cards) ->
                     cards.Contains(ClosedDeal.lowestClub))
                 |> fst
+
         {
             deal with
-                ClosedDeal =
-                    deal.ClosedDeal |> ClosedDeal.startPlay leader
+                Exchange =
+                    deal.ClosedDeal
+                        |> ClosedDeal.startPlay leader
+                        |> withDeal deal.Exchange
         }
 
     /// Current player in the given deal.
@@ -143,9 +154,10 @@ module OpenDeal =
     let addPlay card deal =
         {
             deal with
-                ClosedDeal =
+                Exchange =
                     deal.ClosedDeal
                         |> ClosedDeal.addPlay card
+                        |> withDeal deal.Exchange
                 UnplayedCardMap =
                     let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
                     let unplayedCards = deal.UnplayedCardMap[seat]
