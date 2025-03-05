@@ -19,13 +19,13 @@ module ClosedDeal =
                 assert(
                     deal.ExchangeDirection
                         <> ExchangeDirection.Hold)
-                let legalPasses =
+                assert(
                     let pass =
                         let passer =
                             Exchange.currentPasser exchange
                         exchange.PassMap[passer]
-                    Set.difference hand pass
-                Pass, Seq.toArray legalPasses
+                    Set.intersect hand pass |> Set.isEmpty)
+                Pass, Seq.toArray hand
             | _ ->
                 let legalPlays = ClosedDeal.legalPlays hand deal
                 Play, Seq.toArray legalPlays
