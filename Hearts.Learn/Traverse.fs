@@ -49,9 +49,7 @@ module Traverse =
         and loopNonTerminal deal depth =
             let hand = OpenDeal.currentHand deal
             let moveType, legalMoves =
-                deal.ClosedDeal
-                    |> ClosedDeal.legalMoves
-                        hand deal.ExchangeOpt
+                deal |> OpenDeal.legalMoves hand
             if legalMoves.Length = 1 then
                 addLoop deal depth moveType legalMoves[0]   // forced move
             else

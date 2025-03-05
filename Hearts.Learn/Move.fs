@@ -4,35 +4,14 @@ open System
 
 open PlayingCards
 open Hearts
+open Hearts.Model
 
 /// A move is either a pass (during the exchange) or
 /// a play (after the exchange).
 type MoveType = Pass | Play
 
-module ClosedDeal =
-
-    /// What moves can be made from the given hand?
-    let legalMoves hand exchangeOpt deal =
-        match exchangeOpt with
-            | Some exchange
-                when not (Exchange.isComplete exchange) ->
-                assert(
-                    deal.ExchangeDirection
-                        <> ExchangeDirection.Hold)
-                assert(
-                    let pass =
-                        let passer =
-                            Exchange.currentPasser exchange
-                        exchange.PassMap[passer]
-                    Set.intersect hand pass |> Set.isEmpty)
-                Pass, Seq.toArray hand
-            | _ ->
-                let legalPlays = ClosedDeal.legalPlays hand deal
-                Play, Seq.toArray legalPlays
 
 module OpenDeal =
-
-    open Hearts.Model
 
     /// Plays the given number of deals in parallel.
     let generate (rng : Random) numDeals playFun =
@@ -60,6 +39,26 @@ module OpenDeal =
                         OpenDeal.startPlay deal
                     else deal
                 playFun deal)
+
+    /// What moves can be made from the given hand?
+    let legalMoves hand deal =
+        match deal.ExchangeOpt with
+            | Some exchange
+                when not (Exchange.isComplete exchange) ->
+                assert(
+                    deal.ClosedDeal.ExchangeDirection
+                        <> ExchangeDirection.Hold)
+                assert(
+                    let pass =
+                        let passer =
+                            Exchange.currentPasser exchange
+                        exchange.PassMap[passer]
+                    Set.intersect hand pass |> Set.isEmpty)
+                Pass, Seq.toArray hand
+            | _ ->
+                let legalPlays =
+                    ClosedDeal.legalPlays hand deal.ClosedDeal
+                Play, Seq.toArray legalPlays
 
     /// Makes the given move in the given deal.
     let addMove moveType move deal =
