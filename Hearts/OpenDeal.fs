@@ -7,15 +7,15 @@ open PlayingCards
 /// hand.
 type OpenDeal =
     {
-        /// Cards passed by each player.
-        Exchange : Exchange
+        /// Base deal.
+        ClosedDeal : ClosedDeal
+
+        /// Cards passed by each player on non-hold deals.
+        ExchangeOpt : Option<Exchange>
 
         /// Each player's unplayed cards.
         UnplayedCardMap : Map<Seat, Hand>
     }
-
-    /// Public deal.
-    member this.ClosedDeal = this.Exchange.Deal
 
 module OpenDeal =
 
@@ -30,9 +30,10 @@ module OpenDeal =
                     |> Seq.length
             nCards = Card.numCards)
         {
-            Exchange =
-                ClosedDeal.create dealer dir
-                    |> Exchange.create
+            ClosedDeal = ClosedDeal.create dealer dir
+            ExchangeOpt =
+                if dir = ExchangeDirection.Hold then None
+                else Some Exchange.empty
             UnplayedCardMap = handMap
         }
 
@@ -53,32 +54,50 @@ module OpenDeal =
             |> fromHands dealer dir
 
     /// Passes the given card in the given deal.
-    let addPass card (deal : OpenDeal) =
-        assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
+    let addPass card deal =
+        assert(
+            ClosedDeal.numCardsPlayed deal.ClosedDeal = 0)
+        assert(
+            deal.ClosedDeal.ExchangeDirection
+                <> ExchangeDirection.Hold)
 
-            // remove outgoing card from passer's hand
-        let cardMap =
-            let passer = Exchange.currentPasser deal.Exchange
-            let cardMap = deal.UnplayedCardMap
-            let unplayedCards =
-                assert(cardMap[passer].Contains(card))
-                cardMap[passer] |> Set.remove card
-            cardMap |> Map.add passer unplayedCards
+        match deal.ExchangeOpt with
+            | Some exchange ->
 
-        {
-            deal with
-                Exchange =
-                    deal.Exchange |> Exchange.addPass card
-                UnplayedCardMap = cardMap
-        }
+                    // remove outgoing card from passer's hand
+                let cardMap =
+                    let passer =
+                        Exchange.currentPasser
+                            deal.ClosedDeal.Dealer
+                            exchange
+                    let cardMap = deal.UnplayedCardMap
+                    let unplayedCards =
+                        assert(cardMap[passer].Contains(card))
+                        cardMap[passer] |> Set.remove card
+                    cardMap |> Map.add passer unplayedCards
+
+                {
+                    deal with
+                        ExchangeOpt =
+                            exchange
+                                |> Exchange.addPass card
+                                |> Some
+                        UnplayedCardMap = cardMap
+                }
+
+            | None -> failwith "Unexpected"
 
     /// Receives cards from the given passer in the given deal.
     let private receivePass passer (cards : Pass) deal =
+        assert(deal.ExchangeOpt.IsSome)
+        assert(
+            deal.ClosedDeal.ExchangeDirection
+                <> ExchangeDirection.Hold)
 
             // add incoming cards to receiver's hand
         let cardMap =
             let receiver =
-                deal.Exchange.ExchangeDirection
+                deal.ClosedDeal.ExchangeDirection
                     |> ExchangeDirection.apply passer
             let cardMap = deal.UnplayedCardMap
             let unplayedCards =
@@ -93,31 +112,35 @@ module OpenDeal =
                 UnplayedCardMap = cardMap
         }
 
-    /// Updates the given exchange with the given deal.
-    let private withDeal exchange deal =
-        { exchange with Deal = deal }
-
     /// Receives passed cards (if any) and starts play in the
     /// given deal.
     let startPlay deal =
-        assert(deal.Exchange |> Exchange.isComplete)
-        assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
+        assert(
+            deal.ClosedDeal
+                |> ClosedDeal.numCardsPlayed = 0)
+        assert(
+            (deal.ClosedDeal.ExchangeDirection
+                = ExchangeDirection.Hold)
+                = deal.ExchangeOpt.IsNone)
 
             // receive passed cards?
         let deal =
-            if deal.Exchange |> Exchange.isHold then deal
-            else
-                assert(
-                    deal.UnplayedCardMap
-                        |> Map.forall (fun _ cards ->
-                            cards.Count =
-                                ClosedDeal.numCardsPerHand - Pass.numCards))
-                let seatPasses =
-                    deal.Exchange
-                        |> Exchange.seatPasses
-                (deal, seatPasses)
-                    ||> Seq.fold (fun deal (passer, cards) ->
-                        receivePass passer cards deal)
+            match deal.ExchangeOpt with
+                | Some exchange ->
+                    assert(Exchange.isComplete exchange)
+                    assert(
+                        deal.UnplayedCardMap
+                            |> Map.forall (fun _ cards ->
+                                cards.Count =
+                                    ClosedDeal.numCardsPerHand - Pass.numCards))
+                    let seatPasses =
+                        exchange
+                            |> Exchange.seatPasses
+                                deal.ClosedDeal.Dealer
+                    (deal, seatPasses)
+                        ||> Seq.fold (fun deal (passer, cards) ->
+                            receivePass passer cards deal)
+                | None -> deal
 
             // determine first trick leader (must wait until cards are passed)
         let leader =
@@ -133,18 +156,25 @@ module OpenDeal =
 
         {
             deal with
-                Exchange =
+                ClosedDeal =
                     deal.ClosedDeal
                         |> ClosedDeal.startPlay leader
-                        |> withDeal deal.Exchange
         }
 
     /// Current player in the given deal.
     let currentPlayer deal =
-        if deal.Exchange |> Exchange.isComplete then
-            deal.ClosedDeal |> ClosedDeal.currentPlayer
-        else
-            deal.Exchange |> Exchange.currentPasser
+        match deal.ExchangeOpt with
+            | Some exchange
+                when not (Exchange.isComplete exchange) ->
+                assert(
+                    deal.ClosedDeal.ExchangeDirection
+                        <> ExchangeDirection.Hold)
+                exchange
+                    |> Exchange.currentPasser
+                        deal.ClosedDeal.Dealer
+            | _ ->
+                deal.ClosedDeal
+                    |> ClosedDeal.currentPlayer
 
     /// Answers the current player's unplayed cards.
     let currentHand deal =
@@ -154,10 +184,9 @@ module OpenDeal =
     let addPlay card deal =
         {
             deal with
-                Exchange =
+                ClosedDeal =
                     deal.ClosedDeal
                         |> ClosedDeal.addPlay card
-                        |> withDeal deal.Exchange
                 UnplayedCardMap =
                     let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
                     let unplayedCards = deal.UnplayedCardMap[seat]
@@ -177,18 +206,25 @@ module OpenDeal =
 
             // applies only at trick boundaries
         let isApplicable =
-            Exchange.isComplete deal.Exchange
-                && deal.ClosedDeal.CurrentTrickOpt
-                    |> Option.map (fun trick -> trick.Cards.IsEmpty)
-                    |> Option.defaultValue true   // end of deal
+            match deal.ExchangeOpt,
+                deal.ClosedDeal.CurrentTrickOpt with
+                | Some exchange, _
+                    when not (
+                        Exchange.isComplete exchange) -> false
+                | _, Some trick -> trick.Cards.IsEmpty
+                | _, None ->
+                    assert(
+                        ClosedDeal.isComplete deal.ClosedDeal)
+                    true   // end of deal
+
         if isApplicable then
 
                 // deal is actually complete?
-            if deal.ClosedDeal |> ClosedDeal.isComplete then
+            if ClosedDeal.isComplete deal.ClosedDeal then
                 Some Score.zero
 
                 // all points have been taken?
-            elif deal.ClosedDeal.Score |> Score.sum = numPointsPerDeal then
+            elif Score.sum deal.ClosedDeal.Score = numPointsPerDeal then
                 Some Score.zero
 
                 // current player takes all remaining tricks?

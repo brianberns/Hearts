@@ -12,14 +12,15 @@ type MoveType = Pass | Play
 module ClosedDeal =
 
     /// What moves can be made from the given hand?
-    let legalMoves hand exchange deal =
-        match exchange.CurrentPassOpt with
+    let legalMoves hand exchangeOpt deal =
+        let curPassOpt =
+            exchangeOpt
+                |> Option.bind _.CurrentPassOpt
+        match curPassOpt with
             | Some pass ->
-                assert(Exchange.isComplete exchange |> not)
                 let legalPasses = Set.difference hand pass
                 Pass, Seq.toArray legalPasses
             | None ->
-                assert(Exchange.isComplete exchange)
                 let legalPlays = ClosedDeal.legalPlays hand deal
                 Play, Seq.toArray legalPlays
 
@@ -49,7 +50,7 @@ module OpenDeal =
             |> map (fun (deck, dealer, dir) ->
                 let deal =
                     let deal = OpenDeal.fromDeck dealer dir deck
-                    if Exchange.isHold deal.Exchange then   // can start play immediately?
+                    if dir = ExchangeDirection.Hold then   // can start play immediately?
                         OpenDeal.startPlay deal
                     else deal
                 playFun deal)
@@ -57,9 +58,17 @@ module OpenDeal =
     /// Makes the given move in the given deal.
     let addMove moveType move deal =
         match moveType with
+
             | Pass ->
+
                 let deal = OpenDeal.addPass move deal
-                if Exchange.isComplete deal.Exchange then
-                    OpenDeal.startPlay deal
+
+                    // start play?
+                let canStartPlay =
+                    deal.ExchangeOpt
+                        |> Option.map Exchange.isComplete
+                        |> Option.defaultValue true   // no exchange
+                if canStartPlay then OpenDeal.startPlay deal
                 else deal
+
             | Play -> OpenDeal.addPlay move deal
