@@ -27,78 +27,80 @@ module Pass =
 /// All cards passed.
 type Exchange =
     {
-        /// Current pass, if any.
-        CurrentPassOpt : Option<Pass>
+        /// Player whose turn it is to pass, if the exchange
+        /// is not yet complete.
+        CurrentPasserOpt : Option<Seat>
 
-        /// Complete passes in reverse chronological order.
-        CompletePasses : List<Pass>
+        /// Passes made by each player so far.
+        PassMap : Map<Seat, Pass>
     }
 
 module Exchange =
 
-    /// Initial exchange state.
-    let empty =
+    /// Creates an exchange
+    let create currentPasser =
         {
-            CurrentPassOpt = Some Pass.empty
-            CompletePasses = List.empty
+            CurrentPasserOpt = Some currentPasser
+            PassMap = Map [ currentPasser, Pass.empty ]
         }
 
     /// An exchange is complete when all players have passed the
     /// full number of cards.
     let isComplete exchange =
         assert(
-            exchange.CurrentPassOpt.IsSome
-                || exchange.CompletePasses.Length = Seat.numSeats)
-        assert(
-            exchange.CompletePasses
-                |> Seq.forall (fun pass ->
-                    pass.Count = Pass.numCards))
-        exchange.CurrentPassOpt.IsNone
+            exchange.CurrentPasserOpt.IsSome
+                || (exchange.PassMap.Count = Seat.numSeats
+                    && exchange.PassMap.Values
+                        |> Seq.forall (fun pass ->
+                            pass.Count = Pass.numCards)))
+        exchange.CurrentPasserOpt.IsNone
 
-    /// Whose turn is it to pass cards in the given exchange?
-    let currentPasser dealer exchange =
+    /// Whose turn is it to pass cards in the given incomplete
+    /// exchange?
+    let currentPasser exchange =
         assert(isComplete exchange |> not)
-        dealer
-            |> Seat.incr (
-                exchange.CompletePasses.Length + 1)   // dealer passes last
+        match exchange.CurrentPasserOpt with
+            | Some passer -> passer
+            | None -> failwith "Exchange is complete"
 
     /// Adds the given card to the given exchange.
     let addPass card exchange =
         assert(isComplete exchange |> not)
 
             // get current pass
-        let curPass =
-            match exchange.CurrentPassOpt with
-                | Some curPass ->
-                    assert(curPass.Count < Pass.numCards)
-                    curPass
-                | None -> failwith "Unexpected"
+        let curPasser = currentPasser exchange
+        let curPass = exchange.PassMap[curPasser]
+        assert(curPass.Count < Pass.numCards)
 
-            // add given card to pass
-        let curPassOpt, completePasses =
-            let curPass = Pass.add card curPass
-            assert(curPass.Count <= Pass.numCards)
-            if curPass.Count = Pass.numCards then
-                let completePasses =
-                    curPass :: exchange.CompletePasses
-                let curPassOpt =
-                    if completePasses.Length < Seat.numSeats then
-                        Some Pass.empty
-                    else None
-                curPassOpt, completePasses
+            // add given card to current pass
+        let curPass = Pass.add card curPass
+        assert(curPass.Count <= Pass.numCards)
+
+            // update current pass in pass map
+        let passMap =
+            exchange.PassMap
+                |> Map.add curPasser curPass
+        assert(passMap.Count <= Seat.numSeats)
+
+            // update exchange
+        let curPasserOpt, passMap =
+
+                // current pass continues?
+            if curPass.Count < Pass.numCards then
+                Some curPasser, passMap
+
+                // start a new pass?
+            elif passMap.Count < Seat.numSeats then
+                let curPasser = Seat.next curPasser
+                Some curPasser,
+                passMap |> Map.add curPasser Pass.empty
+
+                // exchange is complete
             else
-                Some curPass, exchange.CompletePasses
+                assert(curPass.Count = Pass.numCards)
+                None, passMap
 
         {
-            exchange with
-                CurrentPassOpt = curPassOpt
-                CompletePasses = completePasses
+            CurrentPasserOpt = curPasserOpt
+            PassMap = passMap
         }
-
-    /// Cards passed by each player in the given exchange, in
-    /// chronological order.
-    let seatPasses dealer exchange =
-        assert(isComplete exchange)
-        let seats = Seat.next dealer |> Seat.cycle   // dealer passes last
-        let passes = exchange.CompletePasses |> List.rev
-        Seq.zip seats passes

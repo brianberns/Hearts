@@ -33,7 +33,10 @@ module OpenDeal =
             ClosedDeal = ClosedDeal.create dealer dir
             ExchangeOpt =
                 if dir = ExchangeDirection.Hold then None
-                else Some Exchange.empty
+                else
+                    Seat.next dealer   // dealer passes last
+                        |> Exchange.create
+                        |> Some
             UnplayedCardMap = handMap
         }
 
@@ -66,10 +69,7 @@ module OpenDeal =
 
                     // remove outgoing card from passer's hand
                 let cardMap =
-                    let passer =
-                        Exchange.currentPasser
-                            deal.ClosedDeal.Dealer
-                            exchange
+                    let passer = Exchange.currentPasser exchange
                     let cardMap = deal.UnplayedCardMap
                     let unplayedCards =
                         assert(cardMap[passer].Contains(card))
@@ -133,13 +133,9 @@ module OpenDeal =
                             |> Map.forall (fun _ cards ->
                                 cards.Count =
                                     ClosedDeal.numCardsPerHand - Pass.numCards))
-                    let seatPasses =
-                        exchange
-                            |> Exchange.seatPasses
-                                deal.ClosedDeal.Dealer
-                    (deal, seatPasses)
-                        ||> Seq.fold (fun deal (passer, cards) ->
-                            receivePass passer cards deal)
+                    (deal, exchange.PassMap)
+                        ||> Seq.fold (fun deal (KeyValue(passer, pass)) ->
+                            receivePass passer pass deal)
                 | None -> deal
 
             // determine first trick leader (must wait until cards are passed)
@@ -169,12 +165,9 @@ module OpenDeal =
                 assert(
                     deal.ClosedDeal.ExchangeDirection
                         <> ExchangeDirection.Hold)
-                exchange
-                    |> Exchange.currentPasser
-                        deal.ClosedDeal.Dealer
+                Exchange.currentPasser exchange
             | _ ->
-                deal.ClosedDeal
-                    |> ClosedDeal.currentPlayer
+                ClosedDeal.currentPlayer deal.ClosedDeal
 
     /// Answers the current player's unplayed cards.
     let currentHand deal =

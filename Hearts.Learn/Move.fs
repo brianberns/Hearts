@@ -13,14 +13,20 @@ module ClosedDeal =
 
     /// What moves can be made from the given hand?
     let legalMoves hand exchangeOpt deal =
-        let curPassOpt =
-            exchangeOpt
-                |> Option.bind _.CurrentPassOpt
-        match curPassOpt with
-            | Some pass ->
-                let legalPasses = Set.difference hand pass
+        match exchangeOpt with
+            | Some exchange
+                when not (Exchange.isComplete exchange) ->
+                assert(
+                    deal.ExchangeDirection
+                        <> ExchangeDirection.Hold)
+                let legalPasses =
+                    let pass =
+                        let passer =
+                            Exchange.currentPasser exchange
+                        exchange.PassMap[passer]
+                    Set.difference hand pass
                 Pass, Seq.toArray legalPasses
-            | None ->
+            | _ ->
                 let legalPlays = ClosedDeal.legalPlays hand deal
                 Play, Seq.toArray legalPlays
 
