@@ -1,7 +1,5 @@
 ﻿namespace Hearts
 
-open PlayingCards
-
 /// All cards passed in a deal.
 type Exchange =
     {
