@@ -27,9 +27,10 @@ module Playout =
 
     /// Logs hint information.
     let private logHint
-        (infoSet : InformationSet) deal (legalPlays : _[]) =
+        (infoSet : InformationSet) deal (legalActions : _[]) =
         assert(infoSet.Deal = deal.ClosedDeal)
-        assert(InformationSet.legalPlays infoSet = legalPlays)
+        assert(InformationSet.legalActions infoSet |> snd
+            = legalActions)
         async {
             match deal |> OpenDeal.tryFindInevitable with
 
@@ -38,10 +39,10 @@ module Playout =
                     for seat, points in Map.toSeq score.ScoreMap do
                         console.log($"   {Seat.toString seat}: {points} point(s)")
 
-                | None when legalPlays.Length > 1 ->
+                | None when legalActions.Length > 1 ->
                     let! strategy = Remoting.getStrategy infoSet
                     let pairs =
-                        Array.zip legalPlays strategy
+                        Array.zip legalActions strategy
                             |> Seq.sortByDescending snd
                     console.log("Hint:")
                     for (card : Card), prob in pairs do
@@ -109,20 +110,19 @@ module Playout =
 
             // determine all legal plays
         let infoSet = OpenDeal.currentInfoSet context.Deal
-        let legalPlays =
-            InformationSet.legalPlays infoSet
-                |> Seq.toArray
-        assert(legalPlays.Length > 0)
+        let _, legalActions =
+            InformationSet.legalActions infoSet
+        assert(legalActions.Length > 0)
 
             // enable user to select one of the corresponding card views
         Promise.create(fun resolve _reject ->
 
                 // prompt user to play
             chooser |> PlayChooser.display
-            logHint infoSet context.Deal legalPlays
+            logHint infoSet context.Deal legalActions
 
                 // handle card clicks
-            let legalPlaySet = set legalPlays
+            let legalPlaySet = set legalActions
             for cardView in handView do
                 let card = cardView |> CardView.card
                 if legalPlaySet.Contains(card) then

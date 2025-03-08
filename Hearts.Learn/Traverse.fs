@@ -49,10 +49,7 @@ module Traverse =
         and loopNonTerminal deal depth =
             let infoSet = OpenDeal.currentInfoSet deal
             let actionType, legalActions =
-                OpenDeal.legalActions
-                    infoSet.Hand
-                    deal.ClosedDeal
-                    deal.ExchangeOpt
+                InformationSet.legalActions infoSet
             if legalActions.Length = 1 then
                 addLoop deal depth actionType legalActions[0]   // forced action
             else

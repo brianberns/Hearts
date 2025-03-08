@@ -78,11 +78,10 @@ module Trickster =
 
         let play infoSet =
 
-            let legalPlays =
-                InformationSet.legalPlays infoSet
-                    |> set
-            if legalPlays.Count = 1 then
-                Seq.head legalPlays
+            let actionType, legalActions =
+                InformationSet.legalActions infoSet
+            if legalActions.Length = 1 then
+                Seq.head legalActions
             else
 
                 let hand = infoSet.Hand
@@ -116,21 +115,38 @@ module Trickster =
                     |]
 
                 let trick =
-                    ClosedDeal.currentTrick deal
-                        |> Trick.plays
-                        |> Seq.map snd
+                    infoSet.Deal.CurrentTrickOpt
+                        |> Option.map (fun trick ->
+                            trick
+                                |> Trick.plays
+                                |> Seq.map snd
+                                |> toString)
+                        |> Option.defaultValue ""
+
+                let notLegal =
+                    (hand, legalActions)
+                        ||> Seq.fold (fun hand card ->
+                            assert(hand.Contains(card))
+                            hand.Remove(card))
                         |> toString
 
-                let notLegal = toString (hand - legalPlays)
-
-                let cardState =
-                    TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
-                        bot,
-                        players,
-                        trick,
-                        notLegal)
-
-                let card = bot.SuggestNextCard(cardState)
+                let card =
+                    match actionType with
+                        | Pass ->
+                            let cardState =
+                                Trickster.cloud.SuggestPassState(
+                                    hand = Trickster.cloud.Hand(toString hand),
+                                    passCount = 1)
+                            bot.SuggestPass(cardState)
+                                |> Seq.exactlyOne
+                        | Play ->
+                            let cardState =
+                                TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
+                                    bot,
+                                    players,
+                                    trick,
+                                    notLegal)
+                            bot.SuggestNextCard(cardState)
                 let rank = enum<Rank>(int card.rank)
                 let suit =
                     match card.suit with

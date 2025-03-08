@@ -6,10 +6,6 @@ open PlayingCards
 open Hearts
 open Hearts.Model
 
-/// An action is either a pass (during the exchange) or
-/// a play (after the exchange).
-type ActionType = Pass | Play
-
 module OpenDeal =
 
     /// Plays the given number of deals in parallel.
@@ -38,26 +34,6 @@ module OpenDeal =
                         OpenDeal.startPlay deal
                     else deal
                 playFun deal)
-
-    /// What actions can be taken in the given deal?
-    let legalActions hand deal exchangeOpt =
-        match exchangeOpt with
-            | Some exchange
-                when not (Exchange.isComplete exchange) ->
-                assert(
-                    deal.ExchangeDirection
-                        <> ExchangeDirection.Hold)
-                assert(
-                    let pass =
-                        let passer =
-                            Exchange.currentPasser exchange
-                        exchange.PassMap[passer]
-                    Set.intersect hand pass |> Set.isEmpty)
-                Pass, Seq.toArray hand   // pass any card in hand
-            | _ ->
-                let legalPlays =
-                    ClosedDeal.legalPlays hand deal
-                Play, Seq.toArray legalPlays
 
     /// Takes the given action in the given deal.
     let addAction actionType action deal =

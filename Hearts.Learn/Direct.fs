@@ -16,18 +16,17 @@ module Direct =
             seq {
                 let play, sampleOpt =
                     let infoSet = OpenDeal.currentInfoSet deal
-                    let legalPlays =
-                        InformationSet.legalPlays infoSet
-                            |> Seq.toArray
-                    if legalPlays.Length = 1 then
-                        Array.exactlyOne legalPlays,
+                    let _, legalActions =
+                        InformationSet.legalActions infoSet
+                    if legalActions.Length = 1 then
+                        Array.exactlyOne legalActions,
                         None
                     else
                         let play = player.Play infoSet
                         let regrets =
                             let strategy =
                                 [|
-                                    for card in legalPlays do
+                                    for card in legalActions do
                                         if card = play then 1.0f
                                         else 0.0f
                                 |]
@@ -35,7 +34,7 @@ module Direct =
                             strategy
                                 |> Array.map (fun x -> x - mean)
                                 |> DenseVector.ofArray
-                                |> Strategy.toWide legalPlays
+                                |> Strategy.toWide legalActions
                         play,
                         AdvantageSample.create infoSet regrets 1
                             |> Some

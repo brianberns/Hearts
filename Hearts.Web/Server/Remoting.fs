@@ -24,10 +24,9 @@ module Model =
 
     /// Finds the strategy for the given info set.
     let getStrategy infoSet model =
-        let legalPlays =
-            InformationSet.legalPlays infoSet
-                |> Seq.toArray
-        Strategy.getFromAdvantage infoSet model legalPlays
+        let _, legalActions =
+            InformationSet.legalActions infoSet
+        Strategy.getFromAdvantage infoSet model legalActions
 
 module Remoting =
 

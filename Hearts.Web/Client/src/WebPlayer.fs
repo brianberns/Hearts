@@ -45,17 +45,16 @@ module WebPlayer =
 
             // get legal plays in this situation
         let infoSet = OpenDeal.currentInfoSet deal
-        let legalPlays =
-            InformationSet.legalPlays infoSet
-                |> Seq.toArray
+        let _, legalActions =
+            InformationSet.legalActions infoSet
 
             // choose play
-        match legalPlays.Length with
+        match legalActions.Length with
             | 0 -> failwith "Unexpected"
-            | 1 -> async { return legalPlays[0] }
+            | 1 -> async { return legalActions[0] }
             | _ ->
                 async {
                     let! iAction =
                         Remoting.getActionIndex infoSet
-                    return legalPlays[iAction]
+                    return legalActions[iAction]
                 }

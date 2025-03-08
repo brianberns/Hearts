@@ -135,15 +135,14 @@ module Trainer =
     let createPlayer model =
 
         let play infoSet =
-            let legalPlays =
-                InformationSet.legalPlays infoSet
-                    |> Seq.toArray
+            let _, legalActions =
+                InformationSet.legalActions infoSet
             let strategy =
                 Strategy.getFromAdvantage
-                    infoSet model legalPlays
+                    infoSet model legalActions
             lock settings.Random (fun () ->
                 Vector.sample settings.Random strategy)
-                |> Array.get legalPlays
+                |> Array.get legalActions
 
         { Play = play }
 

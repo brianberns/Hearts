@@ -3,6 +3,10 @@
 open PlayingCards
 open Hearts
 
+/// An action is either a pass (during the exchange) or
+/// a play (after the exchange).
+type ActionType = Pass | Play
+
 /// All information known to a player about a deal,
 /// including information known only by that player.
 type InformationSet =
@@ -40,7 +44,21 @@ module InformationSet =
             Deal = deal
         }
 
-    /// What cards can be played in the given information set?
-    let legalPlays infoSet =
-        infoSet.Deal
-            |> ClosedDeal.legalPlays infoSet.Hand
+    /// What actions can be taken in the given information set?
+    let legalActions infoSet =
+        match infoSet.OutgoingPassOpt with
+            | Some pass ->
+                assert(
+                    infoSet.Deal.ExchangeDirection
+                        <> ExchangeDirection.Hold)
+                Pass, Seq.toArray infoSet.Hand   // pass any card in hand
+            | None ->
+                assert(
+                    infoSet.Deal.ExchangeDirection
+                        = ExchangeDirection.Hold
+                    || (infoSet.OutgoingPassOpt.Value.Count = Pass.numCards
+                        && infoSet.IncomingPassOpt.Value.Count = Pass.numCards))
+                let legalPlays =
+                    ClosedDeal.legalPlays
+                        infoSet.Hand infoSet.Deal
+                Play, Seq.toArray legalPlays
