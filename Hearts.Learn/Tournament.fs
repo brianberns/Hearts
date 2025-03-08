@@ -71,7 +71,7 @@ module Trickster =
         let bot =
             let options =
                 Trickster.cloud.HeartsOptions(
-                    passing = Trickster.cloud.HeartsPassing.None)
+                    passing = Trickster.cloud.HeartsPassing.LeftRightAcrossKeep)
             Trickster.Bots.HeartsBot(
                 options,
                 Trickster.cloud.Suit.Unknown)

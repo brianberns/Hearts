@@ -53,7 +53,7 @@ module OpenDeal =
                             Exchange.currentPasser exchange
                         exchange.PassMap[passer]
                     Set.intersect hand pass |> Set.isEmpty)
-                Pass, Seq.toArray hand
+                Pass, Seq.toArray hand   // pass any card in hand
             | _ ->
                 let legalPlays =
                     ClosedDeal.legalPlays hand deal
