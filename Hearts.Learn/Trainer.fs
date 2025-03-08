@@ -4,8 +4,6 @@ open System
 open System.Diagnostics
 open System.IO
 
-open MathNet.Numerics.LinearAlgebra
-
 open TorchSharp
 
 open Hearts
