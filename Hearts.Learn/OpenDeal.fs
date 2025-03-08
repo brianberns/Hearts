@@ -40,6 +40,7 @@ module OpenDeal =
 
             | ActionType.Pass ->
 
+                    // add pass to deal
                 let deal = OpenDeal.addPass action deal
 
                     // start play?
@@ -47,7 +48,9 @@ module OpenDeal =
                     deal.ExchangeOpt
                         |> Option.map Exchange.isComplete
                         |> Option.defaultValue true   // no exchange
-                if canStartPlay then OpenDeal.startPlay deal
+                if canStartPlay then
+                    OpenDeal.startPlay deal
                 else deal
 
-            | ActionType.Play -> OpenDeal.addPlay action deal
+            | ActionType.Play ->
+                OpenDeal.addPlay action deal

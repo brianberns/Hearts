@@ -81,6 +81,8 @@ module Exchange =
             PassMap = passMap
         }
 
+    /// Gets passes from and to the given player in the
+    /// given exchange, if any.
     let getPassOpts player dir exchange =
         let outOpt =
             exchange.PassMap |> Map.tryFind player
