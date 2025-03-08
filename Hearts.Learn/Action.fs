@@ -4,7 +4,6 @@ open System
 
 open PlayingCards
 open Hearts
-open Hearts.Model
 
 module OpenDeal =
 
