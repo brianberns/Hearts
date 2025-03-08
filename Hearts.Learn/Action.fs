@@ -6,7 +6,7 @@ open PlayingCards
 open Hearts
 open Hearts.Model
 
-/// An actionis either a pass (during the exchange) or
+/// An action is either a pass (during the exchange) or
 /// a play (after the exchange).
 type ActionType = Pass | Play
 
