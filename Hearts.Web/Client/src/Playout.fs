@@ -109,8 +109,7 @@ module Playout =
         let infoSet = OpenDeal.currentInfoSet context.Deal
         let legalPlays =
             context.Deal.ClosedDeal
-                |> ClosedDeal.legalPlays
-                    infoSet.Secret.Hand
+                |> ClosedDeal.legalPlays infoSet.Hand
                 |> Seq.toArray
         assert(legalPlays.Length > 0)
 

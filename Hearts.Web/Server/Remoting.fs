@@ -26,8 +26,7 @@ module Model =
     let getStrategy infoSet model =
         let legalPlays =
             infoSet.Deal
-                |> ClosedDeal.legalPlays
-                    infoSet.Secret.Hand
+                |> ClosedDeal.legalPlays infoSet.Hand
                 |> Seq.toArray
         Strategy.getFromAdvantage infoSet model legalPlays
 

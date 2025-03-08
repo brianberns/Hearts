@@ -3,9 +3,13 @@
 open PlayingCards
 open Hearts
 
-/// Information known only to a player about her own hand.
-type Secret =
+/// All information known to a player about a deal,
+/// including information known only by that player.
+type InformationSet =
     {
+        /// Player.
+        Player : Seat
+
         /// Player's hand.
         Hand : Hand
 
@@ -14,28 +18,6 @@ type Secret =
 
         /// Cards received by the player, if any.
         IncomingPassOpt : Option<Pass>
-    }
-
-module Secret =
-
-    /// Creates a secret.
-    let create hand outgoingPassOpt incomingPassOpt =
-        assert(Option.isNone incomingPassOpt
-            || Option.isSome outgoingPassOpt)
-        {
-            Hand = hand
-            OutgoingPassOpt = outgoingPassOpt
-            IncomingPassOpt = incomingPassOpt
-        }
-
-/// All information known to a player about a deal.
-type InformationSet =
-    {
-        /// Player.
-        Player : Seat
-
-        /// Player's secret information.
-        Secret : Secret
 
         /// Public information.
         Deal : ClosedDeal
@@ -43,12 +25,16 @@ type InformationSet =
 
 module InformationSet =
 
-    let create player secret deal =
+    let create player hand outgoingPassOpt incomingPassOpt deal =
+        assert(Option.isNone incomingPassOpt
+            || Option.isSome outgoingPassOpt)
         assert(deal.CurrentTrickOpt.IsNone
             || ClosedDeal.currentPlayer deal = player)
         assert(ClosedDeal.isComplete deal |> not)
         {
             Player = player
-            Secret = secret
+            Hand = hand
+            OutgoingPassOpt = outgoingPassOpt
+            IncomingPassOpt = incomingPassOpt
             Deal = deal
         }

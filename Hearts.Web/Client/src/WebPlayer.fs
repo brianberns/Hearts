@@ -47,7 +47,7 @@ module WebPlayer =
         let infoSet = OpenDeal.currentInfoSet deal
         let legalPlays =
             ClosedDeal.legalPlays
-                infoSet.Secret.Hand
+                infoSet.Hand
                 deal.ClosedDeal
                 |> Seq.toArray
 

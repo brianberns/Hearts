@@ -103,16 +103,16 @@ module Encoding =
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
         let unseen =
-            infoSet.Deal.UnplayedCards - infoSet.Secret.Hand
+            infoSet.Deal.UnplayedCards - infoSet.Hand
         let trickOpt = infoSet.Deal.CurrentTrickOpt
         let encoded =
             [|
-                yield! encodeCards infoSet.Secret.Hand   // current player's hand
-                yield! encodeCards unseen                // unplayed cards not in current player's hand
-                yield! encodeTrick trickOpt.Value        // current trick
-                yield! encodeVoids                       // voids
+                yield! encodeCards infoSet.Hand         // current player's hand
+                yield! encodeCards unseen               // unplayed cards not in current player's hand
+                yield! encodeTrick trickOpt.Value       // current trick
+                yield! encodeVoids                      // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                       // score
+                yield! encodeScore                      // score
                     infoSet.Player infoSet.Deal.Score
             |]
         assert(encoded.Length = encodedLength)

@@ -18,7 +18,7 @@ module Direct =
                     let infoSet = OpenDeal.currentInfoSet deal
                     let legalPlays =
                         ClosedDeal.legalPlays
-                            infoSet.Secret.Hand
+                            infoSet.Hand
                             deal.ClosedDeal
                             |> Seq.toArray
                     if legalPlays.Length = 1 then

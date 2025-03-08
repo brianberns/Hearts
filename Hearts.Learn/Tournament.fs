@@ -78,7 +78,7 @@ module Trickster =
 
         let play infoSet =
 
-            let hand = infoSet.Secret.Hand
+            let hand = infoSet.Hand
             let deal = infoSet.Deal
             let legalPlays =
                 ClosedDeal.legalPlays hand deal
