@@ -25,6 +25,7 @@ type InformationSet =
 
 module InformationSet =
 
+    /// Creates an information set.
     let create player hand outgoingPassOpt incomingPassOpt deal =
         assert(Option.isNone incomingPassOpt
             || Option.isSome outgoingPassOpt)
@@ -38,3 +39,8 @@ module InformationSet =
             IncomingPassOpt = incomingPassOpt
             Deal = deal
         }
+
+    /// What cards can be played in the given information set?
+    let legalPlays infoSet =
+        infoSet.Deal
+            |> ClosedDeal.legalPlays infoSet.Hand

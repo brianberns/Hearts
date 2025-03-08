@@ -17,9 +17,7 @@ module Direct =
                 let play, sampleOpt =
                     let infoSet = OpenDeal.currentInfoSet deal
                     let legalPlays =
-                        ClosedDeal.legalPlays
-                            infoSet.Hand
-                            deal.ClosedDeal
+                        InformationSet.legalPlays infoSet
                             |> Seq.toArray
                     if legalPlays.Length = 1 then
                         Array.exactlyOne legalPlays,

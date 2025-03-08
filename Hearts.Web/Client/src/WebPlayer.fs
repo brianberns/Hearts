@@ -46,9 +46,7 @@ module WebPlayer =
             // get legal plays in this situation
         let infoSet = OpenDeal.currentInfoSet deal
         let legalPlays =
-            ClosedDeal.legalPlays
-                infoSet.Hand
-                deal.ClosedDeal
+            InformationSet.legalPlays infoSet
                 |> Seq.toArray
 
             // choose play

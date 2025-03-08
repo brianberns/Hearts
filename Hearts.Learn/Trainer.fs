@@ -136,9 +136,7 @@ module Trainer =
 
         let play infoSet =
             let legalPlays =
-                infoSet.Deal
-                    |> ClosedDeal.legalPlays
-                        infoSet.Hand
+                InformationSet.legalPlays infoSet
                     |> Seq.toArray
             let strategy =
                 Strategy.getFromAdvantage

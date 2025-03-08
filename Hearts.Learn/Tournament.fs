@@ -78,15 +78,15 @@ module Trickster =
 
         let play infoSet =
 
-            let hand = infoSet.Hand
-            let deal = infoSet.Deal
             let legalPlays =
-                ClosedDeal.legalPlays hand deal
+                InformationSet.legalPlays infoSet
                     |> set
             if legalPlays.Count = 1 then
                 Seq.head legalPlays
             else
 
+                let hand = infoSet.Hand
+                let deal = infoSet.Deal
                 let players =
                     [|
                         let curPlayer =
