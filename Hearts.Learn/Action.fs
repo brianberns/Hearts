@@ -39,7 +39,7 @@ module OpenDeal =
     let addAction actionType action deal =
         match actionType with
 
-            | Pass ->
+            | ActionType.Pass ->
 
                 let deal = OpenDeal.addPass action deal
 
@@ -51,4 +51,4 @@ module OpenDeal =
                 if canStartPlay then OpenDeal.startPlay deal
                 else deal
 
-            | Play -> OpenDeal.addPlay action deal
+            | ActionType.Play -> OpenDeal.addPlay action deal

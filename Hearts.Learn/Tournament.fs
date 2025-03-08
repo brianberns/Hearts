@@ -131,14 +131,14 @@ module Trickster =
 
                     let card =
                         match actionType with
-                            | Pass ->
+                            | ActionType.Pass ->
                                 let cardState =
                                     Trickster.cloud.SuggestPassState(
                                         hand = Trickster.cloud.Hand(toString hand),
                                         passCount = 1)
                                 bot.SuggestPass(cardState)
                                     |> Seq.exactlyOne
-                            | Play ->
+                            | ActionType.Play ->
                                 let cardState =
                                     TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
                                         bot,
