@@ -50,11 +50,14 @@ module Encoding =
     /// Encodes each card in the given current trick as
     /// a one-hot vector in the deck size and then concatenates
     /// those vectors.
-    let private encodeTrick trick =
+    let private encodeTrick trickOpt =
         let cards =
-            trick.Cards
-                |> List.rev
-                |> List.toArray
+            trickOpt
+                |> Option.map (fun trick ->
+                    trick.Cards
+                        |> List.rev
+                        |> List.toArray)
+                |> Option.defaultValue Array.empty
         assert(cards.Length < Seat.numSeats)
         [|
             for iCard = 0 to Seat.numSeats - 2 do
@@ -95,7 +98,7 @@ module Encoding =
     /// Total encoded length of an info set.
     let encodedLength =
         Card.numCards                                 // current player's hand
-            + Card.numCards                           // other unplayed cards
+            + Card.numCards                           // unplayed cards not in current player's hand
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
             + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
             + Seat.numSeats                           // score
@@ -109,7 +112,7 @@ module Encoding =
             [|
                 yield! encodeCards infoSet.Hand         // current player's hand
                 yield! encodeCards unseen               // unplayed cards not in current player's hand
-                yield! encodeTrick trickOpt.Value       // current trick
+                yield! encodeTrick trickOpt             // current trick
                 yield! encodeVoids                      // voids
                     infoSet.Player infoSet.Deal.Voids
                 yield! encodeScore                      // score
