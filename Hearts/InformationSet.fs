@@ -31,7 +31,7 @@ module Pass =
         pass.Add(card)
 
 /// All information known to a player about a deal,
-/// including information known only by that player.
+/// including information known only to that player.
 type InformationSet =
     {
         /// Player.
@@ -79,12 +79,12 @@ module InformationSet =
         let actionType = legalActionType infoSet
         let actions =
             match actionType with
-                | Pass ->
+                | ActionType.Pass ->
                     assert(
                         infoSet.Deal.ExchangeDirection
                             <> ExchangeDirection.Hold)
                     Seq.toArray infoSet.Hand   // pass any card in hand
-                | Play ->
+                | ActionType.Play ->
                     assert(
                         infoSet.Deal.ExchangeDirection
                             = ExchangeDirection.Hold
