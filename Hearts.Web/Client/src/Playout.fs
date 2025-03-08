@@ -26,8 +26,10 @@ module Playout =
         }
 
     /// Logs hint information.
-    let private logHint (infoSet : InformationSet) deal (legalPlays : _[]) =
+    let private logHint
+        (infoSet : InformationSet) deal (legalPlays : _[]) =
         assert(infoSet.Deal = deal.ClosedDeal)
+        assert(InformationSet.legalPlays infoSet = legalPlays)
         async {
             match deal |> OpenDeal.tryFindInevitable with
 
