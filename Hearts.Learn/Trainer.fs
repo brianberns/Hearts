@@ -57,9 +57,11 @@ module Trainer =
         let getStrategy =
             match modelOpt with
                 | Some model ->
-                    Strategy.getFromAdvantage model
+                    fun infoSet legalPlays ->
+                        Strategy.getFromAdvantage
+                            infoSet model legalPlays
                 | None ->
-                    fun _ _ legalPlays ->
+                    fun _ legalPlays ->
                         Strategy.random legalPlays.Length
 
         OpenDeal.generate
@@ -132,14 +134,15 @@ module Trainer =
     /// Creates a Hearts player using the given model.
     let createPlayer model =
 
-        let play hand deal =
+        let play infoSet =
             let legalPlays =
-                deal
-                    |> ClosedDeal.legalPlays hand
+                infoSet.Deal
+                    |> ClosedDeal.legalPlays
+                        infoSet.Secret.Hand
                     |> Seq.toArray
             let strategy =
-                Strategy.getFromAdvantage model
-                    hand deal legalPlays
+                Strategy.getFromAdvantage
+                    infoSet model legalPlays
             lock settings.Random (fun () ->
                 Vector.sample settings.Random strategy)
                 |> Array.get legalPlays

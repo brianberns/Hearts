@@ -6,7 +6,7 @@ open PlayingCards
 type Player =
     {
         /// Plays a card from the given hand on the given deal.
-        Play : Hand -> ClosedDeal -> Card
+        Play : InformationSet -> Card
     }
 
 module Game =

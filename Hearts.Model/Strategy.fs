@@ -44,11 +44,11 @@ module Strategy =
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    /// Computes strategy for the given info set (hand + deal)
-    /// using the given advantage model.
-    let getFromAdvantage model hand deal legalPlays =
+    /// Computes strategy for the given info set using the
+    /// given advantage model.
+    let getFromAdvantage infoSet model legalPlays =
         use advantage =
-            AdvantageModel.getAdvantage hand deal model
+            AdvantageModel.getAdvantage infoSet model
         advantage.data<float32>()
             |> DenseVector.ofSeq
             |> toNarrow legalPlays

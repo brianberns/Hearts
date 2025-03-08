@@ -78,11 +78,11 @@ type AdvantageModel(device : torch.Device) as this =
 
 module AdvantageModel =
 
-    /// Gets the advantage for the given info set (hand + deal).
-    let getAdvantage hand deal (model : AdvantageModel) =
+    /// Gets the advantage for the given info set.
+    let getAdvantage infoSet (model : AdvantageModel) =
         use _ = torch.no_grad()
         use input =
-            let encoded = Encoding.encode hand deal
+            let encoded = Encoding.encode infoSet
             tensor(
                 encoded, device = model.Device,
                 dtype = ScalarType.Float32)

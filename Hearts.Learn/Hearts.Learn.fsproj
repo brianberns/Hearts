@@ -10,7 +10,7 @@
     <Compile Include="Reservoir.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Model.fs" />
-    <Compile Include="Move.fs" />
+    <Compile Include="Action.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Tournament.fs" />
     <Compile Include="Trainer.fs" />

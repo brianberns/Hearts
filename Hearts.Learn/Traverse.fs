@@ -35,7 +35,7 @@ module Traverse =
         [| yield! items; yield item |]
 
     /// Evaluates the utility of the given deal.
-    let traverse iter deal getStrategy =
+    let traverse iter deal (getStrategy : InformationSet -> PlayingCards.Card[] -> Vector<_>) =
 
         /// Top-level loop.
         let rec loop deal depth =
@@ -47,17 +47,16 @@ module Traverse =
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal depth =
-            let hand = OpenDeal.currentHand deal
-            let moveType, legalMoves =
-                deal |> OpenDeal.legalMoves hand
-            if legalMoves.Length = 1 then
-                addLoop deal depth moveType legalMoves[0]   // forced move
+            let infoSet = OpenDeal.currentInfoSet deal
+            let actionType, legalActions =
+                OpenDeal.legalActions infoSet.Secret.Hand deal
+            if legalActions.Length = 1 then
+                addLoop deal depth actionType legalActions[0]   // forced action
             else
                     // get utility of current player's strategy
                 let player = OpenDeal.currentPlayer deal
                 let strategy : Vector<float32> =
-                    getStrategy
-                        hand deal.ClosedDeal legalMoves
+                    getStrategy infoSet legalActions
                 let rnd =
                     lock settings.Random (fun () ->
                         settings.Random.NextDouble())
@@ -66,27 +65,27 @@ module Traverse =
                         / (settings.SampleDecay + float depth)
                 if rnd <= threshold then
                     getFullUtility
-                        hand player deal depth moveType legalMoves strategy
+                        infoSet deal depth actionType legalActions strategy
                 else
-                    getOneUtility deal depth moveType legalMoves strategy
+                    getOneUtility deal depth actionType legalActions strategy
 
-        /// Adds the given move to the given deal and loops.
-        and addLoop deal depth moveType move =
-            let deal = OpenDeal.addMove moveType move deal
+        /// Adds the given action to the given deal and loops.
+        and addLoop deal depth actionType action =
+            let deal = OpenDeal.addAction actionType action deal
             loop deal (depth + 1)
 
         /// Gets the full utility of the given info set (hand + deal).
-        and getFullUtility hand player deal depth moveType legalMoves strategy =
+        and getFullUtility infoSet deal depth actionType legalActions strategy =
 
                 // get utility of each action
             let actionUtilities, samples =
                 let utilityArrays, sampleArrays =
-                    legalMoves
-                        |> Array.map (addLoop deal depth moveType)
+                    legalActions
+                        |> Array.map (addLoop deal depth actionType)
                         |> Array.unzip
                 DenseMatrix.ofColumnArrays utilityArrays,
                 Array.concat sampleArrays
-            assert(actionUtilities.ColumnCount = legalMoves.Length)
+            assert(actionUtilities.ColumnCount = legalActions.Length)
             assert(actionUtilities.RowCount = Seat.numSeats)
 
                 // utility of this info set is action utilities weighted by action probabilities
@@ -94,20 +93,19 @@ module Traverse =
             assert(utility.Count = Seat.numSeats)
             let samples =
                 let wideRegrets =
-                    let idx = int player
+                    let idx = int infoSet.Player
                     (actionUtilities.Row(idx) - utility[idx])
-                        |> Strategy.toWide legalMoves
-                AdvantageSample.create
-                    hand deal.ClosedDeal wideRegrets iter
+                        |> Strategy.toWide legalActions
+                AdvantageSample.create infoSet wideRegrets iter
                     |> append samples
             utility.ToArray(), samples
 
         /// Gets the utility of the given info set (hand + deal)
         /// by sampling a single action.
-        and getOneUtility deal depth moveType legalMoves strategy =
+        and getOneUtility deal depth actionType legalActions strategy =
             lock settings.Random (fun () ->
                 Vector.sample settings.Random strategy)
-                |> Array.get legalMoves
-                |> addLoop deal depth moveType
+                |> Array.get legalActions
+                |> addLoop deal depth actionType
 
         loop deal 0 |> snd

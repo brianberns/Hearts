@@ -11,9 +11,8 @@ module Tournament =
         let rec loop deal score =
             let deal =
                 let card =
-                    let seat = OpenDeal.currentPlayer deal
-                    let hand = deal.UnplayedCardMap[seat]
-                    playerMap[seat].Play hand deal.ClosedDeal
+                    let infoSet = OpenDeal.currentInfoSet deal
+                    playerMap[infoSet.Player].Play infoSet
                 OpenDeal.addPlay card deal
             match Game.tryUpdateScore deal score with
                 | Some score -> score
@@ -77,8 +76,10 @@ module Trickster =
                 options,
                 Trickster.cloud.Suit.Unknown)
 
-        let play (hand : Hand) deal =
+        let play infoSet =
 
+            let hand = infoSet.Secret.Hand
+            let deal = infoSet.Deal
             let legalPlays =
                 ClosedDeal.legalPlays hand deal
                     |> set

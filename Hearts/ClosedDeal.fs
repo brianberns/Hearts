@@ -26,6 +26,17 @@ module ExchangeDirection =
                 | _ -> failwith "Unexpected"
         seat |> Seat.incr n
 
+    /// Finds the seat that passes cards to the given seat.
+    let unapply seat dir =
+        let n =
+            match dir with
+                | ExchangeDirection.Hold -> 0
+                | ExchangeDirection.Left -> 3
+                | ExchangeDirection.Across -> 2
+                | ExchangeDirection.Right -> 1
+                | _ -> failwith "Unexpected"
+        seat |> Seat.incr n
+
 /// A deal is a round of play within a game. A closed deal contains
 /// no information about how unplayed cards are distributed among
 /// the players. Cards played during a deal are grouped into tricks.

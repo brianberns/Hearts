@@ -173,6 +173,25 @@ module OpenDeal =
     let currentHand deal =
         deal.UnplayedCardMap[currentPlayer deal]
 
+    /// Answers the current player's information set.
+    let currentInfoSet deal =
+
+        let player = currentPlayer deal
+
+        let secret =
+            let hand = deal.UnplayedCardMap[player]
+            let outOpt, inOpt =
+                deal.ExchangeOpt
+                    |> Option.map (
+                        Exchange.getPassOpts
+                            player
+                            deal.ClosedDeal.ExchangeDirection)
+                    |> Option.defaultValue (None, None)
+            Secret.create hand outOpt inOpt
+
+        InformationSet.create
+            player secret deal.ClosedDeal
+
     /// Plays the given card on the given deal.
     let addPlay card deal =
         {

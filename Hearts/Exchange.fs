@@ -104,3 +104,12 @@ module Exchange =
             CurrentPasserOpt = curPasserOpt
             PassMap = passMap
         }
+
+    let getPassOpts player dir exchange =
+        let outOpt =
+            exchange.PassMap |> Map.tryFind player
+        let inOpt =
+            let sender =
+                ExchangeDirection.unapply player dir
+            exchange.PassMap |> Map.tryFind sender
+        outOpt, inOpt

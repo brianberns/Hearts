@@ -6,10 +6,9 @@ open PlayingCards
 open Hearts
 open Hearts.Model
 
-/// A move is either a pass (during the exchange) or
+/// An actionis either a pass (during the exchange) or
 /// a play (after the exchange).
-type MoveType = Pass | Play
-
+type ActionType = Pass | Play
 
 module OpenDeal =
 
@@ -40,8 +39,9 @@ module OpenDeal =
                     else deal
                 playFun deal)
 
-    /// What moves can be made from the given hand?
-    let legalMoves hand deal =
+    /// What actions can be taken in the given deal?
+    let legalActions hand deal =
+        assert(hand = OpenDeal.currentHand deal)   // performance optimization: avoid calling twice
         match deal.ExchangeOpt with
             | Some exchange
                 when not (Exchange.isComplete exchange) ->
@@ -60,13 +60,13 @@ module OpenDeal =
                     ClosedDeal.legalPlays hand deal.ClosedDeal
                 Play, Seq.toArray legalPlays
 
-    /// Makes the given move in the given deal.
-    let addMove moveType move deal =
-        match moveType with
+    /// Takes the given action in the given deal.
+    let addAction actionType action deal =
+        match actionType with
 
             | Pass ->
 
-                let deal = OpenDeal.addPass move deal
+                let deal = OpenDeal.addPass action deal
 
                     // start play?
                 let canStartPlay =
@@ -76,4 +76,4 @@ module OpenDeal =
                 if canStartPlay then OpenDeal.startPlay deal
                 else deal
 
-            | Play -> OpenDeal.addPlay move deal
+            | Play -> OpenDeal.addPlay action deal

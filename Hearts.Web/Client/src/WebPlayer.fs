@@ -16,9 +16,9 @@ module Remoting =
             |> Remoting.buildProxy<IHeartsApi>
 
     /// Chooses an action for the given info set.
-    let getActionIndex hand deal =
+    let getActionIndex infoSet =
         async {
-            match! Async.Catch(api.GetPlayIndex hand deal) with
+            match! Async.Catch(api.GetActionIndex infoSet) with
                 | Choice1Of2 index -> return index
                 | Choice2Of2 exn ->
                     failwith exn.Message   // is there a better way to handle this?
@@ -26,9 +26,9 @@ module Remoting =
         }
 
     /// Gets the strategy for the given info set.
-    let getStrategy hand deal =
+    let getStrategy infoSet =
         async {
-            match! Async.Catch(api.GetStrategy hand deal) with
+            match! Async.Catch(api.GetStrategy infoSet) with
                 | Choice1Of2 strategy -> return strategy
                 | Choice2Of2 exn ->
                     failwith exn.Message   // is there a better way to handle this?
@@ -41,12 +41,14 @@ module WebPlayer =
     open Hearts
 
     /// Plays a card in the given deal.
-    let makePlay (deal : OpenDeal) =
+    let makePlay deal =
 
             // get legal plays in this situation
-        let hand = OpenDeal.currentHand deal
+        let infoSet = OpenDeal.currentInfoSet deal
         let legalPlays =
-            ClosedDeal.legalPlays hand deal.ClosedDeal
+            ClosedDeal.legalPlays
+                infoSet.Secret.Hand
+                deal.ClosedDeal
                 |> Seq.toArray
 
             // choose play
@@ -56,6 +58,6 @@ module WebPlayer =
             | _ ->
                 async {
                     let! iAction =
-                        Remoting.getActionIndex hand deal.ClosedDeal
+                        Remoting.getActionIndex infoSet
                     return legalPlays[iAction]
                 }

@@ -23,13 +23,13 @@ module Model =
         model
 
     /// Finds the strategy for the given info set.
-    let getStrategy model hand deal =
+    let getStrategy infoSet model =
         let legalPlays =
-            deal
-                |> ClosedDeal.legalPlays hand
+            infoSet.Deal
+                |> ClosedDeal.legalPlays
+                    infoSet.Secret.Hand
                 |> Seq.toArray
-        Strategy.getFromAdvantage
-            model hand deal legalPlays
+        Strategy.getFromAdvantage infoSet model legalPlays
 
 module Remoting =
 
@@ -39,16 +39,16 @@ module Remoting =
         let model = Model.connect dir
         model.eval()
         {
-            GetPlayIndex =
-                fun hand deal ->
+            GetActionIndex =
+                fun infoSet ->
                     async {
-                        let strategy = Model.getStrategy model hand deal
+                        let strategy = Model.getStrategy infoSet model
                         return Vector.sample rng strategy
                     }
             GetStrategy =
-                fun hand deal ->
+                fun infoSet ->
                     async {
-                        let strategy = Model.getStrategy model hand deal
+                        let strategy = Model.getStrategy infoSet model
                         return strategy.ToArray()
                             |> Array.map float
                     }

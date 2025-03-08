@@ -15,17 +15,17 @@ module Direct =
         let rec loop deal =
             seq {
                 let play, sampleOpt =
-                    let hand =
-                        let seat = OpenDeal.currentPlayer deal
-                        deal.UnplayedCardMap[seat]
+                    let infoSet = OpenDeal.currentInfoSet deal
                     let legalPlays =
-                        ClosedDeal.legalPlays hand deal.ClosedDeal
+                        ClosedDeal.legalPlays
+                            infoSet.Secret.Hand
+                            deal.ClosedDeal
                             |> Seq.toArray
                     if legalPlays.Length = 1 then
                         Array.exactlyOne legalPlays,
                         None
                     else
-                        let play = player.Play hand deal.ClosedDeal
+                        let play = player.Play infoSet
                         let regrets =
                             let strategy =
                                 [|
@@ -39,8 +39,7 @@ module Direct =
                                 |> DenseVector.ofArray
                                 |> Strategy.toWide legalPlays
                         play,
-                        AdvantageSample.create
-                            hand deal.ClosedDeal regrets 1
+                        AdvantageSample.create infoSet regrets 1
                             |> Some
 
                 match sampleOpt with

@@ -26,7 +26,8 @@ module Playout =
         }
 
     /// Logs hint information.
-    let private logHint hand deal (legalPlays : _[]) =
+    let private logHint (infoSet : InformationSet) deal (legalPlays : _[]) =
+        assert(infoSet.Deal = deal.ClosedDeal)
         async {
             match deal |> OpenDeal.tryFindInevitable with
 
@@ -36,8 +37,7 @@ module Playout =
                         console.log($"   {Seat.toString seat}: {points} point(s)")
 
                 | None when legalPlays.Length > 1 ->
-                    let! strategy =
-                        Remoting.getStrategy hand deal.ClosedDeal
+                    let! strategy = Remoting.getStrategy infoSet
                     let pairs =
                         Array.zip legalPlays strategy
                             |> Seq.sortByDescending snd
@@ -106,10 +106,11 @@ module Playout =
     let private playUser chooser (handView : HandView) context =
 
             // determine all legal plays
-        let hand = OpenDeal.currentHand context.Deal
+        let infoSet = OpenDeal.currentInfoSet context.Deal
         let legalPlays =
             context.Deal.ClosedDeal
-                |> ClosedDeal.legalPlays hand
+                |> ClosedDeal.legalPlays
+                    infoSet.Secret.Hand
                 |> Seq.toArray
         assert(legalPlays.Length > 0)
 
@@ -118,7 +119,7 @@ module Playout =
 
                 // prompt user to play
             chooser |> PlayChooser.display
-            logHint hand context.Deal legalPlays
+            logHint infoSet context.Deal legalPlays
 
                 // handle card clicks
             let legalPlaySet = set legalPlays

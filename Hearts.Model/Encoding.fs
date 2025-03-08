@@ -92,7 +92,7 @@ module Encoding =
                 byte score.ScoreMap[seat]
         |]
 
-    /// Total encoded length of an info set (hand + deal).
+    /// Total encoded length of an info set.
     let encodedLength =
         Card.numCards                                 // current player's hand
             + Card.numCards                           // other unplayed cards
@@ -100,18 +100,20 @@ module Encoding =
             + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
             + Seat.numSeats                           // score
 
-    /// Encodes the given info set (hand + deal) as a vector.
-    let encode (hand : Hand) deal : Encoding =
-        let unseen = deal.UnplayedCards - hand
-        let trick = ClosedDeal.currentTrick deal
-        let player = Trick.currentPlayer trick
+    /// Encodes the given info set as a vector.
+    let encode infoSet : Encoding =
+        let unseen =
+            infoSet.Deal.UnplayedCards - infoSet.Secret.Hand
+        let trickOpt = infoSet.Deal.CurrentTrickOpt
         let encoded =
             [|
-                yield! encodeCards hand                // current player's hand
-                yield! encodeCards unseen              // unplayed cards not in current player's hand
-                yield! encodeTrick trick               // current trick
-                yield! encodeVoids player deal.Voids   // voids
-                yield! encodeScore player deal.Score   // score
+                yield! encodeCards infoSet.Secret.Hand   // current player's hand
+                yield! encodeCards unseen                // unplayed cards not in current player's hand
+                yield! encodeTrick trickOpt.Value        // current trick
+                yield! encodeVoids                       // voids
+                    infoSet.Player infoSet.Deal.Voids
+                yield! encodeScore                       // score
+                    infoSet.Player infoSet.Deal.Score
             |]
         assert(encoded.Length = encodedLength)
         encoded

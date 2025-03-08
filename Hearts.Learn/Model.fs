@@ -27,12 +27,12 @@ type AdvantageSample =
 module AdvantageSample =
 
     /// Creates an advantage sample.
-    let create hand deal regrets iteration =
+    let create infoSet regrets iteration =
         assert(Vector.length regrets = Network.outputSize)
         assert(iteration > 0)
         assert(iteration <= settings.NumIterations)
         {
-            Encoding = Encoding.encode hand deal
+            Encoding = Encoding.encode infoSet
             Regrets = regrets
             Weight =
                 float32 iteration
