@@ -134,17 +134,19 @@ module Trainer =
     /// Creates a Hearts player using the given model.
     let createPlayer model =
 
-        let play infoSet =
-            let _, legalActions =
+        let act infoSet =
+            let actionType, legalActions =
                 InformationSet.legalActions infoSet
             let strategy =
                 Strategy.getFromAdvantage
                     infoSet model legalActions
-            lock settings.Random (fun () ->
-                Vector.sample settings.Random strategy)
-                |> Array.get legalActions
+            let action =
+                lock settings.Random (fun () ->
+                    Vector.sample settings.Random strategy)
+                    |> Array.get legalActions
+            actionType, action
 
-        { Play = play }
+        { Act = act }
 
     /// Evaluates the given model by playing it against a
     /// standard.

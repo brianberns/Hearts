@@ -5,8 +5,8 @@ open PlayingCards
 /// Interface for a Hearts player.
 type Player =
     {
-        /// Plays a card from the given hand on the given deal.
-        Play : InformationSet -> Card
+        /// Chooses an action in the given information set.
+        Act : InformationSet -> ActionType * Card
     }
 
 module Game =

@@ -22,12 +22,12 @@ module Direct =
                         Array.exactlyOne legalActions,
                         None
                     else
-                        let play = player.Play infoSet
+                        let _, action = player.Act infoSet
                         let regrets =
                             let strategy =
                                 [|
                                     for card in legalActions do
-                                        if card = play then 1.0f
+                                        if card = action then 1.0f
                                         else 0.0f
                                 |]
                             let mean = Array.average strategy
@@ -35,7 +35,7 @@ module Direct =
                                 |> Array.map (fun x -> x - mean)
                                 |> DenseVector.ofArray
                                 |> Strategy.toWide legalActions
-                        play,
+                        action,
                         AdvantageSample.create infoSet regrets 1
                             |> Some
 

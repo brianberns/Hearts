@@ -11,10 +11,8 @@ module Tournament =
         let rec loop deal score =
             let deal =
                 let infoSet = OpenDeal.currentInfoSet deal
-                let actionType =
-                    InformationSet.legalActionType infoSet
-                let action =
-                    playerMap[infoSet.Player].Play infoSet
+                let actionType, action =
+                    playerMap[infoSet.Player].Act infoSet
                 OpenDeal.addAction actionType action deal
             match Game.tryUpdateScore deal score with
                 | Some score -> score
@@ -78,83 +76,85 @@ module Trickster =
                 options,
                 Trickster.cloud.Suit.Unknown)
 
-        let play infoSet =
+        let act infoSet =
 
             let actionType, legalActions =
                 InformationSet.legalActions infoSet
-            if legalActions.Length = 1 then
-                Seq.head legalActions
-            else
+            let card =
+                if legalActions.Length = 1 then
+                    Seq.head legalActions
+                else
 
-                let hand = infoSet.Hand
-                let deal = infoSet.Deal
-                let players =
-                    [|
-                        let cardsTakenMap =
-                            deal
-                                |> ClosedDeal.tricks
-                                |> Seq.collect Trick.plays
-                                |> Seq.groupBy fst
-                                |> Seq.map (fun (seat, plays) ->
-                                    seat, Seq.map snd plays)
-                                |> Map
-                        for seat in Seat.cycle infoSet.Player do
-                            let hand =
-                                if seat = infoSet.Player then
-                                    toString hand
-                                else ""
-                            let cardsTaken =
-                                cardsTakenMap
-                                    |> Map.tryFind seat
-                                    |> Option.map toString
-                                    |> Option.defaultValue ""
-                            TestBots.TestPlayer(
-                                hand = hand,
-                                handScore = deal.Score[seat],
-                                cardsTaken = cardsTaken)
-                    |]
+                    let hand = infoSet.Hand
+                    let deal = infoSet.Deal
+                    let players =
+                        [|
+                            let cardsTakenMap =
+                                deal
+                                    |> ClosedDeal.tricks
+                                    |> Seq.collect Trick.plays
+                                    |> Seq.groupBy fst
+                                    |> Seq.map (fun (seat, plays) ->
+                                        seat, Seq.map snd plays)
+                                    |> Map
+                            for seat in Seat.cycle infoSet.Player do
+                                let hand =
+                                    if seat = infoSet.Player then
+                                        toString hand
+                                    else ""
+                                let cardsTaken =
+                                    cardsTakenMap
+                                        |> Map.tryFind seat
+                                        |> Option.map toString
+                                        |> Option.defaultValue ""
+                                TestBots.TestPlayer(
+                                    hand = hand,
+                                    handScore = deal.Score[seat],
+                                    cardsTaken = cardsTaken)
+                        |]
 
-                let trick =
-                    infoSet.Deal.CurrentTrickOpt
-                        |> Option.map (fun trick ->
-                            trick
-                                |> Trick.plays
-                                |> Seq.map snd
-                                |> toString)
-                        |> Option.defaultValue ""
+                    let trick =
+                        infoSet.Deal.CurrentTrickOpt
+                            |> Option.map (fun trick ->
+                                trick
+                                    |> Trick.plays
+                                    |> Seq.map snd
+                                    |> toString)
+                            |> Option.defaultValue ""
 
-                let notLegal =
-                    (hand, legalActions)
-                        ||> Seq.fold (fun hand card ->
-                            assert(hand.Contains(card))
-                            hand.Remove(card))
-                        |> toString
+                    let notLegal =
+                        (hand, legalActions)
+                            ||> Seq.fold (fun hand card ->
+                                assert(hand.Contains(card))
+                                hand.Remove(card))
+                            |> toString
 
-                let card =
-                    match actionType with
-                        | Pass ->
-                            let cardState =
-                                Trickster.cloud.SuggestPassState(
-                                    hand = Trickster.cloud.Hand(toString hand),
-                                    passCount = 1)
-                            bot.SuggestPass(cardState)
-                                |> Seq.exactlyOne
-                        | Play ->
-                            let cardState =
-                                TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
-                                    bot,
-                                    players,
-                                    trick,
-                                    notLegal)
-                            bot.SuggestNextCard(cardState)
-                let rank = enum<Rank>(int card.rank)
-                let suit =
-                    match card.suit with
-                        | Trickster.cloud.Suit.Clubs -> Suit.Clubs
-                        | Trickster.cloud.Suit.Diamonds -> Suit.Diamonds
-                        | Trickster.cloud.Suit.Hearts -> Suit.Hearts
-                        | Trickster.cloud.Suit.Spades -> Suit.Spades
-                        | _ -> failwith "Unexpected"
-                Card(rank, suit)
+                    let card =
+                        match actionType with
+                            | Pass ->
+                                let cardState =
+                                    Trickster.cloud.SuggestPassState(
+                                        hand = Trickster.cloud.Hand(toString hand),
+                                        passCount = 1)
+                                bot.SuggestPass(cardState)
+                                    |> Seq.exactlyOne
+                            | Play ->
+                                let cardState =
+                                    TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
+                                        bot,
+                                        players,
+                                        trick,
+                                        notLegal)
+                                bot.SuggestNextCard(cardState)
+                    let rank = enum<Rank>(int card.rank)
+                    let suit =
+                        match card.suit with
+                            | Trickster.cloud.Suit.Clubs -> Suit.Clubs
+                            | Trickster.cloud.Suit.Diamonds -> Suit.Diamonds
+                            | Trickster.cloud.Suit.Hearts -> Suit.Hearts
+                            | Trickster.cloud.Suit.Spades -> Suit.Spades
+                            | _ -> failwith "Unexpected"
+                    Card(rank, suit)
+            actionType, card
 
-        { Play = play }
+        { Act = act }
