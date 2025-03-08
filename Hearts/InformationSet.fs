@@ -75,3 +75,10 @@ module InformationSet =
                         infoSet.Hand infoSet.Deal
                         |> Seq.toArray
         actionType, actions
+
+/// Interface for a Hearts player.
+type Player =
+    {
+        /// Chooses an action in the given information set.
+        Act : InformationSet -> ActionType * Card
+    }

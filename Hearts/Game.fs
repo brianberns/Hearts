@@ -2,13 +2,6 @@
 
 open PlayingCards
 
-/// Interface for a Hearts player.
-type Player =
-    {
-        /// Chooses an action in the given information set.
-        Act : InformationSet -> ActionType * Card
-    }
-
 module Game =
 
     /// Answers the seat of the player who shot the moon, if
