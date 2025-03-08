@@ -2,6 +2,7 @@
 
 open MathNet.Numerics.LinearAlgebra
 
+open PlayingCards
 open Hearts
 open Hearts.Model
 
@@ -34,8 +35,14 @@ module Traverse =
     let private append items item =
         [| yield! items; yield item |]
 
+    /// Function to get strategy for a given info set.
+    type GetStrategy =
+        InformationSet
+            -> Card[]            // legal actions
+            -> Vector<float32>   // per-action strategy
+
     /// Evaluates the utility of the given deal.
-    let traverse iter deal (getStrategy : InformationSet -> PlayingCards.Card[] -> Vector<_>) =
+    let traverse iter deal (getStrategy : GetStrategy) =
 
         /// Top-level loop.
         let rec loop deal depth =
@@ -54,9 +61,7 @@ module Traverse =
                 addLoop deal depth actionType legalActions[0]   // forced action
             else
                     // get utility of current player's strategy
-                let player = OpenDeal.currentPlayer deal
-                let strategy : Vector<float32> =
-                    getStrategy infoSet legalActions
+                let strategy = getStrategy infoSet legalActions
                 let rnd =
                     lock settings.Random (fun () ->
                         settings.Random.NextDouble())
