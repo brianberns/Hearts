@@ -77,7 +77,7 @@ module Traverse =
         /// Adds the given action to the given deal and loops.
         and addLoop deal depth actionType action =
             let deal = OpenDeal.addAction actionType action deal
-            loop deal (depth + 1)
+            loop deal depth
 
         /// Gets the full utility of the given info set.
         and getFullUtility infoSet deal depth actionType legalActions strategy =
@@ -86,7 +86,7 @@ module Traverse =
             let actionUtilities, samples =
                 let utilityArrays, sampleArrays =
                     legalActions
-                        |> Array.map (addLoop deal depth actionType)
+                        |> Array.map (addLoop deal (depth+1) actionType)
                         |> Array.unzip
                 DenseMatrix.ofColumnArrays utilityArrays,
                 Array.concat sampleArrays
@@ -111,6 +111,6 @@ module Traverse =
             lock settings.Random (fun () ->
                 Vector.sample settings.Random strategy)
                 |> Array.get legalActions
-                |> addLoop deal depth actionType
+                |> addLoop deal (depth+1) actionType
 
         loop deal 0 |> snd
