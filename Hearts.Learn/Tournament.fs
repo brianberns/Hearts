@@ -55,9 +55,9 @@ module Tournament =
 
 module Trickster =
 
-    // open Trickster.Bots
-    // open Trickster.cloud
-    // open TestBots
+    open Trickster
+    open Trickster.Bots
+    open TestBots
 
     let private toString cards =
         cards
@@ -70,11 +70,11 @@ module Trickster =
 
         let bot =
             let options =
-                Trickster.cloud.HeartsOptions(
-                    passing = Trickster.cloud.HeartsPassing.LeftRightAcrossKeep)
-            Trickster.Bots.HeartsBot(
+                cloud.HeartsOptions(
+                    passing = cloud.HeartsPassing.LeftRightAcrossKeep)
+            HeartsBot(
                 options,
-                Trickster.cloud.Suit.Unknown)
+                cloud.Suit.Unknown)
 
         let act infoSet =
 
@@ -107,7 +107,7 @@ module Trickster =
                                         |> Map.tryFind seat
                                         |> Option.map toString
                                         |> Option.defaultValue ""
-                                TestBots.TestPlayer(
+                                TestPlayer(
                                     hand = hand,
                                     handScore = deal.Score[seat],
                                     cardsTaken = cardsTaken)
@@ -133,14 +133,14 @@ module Trickster =
                         match actionType with
                             | ActionType.Pass ->
                                 let cardState =
-                                    Trickster.cloud.SuggestPassState(
-                                        hand = Trickster.cloud.Hand(toString hand),
+                                    cloud.SuggestPassState(
+                                        hand = cloud.Hand(toString hand),
                                         passCount = 1)
                                 bot.SuggestPass(cardState)
                                     |> Seq.exactlyOne
                             | ActionType.Play ->
                                 let cardState =
-                                    TestBots.TestCardState<Trickster.cloud.HeartsOptions>(
+                                    TestCardState(
                                         bot,
                                         players,
                                         trick,
@@ -149,10 +149,10 @@ module Trickster =
                     let rank = enum<Rank>(int card.rank)
                     let suit =
                         match card.suit with
-                            | Trickster.cloud.Suit.Clubs -> Suit.Clubs
-                            | Trickster.cloud.Suit.Diamonds -> Suit.Diamonds
-                            | Trickster.cloud.Suit.Hearts -> Suit.Hearts
-                            | Trickster.cloud.Suit.Spades -> Suit.Spades
+                            | cloud.Suit.Clubs -> Suit.Clubs
+                            | cloud.Suit.Diamonds -> Suit.Diamonds
+                            | cloud.Suit.Hearts -> Suit.Hearts
+                            | cloud.Suit.Spades -> Suit.Spades
                             | _ -> failwith "Unexpected"
                     Card(rank, suit)
             actionType, card
