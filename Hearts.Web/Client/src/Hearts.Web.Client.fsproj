@@ -19,8 +19,8 @@
     <Compile Include="..\..\..\Hearts\Trick.fs" />
     <Compile Include="..\..\..\Hearts\Score.fs" />
     <Compile Include="..\..\..\Hearts\ClosedDeal.fs" />
-    <Compile Include="..\..\..\Hearts\Exchange.fs" />
     <Compile Include="..\..\..\Hearts\InformationSet.fs" />
+    <Compile Include="..\..\..\Hearts\Exchange.fs" />
     <Compile Include="..\..\..\Hearts\OpenDeal.fs" />
     <Compile Include="..\..\..\Hearts\Game.fs" />
     <Compile Include="..\..\Shared\SharedTypes.fs" />

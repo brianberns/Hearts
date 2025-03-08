@@ -5,7 +5,30 @@ open Hearts
 
 /// An action is either a pass (during the exchange) or
 /// a play (after the exchange).
+[<RequireQualifiedAccess>]
 type ActionType = Pass | Play
+
+/// Cards passed from one player to another.
+type Pass = Set<Card>
+
+module Pass =
+
+    /// Number of cards passed by each player.
+    let numCards = 3
+
+    /// Empty pass to which cards will be added.
+    let empty : Pass = Set.empty
+
+    /// Is the given pass ready to be delivered?
+    let isComplete (pass : Pass) =
+        assert(pass.Count <= numCards)
+        pass.Count = numCards
+
+    /// Adds the given card to the given pass.
+    let add card (pass : Pass) : Pass =
+        assert(pass.Count < numCards)
+        assert(pass.Contains(card) |> not)
+        pass.Add(card)
 
 /// All information known to a player about a deal,
 /// including information known only by that player.
@@ -47,8 +70,9 @@ module InformationSet =
     /// What action type can be taken in the given information set?
     let legalActionType infoSet =
         match infoSet.OutgoingPassOpt with
-            | Some pass when pass.Count < Pass.numCards -> Pass
-            | _ -> Play
+            | Some pass when pass.Count < Pass.numCards ->
+                ActionType.Pass
+            | _ -> ActionType.Play
 
     /// What actions can be taken in the given information set?
     let legalActions infoSet =
