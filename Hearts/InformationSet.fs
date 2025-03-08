@@ -44,23 +44,32 @@ module InformationSet =
             Deal = deal
         }
 
+    /// What action type can be taken in the given information set?
+    let legalActionType infoSet =
+        match infoSet.OutgoingPassOpt with
+            | Some pass when pass.Count < Pass.numCards -> Pass
+            | _ -> Play
+
     /// What actions can be taken in the given information set?
     let legalActions infoSet =
-        match infoSet.OutgoingPassOpt with
-            | Some pass when pass.Count < Pass.numCards ->
-                assert(
-                    infoSet.Deal.ExchangeDirection
-                        <> ExchangeDirection.Hold)
-                Pass, Seq.toArray infoSet.Hand   // pass any card in hand
-            | _ ->
-                assert(
-                    infoSet.Deal.ExchangeDirection
-                        = ExchangeDirection.Hold
-                    || (infoSet.OutgoingPassOpt.Value.Count
-                            = Pass.numCards
-                        && infoSet.IncomingPassOpt.Value.Count
-                            = Pass.numCards))
-                let legalPlays =
-                    ClosedDeal.legalPlays
-                        infoSet.Hand infoSet.Deal
-                Play, Seq.toArray legalPlays
+        let actionType = legalActionType infoSet
+        let actions =
+            match actionType with
+                | Pass ->
+                    assert(
+                        infoSet.Deal.ExchangeDirection
+                            <> ExchangeDirection.Hold)
+                    Seq.toArray infoSet.Hand   // pass any card in hand
+                | Play ->
+                    assert(
+                        infoSet.Deal.ExchangeDirection
+                            = ExchangeDirection.Hold
+                        || (infoSet.OutgoingPassOpt.Value.Count
+                                = Pass.numCards
+                            && infoSet.IncomingPassOpt.Value.Count
+                                = Pass.numCards))
+                    let legalPlays =
+                        ClosedDeal.legalPlays
+                            infoSet.Hand infoSet.Deal
+                    Seq.toArray legalPlays
+        actionType, actions
