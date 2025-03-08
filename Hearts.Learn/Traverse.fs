@@ -79,7 +79,7 @@ module Traverse =
             let deal = OpenDeal.addAction actionType action deal
             loop deal (depth + 1)
 
-        /// Gets the full utility of the given info set (hand + deal).
+        /// Gets the full utility of the given info set.
         and getFullUtility infoSet deal depth actionType legalActions strategy =
 
                 // get utility of each action
@@ -105,8 +105,8 @@ module Traverse =
                     |> append samples
             utility.ToArray(), samples
 
-        /// Gets the utility of the given info set (hand + deal)
-        /// by sampling a single action.
+        /// Gets the utility of the given info set by
+        /// sampling a single action.
         and getOneUtility deal depth actionType legalActions strategy =
             lock settings.Random (fun () ->
                 Vector.sample settings.Random strategy)

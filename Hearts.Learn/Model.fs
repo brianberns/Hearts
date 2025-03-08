@@ -13,7 +13,7 @@ open Hearts.Model
 /// An observed advantage event.
 type AdvantageSample =
     {
-        /// Encoded info set (hand + deal).
+        /// Encoded info set.
         Encoding : Encoding
 
         /// Observed regrets.
