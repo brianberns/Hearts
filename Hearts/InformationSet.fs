@@ -47,17 +47,19 @@ module InformationSet =
     /// What actions can be taken in the given information set?
     let legalActions infoSet =
         match infoSet.OutgoingPassOpt with
-            | Some pass ->
+            | Some pass when pass.Count < Pass.numCards ->
                 assert(
                     infoSet.Deal.ExchangeDirection
                         <> ExchangeDirection.Hold)
                 Pass, Seq.toArray infoSet.Hand   // pass any card in hand
-            | None ->
+            | _ ->
                 assert(
                     infoSet.Deal.ExchangeDirection
                         = ExchangeDirection.Hold
-                    || (infoSet.OutgoingPassOpt.Value.Count = Pass.numCards
-                        && infoSet.IncomingPassOpt.Value.Count = Pass.numCards))
+                    || (infoSet.OutgoingPassOpt.Value.Count
+                            = Pass.numCards
+                        && infoSet.IncomingPassOpt.Value.Count
+                            = Pass.numCards))
                 let legalPlays =
                     ClosedDeal.legalPlays
                         infoSet.Hand infoSet.Deal

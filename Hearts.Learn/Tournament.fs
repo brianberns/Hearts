@@ -88,8 +88,6 @@ module Trickster =
                 let deal = infoSet.Deal
                 let players =
                     [|
-                        let curPlayer =
-                            ClosedDeal.currentPlayer deal
                         let cardsTakenMap =
                             deal
                                 |> ClosedDeal.tricks
@@ -98,9 +96,9 @@ module Trickster =
                                 |> Seq.map (fun (seat, plays) ->
                                     seat, Seq.map snd plays)
                                 |> Map
-                        for seat in Seat.cycle curPlayer do
+                        for seat in Seat.cycle infoSet.Player do
                             let hand =
-                                if seat = curPlayer then
+                                if seat = infoSet.Player then
                                     toString hand
                                 else ""
                             let cardsTaken =
