@@ -40,13 +40,12 @@ module OpenDeal =
                 playFun deal)
 
     /// What actions can be taken in the given deal?
-    let legalActions hand deal =
-        assert(hand = OpenDeal.currentHand deal)   // performance optimization: avoid calling twice
-        match deal.ExchangeOpt with
+    let legalActions hand deal exchangeOpt =
+        match exchangeOpt with
             | Some exchange
                 when not (Exchange.isComplete exchange) ->
                 assert(
-                    deal.ClosedDeal.ExchangeDirection
+                    deal.ExchangeDirection
                         <> ExchangeDirection.Hold)
                 assert(
                     let pass =
@@ -57,7 +56,7 @@ module OpenDeal =
                 Pass, Seq.toArray hand
             | _ ->
                 let legalPlays =
-                    ClosedDeal.legalPlays hand deal.ClosedDeal
+                    ClosedDeal.legalPlays hand deal
                 Play, Seq.toArray legalPlays
 
     /// Takes the given action in the given deal.
