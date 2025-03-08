@@ -92,7 +92,10 @@ module Trainer =
 
             // train new model
         let stopwatch = Stopwatch.StartNew()
-        let model = new AdvantageModel(settings.Device)
+        let model =
+            new AdvantageModel(
+                settings.HiddenSize,
+                settings.Device)
         AdvantageModel.train iter resv.Items model
         stopwatch.Stop()
         if settings.Verbose then
@@ -176,7 +179,6 @@ module Trainer =
 
         if settings.Verbose then
             printfn $"Model input size: {Network.inputSize}"
-            printfn $"Model hidden size: {Network.hiddenSize}"
             printfn $"Model output size: {Network.outputSize}"
 
             // run the iterations

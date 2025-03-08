@@ -15,9 +15,6 @@ module Network =
     /// Size of neural network input.
     let inputSize = Encoding.encodedLength
 
-    /// Size of a neural network hidden layer.
-    let hiddenSize = Encoding.encodedLength * 4
-
     /// Size of neural network output.
     let outputSize = Card.numCards
 
@@ -31,7 +28,9 @@ type SkipConnection(inner : Network) as this =
         x + input
 
 /// Model used for learning advantages.
-type AdvantageModel(device : torch.Device) as this =
+type AdvantageModel(
+    hiddenSize : int,
+    device : torch.Device) as this =
     inherit Network("AdvantageModel")
 
     let mutable curDevice = device
@@ -43,7 +42,7 @@ type AdvantageModel(device : torch.Device) as this =
 
             Linear(
                 Network.inputSize,
-                Network.hiddenSize,
+                hiddenSize,
                 device = device),
             ReLU(),
             Dropout(),
@@ -51,14 +50,14 @@ type AdvantageModel(device : torch.Device) as this =
             SkipConnection(
                 Sequential(
                     Linear(
-                        Network.hiddenSize,
-                        Network.hiddenSize,
+                        hiddenSize,
+                        hiddenSize,
                         device = device),
                     ReLU(),
                     Dropout())),
 
             Linear(
-                Network.hiddenSize,
+                hiddenSize,
                 Network.outputSize,
                 device = device))
 

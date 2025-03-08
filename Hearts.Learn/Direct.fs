@@ -66,7 +66,10 @@ module Direct =
         printfn $"Number of samples: {samples.Length}"
 
             // train model
-        let model = new AdvantageModel(settings.Device)
+        let model =
+            new AdvantageModel(
+                settings.HiddenSize,
+                settings.Device)
         AdvantageModel.train 0 samples model
 
             // save trained model

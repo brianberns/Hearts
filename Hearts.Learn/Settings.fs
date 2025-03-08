@@ -2,12 +2,16 @@
 
 open System
 open TorchSharp
+open Hearts.Model
 
 /// Hyperparameters.
 type Settings =
     {
         /// Random number generator.
         Random : Random
+
+        /// Size of a neural network hidden layer.
+        HiddenSize : int
 
         /// Optimizer learning rate.
         LearningRate : float
@@ -74,6 +78,7 @@ module Settings =
         let settings =
             {
                 Random = Random(seed)
+                HiddenSize = Encoding.encodedLength * 2
                 LearningRate = 2e-3
                 SampleDecay = 0.23
                 NumAdvantageTrainEpochs = 500
@@ -93,7 +98,7 @@ module Settings =
 
         writer.add_text(
             $"settings/HiddenSize",
-            string Hearts.Model.Network.hiddenSize, 0)
+            string settings.HiddenSize, 0)
         writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
