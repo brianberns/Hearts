@@ -67,7 +67,7 @@ module Encoding =
         |]
 
     /// Encodes the given voids as a multi-hot vector in the
-    /// number of suits times the number of seats.
+    /// number of suits times the number of other seats.
     let private encodeVoids player voids =
         [|
             for suit in Enum.getValues<Suit> do
