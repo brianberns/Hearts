@@ -3,15 +3,22 @@
 open PlayingCards
 open Hearts
 
+/// Information known only to a player about her own hand.
 type Secret =
     {
+        /// Player's hand.
         Hand : Hand
+
+        /// Cards passed by the player, if any.
         OutgoingPassOpt : Option<Pass>
+
+        /// Cards received by the player, if any.
         IncomingPassOpt : Option<Pass>
     }
 
 module Secret =
 
+    /// Creates a secret.
     let create hand outgoingPassOpt incomingPassOpt =
         assert(Option.isNone incomingPassOpt
             || Option.isSome outgoingPassOpt)
@@ -21,10 +28,16 @@ module Secret =
             IncomingPassOpt = incomingPassOpt
         }
 
+/// All information known to a player about a deal.
 type InformationSet =
     {
+        /// Player.
         Player : Seat
+
+        /// Player's secret information.
         Secret : Secret
+
+        /// Public information.
         Deal : ClosedDeal
     }
 
