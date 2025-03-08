@@ -37,9 +37,10 @@ module ExchangeDirection =
                 | _ -> failwith "Unexpected"
         seat |> Seat.incr n
 
-/// A deal is a round of play within a game. A closed deal contains
-/// no information about how unplayed cards are distributed among
-/// the players. Cards played during a deal are grouped into tricks.
+/// A deal is a round of play within a game. A closed deal is the
+/// "public" view of a deal, so it contains no information about
+/// how unplayed cards are distributed among the players, and no
+/// information about the exchange (other than its direction).
 type ClosedDeal =
     {
         /// Player who dealt this deal.
@@ -123,7 +124,9 @@ module ClosedDeal =
             | Some trick -> trick
             | None -> failwith "No current trick"
 
-    /// Current player in the given deal.
+    /// Current player in the given deal, once the exchange
+    /// has completed. (There is no current player during the
+    /// exchange from the public point of view.)
     let currentPlayer deal =
         deal
             |> currentTrick
