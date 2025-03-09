@@ -56,6 +56,12 @@ module OpenDeal =
             |> Map
             |> fromHands dealer dir
 
+    /// Gets the exchange in the given deal.
+    let getExchange deal =
+        match deal.ExchangeOpt with
+            | Some exchange -> exchange
+            | None -> failwith "No exchange"
+
     /// Passes the given card in the given deal.
     let addPass card deal =
         assert(
@@ -64,28 +70,24 @@ module OpenDeal =
             deal.ClosedDeal.ExchangeDirection
                 <> ExchangeDirection.Hold)
 
-        match deal.ExchangeOpt with
-            | Some exchange ->
+            // remove outgoing card from passer's hand
+        let exchange = getExchange deal
+        let cardMap =
+            let passer = Exchange.currentPasser exchange
+            let cardMap = deal.UnplayedCardMap
+            let unplayedCards =
+                assert(cardMap[passer].Contains(card))
+                cardMap[passer] |> Set.remove card
+            cardMap |> Map.add passer unplayedCards
 
-                    // remove outgoing card from passer's hand
-                let cardMap =
-                    let passer = Exchange.currentPasser exchange
-                    let cardMap = deal.UnplayedCardMap
-                    let unplayedCards =
-                        assert(cardMap[passer].Contains(card))
-                        cardMap[passer] |> Set.remove card
-                    cardMap |> Map.add passer unplayedCards
-
-                {
-                    deal with
-                        ExchangeOpt =
-                            exchange
-                                |> Exchange.addPass card
-                                |> Some
-                        UnplayedCardMap = cardMap
-                }
-
-            | None -> failwith "Unexpected"
+        {
+            deal with
+                ExchangeOpt =
+                    exchange
+                        |> Exchange.addPass card
+                        |> Some
+                UnplayedCardMap = cardMap
+        }
 
     /// Receives cards from the given passer in the given deal.
     let private receivePass passer (cards : Pass) deal =

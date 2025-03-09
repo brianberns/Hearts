@@ -24,8 +24,7 @@ module Exchange =
 
     /// Logs hint information.
     let private logHint
-        (infoSet : InformationSet) deal (legalActions : _[]) =
-        assert(infoSet.Deal = deal.ClosedDeal)
+        (infoSet : InformationSet) (legalActions : _[]) =
         assert(InformationSet.legalActions infoSet |> snd
             = legalActions)
         async {
@@ -45,8 +44,7 @@ module Exchange =
         promise {
 
                 // write to log
-            let seat =
-                context.Deal.ClosedDeal |> ClosedDeal.currentPlayer
+            let seat = OpenDeal.currentPlayer context.Deal
             console.log($"{Seat.toString seat} passes {card}")
 
                 // add the card to the deal
@@ -58,7 +56,7 @@ module Exchange =
             DealView.displayStatus deal
 
                 // exchange is complete?
-            /// let exchangeComplete = ClosedDeal.isComplete deal.ClosedDeal
+            // let exchangeComplete = Exchange.isComplete deal.ExchangeOpt
 
             return deal
         }
@@ -77,7 +75,7 @@ module Exchange =
 
                 // prompt user to pass
             chooser |> PassChooser.display
-            logHint infoSet context.Deal legalActions
+            logHint infoSet legalActions
 
                 // handle card clicks
             let legalActionSet = set legalActions
@@ -134,7 +132,7 @@ module Exchange =
                     return persState
                 else
                         // prepare current passer
-                    let seat = ClosedDeal.currentPlayer deal.ClosedDeal
+                    let seat = OpenDeal.currentPlayer deal
                     let (handView : HandView),
                         animCardPass =
                             exchangeMap[seat]

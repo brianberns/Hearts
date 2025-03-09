@@ -168,14 +168,17 @@ type PassChooser =
 
 module PassChooser =
 
+    open Hearts
+
     /// Creates a chooser.
     let create dir =
 
             // create an element to prompt the user
         let div =
             let sDir =
-                (Hearts.ExchangeDirection.toString dir)
+                (ExchangeDirection.toString dir)
                     .ToLower()
+            assert(Pass.numCards = 3)
             ~~HTMLDivElement.Create(innerText = $"Pass three cards {sDir}")
         div.addClass("play-chooser")
 
