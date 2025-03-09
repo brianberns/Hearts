@@ -14,6 +14,7 @@
     <Compile Include="OpenDeal.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Tournament.fs" />
+    <Compile Include="Trickster.fs" />
     <Compile Include="Trainer.fs" />
     <Compile Include="Direct.fs" />
     <Compile Include="Program.fs" />
