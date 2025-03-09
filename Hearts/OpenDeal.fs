@@ -119,9 +119,10 @@ module OpenDeal =
             deal.ClosedDeal
                 |> ClosedDeal.numCardsPlayed = 0)
         assert(
-            (deal.ClosedDeal.ExchangeDirection
-                = ExchangeDirection.Hold)
-                = deal.ExchangeOpt.IsNone)
+            match deal.ClosedDeal.ExchangeDirection, deal.ExchangeOpt with
+                | ExchangeDirection.Hold, None -> true
+                | _, Some exchange -> Exchange.isComplete exchange
+                | _, None -> false)
 
             // receive passed cards?
         let deal =
