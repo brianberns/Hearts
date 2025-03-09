@@ -35,6 +35,7 @@
     <Compile Include="HandView.fs" />
     <Compile Include="DealView.fs" />
     <Compile Include="PersistentState.fs" />
+    <Compile Include="Exchange.fs" />
     <Compile Include="Playout.fs" />
     <Compile Include="Deal.fs" />
     <Compile Include="App.fs" />

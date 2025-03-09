@@ -148,7 +148,7 @@ module Playout =
     let private playAuto context =
         async {
                 // determine card to play
-            let! card = WebPlayer.makePlay context.Deal
+            let! card = WebPlayer.takeAction context.Deal
 
                 // create view of the selected card
             let! cardView =

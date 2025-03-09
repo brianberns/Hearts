@@ -10,6 +10,44 @@ open Hearts.Web.Client   // ugly - force AutoOpen
 
 module Deal =
 
+    /// Runs the exchange of the given deal.
+    let private exchange
+        dir
+        (surface : JQueryElement)
+        persState
+        handViews =
+
+            // create pass chooser
+        let chooser = PassChooser.create dir
+        surface.append(chooser.Element)
+
+            // get animations for each seat
+        let exchangeMap =
+            handViews
+                |> Seq.map (fun (seat : Seat, handView) ->
+
+                    let animCardPass = fun _ -> Animation.Sleep 1000
+                    (*
+                        let anim =
+                            if seat.IsUser then OpenHandView.playAnim
+                            else ClosedHandView.playAnim
+                        anim seat handView
+                    *)
+
+                    let tuple =
+                        handView,
+                        animCardPass
+
+                    seat, tuple)
+                |> Map
+
+            // run the exchange
+        async {
+            let! persState' = Exchange.run persState chooser exchangeMap
+            chooser.Element.remove()
+            return persState'
+        }
+
     /// Runs the playout of the given deal.
     let private playout
         (surface : JQueryElement)
@@ -174,6 +212,14 @@ module Deal =
             let! seatViews =
                 DealView.start surface dealer deal
                     |> Async.AwaitPromise
+
+                // run the exchange?
+            let! persState =
+                let dir = deal.ClosedDeal.ExchangeDirection
+                if dir <> ExchangeDirection.Hold then
+                    exchange dir surface persState seatViews
+                else
+                    async.Return(persState)
 
                 // run the playout
             let! persState = playout surface persState seatViews

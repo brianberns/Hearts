@@ -84,31 +84,29 @@ module ClosedHandView =
         assert(cardViews |> Seq.forall CardView.isBack)
         ResizeArray(cardViews)
 
-    /// Answers a function that can be called to animate the playing
-    /// of a card from the given closed hand view.
-    let playAnim seat (handView : HandView) =
-        fun (cardView : CardView) ->
+    /// Animates the playing of a card from a closed hand view.
+    let playAnim seat (handView : HandView) (cardView : CardView) =
 
-                // remove arbitrary card from hand
-            let back = handView |> Seq.last
-            assert(back |> CardView.isBack)
-            let flag = handView.Remove(back)
-            assert(flag)
+            // remove arbitrary card from hand
+        let back = handView |> Seq.last
+        assert(back |> CardView.isBack)
+        let flag = handView.Remove(back)
+        assert(flag)
 
-                // animate card being played
-            Animation.Serial [|
+            // animate card being played
+        Animation.Serial [|
 
-                    // bring card to front
-                BringToFront
-                    |> Animation.create back
+                // bring card to front
+            BringToFront
+                |> Animation.create back
 
-                    // reveal card
-                ReplaceWith cardView
-                    |> Animation.create back
+                // reveal card
+            ReplaceWith cardView
+                |> Animation.create back
 
-                    // slide revealed card to center
-                TrickView.playAnim seat cardView
-            |]
+                // slide revealed card to center
+            TrickView.playAnim seat cardView
+        |]
 
 module OpenHandView =
 
@@ -137,28 +135,26 @@ module OpenHandView =
             |> Seq.toArray
             |> Animation.Parallel
 
-    /// Answers a function that can be called to animate the playing
-    /// of a card from the given open hand view.
-    let playAnim seat (handView : HandView) =
-        fun (cardView : CardView) ->
+    /// Animates the playing of a card from the an open hand view.
+    let playAnim seat (handView : HandView) (cardView : CardView) =
 
-                // remove selected card from hand
-            let flag = handView.Remove(cardView)
-            assert(flag)
+            // remove selected card from hand
+        let flag = handView.Remove(cardView)
+        assert(flag)
 
-                // animate card being played
-            let animPlay =
-                [|
-                    BringToFront                       // bring card to front
-                        |> Animation.create cardView
-                    TrickView.playAnim seat cardView   // slide revealed card to center
-                |] |> Animation.Serial
-
-                // animate adjustment of remaining cards to fill gap
-            let animAdjust = HandView.adjustAnim seat handView
-
-                // animate in parallel
+            // animate card being played
+        let animPlay =
             [|
-                animPlay
-                animAdjust
-            |] |> Animation.Parallel
+                BringToFront                       // bring card to front
+                    |> Animation.create cardView
+                TrickView.playAnim seat cardView   // slide revealed card to center
+            |] |> Animation.Serial
+
+            // animate adjustment of remaining cards to fill gap
+        let animAdjust = HandView.adjustAnim seat handView
+
+            // animate in parallel
+        [|
+            animPlay
+            animAdjust
+        |] |> Animation.Parallel

@@ -40,8 +40,8 @@ module WebPlayer =
 
     open Hearts
 
-    /// Plays a card in the given deal.
-    let makePlay deal =
+    /// Takes an action in the given deal.
+    let takeAction deal =
 
             // get legal plays in this situation
         let infoSet = OpenDeal.currentInfoSet deal

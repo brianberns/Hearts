@@ -159,6 +159,36 @@ module CardView =
         cardView.attr("data-card")
             |> Card.fromString
 
+/// Widget that prompts the user to choose a legal pass.
+type PassChooser =
+    {
+        /// Underlying HTML element.
+        Element : JQueryElement
+    }
+
+module PassChooser =
+
+    /// Creates a chooser.
+    let create dir =
+
+            // create an element to prompt the user
+        let div =
+            let sDir =
+                (Hearts.ExchangeDirection.toString dir)
+                    .ToLower()
+            ~~HTMLDivElement.Create(innerText = $"Pass three cards {sDir}")
+        div.addClass("play-chooser")
+
+        { Element = div }
+
+    /// Makes the given chooser visible.
+    let display chooser =
+        chooser.Element.css {| display = "block" |}
+
+    /// Makes the given chooser invisible.
+    let hide chooser =
+        chooser.Element.css {| display = "none" |}
+
 /// Widget that prompts the user to choose a legal play.
 type PlayChooser =
     {
