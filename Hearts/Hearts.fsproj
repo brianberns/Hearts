@@ -9,6 +9,7 @@
     <Compile Include="Seat.fs" />
     <Compile Include="Trick.fs" />
     <Compile Include="Score.fs" />
+    <Compile Include="ExchangeDirection.fs" />
     <Compile Include="ClosedDeal.fs" />
     <Compile Include="Pass.fs" />
     <Compile Include="InformationSet.fs" />
