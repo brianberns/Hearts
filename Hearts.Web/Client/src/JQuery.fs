@@ -165,6 +165,20 @@ module JQueryElement =
         let zIndex = zIndexIncr ()
         setZIndex zIndex elem
 
+    /// Gets the position of the given element.
+    // https://stackoverflow.com/a/18297116/344223
+    let getPosition (elem : JQueryElement) =
+        let style = elem.get().[0].style
+        let parse (str : string) =
+            assert(str.EndsWith('%'))
+            str[0 .. str.Length-2]
+                |> System.Double.Parse
+                |> Percent
+        {
+            left = parse style.left
+            top = parse style.top
+        }
+
     /// Sets the position of the given element.
     let setPosition (pos : Position) (elem : JQueryElement) =
         elem.css pos
@@ -180,13 +194,9 @@ module JQueryElement =
         replacementElem
             |> setZIndex (getZIndex elem)
 
-            // use same position (https://stackoverflow.com/a/18297116/344223)
-        let style = elem.get().[0].style
-        replacementElem.css
-            {|
-                left = style.left
-                top = style.top
-            |}
+            // use same position
+        getPosition elem
+            |> replacementElem.css
 
             // switch elements
         let parent = elem.parent()

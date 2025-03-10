@@ -135,7 +135,7 @@ module OpenHandView =
             |> Seq.toArray
             |> Animation.Parallel
 
-    /// Animates the playing of a card from the an open hand view.
+    /// Animates the playing of a card from an open hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
 
             // remove selected card from hand

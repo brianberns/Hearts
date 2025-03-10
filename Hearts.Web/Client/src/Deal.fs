@@ -29,7 +29,11 @@ module Deal =
                     let animCardPass : CardView -> Animation =
                         if seat.IsUser then
                             fun (cardView : CardView) ->
-                                Animation.Sleep 1000
+                                let pos = JQueryElement.getPosition cardView
+                                let (Percent top) = pos.top
+                                let pos = { pos with top = Percent (top - 2.0) }
+                                AnimationAction.moveTo pos
+                                    |> Animation.create cardView
                         else
                             fun (cardView : CardView) ->
                                 let back =
