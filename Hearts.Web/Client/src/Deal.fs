@@ -24,15 +24,20 @@ module Deal =
             // get animations for each seat
         let exchangeMap =
             handViews
-                |> Seq.map (fun (seat : Seat, handView) ->
+                |> Seq.map (fun (seat : Seat, handView : HandView) ->
 
-                    let animCardPass = fun _ -> Animation.Sleep 1000
-                    (*
-                        let anim =
-                            if seat.IsUser then OpenHandView.playAnim
-                            else ClosedHandView.playAnim
-                        anim seat handView
-                    *)
+                    let animCardPass : CardView -> Animation =
+                        if seat.IsUser then
+                            fun (cardView : CardView) ->
+                                Animation.Sleep 1000
+                        else
+                            fun (cardView : CardView) ->
+                                let back =
+                                    handView
+                                        |> Seq.findBack CardView.isBack
+                                let flag = handView.Remove(back)
+                                assert(flag)
+                                Animation.create back (ReplaceWith cardView)
 
                     let tuple =
                         handView,

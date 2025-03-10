@@ -32,7 +32,7 @@ module Exchange =
             let pairs =
                 Array.zip legalActions strategy
                     |> Seq.sortByDescending snd
-            console.log("Hint:")
+            console.log("Pass hint:")
             for (card : Card), prob in pairs do
                 console.log($"   {card}: %.1f{100. * prob}%%")
         } |> Async.StartImmediate
@@ -127,7 +127,8 @@ module Exchange =
             async {
                 let deal = persState.Deal
                 let isComplete =
-                    ClosedDeal.isComplete deal.ClosedDeal
+                    OpenDeal.getExchange deal
+                        |> Exchange.isComplete 
                 if isComplete then
                     return persState
                 else
@@ -153,13 +154,6 @@ module Exchange =
                         // recurse until exchange is complete
                     let persState' =
                         { persState with DealOpt = Some deal' }
-                    let save =   // save at trick boundary
-                        match deal'.ClosedDeal.CurrentTrickOpt with   // to-do: clean this up
-                            | Some trick ->
-                                trick.Cards.Length % Seat.numSeats = 0
-                            | None -> true
-                    if save then
-                        PersistentState.save persState'
                     return! loop persState'
             }
 

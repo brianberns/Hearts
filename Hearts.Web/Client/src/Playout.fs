@@ -44,7 +44,7 @@ module Playout =
                     let pairs =
                         Array.zip legalActions strategy
                             |> Seq.sortByDescending snd
-                    console.log("Hint:")
+                    console.log("Play hint:")
                     for (card : Card), prob in pairs do
                         console.log($"   {card}: %.1f{100. * prob}%%")
 
