@@ -9,7 +9,7 @@ type HandView = ResizeArray<CardView>
 module HandView =
 
     /// Target distance between adjacent cards in the hand.
-    let delta = 1.8
+    let private delta = 1.8
 
     /// Gets the target left coord of the given card in a hand
     /// containing the given total number of cards.
@@ -78,13 +78,29 @@ module HandView =
             |> Animation.Parallel
 
     /// Pass receive position for each hand.
-    let passPosMap =
+    let private passPosMap =
         Position.seatMap [
             Seat.West,  (20, 69)
             Seat.North, (28, 16)
             Seat.East,  (80, 31)
             Seat.South, (72, 83)
         ]
+
+    /// Gets the target pass position for the given seat
+    /// passing in the given direction.
+    let getPassPosition seat dir (handView : HandView)=
+
+            // horizontal offset (-1, 0, 1)
+        let offset =
+            assert(Pass.numCards = 3)
+            float (ClosedDeal.numCardsPerHand
+                - handView.Count
+                - 1) * delta
+
+        let targetSeat =
+            ExchangeDirection.apply seat dir
+        passPosMap[targetSeat]
+            + Position.ofFloats(offset, 0.0)
 
 module ClosedHandView =
 
@@ -94,27 +110,18 @@ module ClosedHandView =
         ResizeArray(cardViews)
 
     /// Animates the passing of a card from a closed hand view.
-    let passAnim seat dir (handView : HandView) cardView =
+    let passAnim seat dir handView (_cardView : CardView) =
 
-            // horizontal offset (-1, 0, 1)
-        let offset =
-            assert(Pass.numCards = 3)
-            float (ClosedDeal.numCardsPerHand
-                - handView.Count
-                - 1) * HandView.delta
+            // get pass target position
+        let pos = HandView.getPassPosition seat dir handView
 
-            // remove arbitrary card from hand
+            // remove arbitrary card from hand instead
         let cardView = handView |> Seq.last
         assert(CardView.isBack cardView)
         let flag = handView.Remove(cardView)
         assert(flag)
 
-            // pass in given direction
-        let pos =
-            let targetSeat =
-                ExchangeDirection.apply seat dir
-            HandView.passPosMap[targetSeat]
-                + Position.ofFloats(offset, 0.0)
+            // animate pass
         [|
             AnimationAction.BringToFront
             AnimationAction.moveTo pos
@@ -174,25 +181,16 @@ module OpenHandView =
             |> Animation.Parallel
 
     /// Animates the passing of a card from an open hand view.
-    let passAnim seat dir (handView : HandView) (cardView : CardView) =
+    let passAnim seat dir handView (cardView : CardView) =
 
-            // horizontal offset (-1, 0, 1)
-        let offset =
-            assert(Pass.numCards = 3)
-            float (ClosedDeal.numCardsPerHand
-                - handView.Count
-                - 1) * HandView.delta
+            // get pass target position
+        let pos = HandView.getPassPosition seat dir handView
 
             // remove card from hand
         let flag = handView.Remove(cardView)
         assert(flag)
 
-            // pass in given direction
-        let pos =
-            let targetSeat =
-                ExchangeDirection.apply seat dir
-            HandView.passPosMap[targetSeat]
-                + Position.ofFloats(offset, 0.0)
+            // animate pass
         [|
             AnimationAction.BringToFront
                 |> Animation.create cardView
