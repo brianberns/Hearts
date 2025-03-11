@@ -21,14 +21,6 @@ module Deal =
         let chooser = PassChooser.create dir
         surface.append(chooser.Element)
 
-        let passPosMap =
-            Position.seatMap [
-                Seat.West,  (20, 69)
-                Seat.North, (28, 16)
-                Seat.East,  (80, 31)
-                Seat.South, (72, 83)
-            ]
-
             // get animations for each seat
         let exchangeMap =
             handViews
