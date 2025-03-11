@@ -21,6 +21,14 @@ module Deal =
         let chooser = PassChooser.create dir
         surface.append(chooser.Element)
 
+        let passPosMap =
+            Position.seatMap [
+                Seat.West,  (20, 69)
+                Seat.North, (28, 16)
+                Seat.East,  (80, 31)
+                Seat.South, (72, 83)
+            ]
+
             // get animations for each seat
         let exchangeMap =
             handViews
@@ -36,12 +44,22 @@ module Deal =
                                     |> Animation.create cardView
                         else
                             fun (cardView : CardView) ->
-                                let back =
-                                    handView
-                                        |> Seq.findBack CardView.isBack
+
+                                    // remove arbitrary card from hand
+                                let back = Seq.last handView
+                                assert(CardView.isBack back)
                                 let flag = handView.Remove(back)
                                 assert(flag)
-                                Animation.create back (ReplaceWith cardView)
+
+                                let targetPos =
+                                    passPosMap[ExchangeDirection.apply seat dir]
+                                [|
+                                    AnimationAction.BringToFront
+                                    AnimationAction.moveTo targetPos
+                                |]
+                                    |> Array.map (fun action ->
+                                        Animation.create back action)
+                                    |> Animation.Serial
 
                     let tuple =
                         handView,

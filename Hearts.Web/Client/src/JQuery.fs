@@ -28,7 +28,7 @@ type Position =
 
         /// Y coordinate.
         top : LengthPercentage
-    } with
+    }
 
     /// Creates a position.
     static member Create(left, top) =
