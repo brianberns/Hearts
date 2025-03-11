@@ -70,7 +70,7 @@ module Exchange =
             InformationSet.legalActions infoSet
         assert(legalActions.Length > 0)
 
-            // enable user to select one of the corresponding card views
+            // enable user to select card views
         Promise.create(fun resolve _reject ->
 
                 // prompt user to pass
@@ -78,27 +78,22 @@ module Exchange =
             logHint infoSet legalActions
 
                 // handle card clicks
-            let legalActionSet = set legalActions
             for cardView in handView do
-                let card = cardView |> CardView.card
-                if legalActionSet.Contains(card) then
-                    cardView.addClass("active")
-                    cardView.click(fun () ->
+                cardView.addClass("active")
+                cardView.click(fun () ->
+                    cardView.addClass("pass")
 
-                            // prevent further clicks
-                        chooser |> PassChooser.hide
-                        for cardView in handView do
-                            cardView.removeClass("active")
-                            cardView.removeClass("inactive")
-                            cardView.off("click")
-
-                            // pass the selected card
-                        promise {
-                            let! deal = passCard context cardView card
-                            resolve deal
-                        } |> ignore)
-                else
-                    cardView.addClass("inactive"))
+                    (*
+                        // pass the selected card
+                    promise {
+                        let! deal = passCard context cardView card
+                        resolve deal
+                    } |> ignore
+                    *)
+                    promise {
+                        do! context.AnimCardPass cardView
+                            |> Animation.run
+                    } |> ignore))
 
     /// Automatically passes a card.
     let private passAuto context =

@@ -37,9 +37,9 @@ module Deal =
                     let animCardPass : CardView -> Animation =
                         if seat.IsUser then
                             fun (cardView : CardView) ->
-                                let pos = JQueryElement.getPosition cardView
-                                let (Percent top) = pos.top
-                                let pos = { pos with top = Percent (top - 2.0) }
+                                let pos =
+                                    JQueryElement.getPosition cardView
+                                        + Position.ofInts(0, -3)
                                 AnimationAction.moveTo pos
                                     |> Animation.create cardView
                         else
