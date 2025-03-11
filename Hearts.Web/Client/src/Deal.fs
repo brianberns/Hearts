@@ -51,15 +51,14 @@ module Deal =
                                 let flag = handView.Remove(back)
                                 assert(flag)
 
-                                let targetPos =
-                                    passPosMap[ExchangeDirection.apply seat dir]
+                                    // pass in given direction
                                 [|
                                     AnimationAction.BringToFront
-                                    AnimationAction.moveTo targetPos
+                                    passPosMap[ExchangeDirection.apply seat dir]
+                                        |> AnimationAction.moveTo
                                 |]
-                                    |> Array.map (fun action ->
-                                        Animation.create back action)
-                                    |> Animation.Serial
+                                    |> Array.map (Animation.create back)
+                                    |> Animation.Parallel
 
                     let tuple =
                         handView,
