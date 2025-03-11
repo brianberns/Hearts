@@ -39,9 +39,9 @@ module Deal =
                             // horizontal offset (-1, 0, 1)
                         let offset =
                             assert(Pass.numCards = 3)
-                            ClosedDeal.numCardsPerHand
+                            float (ClosedDeal.numCardsPerHand
                                 - handView.Count
-                                - 1
+                                - 1) * HandView.delta
 
                             // remove card from hand
                         let cardView =
@@ -55,8 +55,7 @@ module Deal =
                             let targetSeat =
                                 ExchangeDirection.apply seat dir
                             passPosMap[targetSeat]
-                                + Position.ofInts(offset, 0)
-
+                                + Position.ofFloats(offset, 0.0)
                         [|
                             AnimationAction.BringToFront
                                 |> Animation.create cardView

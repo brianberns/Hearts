@@ -8,12 +8,12 @@ type HandView = ResizeArray<CardView>
 
 module HandView =
 
+    /// Target distance between adjacent cards in the hand.
+    let delta = 1.8
+
     /// Gets the target left coord of the given card in a hand
     /// containing the given total number of cards.
     let private getLeft numCards iCard =
-
-        /// Target distance between adjacent cards in the hand.
-        let delta = 1.8
 
         /// Left-shift from center of hand.
         let shift = 0.5 * float (numCards - 1) * delta
