@@ -5,7 +5,7 @@ open Browser.Dom
 open Fable.Core.JsInterop
 open PlayingCards
 
-/// Avoid Fable's attempt to invoke illegal constructors.
+/// Constructors missing from Fable.
 [<AutoOpen>]
 module HTMLElement =
 
@@ -17,13 +17,6 @@ module HTMLElement =
                 :?> HTMLDivElement
 
     let HTMLDivElement = HTMLDivElementType()
-
-    type HTMLButtonElementType() =
-        member _.Create() =
-            document.createElement("button")
-                :?> HTMLButtonElement
-
-    let HTMLButtonElement = HTMLButtonElementType()
 
     type HTMLTableHeaderCellElementType() =
         member _.Create() =
