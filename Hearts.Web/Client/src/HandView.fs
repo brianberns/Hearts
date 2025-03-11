@@ -77,12 +77,50 @@ module HandView =
             |> Seq.toArray
             |> Animation.Parallel
 
+    /// Pass receive position for each hand.
+    let passPosMap =
+        Position.seatMap [
+            Seat.West,  (20, 69)
+            Seat.North, (28, 16)
+            Seat.East,  (80, 31)
+            Seat.South, (72, 83)
+        ]
+
 module ClosedHandView =
 
     /// Creates a closed view of the given cards.
     let ofCardViews (cardViews : seq<CardView>) : HandView =
         assert(cardViews |> Seq.forall CardView.isBack)
         ResizeArray(cardViews)
+
+    /// Animates the passing of a card from a closed hand view.
+    let passAnim seat dir (handView : HandView) cardView =
+
+            // horizontal offset (-1, 0, 1)
+        let offset =
+            assert(Pass.numCards = 3)
+            float (ClosedDeal.numCardsPerHand
+                - handView.Count
+                - 1) * HandView.delta
+
+            // remove arbitrary card from hand
+        let cardView = handView |> Seq.last
+        assert(CardView.isBack cardView)
+        let flag = handView.Remove(cardView)
+        assert(flag)
+
+            // pass in given direction
+        let pos =
+            let targetSeat =
+                ExchangeDirection.apply seat dir
+            HandView.passPosMap[targetSeat]
+                + Position.ofFloats(offset, 0.0)
+        [|
+            AnimationAction.BringToFront
+            AnimationAction.moveTo pos
+        |]
+            |> Array.map (Animation.create cardView)
+            |> Animation.Parallel
 
     /// Animates the playing of a card from a closed hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
@@ -134,6 +172,34 @@ module OpenHandView =
                 Animation.create back (ReplaceWith front))
             |> Seq.toArray
             |> Animation.Parallel
+
+    /// Animates the passing of a card from an open hand view.
+    let passAnim seat dir (handView : HandView) (cardView : CardView) =
+
+            // horizontal offset (-1, 0, 1)
+        let offset =
+            assert(Pass.numCards = 3)
+            float (ClosedDeal.numCardsPerHand
+                - handView.Count
+                - 1) * HandView.delta
+
+            // remove card from hand
+        let flag = handView.Remove(cardView)
+        assert(flag)
+
+            // pass in given direction
+        let pos =
+            let targetSeat =
+                ExchangeDirection.apply seat dir
+            HandView.passPosMap[targetSeat]
+                + Position.ofFloats(offset, 0.0)
+        [|
+            AnimationAction.BringToFront
+                |> Animation.create cardView
+            AnimationAction.moveTo pos
+                |> Animation.create cardView
+            HandView.adjustAnim seat handView
+        |] |> Animation.Parallel
 
     /// Animates the playing of a card from an open hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =

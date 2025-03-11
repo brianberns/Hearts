@@ -34,36 +34,11 @@ module Deal =
             handViews
                 |> Seq.map (fun (seat : Seat, handView : HandView) ->
 
-                    let animCardPass cardView =
-
-                            // horizontal offset (-1, 0, 1)
-                        let offset =
-                            assert(Pass.numCards = 3)
-                            float (ClosedDeal.numCardsPerHand
-                                - handView.Count
-                                - 1) * HandView.delta
-
-                            // remove card from hand
-                        let cardView =
-                            if seat.IsUser then cardView
-                            else Seq.last handView   // use arbitrary card instead
-                        let flag = handView.Remove(cardView)
-                        assert(flag)
-
-                            // pass in given direction
-                        let pos =
-                            let targetSeat =
-                                ExchangeDirection.apply seat dir
-                            passPosMap[targetSeat]
-                                + Position.ofFloats(offset, 0.0)
-                        [|
-                            AnimationAction.BringToFront
-                                |> Animation.create cardView
-                            AnimationAction.moveTo pos
-                                |> Animation.create cardView
-                            if seat.IsUser then
-                                HandView.adjustAnim seat handView
-                        |] |> Animation.Parallel
+                    let animCardPass =
+                        let anim =
+                            if seat.IsUser then OpenHandView.passAnim
+                            else ClosedHandView.passAnim
+                        anim seat dir handView
 
                     let tuple =
                         handView,
