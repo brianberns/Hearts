@@ -34,42 +34,37 @@ module Deal =
             handViews
                 |> Seq.map (fun (seat : Seat, handView : HandView) ->
 
-                    let animCardPass : CardView -> Animation =
-                        if seat.IsUser then
-                            fun (cardView : CardView) ->
-                                let pos =
-                                    JQueryElement.getPosition cardView
-                                        + Position.ofInts(0, -3)
-                                AnimationAction.moveTo pos
-                                    |> Animation.create cardView
-                        else
-                            fun (cardView : CardView) ->
+                    let animCardPass cardView =
 
-                                    // horizontal offset (-1, 0, 1)
-                                let offset =
-                                    assert(Pass.numCards = 3)
-                                    ClosedDeal.numCardsPerHand
-                                        - handView.Count
-                                        - 1
+                            // horizontal offset (-1, 0, 1)
+                        let offset =
+                            assert(Pass.numCards = 3)
+                            ClosedDeal.numCardsPerHand
+                                - handView.Count
+                                - 1
 
-                                    // remove arbitrary card from hand
-                                let back = Seq.last handView
-                                assert(CardView.isBack back)
-                                let flag = handView.Remove(back)
-                                assert(flag)
+                            // remove card from hand
+                        let cardView =
+                            if seat.IsUser then cardView
+                            else Seq.last handView   // use arbitrary card instead
+                        let flag = handView.Remove(cardView)
+                        assert(flag)
 
-                                    // pass in given direction
-                                let pos =
-                                    let targetSeat =
-                                        ExchangeDirection.apply seat dir
-                                    passPosMap[targetSeat]
-                                        + Position.ofInts(offset, 0)
-                                [|
-                                    AnimationAction.BringToFront
-                                    AnimationAction.moveTo pos
-                                |]
-                                    |> Array.map (Animation.create back)
-                                    |> Animation.Parallel
+                            // pass in given direction
+                        let pos =
+                            let targetSeat =
+                                ExchangeDirection.apply seat dir
+                            passPosMap[targetSeat]
+                                + Position.ofInts(offset, 0)
+
+                        [|
+                            AnimationAction.BringToFront
+                                |> Animation.create cardView
+                            AnimationAction.moveTo pos
+                                |> Animation.create cardView
+                            if seat.IsUser then
+                                HandView.adjustAnim seat handView
+                        |] |> Animation.Parallel
 
                     let tuple =
                         handView,

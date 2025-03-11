@@ -23,17 +23,15 @@ module Exchange =
         }
 
     /// Logs hint information.
-    let private logHint
-        (infoSet : InformationSet) (legalActions : _[]) =
-        assert(InformationSet.legalActions infoSet |> snd
-            = legalActions)
+    let private logHint deal =
         async {
+            let infoSet = OpenDeal.currentInfoSet deal
             let! strategy = Remoting.getStrategy infoSet
             let pairs =
-                Array.zip legalActions strategy
+                Array.zip (Seq.toArray infoSet.Hand) strategy
                     |> Seq.sortByDescending snd
             console.log("Pass hint:")
-            for (card : Card), prob in pairs do
+            for card, prob in pairs do
                 console.log($"   {card}: %.1f{100. * prob}%%")
         } |> Async.StartImmediate
 
@@ -56,7 +54,10 @@ module Exchange =
             DealView.displayStatus deal
 
                 // exchange is complete?
-            // let exchangeComplete = Exchange.isComplete deal.ExchangeOpt
+            let deal =
+                if OpenDeal.getExchange deal |> Exchange.isComplete then
+                    OpenDeal.startPlay deal
+                else deal
 
             return deal
         }
@@ -64,35 +65,29 @@ module Exchange =
     /// Allows user to pass a card.
     let private passUser chooser (handView : HandView) context =
 
-            // determine all legal passes
-        let infoSet = OpenDeal.currentInfoSet context.Deal
-        let _, legalActions =
-            InformationSet.legalActions infoSet
-        assert(legalActions.Length > 0)
-
-            // enable user to select card views
+            // enable user to select one of the corresponding card views
         Promise.create(fun resolve _reject ->
 
                 // prompt user to pass
             chooser |> PassChooser.display
-            logHint infoSet legalActions
+            logHint context.Deal
 
                 // handle card clicks
             for cardView in handView do
+                let card = cardView |> CardView.card
                 cardView.addClass("active")
                 cardView.click(fun () ->
-                    cardView.addClass("pass")
 
-                    (*
+                        // prevent further clicks
+                    chooser |> PassChooser.hide
+                    for cardView in handView do
+                        cardView.removeClass("active")
+                        cardView.off("click")
+
                         // pass the selected card
                     promise {
                         let! deal = passCard context cardView card
                         resolve deal
-                    } |> ignore
-                    *)
-                    promise {
-                        do! context.AnimCardPass cardView
-                            |> Animation.run
                     } |> ignore))
 
     /// Automatically passes a card.
