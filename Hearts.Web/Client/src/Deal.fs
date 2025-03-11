@@ -45,9 +45,12 @@ module Deal =
                         else
                             fun (cardView : CardView) ->
 
-                                    // how many cards have already been passed from this hand?
-                                let iPass =
-                                    ClosedDeal.numCardsPerHand - handView.Count
+                                    // horizontal offset (-1, 0, 1)
+                                let offset =
+                                    assert(Pass.numCards = 3)
+                                    ClosedDeal.numCardsPerHand
+                                        - handView.Count
+                                        - 1
 
                                     // remove arbitrary card from hand
                                 let back = Seq.last handView
@@ -56,13 +59,13 @@ module Deal =
                                 assert(flag)
 
                                     // pass in given direction
+                                let pos =
+                                    let targetSeat =
+                                        ExchangeDirection.apply seat dir
+                                    passPosMap[targetSeat]
+                                        + Position.ofInts(offset, 0)
                                 [|
                                     AnimationAction.BringToFront
-                                    let pos =
-                                        let targetSeat =
-                                            ExchangeDirection.apply seat dir
-                                        passPosMap[targetSeat]
-                                            + Position.ofInts((iPass - 1), 0)
                                     AnimationAction.moveTo pos
                                 |]
                                     |> Array.map (Animation.create back)
