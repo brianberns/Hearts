@@ -42,9 +42,9 @@ module HandView =
 
     /// Deals the cards in the given hand view into their target
     /// position.
-    let dealAnimFrom seat (handView : HandView) iFirstCard =
+    let dealAnim seat (handView : HandView) =
         [|
-            for iCard = iFirstCard to handView.Count - 1 do
+            for iCard = 0 to handView.Count - 1 do
                 let cardView = handView[iCard]
                 let actions =
                     let centerPos = centerPosMap[seat]
@@ -55,11 +55,6 @@ module HandView =
                 for action in actions do
                     yield Animation.create cardView action
         |] |> Animation.Parallel
-
-    /// Deals the cards in the given hand view into their target
-    /// position.
-    let dealAnim seat handView =
-        dealAnimFrom seat handView 0
 
     /// Sets the positions of the cards in the given hand, without
     /// animation.
@@ -115,9 +110,8 @@ module ClosedHandView =
         let cardViews =
             let fromSeat = ExchangeDirection.unapply seat dir
             ExchangeView.finish fromSeat
-        let iFirstCard = handView.Count
         handView.AddRange(cardViews)
-        HandView.dealAnimFrom seat handView iFirstCard
+        HandView.dealAnim seat handView
 
     /// Animates the playing of a card from a closed hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
@@ -200,9 +194,8 @@ module OpenHandView =
         let cardViews =
             let fromSeat = ExchangeDirection.unapply seat dir
             ExchangeView.finish fromSeat
-        let iFirstCard = handView.Count
         handView.AddRange(cardViews)
-        HandView.dealAnimFrom seat handView iFirstCard
+        HandView.dealAnim seat handView
 
     /// Animates the playing of a card from an open hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
