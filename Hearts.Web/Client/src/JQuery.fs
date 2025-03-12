@@ -160,7 +160,7 @@ module JQueryElement =
     let private setZIndex zIndex (elem : JQueryElement) =
         elem.css {| ``z-index`` = zIndex |}
 
-    /// Brings the given card view to the front.
+    /// Brings the given element to the front.
     let bringToFront (elem : JQueryElement) =
         let zIndex = zIndexIncr ()
         setZIndex zIndex elem
