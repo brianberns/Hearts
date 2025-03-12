@@ -122,6 +122,7 @@ module Exchange =
                     async {
                         let! cardViews =
                             exchange.PassMap[fromSeat]
+                                |> Seq.sortBy OpenHandView.sortKey
                                 |> Seq.map (createCardView >> Async.AwaitPromise)
                                 |> Async.Parallel
                         return toSeat, cardViews

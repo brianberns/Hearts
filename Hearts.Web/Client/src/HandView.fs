@@ -156,18 +156,22 @@ module ClosedHandView =
 
 module OpenHandView =
 
+    /// Sort key for the given card.
+    let sortKey card =
+        let suitKey =
+            match card.Suit with
+                | Suit.Spades   -> 1   // black
+                | Suit.Hearts   -> 2   // red
+                | Suit.Clubs    -> 3   // black
+                | Suit.Diamonds -> 4   // red
+                | _ -> failwith "Unexpected"
+        let rankKey = -1 * int card.Rank
+        suitKey, rankKey
+
     /// Creates an open view of the given hand.
     let ofHand (hand : Hand) : Fable.Core.JS.Promise<HandView> =
         hand
-            |> Seq.sortByDescending (fun card ->
-                let iSuit =
-                    match card.Suit with
-                        | Suit.Spades   -> 4   // black
-                        | Suit.Hearts   -> 3   // red
-                        | Suit.Clubs    -> 2   // black
-                        | Suit.Diamonds -> 1   // red
-                        | _ -> failwith "Unexpected"
-                iSuit, card.Rank)
+            |> Seq.sortBy sortKey
             |> Seq.map CardView.ofCard
             |> Promise.all
             |> Promise.map ResizeArray
@@ -218,14 +222,21 @@ module OpenHandView =
             // add incoming card fronts to hand view
         assert(cardViews |> Seq.forall (CardView.isBack >> not))
         handView.AddRange(cardViews)
+        handView.Sort(fun viewA viewB ->
+            let keyA = CardView.card viewA |> sortKey
+            let keyB = CardView.card viewB |> sortKey
+            compare keyA keyB)
 
-        Animation.Parallel [|
+        Animation.Serial [|
 
                 // replace backs with fronts
             yield! Array.map2 (fun back front ->
                 Animation.create back (ReplaceWith front))
                 backs
                 cardViews
+
+                // wait
+            yield Animation.Sleep 2000
 
                 // move fronts into the hand
             yield HandView.dealAnim seat handView
