@@ -24,7 +24,7 @@ module Deal =
             // get animations for each seat
         let exchangeMap =
             handViews
-                |> Seq.map (fun (seat : Seat, handView : HandView) ->
+                |> Seq.map (fun (seat : Seat, handView) ->
 
                     let animCardPass =
                         let anim =
@@ -32,10 +32,16 @@ module Deal =
                             else ClosedHandView.passAnim
                         anim seat dir handView
 
+                    let animCardsReceive =
+                        let anim =
+                            if seat.IsUser then OpenHandView.receivePassAnim
+                            else ClosedHandView.receivePassAnim
+                        anim seat dir handView
+
                     let tuple =
                         handView,
                         animCardPass,
-                        ExchangeView.finishAnim seat
+                        animCardsReceive
 
                     seat, tuple)
                 |> Map

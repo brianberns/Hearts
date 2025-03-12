@@ -51,20 +51,17 @@ module ExchangeView =
         AnimationAction.moveTo pos
             |> Animation.create cardView
 
-    /// Animates the end of an exchange by sending its cards
-    /// from the given player to the receiver.
-    let finishAnim (fromSeat : Seat) () =
+    /// Finishes an exchange for the given sending seat.
+    let finish fromSeat =
 
+            // find cards passed by the given seat
         let cardViews = cardViewMap[fromSeat]
         assert(cardViews.Count = Pass.numCards)
 
-        let anim =
-            cardViews
-                |> Seq.map (fun cardView ->
-                    Animation.create cardView Remove)
-                |> Seq.toArray
-                |> Animation.Parallel
+            // make a copy
+        let copy = Seq.toArray cardViews
 
+            // reset to a new exchange
         cardViewMap[fromSeat].Clear()
 
-        anim
+        copy

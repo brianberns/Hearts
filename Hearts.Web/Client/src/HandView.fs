@@ -42,9 +42,9 @@ module HandView =
 
     /// Deals the cards in the given hand view into their target
     /// position.
-    let dealAnim seat (handView : HandView) =
+    let dealAnimFrom seat (handView : HandView) iFirstCard =
         [|
-            for iCard = 0 to handView.Count - 1 do
+            for iCard = iFirstCard to handView.Count - 1 do
                 let cardView = handView[iCard]
                 let actions =
                     let centerPos = centerPosMap[seat]
@@ -55,6 +55,11 @@ module HandView =
                 for action in actions do
                     yield Animation.create cardView action
         |] |> Animation.Parallel
+
+    /// Deals the cards in the given hand view into their target
+    /// position.
+    let dealAnim seat handView =
+        dealAnimFrom seat handView 0
 
     /// Sets the positions of the cards in the given hand, without
     /// animation.
@@ -104,6 +109,15 @@ module ClosedHandView =
             ExchangeView.passAnim
                 seat dir cardView HandView.delta
         |]
+
+    /// Animates receiving cards into a closed hand view.
+    let receivePassAnim seat dir (handView : HandView) () (*delay*) =
+        let cardViews =
+            let fromSeat = ExchangeDirection.unapply seat dir
+            ExchangeView.finish fromSeat
+        let iFirstCard = handView.Count
+        handView.AddRange(cardViews)
+        HandView.dealAnimFrom seat handView iFirstCard
 
     /// Animates the playing of a card from a closed hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
@@ -180,6 +194,15 @@ module OpenHandView =
             animPass
             animAdjust
         |] |> Animation.Parallel
+
+    /// Animates receiving cards into an open hand view.
+    let receivePassAnim seat dir (handView : HandView) () (*delay*) =
+        let cardViews =
+            let fromSeat = ExchangeDirection.unapply seat dir
+            ExchangeView.finish fromSeat
+        let iFirstCard = handView.Count
+        handView.AddRange(cardViews)
+        HandView.dealAnimFrom seat handView iFirstCard
 
     /// Animates the playing of a card from an open hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
