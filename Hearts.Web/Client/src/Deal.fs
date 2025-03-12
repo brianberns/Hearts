@@ -34,7 +34,8 @@ module Deal =
 
                     let tuple =
                         handView,
-                        animCardPass
+                        animCardPass,
+                        ExchangeView.finishAnim seat
 
                     seat, tuple)
                 |> Map

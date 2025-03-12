@@ -1,10 +1,7 @@
 namespace Hearts.Web.Client
 
 open Browser.Dom
-
 open Fable.Core
-
-open PlayingCards
 open Hearts
 
 module Exchange =
@@ -52,12 +49,6 @@ module Exchange =
             do! context.AnimCardPass cardView
                 |> Animation.run
             DealView.displayStatus deal
-
-                // exchange is complete?
-            let deal =
-                if OpenDeal.getExchange deal |> Exchange.isComplete then
-                    OpenDeal.startPlay deal
-                else deal
 
             return deal
         }
@@ -107,8 +98,21 @@ module Exchange =
                 |> Async.AwaitPromise
         }
 
+    let private finish deal (exchangeMap : Map<_, _>) =
+        async {
+            let anim =
+                exchangeMap.Values
+                    |> Seq.map (fun (_, _, animFinish) ->
+                        animFinish ())
+                    |> Seq.toArray
+                    |> Animation.Parallel
+            do! Animation.run anim |> Async.AwaitPromise
+
+            return OpenDeal.startPlay deal
+        }
+
     /// Runs the given deal's exchange.
-    let run (persState : PersistentState) chooser (exchangeMap : Map<_, _>) =
+    let run (persState : PersistentState) chooser exchangeMap =
 
         let dealer = persState.Dealer
 
@@ -120,12 +124,13 @@ module Exchange =
                     OpenDeal.getExchange deal
                         |> Exchange.isComplete 
                 if isComplete then
-                    return persState
+                    let! deal' = finish deal exchangeMap
+                    return { persState with DealOpt = Some deal' }
                 else
                         // prepare current passer
                     let seat = OpenDeal.currentPlayer deal
                     let (handView : HandView),
-                        animCardPass =
+                        animCardPass, _ =
                             exchangeMap[seat]
                     let passer =
                         if seat.IsUser then

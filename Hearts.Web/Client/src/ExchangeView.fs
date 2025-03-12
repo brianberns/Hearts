@@ -50,3 +50,21 @@ module ExchangeView =
             // animate playing the card
         AnimationAction.moveTo pos
             |> Animation.create cardView
+
+    /// Animates the end of an exchange by sending its cards
+    /// from the given player to the receiver.
+    let finishAnim (fromSeat : Seat) () =
+
+        let cardViews = cardViewMap[fromSeat]
+        assert(cardViews.Count = Pass.numCards)
+
+        let anim =
+            cardViews
+                |> Seq.map (fun cardView ->
+                    Animation.create cardView Remove)
+                |> Seq.toArray
+                |> Animation.Parallel
+
+        cardViewMap[fromSeat].Clear()
+
+        anim
