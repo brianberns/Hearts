@@ -79,7 +79,7 @@ module Settings =
             {
                 Random = Random(seed)
                 HiddenSize = Encoding.encodedLength * 4
-                LearningRate = 2e-3
+                LearningRate = 1e-3
                 SampleDecay = 0.15
                 NumAdvantageTrainEpochs = 1000
                 AdvantageBatchSize = 1_000_000
