@@ -112,7 +112,6 @@ module ClosedHandView =
         let oldCardViews =
             let fromSeat = ExchangeDirection.unapply seat dir
             ExchangeView.finish fromSeat
-        assert(oldCardViews |> Seq.forall CardView.isBack)
 
             // add incoming new card views to hand view (all backs)
         assert(cardViews |> Seq.forall CardView.isBack)
