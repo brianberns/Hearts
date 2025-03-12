@@ -106,12 +106,29 @@ module ClosedHandView =
         |]
 
     /// Animates receiving cards into a closed hand view.
-    let receivePassAnim seat dir (handView : HandView) () (*delay*) =
-        let cardViews =
+    let receivePassAnim seat dir (handView : HandView) cardViews =
+
+            // get incoming old card views (might be backs or fronts)
+        let oldCardViews =
             let fromSeat = ExchangeDirection.unapply seat dir
             ExchangeView.finish fromSeat
+        assert(oldCardViews |> Seq.forall CardView.isBack)
+
+            // add incoming new card views to hand view (all backs)
+        assert(cardViews |> Seq.forall CardView.isBack)
         handView.AddRange(cardViews)
-        HandView.dealAnim seat handView
+
+        Animation.Parallel [|
+
+                // replace old views with new
+            yield! Array.map2 (fun oldView newView ->
+                Animation.create oldView (ReplaceWith newView))
+                oldCardViews
+                cardViews
+
+                // move new views into the hand
+            yield HandView.dealAnim seat handView
+        |]
 
     /// Animates the playing of a card from a closed hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
@@ -190,12 +207,29 @@ module OpenHandView =
         |] |> Animation.Parallel
 
     /// Animates receiving cards into an open hand view.
-    let receivePassAnim seat dir (handView : HandView) () (*delay*) =
-        let cardViews =
+    let receivePassAnim seat dir (handView : HandView) cardViews =
+
+            // get incoming card backs
+        let backs =
             let fromSeat = ExchangeDirection.unapply seat dir
             ExchangeView.finish fromSeat
+        assert(backs |> Seq.forall CardView.isBack)
+
+            // add incoming card fronts to hand view
+        assert(cardViews |> Seq.forall (CardView.isBack >> not))
         handView.AddRange(cardViews)
-        HandView.dealAnim seat handView
+
+        Animation.Parallel [|
+
+                // replace backs with fronts
+            yield! Array.map2 (fun back front ->
+                Animation.create back (ReplaceWith front))
+                backs
+                cardViews
+
+                // move fronts into the hand
+            yield HandView.dealAnim seat handView
+        |]
 
     /// Animates the playing of a card from an open hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =

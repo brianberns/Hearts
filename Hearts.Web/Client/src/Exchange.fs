@@ -2,6 +2,8 @@ namespace Hearts.Web.Client
 
 open Browser.Dom
 open Fable.Core
+
+open PlayingCards
 open Hearts
 
 module Exchange =
@@ -98,16 +100,61 @@ module Exchange =
                 |> Async.AwaitPromise
         }
 
+    /// Creates new views for incoming cards in the given exchange.
+    let private createCardViews dir exchange =
+
+        let asyncPairs =
+            Async.Parallel [|
+                for fromSeat in Enum.getValues<Seat> do
+
+                        // get target seat
+                    let toSeat =
+                        ExchangeDirection.apply fromSeat dir
+
+                        // function to create a new card view
+                    let createCardView =
+                        if toSeat.IsUser then
+                            CardView.ofCard
+                        else
+                            fun _ -> CardView.ofBack ()
+
+                        // create new card views
+                    async {
+                        let! cardViews =
+                            exchange.PassMap[fromSeat]
+                                |> Seq.map (createCardView >> Async.AwaitPromise)
+                                |> Async.Parallel
+                        return toSeat, cardViews
+                    }
+            |]
+
+        async {
+            let! pairs = asyncPairs
+            return Map pairs
+        }
+
+    /// Finishes the exchange in the given deal.
     let private finish deal (exchangeMap : Map<_, _>) =
         async {
+
+                // create new card views
+            let exchange = OpenDeal.getExchange deal
+            let! cardViewMap =
+                createCardViews
+                    deal.ClosedDeal.ExchangeDirection
+                    exchange
+
+                // animate finish for each seat
             let anim =
-                exchangeMap.Values
-                    |> Seq.map (fun (_, _, animFinish) ->
-                        animFinish ())
-                    |> Seq.toArray
-                    |> Animation.Parallel
+                Animation.Parallel [|
+                    for (KeyValue(seat, (_, _, animReceivePass)))
+                        in exchangeMap do
+                        let cardViews = cardViewMap[seat]
+                        animReceivePass cardViews : Animation
+                |]
             do! Animation.run anim |> Async.AwaitPromise
 
+                // start play
             return OpenDeal.startPlay deal
         }
 

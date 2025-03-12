@@ -34,8 +34,10 @@ module Deal =
 
                     let animCardsReceive =
                         let anim =
-                            if seat.IsUser then OpenHandView.receivePassAnim
-                            else ClosedHandView.receivePassAnim
+                            if seat.IsUser then
+                                OpenHandView.receivePassAnim
+                            else
+                                ClosedHandView.receivePassAnim
                         anim seat dir handView
 
                     let tuple =
