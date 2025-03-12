@@ -46,3 +46,9 @@ module ExchangeDirection =
                 | ExchangeDirection.Right -> 1
                 | _ -> failwith "Unexpected"
         seat |> Seat.incr n
+
+    /// Next exchange direction.
+    let next (dir : ExchangeDirection) =
+        (int dir + 1) % numDirections
+            |> enum<ExchangeDirection>
+        

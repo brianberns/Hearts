@@ -257,6 +257,9 @@ module Deal =
                         { persState with
                             GameScore = gameScore
                             Dealer = Seat.next persState.Dealer
+                            ExchangeDirection =
+                                ExchangeDirection.next
+                                    persState.ExchangeDirection
                             DealOpt = None }
                     if winners.IsEmpty then
                         PersistentState.save persState'
