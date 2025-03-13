@@ -28,28 +28,28 @@ module Strategy =
                 else 0.0f)
 
     /// Converts a wide vector (indexed by entire deck) to
-    /// a narrow vector (indexed by legal plays).
-    let toNarrow (legalPlays : _[]) (wide : Vector<_>) =
+    /// a narrow vector (indexed by legal actions).
+    let private toNarrow (legalActions : _[]) (wide : Vector<_>) =
         assert(wide.Count = Card.numCards)
-        legalPlays
+        legalActions
             |> Seq.map (
                 Card.toIndex >> Vector.get wide)
             |> DenseVector.ofSeq
 
-    /// Converts a narrow vector (indexed by legal plays) to
+    /// Converts a narrow vector (indexed by legal actions) to
     /// a wide vector (indexed by entire deck).
-    let toWide (legalPlays : _[]) (narrow : Vector<float32>) =
-        assert(narrow.Count = legalPlays.Length)
-        Seq.zip legalPlays narrow
+    let toWide (legalActions : _[]) (narrow : Vector<float32>) =
+        assert(narrow.Count = legalActions.Length)
+        Seq.zip legalActions narrow
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
-    let getFromAdvantage infoSet model legalPlays =
+    let getFromAdvantage infoSet model legalActions =
         use advantage =
             AdvantageModel.getAdvantage infoSet model
         advantage.data<float32>()
             |> DenseVector.ofSeq
-            |> toNarrow legalPlays
+            |> toNarrow legalActions
             |> matchRegrets

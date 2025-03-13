@@ -54,12 +54,12 @@ module Trainer =
         let getStrategy =
             match modelOpt with
                 | Some model ->
-                    fun infoSet legalPlays ->
+                    fun infoSet legalActions ->
                         Strategy.getFromAdvantage
-                            infoSet model legalPlays
+                            infoSet model legalActions
                 | None ->
-                    fun _ legalPlays ->
-                        Strategy.random legalPlays.Length
+                    fun _ legalActions ->
+                        Strategy.random legalActions.Length
 
         OpenDeal.generate
             (Random())

@@ -43,7 +43,7 @@ module WebPlayer =
     /// Takes an action in the given deal.
     let takeAction deal =
 
-            // get legal plays in this situation
+            // get legal actions in this situation
         let infoSet = OpenDeal.currentInfoSet deal
         let _, legalActions =
             InformationSet.legalActions infoSet
