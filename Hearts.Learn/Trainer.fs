@@ -28,13 +28,12 @@ type AdvantageState =
 
 module AdvantageState =
 
-    /// Initial advantage state.
-    let empty =
+    /// Creates an initial advantage state.
+    let create rng =
         {
             ModelOpt = None
             Reservoir =
-                Reservoir.create
-                    settings.Random
+                Reservoir.create rng
                     settings.NumAdvantageSamples
         }
 
@@ -63,12 +62,13 @@ module Trainer =
                         Strategy.random legalPlays.Length
 
         OpenDeal.generate
-            settings.Random
+            (Random())
             settings.NumTraversals
             (fun deal ->
 
                 let samples =
-                    Traverse.traverse iter deal getStrategy
+                    let rng = Random()   // each thread has its own RNG
+                    Traverse.traverse iter deal rng getStrategy
 
                 lock lockable (fun () ->
                     count <- count + 1
@@ -135,6 +135,8 @@ module Trainer =
     /// Creates a Hearts player using the given model.
     let createPlayer model =
 
+        let rng = Random()   // each player has its own RNG
+
         let act infoSet =
             let actionType, legalActions =
                 InformationSet.legalActions infoSet
@@ -142,8 +144,7 @@ module Trainer =
                 Strategy.getFromAdvantage
                     infoSet model legalActions
             let action =
-                lock settings.Random (fun () ->
-                    Vector.sample settings.Random strategy)
+                Vector.sample rng strategy
                     |> Array.get legalActions
             actionType, action
 
@@ -153,11 +154,11 @@ module Trainer =
     /// standard.
     let private evaluate iter (model : AdvantageModel) =
 
-        model.MoveTo(torch.CPU)               // faster inference on CPU
+        model.MoveTo(torch.CPU)   // faster inference on CPU
 
         let avgPayoff =
             Tournament.run
-                (Random(Settings.seed + 1))   // use repeatable test set, not seen during training
+                (Random(0))       // use repeatable test set, not seen during training
                 Trickster.player
                 (createPlayer model)
         settings.Writer.add_scalar(
@@ -180,7 +181,8 @@ module Trainer =
             printfn $"Model output size: {Network.outputSize}"
 
             // run the iterations
+        let state = AdvantageState.create (Random())
         let iterNums = seq { 1 .. settings.NumIterations }
-        (AdvantageState.empty, iterNums)
+        (state, iterNums)
             ||> Seq.fold (fun state iter ->
                 trainIteration iter state)

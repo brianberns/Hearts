@@ -1,5 +1,7 @@
 ﻿namespace Hearts.Learn
 
+open System
+
 open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
@@ -42,7 +44,8 @@ module Traverse =
             -> Vector<float32>   // per-action strategy
 
     /// Evaluates the utility of the given deal.
-    let traverse iter deal (getStrategy : GetStrategy) =
+    let traverse
+        iter deal (rng : Random) (getStrategy : GetStrategy) =
 
         /// Top-level loop.
         let rec loop deal depth =
@@ -62,9 +65,7 @@ module Traverse =
             else
                     // get utility of current player's strategy
                 let strategy = getStrategy infoSet legalActions
-                let rnd =
-                    lock settings.Random (fun () ->
-                        settings.Random.NextDouble())
+                let rnd = rng.NextDouble()
                 let threshold =
                     settings.SampleDecay
                         / (settings.SampleDecay + float depth)
@@ -108,8 +109,7 @@ module Traverse =
         /// Gets the utility of the given info set by
         /// sampling a single action.
         and getOneUtility deal depth actionType legalActions strategy =
-            lock settings.Random (fun () ->
-                Vector.sample settings.Random strategy)
+            Vector.sample rng strategy
                 |> Array.get legalActions
                 |> addLoop deal (depth+1) actionType
 

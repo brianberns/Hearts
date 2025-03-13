@@ -1,5 +1,6 @@
 ﻿namespace Hearts.Learn
 
+open System
 open System.IO
 
 open MathNet.Numerics.LinearAlgebra
@@ -8,6 +9,9 @@ open Hearts
 open Hearts.Model
 
 module Direct =
+
+    /// Random number generator.
+    let private rng = Random()
 
     /// Generates training data using a standard player.
     let private generateTrainingData (player : Player) numDeals =
@@ -50,7 +54,7 @@ module Direct =
             }
 
         OpenDeal.generate
-            settings.Random
+            rng
             numDeals
             (loop >> Seq.toArray)
                 |> Array.concat
@@ -82,7 +86,7 @@ module Direct =
             // evaluate trained model
         let avgPayoff =
             Tournament.run
-                settings.Random
+                rng
                 Trickster.player
                 (Trainer.createPlayer model)
         settings.Writer.add_scalar(
