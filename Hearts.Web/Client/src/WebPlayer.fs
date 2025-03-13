@@ -45,8 +45,7 @@ module WebPlayer =
 
             // get legal actions in this situation
         let infoSet = OpenDeal.currentInfoSet deal
-        let _, legalActions =
-            InformationSet.legalActions infoSet
+        let legalActions = infoSet.LegalActions
 
             // choose play
         match legalActions.Length with

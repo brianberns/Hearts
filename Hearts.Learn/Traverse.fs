@@ -39,9 +39,7 @@ module Traverse =
 
     /// Function to get strategy for a given info set.
     type GetStrategy =
-        InformationSet
-            -> Card[]            // legal actions
-            -> Vector<float32>   // per-action strategy
+        InformationSet -> Vector<float32>   // per-action strategy
 
     /// Evaluates the utility of the given deal.
     let traverse
@@ -58,22 +56,21 @@ module Traverse =
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal depth =
             let infoSet = OpenDeal.currentInfoSet deal
-            let actionType, legalActions =
-                InformationSet.legalActions infoSet
+            let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
-                addLoop deal depth actionType legalActions[0]   // forced action
+                addLoop deal depth
+                    infoSet.LegalActionType legalActions[0]   // forced action
             else
                     // get utility of current player's strategy
-                let strategy = getStrategy infoSet legalActions
+                let strategy = getStrategy infoSet
                 let rnd = rng.NextDouble()
                 let threshold =
                     settings.SampleDecay
                         / (settings.SampleDecay + float depth)
                 if rnd <= threshold then
-                    getFullUtility
-                        infoSet deal depth actionType legalActions strategy
+                    getFullUtility infoSet deal depth strategy
                 else
-                    getOneUtility deal depth actionType legalActions strategy
+                    getOneUtility infoSet deal depth strategy
 
         /// Adds the given action to the given deal and loops.
         and addLoop deal depth actionType action =
@@ -81,13 +78,15 @@ module Traverse =
             loop deal depth
 
         /// Gets the full utility of the given info set.
-        and getFullUtility infoSet deal depth actionType legalActions strategy =
+        and getFullUtility infoSet deal depth strategy =
 
                 // get utility of each action
+            let legalActions = infoSet.LegalActions
             let actionUtilities, samples =
                 let utilityArrays, sampleArrays =
                     legalActions
-                        |> Array.map (addLoop deal (depth+1) actionType)
+                        |> Array.map (
+                            addLoop deal (depth+1) infoSet.LegalActionType)
                         |> Array.unzip
                 DenseMatrix.ofColumnArrays utilityArrays,
                 Array.concat sampleArrays
@@ -108,9 +107,9 @@ module Traverse =
 
         /// Gets the utility of the given info set by
         /// sampling a single action.
-        and getOneUtility deal depth actionType legalActions strategy =
+        and getOneUtility infoSet deal depth strategy =
             Vector.sample rng strategy
-                |> Array.get legalActions
-                |> addLoop deal (depth+1) actionType
+                |> Array.get infoSet.LegalActions
+                |> addLoop deal (depth+1) infoSet.LegalActionType
 
         loop deal 0 |> snd

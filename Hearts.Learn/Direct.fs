@@ -20,8 +20,7 @@ module Direct =
             seq {
                 let play, sampleOpt =
                     let infoSet = OpenDeal.currentInfoSet deal
-                    let _, legalActions =
-                        InformationSet.legalActions infoSet
+                    let legalActions = infoSet.LegalActions
                     if legalActions.Length = 1 then
                         Array.exactlyOne legalActions,
                         None

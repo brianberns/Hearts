@@ -28,8 +28,8 @@ module Trickster =
 
         let act infoSet =
 
-            let actionType, legalActions =
-                InformationSet.legalActions infoSet
+            let actionType = infoSet.LegalActionType
+            let legalActions = infoSet.LegalActions
             let card =
                 if legalActions.Length = 1 then
                     Seq.head legalActions

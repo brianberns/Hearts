@@ -54,12 +54,11 @@ module Trainer =
         let getStrategy =
             match modelOpt with
                 | Some model ->
-                    fun infoSet legalActions ->
-                        Strategy.getFromAdvantage
-                            infoSet model legalActions
+                    fun infoSet ->
+                        Strategy.getFromAdvantage infoSet model
                 | None ->
-                    fun _ legalActions ->
-                        Strategy.random legalActions.Length
+                    fun infoSet ->
+                        Strategy.random infoSet.LegalActions.Length
 
         OpenDeal.generate
             (Random())
@@ -138,15 +137,12 @@ module Trainer =
         let rng = Random()   // each player has its own RNG
 
         let act infoSet =
-            let actionType, legalActions =
-                InformationSet.legalActions infoSet
             let strategy =
-                Strategy.getFromAdvantage
-                    infoSet model legalActions
+                Strategy.getFromAdvantage infoSet model
             let action =
                 Vector.sample rng strategy
-                    |> Array.get legalActions
-            actionType, action
+                    |> Array.get infoSet.LegalActions
+            infoSet.LegalActionType, action
 
         { Act = act }
 

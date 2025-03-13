@@ -11,7 +11,8 @@ open Hearts.Model
 
 module Model =
 
-    /// Performance tweak.
+    /// Server is inference-only, so disable all gradient
+    /// calculations.
     let private _noGrade = TorchSharp.torch.no_grad()
 
     /// Connects to Hearts model.
@@ -26,9 +27,7 @@ module Model =
 
     /// Finds the strategy for the given info set.
     let getStrategy infoSet model =
-        let _, legalActions =
-            InformationSet.legalActions infoSet
-        Strategy.getFromAdvantage infoSet model legalActions
+        Strategy.getFromAdvantage infoSet model
 
 module Remoting =
 

@@ -46,10 +46,10 @@ module Strategy =
 
     /// Computes strategy for the given info set using the
     /// given advantage model.
-    let getFromAdvantage infoSet model legalActions =
+    let getFromAdvantage infoSet model =
         use advantage =
             AdvantageModel.getAdvantage infoSet model
         advantage.data<float32>()
             |> DenseVector.ofSeq
-            |> toNarrow legalActions
+            |> toNarrow infoSet.LegalActions
             |> matchRegrets

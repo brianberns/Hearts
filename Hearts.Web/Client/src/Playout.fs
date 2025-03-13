@@ -26,20 +26,18 @@ module Playout =
         }
 
     /// Logs hint information.
-    let private logHint
-        (infoSet : InformationSet) deal (legalActions : _[]) =
+    let private logHint (infoSet : InformationSet) deal =
         assert(infoSet.Deal = deal.ClosedDeal)
-        assert(InformationSet.legalActions infoSet |> snd
-            = legalActions)
-        async {
-            match deal |> OpenDeal.tryFindInevitable with
+        let legalActions = infoSet.LegalActions
+        match deal |> OpenDeal.tryFindInevitable with
 
-                | Some score ->
-                    console.log("Inevitable:")
-                    for seat, points in Map.toSeq score.ScoreMap do
-                        console.log($"   {Seat.toString seat}: {points} point(s)")
+            | Some score ->
+                console.log("Inevitable:")
+                for seat, points in Map.toSeq score.ScoreMap do
+                    console.log($"   {Seat.toString seat}: {points} point(s)")
 
-                | None when legalActions.Length > 1 ->
+            | None when legalActions.Length > 1 ->
+                async {
                     let! strategy = Remoting.getStrategy infoSet
                     let pairs =
                         Array.zip legalActions strategy
@@ -47,9 +45,9 @@ module Playout =
                     console.log("Play hint:")
                     for card, prob in pairs do
                         console.log($"   {card}: %.1f{100. * prob}%%")
+                } |> Async.StartImmediate
 
-                | _ -> ()
-        } |> Async.StartImmediate
+            | _ -> ()
 
     /// Plays the given card on the current trick, and returns the
     /// seat of the resulting trick winner, if any.
@@ -108,10 +106,9 @@ module Playout =
     /// Allows user to play a card.
     let private playUser chooser (handView : HandView) context =
 
-            // determine all legal plays
+            // determine all legal actions
         let infoSet = OpenDeal.currentInfoSet context.Deal
-        let _, legalActions =
-            InformationSet.legalActions infoSet
+        let legalActions = infoSet.LegalActions
         assert(legalActions.Length > 0)
 
             // enable user to select one of the corresponding card views
@@ -119,7 +116,7 @@ module Playout =
 
                 // prompt user to play
             chooser |> PlayChooser.display
-            logHint infoSet context.Deal legalActions
+            logHint infoSet context.Deal
 
                 // handle card clicks
             let legalPlaySet = set legalActions
