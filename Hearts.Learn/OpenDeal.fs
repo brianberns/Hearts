@@ -15,7 +15,7 @@ module OpenDeal =
             Array.map
 #else
                 // controlling max degree of parallelism seems to be necessary when running a PyTorch model on the CPU
-            Array.mapParallel Environment.ProcessorCount
+            Array.mapParallel settings.MaxDegreeOfParallelism
 #endif
 
         Array.init numDeals (fun iDeal ->
