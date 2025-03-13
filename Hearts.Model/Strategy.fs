@@ -29,7 +29,7 @@ module Strategy =
 
     /// Converts a wide vector (indexed by entire deck) to
     /// a narrow vector (indexed by legal actions).
-    let private toNarrow (legalActions : _[]) (wide : Vector<_>) =
+    let private toNarrow legalActions (wide : Vector<_>) =
         assert(wide.Count = Card.numCards)
         legalActions
             |> Seq.map (

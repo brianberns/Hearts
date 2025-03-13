@@ -37,13 +37,8 @@ module Traverse =
     let private append items item =
         [| yield! items; yield item |]
 
-    /// Function to get strategy for a given info set.
-    type GetStrategy =
-        InformationSet -> Vector<float32>   // per-action strategy
-
     /// Evaluates the utility of the given deal.
-    let traverse
-        iter deal (rng : Random) (getStrategy : GetStrategy) =
+    let traverse iter deal (rng : Random) getStrategy =
 
         /// Top-level loop.
         let rec loop deal depth =
@@ -62,7 +57,7 @@ module Traverse =
                     infoSet.LegalActionType legalActions[0]   // forced action
             else
                     // get utility of current player's strategy
-                let strategy = getStrategy infoSet
+                let strategy : Vector<_> = getStrategy infoSet
                 let rnd = rng.NextDouble()
                 let threshold =
                     settings.SampleDecay
