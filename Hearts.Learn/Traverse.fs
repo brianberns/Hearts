@@ -39,7 +39,7 @@ module Traverse =
 
     /// Function to get strategy for a given info set.
     type GetStrategy =
-        InformationSet -> Vector<float32>   // per-action strategy
+        InformationSet -> Async<Vector<float32>>   // per-action strategy
 
     /// Evaluates the utility of the given deal.
     let traverse
@@ -47,30 +47,35 @@ module Traverse =
 
         /// Top-level loop.
         let rec loop deal depth =
-            match ZeroSum.tryGetPayoff deal with
-                | Some payoff ->
-                    payoff, Array.empty   // deal is over
-                | None ->
-                    loopNonTerminal deal depth
+            async {
+                match ZeroSum.tryGetPayoff deal with
+                    | Some payoff ->
+                        return payoff, Array.empty   // deal is over
+                    | None ->
+                        return! loopNonTerminal deal depth
+            }
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal depth =
-            let infoSet = OpenDeal.currentInfoSet deal
-            let legalActions = infoSet.LegalActions
-            if legalActions.Length = 1 then
-                addLoop deal depth
-                    infoSet.LegalActionType legalActions[0]   // forced action
-            else
-                    // get utility of current player's strategy
-                let strategy = getStrategy infoSet
-                let rnd = rng.NextDouble()
-                let threshold =
-                    settings.SampleDecay
-                        / (settings.SampleDecay + float depth)
-                if rnd <= threshold then
-                    getFullUtility infoSet deal depth strategy
+            async {
+                let infoSet = OpenDeal.currentInfoSet deal
+                let legalActions = infoSet.LegalActions
+                if legalActions.Length = 1 then
+                    return! addLoop deal depth
+                        infoSet.LegalActionType legalActions[0]   // forced action
                 else
-                    getOneUtility infoSet deal depth strategy
+                        // get utility of current player's strategy
+                    let! strategy = getStrategy infoSet
+                    let rnd = rng.NextDouble()
+                    let threshold =
+                        settings.SampleDecay
+                            / (settings.SampleDecay + float depth)
+                    return!
+                        if rnd <= threshold then
+                            getFullUtility infoSet deal depth strategy
+                        else
+                            getOneUtility infoSet deal depth strategy
+            }
 
         /// Adds the given action to the given deal and loops.
         and addLoop deal depth actionType action =
@@ -79,31 +84,34 @@ module Traverse =
 
         /// Gets the full utility of the given info set.
         and getFullUtility infoSet deal depth strategy =
+            async {
 
-                // get utility of each action
-            let legalActions = infoSet.LegalActions
-            let actionUtilities, samples =
-                let utilityArrays, sampleArrays =
+                    // get utility of each action
+                let legalActions = infoSet.LegalActions
+                let! pairs =
                     legalActions
                         |> Array.map (
                             addLoop deal (depth+1) infoSet.LegalActionType)
-                        |> Array.unzip
-                DenseMatrix.ofColumnArrays utilityArrays,
-                Array.concat sampleArrays
-            assert(actionUtilities.ColumnCount = legalActions.Length)
-            assert(actionUtilities.RowCount = Seat.numSeats)
+                        |> Async.Parallel
+                let actionUtilities, samples =
+                    let utilityArrays, sampleArrays = Array.unzip pairs
+                    DenseMatrix.ofColumnArrays utilityArrays,
+                    Array.concat sampleArrays
+                assert(actionUtilities.ColumnCount = legalActions.Length)
+                assert(actionUtilities.RowCount = Seat.numSeats)
 
-                // utility of this info set is action utilities weighted by action probabilities
-            let utility = actionUtilities * strategy
-            assert(utility.Count = Seat.numSeats)
-            let samples =
-                let wideRegrets =
-                    let idx = int infoSet.Player
-                    (actionUtilities.Row(idx) - utility[idx])
-                        |> Strategy.toWide legalActions
-                AdvantageSample.create infoSet wideRegrets iter
-                    |> append samples
-            utility.ToArray(), samples
+                    // utility of this info set is action utilities weighted by action probabilities
+                let utility = actionUtilities * strategy
+                assert(utility.Count = Seat.numSeats)
+                let samples =
+                    let wideRegrets =
+                        let idx = int infoSet.Player
+                        (actionUtilities.Row(idx) - utility[idx])
+                            |> Strategy.toWide legalActions
+                    AdvantageSample.create infoSet wideRegrets iter
+                        |> append samples
+                return utility.ToArray(), samples
+            }
 
         /// Gets the utility of the given info set by
         /// sampling a single action.
@@ -112,4 +120,6 @@ module Traverse =
                 |> Array.get infoSet.LegalActions
                 |> addLoop deal (depth+1) infoSet.LegalActionType
 
-        loop deal 0 |> snd
+        loop deal 0
+            |> Async.RunSynchronously
+            |> snd

@@ -55,10 +55,14 @@ module Trainer =
             match modelOpt with
                 | Some model ->
                     fun infoSet ->
-                        Strategy.getFromAdvantage infoSet model
+                        async {
+                            return Strategy.getFromAdvantage infoSet model
+                        }
                 | None ->
                     fun infoSet ->
-                        Strategy.random infoSet.LegalActions.Length
+                        async {
+                            return Strategy.random infoSet.LegalActions.Length
+                        }
 
         OpenDeal.generate
             (Random())
