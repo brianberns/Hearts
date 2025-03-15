@@ -5,12 +5,12 @@ open Hearts.Model
 
 type InferenceRequest = InformationSet
 
-type InferenceManager() =
+type InferenceManager(model) =
 
     let requests = ResizeArray<InferenceRequest>()
 
-    member this.AddRequest(req) =
+    member _.AddRequest(req) =
         requests.Add(req)
 
-    member this.Infer() =
-        Strategy.getFromAdvantage requests
+    member _.Infer() =
+        Strategy.getFromAdvantage requests model
