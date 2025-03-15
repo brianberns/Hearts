@@ -44,12 +44,16 @@ module Strategy =
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    /// Computes strategy for the given info set using the
+    /// Computes strategies for the given info sets using the
     /// given advantage model.
-    let getFromAdvantage infoSet model =
-        use advantage =
-            AdvantageModel.getAdvantage infoSet model
-        advantage.data<float32>()
-            |> DenseVector.ofSeq
-            |> toNarrow infoSet.LegalActions
-            |> matchRegrets
+    let getFromAdvantage infoSets model =
+        use advantages =
+            AdvantageModel.getAdvantage infoSets model
+        assert(advantages.shape[0] = infoSets.Length)
+        [|
+            for i, infoSet in Seq.indexed infoSets do
+                advantages[i].data<float32>()
+                    |> DenseVector.ofSeq
+                    |> toNarrow infoSet.LegalActions
+                    |> matchRegrets
+        |]
