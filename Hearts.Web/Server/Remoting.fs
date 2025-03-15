@@ -19,7 +19,7 @@ module Model =
     let connect dir =
         let model =
             new AdvantageModel(
-                Encoding.encodedLength * 2,
+                1536,
                 TorchSharp.torch.CPU)
         let path = Path.Combine(dir, "AdvantageModel.pt")
         model.load(path) |> ignore
