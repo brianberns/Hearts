@@ -46,10 +46,12 @@ module Strategy =
 
     /// Computes strategies for the given info sets using the
     /// given advantage model.
-    let getFromAdvantage infoSets model =
+    let getFromAdvantage
+        (infoSets : System.Collections.Generic.IReadOnlyCollection<_>)
+        model =
         use advantages =
             AdvantageModel.getAdvantage infoSets model
-        assert(advantages.shape[0] = infoSets.Length)
+        assert(advantages.shape[0] = infoSets.Count)
         [|
             for i, infoSet in Seq.indexed infoSets do
                 advantages[i].data<float32>()
