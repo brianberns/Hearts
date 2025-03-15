@@ -19,7 +19,10 @@ type InferenceManager(model) =
         idx
 
     member _.Infer() =
-        Strategy.getFromAdvantage requests model
+        let delta = requests.Count - responses.Count
+        printfn "delta: %A" delta
+        let batch = requests.GetRange(responses.Count, delta)
+        Strategy.getFromAdvantage batch model
             |> responses.AddRange
 
     member _.GetResponse(idx) =
