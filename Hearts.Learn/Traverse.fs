@@ -57,14 +57,14 @@ module Traverse =
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal depth =
-            async {
-                let infoSet = OpenDeal.currentInfoSet deal
-                let legalActions = infoSet.LegalActions
-                if legalActions.Length = 1 then
-                    return! addLoop deal depth
-                        infoSet.LegalActionType legalActions[0]   // forced action
-                else
-                        // get utility of current player's strategy
+            let infoSet = OpenDeal.currentInfoSet deal
+            let legalActions = infoSet.LegalActions
+            if legalActions.Length = 1 then
+                addLoop deal depth
+                    infoSet.LegalActionType legalActions[0]   // forced action
+            else
+                    // get utility of current player's strategy
+                async {
                     let! strategy = getStrategy infoSet
                     let rnd = rng.NextDouble()
                     let threshold =
@@ -75,7 +75,7 @@ module Traverse =
                             getFullUtility infoSet deal depth strategy
                         else
                             getOneUtility infoSet deal depth strategy
-            }
+                }
 
         /// Adds the given action to the given deal and loops.
         and addLoop deal depth actionType action =
@@ -85,14 +85,13 @@ module Traverse =
         /// Gets the full utility of the given info set.
         and getFullUtility infoSet deal depth strategy =
             async {
-
                     // get utility of each action
                 let legalActions = infoSet.LegalActions
                 let! pairs =
                     legalActions
                         |> Array.map (
                             addLoop deal (depth+1) infoSet.LegalActionType)
-                        |> Async.Parallel
+                        |> Async.Sequential
                 let actionUtilities, samples =
                     let utilityArrays, sampleArrays = Array.unzip pairs
                     DenseMatrix.ofColumnArrays utilityArrays,
