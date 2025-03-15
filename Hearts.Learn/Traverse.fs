@@ -118,6 +118,7 @@ module Traverse =
                 |> Array.get infoSet.LegalActions
                 |> addLoop deal (depth+1) infoSet.LegalActionType
 
-        loop deal 0
-            |> Async.RunSynchronously
-            |> snd
+        async {
+            let! _, samples = loop deal 0
+            return samples
+        }

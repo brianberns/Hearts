@@ -49,13 +49,15 @@ module Strategy =
     let getFromAdvantage
         (infoSets : System.Collections.Generic.IReadOnlyCollection<_>)
         model =
-        use advantages =
-            AdvantageModel.getAdvantage infoSets model
-        assert(advantages.shape[0] = infoSets.Count)
-        [|
-            for i, infoSet in Seq.indexed infoSets do
-                advantages[i].data<float32>()
-                    |> DenseVector.ofSeq
-                    |> toNarrow infoSet.LegalActions
-                    |> matchRegrets
-        |]
+        if infoSets.Count = 0 then Array.empty
+        else
+            use advantages =
+                AdvantageModel.getAdvantage infoSets model
+            assert(advantages.shape[0] = infoSets.Count)
+            [|
+                for i, infoSet in Seq.indexed infoSets do
+                    advantages[i].data<float32>()
+                        |> DenseVector.ofSeq
+                        |> toNarrow infoSet.LegalActions
+                        |> matchRegrets
+            |]

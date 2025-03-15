@@ -39,47 +39,68 @@ module AdvantageState =
 
 module Trainer =
 
-    /// Generates training data using the given model.
-    let private generateSamples iter modelOpt =
+    let generateRandomSamples iter =
 
         let mutable count = 0     // ugly, but just for logging
-        let lockable = new obj()
-
-            // move model to CPU for faster inference
-        modelOpt
-            |> Option.iter (fun (model : AdvantageModel) ->
-                model.MoveTo(torch.CPU))
 
             // function to get strategy for a given info set
-        let getStrategy =
-            match modelOpt with
-                | Some model ->
-                    fun infoSet ->
-                        async {
-                            return Strategy.getFromAdvantage [|infoSet|] model
-                                |> Array.exactlyOne
-                        }
-                | None ->
-                    fun infoSet ->
-                        async {
-                            return Strategy.random infoSet.LegalActions.Length
-                        }
+        let getStrategy infoSet =
+            async {
+                return Strategy.random infoSet.LegalActions.Length
+            }
 
+        let rng = Random()
         OpenDeal.generate
-            (Random())
+            rng
             settings.NumTraversals
             (fun deal ->
 
                 let samples =
+                    Traverse.traverse iter deal rng getStrategy
+                        |> Async.RunSynchronously
+
+                count <- count + 1
+                settings.Writer.add_scalar(
+                    $"advantage samples/iter%03d{iter}",
+                    float32 samples.Length,
+                    count)
+
+                samples)
+                |> Array.concat
+
+    /// Generates training data using the given model.
+    let private generateSamples iter (model : AdvantageModel) =
+
+        let mutable count = 0     // ugly, but just for logging
+
+            // move model to CPU for faster inference
+        model.MoveTo(torch.CPU)
+
+            // function to get strategy for a given info set
+        let mgr = InferenceManager(model)
+        let getStrategy infoSet : Async<MathNet.Numerics.LinearAlgebra.Vector<_>> =
+            let idx = mgr.AddRequest(infoSet)
+            Async.FromContinuations(fun (success, _error, _cancel) ->
+                success (mgr.GetResponse(idx)))
+
+        let rng = Random()
+        OpenDeal.generate
+            rng
+            settings.NumTraversals
+            (fun deal ->
+
+                let asyncSamples =
                     let rng = Random()   // each thread has its own RNG
                     Traverse.traverse iter deal rng getStrategy
+                mgr.Infer()
+                let samples =
+                    Async.RunSynchronously asyncSamples
 
-                lock lockable (fun () ->
-                    count <- count + 1
-                    settings.Writer.add_scalar(
-                        $"advantage samples/iter%03d{iter}",
-                        float32 samples.Length,
-                        count))
+                count <- count + 1
+                settings.Writer.add_scalar(
+                    $"advantage samples/iter%03d{iter}",
+                    float32 samples.Length,
+                    count)
 
                 samples)
                 |> Array.concat
@@ -115,7 +136,9 @@ module Trainer =
             // generate training data from existing model
         let stopwatch = Stopwatch.StartNew()
         let samples =
-            generateSamples iter state.ModelOpt
+            match state.ModelOpt with
+                | Some model -> generateSamples iter model
+                | None -> generateRandomSamples iter
         if settings.Verbose then
             printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
