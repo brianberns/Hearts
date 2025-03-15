@@ -4,7 +4,6 @@ open System
 
 open MathNet.Numerics.LinearAlgebra
 
-open PlayingCards
 open Hearts
 open Hearts.Model
 
