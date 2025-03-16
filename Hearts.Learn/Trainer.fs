@@ -40,18 +40,26 @@ module AdvantageState =
 module Trainer =
 
     let rec private getSamples model results =
-        Array.empty
+        let infoSets, conts =
+            results
+                |> Array.choose (function
+                    | Traverse.Descend desc ->
+                        Some (desc.InformationSet, desc.Continuation)
+                    | _ -> None)
+                |> Array.unzip
+        let strategies =
+            Strategy.getFromAdvantage infoSets model
+        let results =
+            (strategies, conts)
+                ||> Array.map2 (fun strategy cont ->
+                    cont strategy)
+        results
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
 
         let mutable count = 0     // ugly, but just for logging
         let lockable = new obj()
-
-            // move model to CPU for faster inference
-        modelOpt
-            |> Option.iter (fun (model : AdvantageModel) ->
-                model.MoveTo(torch.CPU))
 
         (*
             // function to get strategy for a given info set
