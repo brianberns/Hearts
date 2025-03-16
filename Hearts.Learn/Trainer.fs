@@ -39,6 +39,9 @@ module AdvantageState =
 
 module Trainer =
 
+    let rec private getSamples model results =
+        Array.empty
+
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
 
@@ -50,6 +53,7 @@ module Trainer =
             |> Option.iter (fun (model : AdvantageModel) ->
                 model.MoveTo(torch.CPU))
 
+        (*
             // function to get strategy for a given info set
         let getStrategy =
             match modelOpt with
@@ -60,6 +64,7 @@ module Trainer =
                 | None ->
                     fun infoSet ->
                         Strategy.random infoSet.LegalActions.Length
+        *)
 
         OpenDeal.generate
             (Random())
@@ -68,7 +73,8 @@ module Trainer =
 
                 let samples =
                     let rng = Random()   // each thread has its own RNG
-                    Traverse.traverse iter deal rng getStrategy
+                    Traverse.traverse iter deal rng
+                        |> getSamples modelOpt.Value
 
                 lock lockable (fun () ->
                     count <- count + 1
