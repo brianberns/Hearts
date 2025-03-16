@@ -6,7 +6,6 @@ open System.IO
 open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
-open Hearts
 open Hearts.Model
 
 module Model =
@@ -40,13 +39,17 @@ module Remoting =
             GetActionIndex =
                 fun infoSet ->
                     async {
-                        let strategy = Model.getStrategy infoSet model
+                        let strategy =
+                            Model.getStrategy [|infoSet|] model
+                                |> Array.exactlyOne
                         return Vector.sample rng strategy
                     }
             GetStrategy =
                 fun infoSet ->
                     async {
-                        let strategy = Model.getStrategy infoSet model
+                        let strategy =
+                            Model.getStrategy [|infoSet|] model
+                                |> Array.exactlyOne
                         return strategy.ToArray()
                             |> Array.map float
                     }

@@ -55,7 +55,8 @@ module Trainer =
             match modelOpt with
                 | Some model ->
                     fun infoSet ->
-                        Strategy.getFromAdvantage infoSet model
+                        Strategy.getFromAdvantage [|infoSet|] model
+                            |> Array.exactlyOne
                 | None ->
                     fun infoSet ->
                         Strategy.random infoSet.LegalActions.Length
@@ -138,7 +139,8 @@ module Trainer =
 
         let act infoSet =
             let strategy =
-                Strategy.getFromAdvantage infoSet model
+                Strategy.getFromAdvantage [|infoSet|] model
+                    |> Array.exactlyOne
             let action =
                 Vector.sample rng strategy
                     |> Array.get infoSet.LegalActions
