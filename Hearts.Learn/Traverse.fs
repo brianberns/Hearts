@@ -7,8 +7,53 @@ open MathNet.Numerics.LinearAlgebra
 open Hearts
 open Hearts.Model
 
+type Traversal =
+
+    | GetStrategy of
+        {|
+            InformationSet : InformationSet
+            Continuation : Vector<float32> (*per-action strategy*) -> Traversal
+        |}
+
+    | GetUtility of
+        {|
+            InformationSet : InformationSet
+            Results : Traversal[]
+            Continuation :
+                float32[][] (*utility arrays*)
+                    -> AdvantageSample[][]
+                    -> Traversal
+        |}
+
+    | Complete of
+        {|
+            Utilities : float32[]
+            Samples : AdvantageSample[]
+        |}
+
+module Traversal =
+
+    let createDescend infoSet cont =
+        GetStrategy {|
+            InformationSet = infoSet
+            Continuation = cont
+        |}
+
+    let createAscend infoSet results cont =
+        GetUtility {|
+            InformationSet = infoSet
+            Results = results
+            Continuation = cont
+        |}
+
+    let createComplete utilities samples =
+        Complete {|
+            Utilities = utilities
+            Samples = samples
+        |}
+
 /// Model Hearts as a zero-sum game.
-module ZeroSum =
+module private ZeroSum =
 
     /// Gets the payoff for the given deal score from each
     /// player's point of view.
@@ -32,48 +77,6 @@ module ZeroSum =
 
 module Traverse =
 
-    type Result =
-        | Complete of
-            {|
-                Utilities : float32[]
-                Samples : AdvantageSample[]
-            |}
-        | Descend of
-            {|
-                InformationSet : InformationSet
-                Continuation : Vector<float32> (*per-action strategy*) -> Result
-            |}
-        | Ascend of
-            {|
-                InformationSet : InformationSet
-                Results : Result[]
-                Continuation :
-                    float32[][] (*utility arrays*)
-                        -> AdvantageSample[][]
-                        -> Result
-            |}
-
-    module Result =
-
-        let createComplete utilities samples =
-            Complete {|
-                Utilities = utilities
-                Samples = samples
-            |}
-
-        let createDescend infoSet cont =
-            Descend {|
-                InformationSet = infoSet
-                Continuation = cont
-            |}
-
-        let createAscend infoSet results cont =
-            Ascend {|
-                InformationSet = infoSet
-                Results = results
-                Continuation = cont
-            |}
-
     /// Appends an item to the end of an array.
     let private append items item =
         [| yield! items; yield item |]
@@ -82,15 +85,15 @@ module Traverse =
     let traverse iter deal (rng : Random) =
 
         /// Top-level loop.
-        let rec loop deal depth : Result =
+        let rec loop deal depth : Traversal =
             match ZeroSum.tryGetPayoff deal with
                 | Some payoff ->
-                    Result.createComplete payoff Array.empty   // deal is over
+                    Traversal.createComplete payoff Array.empty   // deal is over
                 | None ->
                     loopNonTerminal deal depth
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal deal depth : Result =
+        and loopNonTerminal deal depth : Traversal =
             let infoSet = OpenDeal.currentInfoSet deal
             let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
@@ -107,15 +110,15 @@ module Traverse =
                     else getOneUtility
                 let cont =
                     getUtility infoSet deal depth
-                Result.createDescend infoSet cont
+                Traversal.createDescend infoSet cont
 
         /// Adds the given action to the given deal and loops.
-        and addLoop deal depth actionType action : Result =
+        and addLoop deal depth actionType action : Traversal =
             let deal = OpenDeal.addAction actionType action deal
             loop deal depth
 
         /// Gets the full utility of the given info set.
-        and getFullUtility infoSet deal depth strategy : Result =
+        and getFullUtility infoSet deal depth strategy : Traversal =
             let legalActions = infoSet.LegalActions
             let results =
                 legalActions
@@ -141,11 +144,11 @@ module Traverse =
                             |> Strategy.toWide legalActions
                     AdvantageSample.create infoSet wideRegrets iter
                         |> append samples
-                Result.createComplete
+                Traversal.createComplete
                     (utility.ToArray())
                     samples
 
-            Result.createAscend infoSet results cont
+            Traversal.createAscend infoSet results cont
 
         /// Gets the utility of the given info set by
         /// sampling a single action.

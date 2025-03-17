@@ -39,6 +39,7 @@ module AdvantageState =
 
 module Trainer =
 
+    (*
     let private getStrategies infoSets modelOpt =
         match modelOpt with
             | Some model ->
@@ -48,36 +49,46 @@ module Trainer =
                     |> Array.map (fun infoSet ->
                         Strategy.random infoSet.LegalActions.Length)
 
-    let rec private getSamples modelOpt results : AdvantageSample[] =
+    let private getSamples modelOpt results : AdvantageSample[] =
 
-        let infoSets, conts =
-            results
-                |> Array.choose (function
-                    | Traverse.Descend desc ->
-                        Some (desc.InformationSet, desc.Continuation)
-                    | _ -> None)
-                |> Array.unzip
+        let rec descend results =
 
-        if infoSets.Length > 0 then
+                // get info sets that need inference
+            let infoSets, conts =
+                results
+                    |> Array.choose (function
+                        | Traverse.Descend desc ->
+                            Some (desc.InformationSet, desc.Continuation)
+                        | _ -> None)
+                    |> Array.unzip
 
-            let descendingResults =
-                (getStrategies infoSets modelOpt, conts)
-                    ||> Array.map2 (|>)
+            if infoSets.Length > 0 then
 
-            (0, results)
-                ||> Array.mapFold (fun iDesc -> function
-                    | Traverse.Descend _ ->
-                        descendingResults[iDesc], iDesc + 1
-                    | result ->
-                        result, iDesc)
-                |> fst
-                |> getSamples modelOpt
+                    // infer strategies and get new results from them
+                let descendingResults =
+                    (getStrategies infoSets modelOpt, conts)
+                        ||> Array.map2 (|>)
+                assert(descendingResults |> Seq.forall _.IsAscend)
 
-        else
-            results
-                |> Array.collect (function
-                    | Traverse.Complete comp -> comp.Samples
-                    | _ -> failwith "Unexpected")
+                    // replace old results with new
+                (0, results)
+                    ||> Array.mapFold (fun iDesc -> function
+                        | Traverse.Descend _ ->
+                            descendingResults[iDesc], iDesc + 1
+                        | result ->
+                            result, iDesc)
+                    |> fst
+                    |> descend
+
+            else
+                    // extract samples from complete results
+                results
+                    |> Array.collect (function
+                        | Traverse.Complete comp -> comp.Samples
+                        | _ -> failwith "Unexpected")
+
+        descend results
+        *)
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
@@ -94,7 +105,7 @@ module Trainer =
                     let rng = Random()   // each thread has its own RNG
                     Traverse.traverse iter deal rng
                         |> Array.singleton
-                        |> getSamples modelOpt
+                        |> Inference.complete modelOpt
 
                 lock lockable (fun () ->
                     count <- count + 1
@@ -177,8 +188,6 @@ module Trainer =
     /// Evaluates the given model by playing it against a
     /// standard.
     let private evaluate iter (model : AdvantageModel) =
-
-        model.MoveTo(torch.CPU)   // faster inference on CPU
 
         let avgPayoff =
             Tournament.run
