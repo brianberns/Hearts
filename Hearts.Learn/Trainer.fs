@@ -39,7 +39,7 @@ module AdvantageState =
 
 module Trainer =
 
-    let rec private getSamples model results =
+    let rec private getSamples model results : AdvantageSample[] =
         let infoSets, conts =
             results
                 |> Array.choose (function
@@ -51,9 +51,8 @@ module Trainer =
             Strategy.getFromAdvantage infoSets model
         let results =
             (strategies, conts)
-                ||> Array.map2 (fun strategy cont ->
-                    cont strategy)
-        results
+                ||> Array.map2 (|>)
+        Array.empty
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
@@ -82,7 +81,8 @@ module Trainer =
                 let samples =
                     let rng = Random()   // each thread has its own RNG
                     Traverse.traverse iter deal rng
-                        |> getSamples modelOpt.Value
+                        |> Array.singleton
+                        |> getSamples (Option.get modelOpt)
 
                 lock lockable (fun () ->
                     count <- count + 1
