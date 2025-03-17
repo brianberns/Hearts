@@ -39,7 +39,17 @@ module AdvantageState =
 
 module Trainer =
 
-    let rec private getSamples model results : AdvantageSample[] =
+    let private getStrategies infoSets modelOpt =
+        match modelOpt with
+            | Some model ->
+                Strategy.getFromAdvantage infoSets model
+            | None ->
+                infoSets
+                    |> Array.map (fun infoSet ->
+                        Strategy.random infoSet.LegalActions.Length)
+
+    let rec private getSamples modelOpt results : AdvantageSample[] =
+
         let infoSets, conts =
             results
                 |> Array.choose (function
@@ -47,31 +57,33 @@ module Trainer =
                         Some (desc.InformationSet, desc.Continuation)
                     | _ -> None)
                 |> Array.unzip
-        let strategies =
-            Strategy.getFromAdvantage infoSets model
-        let results =
-            (strategies, conts)
-                ||> Array.map2 (|>)
-        Array.empty
+
+        if infoSets.Length > 0 then
+
+            let descendingResults =
+                (getStrategies infoSets modelOpt, conts)
+                    ||> Array.map2 (|>)
+
+            (0, results)
+                ||> Array.mapFold (fun iDesc -> function
+                    | Traverse.Descend _ ->
+                        descendingResults[iDesc], iDesc + 1
+                    | result ->
+                        result, iDesc)
+                |> fst
+                |> getSamples modelOpt
+
+        else
+            results
+                |> Array.collect (function
+                    | Traverse.Complete comp -> comp.Samples
+                    | _ -> failwith "Unexpected")
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
 
         let mutable count = 0     // ugly, but just for logging
         let lockable = new obj()
-
-        (*
-            // function to get strategy for a given info set
-        let getStrategy =
-            match modelOpt with
-                | Some model ->
-                    fun infoSet ->
-                        Strategy.getFromAdvantage [|infoSet|] model
-                            |> Array.exactlyOne
-                | None ->
-                    fun infoSet ->
-                        Strategy.random infoSet.LegalActions.Length
-        *)
 
         OpenDeal.generate
             (Random())
@@ -82,7 +94,7 @@ module Trainer =
                     let rng = Random()   // each thread has its own RNG
                     Traverse.traverse iter deal rng
                         |> Array.singleton
-                        |> getSamples (Option.get modelOpt)
+                        |> getSamples modelOpt
 
                 lock lockable (fun () ->
                     count <- count + 1
