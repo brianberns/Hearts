@@ -2,6 +2,15 @@
 
 open Hearts.Model
 
+module Array =
+
+    module Parallel =
+
+        let map2 mapping array1 array2 =
+            Array.zip array1 array2
+                |> Array.Parallel.map (fun (val1, val2) ->
+                    mapping val1 val2)
+
 module Inference =
 
     let private getStrategies infoSets modelOpt =
@@ -41,7 +50,7 @@ module Inference =
                     |> Seq.toArray
                     |> Array.unzip
             (getStrategies ids modelOpt, conts)
-                ||> Array.map2 (|>)
+                ||> Array.Parallel.map2 (|>)
         assert(batch |> Seq.forall (_.IsGetStrategy >> not))
 
             // replace GS nodes in the correct order
@@ -90,7 +99,7 @@ module Inference =
                         loop childArrays
                             |> Array.map (Array.map getComp)
                     (comps, conts)
-                        ||> Array.map2 (|>)
+                        ||> Array.Parallel.map2 (|>)
 
                     // replace in-progress nodes
                 (nonInitialArrays, comps)

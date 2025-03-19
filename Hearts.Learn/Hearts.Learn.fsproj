@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <None Include="Readme.md" />
-    <Compile Include="Prelude.fs" />
     <Compile Include="Reservoir.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Model.fs" />
