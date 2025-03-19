@@ -13,81 +13,92 @@ module Inference =
                     |> Array.map (fun infoSet ->
                         Strategy.random infoSet.LegalActions.Length)
 
-    type Complete = float32[] * AdvantageSample[]
+    /// Replaces items in the given arrays.
+    let private replace chooser fromItems (toItems : _[]) =
+        let result, n =
+            (0, fromItems)
+                ||> Array.mapFold (
+                    Array.mapFold (fun i fromItem ->
+                        match chooser fromItem with
+                            | Some toItem -> toItem, i
+                            | None ->
+                                toItems[i], i + 1))
+        assert(n = toItems.Length)
+        result
 
-    let complete modelOpt (nodes : Traversal[]) : AdvantageSample[] =
+    /// Replaces all GetStragey nodes in a level.
+    let private replaceGetStrategy modelOpt nodeArrays =
 
-        // First, “expand” Initial nodes into their continuation results.
-        // At each level (i.e. within a given array of sibling nodes)
-        // we batch–call GetChildIds on all Initial nodes (preserving order).
-        let rec expandBatch (nodes: Traversal[]) : Traversal[] =
-            // Find all indices where a node is still Initial.
-            let indexedInitials =
-                nodes 
-                |> Array.mapi (fun i node ->
-                    match node with
-                    | GetStrategy init -> Some (i, init)
-                    | _ -> None)
-                |> Array.choose id
-            if indexedInitials.Length = 0 then
-                // No Initial nodes at this level.
-                // But if any node is InProgress, its children may still be Initial.
-                nodes 
-                |> Array.map (fun node ->
-                    match node with
-                    | GetUtility ip -> GetUtility {| ip with Results = expandBatch ip.Results |}
-                    | _ -> node)
+            // create non-GS nodes from GS nodes in one batch
+        let batch =
+            let ids, conts =
+                nodeArrays
+                    |> Seq.concat
+                    |> Seq.choose (function
+                        | GetStrategy gs ->
+                            Some (gs.InformationSet, gs.Continuation)
+                        | _ -> None)
+                    |> Seq.toArray
+                    |> Array.unzip
+            (getStrategies ids modelOpt, conts)
+                ||> Array.map2 (|>)
+        assert(batch |> Seq.forall (_.IsGetStrategy >> not))
+
+            // replace GS nodes in the correct order
+        (nodeArrays, batch)
+            ||> replace (function
+                | GetStrategy _ -> None
+                | node -> Some node)
+
+    let private getComp = function
+        | Complete comp -> comp
+        | _ -> failwith "Unexpected"
+
+    let rec private getSamples comp =
+        [|
+            match comp.SampleOpt with
+                | Some sample -> sample
+                | None -> ()
+            for child in comp.Children do
+                yield! getSamples child
+        |]
+
+    /// Recursively drives the given nodes to completion.
+    let complete modelOpt (nodes : Node[]) =
+
+        let rec loop (nodeArrays : Node[][]) : Node[][] =
+            if Array.isEmpty nodeArrays then
+                Array.empty
             else
-                // For all Initial nodes at this level, collect their ids (in the same order).
-                let ids = indexedInitials |> Array.map (fun (_, init) -> init.InformationSet)
-                // Batch call: one call per level.
-                let childrenIdsBatch = getStrategies ids modelOpt
-                // Replace each Initial node with the node returned by its continuation.
-                let nodesUpdated = Array.copy nodes
-                for k in 0 .. indexedInitials.Length - 1 do
-                    let (i, init) = indexedInitials[k]
-                    let childIds = childrenIdsBatch[k]
-                    nodesUpdated[i] <- init.Continuation childIds
-                // Recurse: some of the new nodes might be Initial or have InProgress children.
-                nodesUpdated 
-                |> Array.map (fun node ->
-                    match node with
-                    | GetUtility ip -> GetUtility {| ip with Results = expandBatch ip.Results |}
-                    | _ -> node)
-    
-        // Now every node is either InProgress or Complete.
-        // We define a function to “complete” an InProgress node by recursively processing its children.
-        let rec completeNode (node: Traversal) : Complete =
-             match node with
-             | Complete c -> c.Utilities, c.Samples
-             | GetUtility ip ->
-                 // Complete all children (this preserves the original order).
-                 let childrenComplete = ip.Results |> Array.map completeNode
-                 let childFsts = childrenComplete |> Array.map fst
-                 let childSnds = childrenComplete |> Array.map snd
-                 match ip.Continuation childFsts childSnds with
-                 | Complete c -> c.Utilities, c.Samples
-                 | _ -> failwith "Continuation did not yield a Complete node"
-             | GetStrategy _ -> failwith "Should not have any Initial node after expansion"
-    
-        // We now traverse the (expanded) tree to collect the complete nodes for every node.
-        let rec collectCompletes (node: Traversal) : Complete list =
-             match node with
-             | Complete c -> [c.Utilities, c.Samples]
-             | GetUtility ip ->
-                 // First complete this node.
-                 let selfComplete = completeNode node
-                 // Then collect complete nodes from its children.
-                 let childrenCompletes = ip.Results |> Array.toList |> List.collect collectCompletes
-                 selfComplete :: childrenCompletes
-             | GetStrategy _ -> failwith "Should not have any Initial node after expansion"
-    
-        // Expand all nodes (batched per sibling group).
-        let expanded = expandBatch nodes
-        // Collect complete nodes from the entire tree.
-        let allCompletes = expanded |> Array.toList |> List.collect collectCompletes
-        // (Optionally sort by id – here the sample expects node ids 1,2,3,4,5.)
-        allCompletes 
-        // |> List.sortBy (fun c -> c.Id) 
-        |> Seq.collect snd
-        |> Seq.toArray
+                    // replace initial nodes
+                let nonInitialArrays =
+                    replaceGetStrategy modelOpt nodeArrays
+
+                    // drive children of in-progress nodes to completion
+                let comps =
+                    let childArrays, conts =
+                        nonInitialArrays
+                            |> Seq.concat
+                            |> Seq.choose (function
+                                | GetStrategy _ -> failwith "Unexpected"
+                                | GetUtility gu ->
+                                    Some (gu.Results, gu.Continuation)
+                                | _ -> None)
+                            |> Seq.toArray
+                            |> Array.unzip
+                    let comps =
+                        loop childArrays
+                            |> Array.map (Array.map getComp)
+                    (comps, conts)
+                        ||> Array.map2 (|>)
+
+                    // replace in-progress nodes
+                (nonInitialArrays, comps)
+                    ||> replace (function
+                        | GetStrategy _ -> failwith "Unexpected"
+                        | GetUtility _ -> None
+                        | Complete _ as node -> Some node)
+
+        loop [| nodes |]
+            |> Array.exactlyOne
+            |> Array.collect (getComp >> getSamples)

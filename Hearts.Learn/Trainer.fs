@@ -4,8 +4,6 @@ open System
 open System.Diagnostics
 open System.IO
 
-open TorchSharp
-
 open Hearts
 open Hearts.Model
 
@@ -38,57 +36,6 @@ module AdvantageState =
         }
 
 module Trainer =
-
-    (*
-    let private getStrategies infoSets modelOpt =
-        match modelOpt with
-            | Some model ->
-                Strategy.getFromAdvantage infoSets model
-            | None ->
-                infoSets
-                    |> Array.map (fun infoSet ->
-                        Strategy.random infoSet.LegalActions.Length)
-
-    let private getSamples modelOpt results : AdvantageSample[] =
-
-        let rec descend results =
-
-                // get info sets that need inference
-            let infoSets, conts =
-                results
-                    |> Array.choose (function
-                        | Traverse.Descend desc ->
-                            Some (desc.InformationSet, desc.Continuation)
-                        | _ -> None)
-                    |> Array.unzip
-
-            if infoSets.Length > 0 then
-
-                    // infer strategies and get new results from them
-                let descendingResults =
-                    (getStrategies infoSets modelOpt, conts)
-                        ||> Array.map2 (|>)
-                assert(descendingResults |> Seq.forall _.IsAscend)
-
-                    // replace old results with new
-                (0, results)
-                    ||> Array.mapFold (fun iDesc -> function
-                        | Traverse.Descend _ ->
-                            descendingResults[iDesc], iDesc + 1
-                        | result ->
-                            result, iDesc)
-                    |> fst
-                    |> descend
-
-            else
-                    // extract samples from complete results
-                results
-                    |> Array.collect (function
-                        | Traverse.Complete comp -> comp.Samples
-                        | _ -> failwith "Unexpected")
-
-        descend results
-        *)
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
