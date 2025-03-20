@@ -76,7 +76,7 @@ module Inference =
         |]
 
     /// Recursively drives the given nodes to completion.
-    let complete iter modelOpt (nodes : Node[]) =
+    let complete modelOpt (nodes : Node[]) =
 
         let rec loop depth nodeArrays =
             if Array.isEmpty nodeArrays then
@@ -85,21 +85,18 @@ module Inference =
                     // replace initial nodes
                 let nonInitialArrays =
                     replaceGetStrategy modelOpt nodeArrays
-                let nonInitials = Array.concat nonInitialArrays
-                settings.Writer.add_scalar(
-                    $"advantage samples/iter%03d{iter}",
-                    float32 nonInitials.Length,
-                    depth)
 
                     // drive children of in-progress nodes to completion
                 let comps =
                     let childArrays, conts =
-                        nonInitials
-                            |> Array.choose (function
+                        nonInitialArrays
+                            |> Seq.concat
+                            |> Seq.choose (function
                                 | GetStrategy _ -> failwith "Unexpected"
                                 | GetUtility gu ->
                                     Some (gu.Results, gu.Continuation)
                                 | _ -> None)
+                            |> Seq.toArray
                             |> Array.unzip
                     let comps =
                         loop (depth + 1) childArrays

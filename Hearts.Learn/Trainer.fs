@@ -39,13 +39,29 @@ module Trainer =
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
-        OpenDeal.generate
-            (Random())
-            settings.NumTraversals
-            (fun deal ->
-                let rng = Random()   // each thread has its own RNG
-                Traverse.traverse iter deal rng)
-            |> Inference.complete iter modelOpt
+        let chunkSize = 100
+        let rng = Random()
+        Array.zeroCreate<int> settings.NumTraversals
+            |> Array.chunkBySize chunkSize
+            |> Array.indexed
+            |> Array.collect (fun (i, chunk) ->
+
+                let samples =
+                    let numTraverals = chunk.Length
+                    OpenDeal.generate
+                        rng
+                        numTraverals
+                        (fun deal ->
+                            let rng = Random()   // each thread has its own RNG
+                            Traverse.traverse iter deal rng)
+                    |> Inference.complete modelOpt
+
+                settings.Writer.add_scalar(
+                    $"advantage samples/iter%03d{iter}",
+                    float32 samples.Length,
+                    (i + 1) * chunkSize)
+
+                samples)
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
