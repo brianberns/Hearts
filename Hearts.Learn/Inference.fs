@@ -75,7 +75,7 @@ module Inference =
     /// Recursively drives the given nodes to completion.
     let complete iter modelOpt (nodes : Node[]) =
 
-        let rec loop depth (nodeArrays : Node[][]) : Node[][] =
+        let rec loop depth nodeArrays =
             if Array.isEmpty nodeArrays then
                 Array.empty
             else
@@ -84,7 +84,7 @@ module Inference =
                     replaceGetStrategy modelOpt nodeArrays
                 let nonInitials = Array.concat nonInitialArrays
                 settings.Writer.add_scalar(
-                    $"advantage samples/iter%03d{iter}",
+                    $"advantage inferences/iter%03d{iter}",
                     float32 nonInitials.Length,
                     depth)
 
