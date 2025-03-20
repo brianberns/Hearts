@@ -56,7 +56,6 @@ module Strategy =
             assert(advantages.shape[0] = infoSets.Length)
 
                 // access data on CPU
-            advantages.``to``(torch.CPU) |> ignore
             let nCols = int advantages.shape[1]
             assert(nCols = Network.outputSize)
             let data =
