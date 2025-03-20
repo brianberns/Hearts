@@ -94,7 +94,7 @@ module Inference =
                             |> Seq.choose (function
                                 | GetStrategy _ -> failwith "Unexpected"
                                 | GetUtility gu ->
-                                    Some (gu.Results, gu.Continuation)
+                                    Some (gu.Children, gu.Continuation)
                                 | _ -> None)
                             |> Seq.toArray
                             |> Array.unzip

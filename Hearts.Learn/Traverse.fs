@@ -7,16 +7,26 @@ open MathNet.Numerics.LinearAlgebra
 open Hearts
 open Hearts.Model
 
+/// Initial node state, awaiting strategy.
 type GetStrategy =
     {
+        /// Information set in this node.
         InformationSet : InformationSet
+
+        /// Leads to a node in one of the other two states.
         Continuation : Vector<float32> (*per-action strategy*) -> Node
     }
 
+/// Node state awaiting complete children.
 and GetUtility =
     {
+        /// Information set in this node.
         InformationSet : InformationSet
-        Results : Node[]
+
+        /// Incomplete child nodes.
+        Children : Node[]
+
+        /// Leads to a completed node.
         Continuation : Complete[] (*children*) -> Node
     }
 
@@ -40,10 +50,10 @@ module Node =
             Continuation = cont
         }
 
-    let getUtility infoSet results cont =
+    let getUtility infoSet children cont =
         GetUtility {
             InformationSet = infoSet
-            Results = results
+            Children = children
             Continuation = cont
         }
 
