@@ -54,7 +54,8 @@ module Strategy =
             [|
                 for i, infoSet in Seq.indexed infoSets do
                     use advantage = advantages[i]
-                    advantage.data<float32>()
+                    use accessor = advantage.data<float32>()
+                    accessor
                         |> DenseVector.ofSeq
                         |> toNarrow infoSet.LegalActions
                         |> matchRegrets
