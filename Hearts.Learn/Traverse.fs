@@ -30,26 +30,41 @@ and GetUtility =
         Continuation : Complete[] (*children*) -> Node
     }
 
+/// Final node state.
 and Complete =
     {
+        /// Per-action utility of this node.
         Utilities : float32[]
+
+        /// Sample representing this node.
         SampleOpt : Option<AdvantageSample>
+
+        /// Complete children.
         Children : Complete[]
     }
 
+/// Game state.
 and Node =
+
+    /// Awaiting strategy.
     | GetStrategy of GetStrategy
+
+    /// Awaiting utility.
     | GetUtility of GetUtility
+
+    /// Final.
     | Complete of Complete
 
 module Node =
 
+    /// Creates a node.
     let getStrategy infoSet cont =
         GetStrategy {
             InformationSet = infoSet
             Continuation = cont
         }
 
+    /// Creates a node.
     let getUtility infoSet children cont =
         GetUtility {
             InformationSet = infoSet
@@ -57,6 +72,7 @@ module Node =
             Continuation = cont
         }
 
+    /// Creates a node.
     let complete utilities sampleOpt children =
         Complete {
             Utilities = utilities
