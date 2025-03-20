@@ -47,18 +47,28 @@ module Strategy =
     /// Computes strategies for the given info sets using the
     /// given advantage model.
     let getFromAdvantage model infoSets =
+
         if Array.length infoSets > 0 then
+
+                // run model on GPU
             use advantages =
                 AdvantageModel.getAdvantages infoSets model
             assert(advantages.shape[0] = infoSets.Length)
+
+                // access data on CPU
             advantages.``to``(torch.CPU) |> ignore
+            let nCols = int advantages.shape[1]
+            assert(nCols = Network.outputSize)
+            let data =
+                use accessor = advantages.data<float32>()
+                accessor.ToArray()
             [|
-                for i, infoSet in Seq.indexed infoSets do
-                    use advantage = advantages[i]
-                    use accessor = advantage.data<float32>()
-                    accessor
+                for iRow, infoSet in Seq.indexed infoSets do
+                    let iStart = iRow * nCols
+                    data[iStart .. iStart + nCols - 1]
                         |> DenseVector.ofSeq
                         |> toNarrow infoSet.LegalActions
                         |> matchRegrets
             |]
+
         else Array.empty
