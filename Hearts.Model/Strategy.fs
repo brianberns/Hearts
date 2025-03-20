@@ -46,7 +46,7 @@ module Strategy =
 
     /// Computes strategies for the given info sets using the
     /// given advantage model.
-    let getFromAdvantage infoSets model =
+    let getFromAdvantage model infoSets =
         if Array.length infoSets > 0 then
             use advantages =
                 AdvantageModel.getAdvantages infoSets model

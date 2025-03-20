@@ -16,7 +16,10 @@ module Inference =
     let private getStrategies infoSets modelOpt =
         match modelOpt with
             | Some (model : AdvantageModel) ->
-                Strategy.getFromAdvantage infoSets model
+                infoSets
+                    |> Array.chunkBySize settings.AdvantageSubBatchSize
+                    |> Array.collect (
+                        Strategy.getFromAdvantage model)
             | None ->
                 infoSets
                     |> Array.map (fun infoSet ->

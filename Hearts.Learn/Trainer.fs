@@ -106,7 +106,7 @@ module Trainer =
 
         let act infoSet =
             let strategy =
-                Strategy.getFromAdvantage [|infoSet|] model
+                Strategy.getFromAdvantage model [|infoSet|]
                     |> Array.exactlyOne
             let action =
                 Vector.sample rng strategy

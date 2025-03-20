@@ -26,7 +26,7 @@ module Model =
 
     /// Finds the strategy for the given info set.
     let getStrategy infoSet model =
-        Strategy.getFromAdvantage infoSet model
+        Strategy.getFromAdvantage model infoSet
 
 module Remoting =
 
@@ -40,7 +40,9 @@ module Remoting =
                 fun infoSet ->
                     async {
                         let strategy =
-                            Model.getStrategy [|infoSet|] model
+                            Strategy.getFromAdvantage
+                                model
+                                [|infoSet|]
                                 |> Array.exactlyOne
                         return Vector.sample rng strategy
                     }
