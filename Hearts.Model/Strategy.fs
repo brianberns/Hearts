@@ -1,7 +1,7 @@
 ﻿namespace Hearts.Model
 
+open TorchSharp
 open MathNet.Numerics.LinearAlgebra
-
 open PlayingCards
 
 module Strategy =
@@ -51,6 +51,7 @@ module Strategy =
             use advantages =
                 AdvantageModel.getAdvantages infoSets model
             assert(advantages.shape[0] = infoSets.Length)
+            advantages.``to``(torch.CPU) |> ignore
             [|
                 for i, infoSet in Seq.indexed infoSets do
                     use advantage = advantages[i]
