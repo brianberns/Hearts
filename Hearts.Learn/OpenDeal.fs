@@ -17,7 +17,7 @@ module OpenDeal =
                 enum<ExchangeDirection>
                     (iDeal % ExchangeDirection.numDirections)
             deck, dealer, dir)
-            |> Array.Parallel.map (fun (deck, dealer, dir) ->
+            |> Array.map (fun (deck, dealer, dir) ->
                 let deal =
                     let deal = OpenDeal.fromDeck dealer dir deck
                     if dir = ExchangeDirection.Hold then   // can start play immediately?

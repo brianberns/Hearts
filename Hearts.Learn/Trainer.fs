@@ -39,30 +39,13 @@ module Trainer =
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
-
-        let mutable count = 0     // ugly, but just for logging
-        let lockable = new obj()
-
         OpenDeal.generate
             (Random())
             settings.NumTraversals
             (fun deal ->
-
-                let samples =
-                    let rng = Random()   // each thread has its own RNG
-                    Traverse.traverse iter deal rng
-                        |> Array.singleton
-                        |> Inference.complete modelOpt
-
-                lock lockable (fun () ->
-                    count <- count + 1
-                    settings.Writer.add_scalar(
-                        $"advantage samples/iter%03d{iter}",
-                        float32 samples.Length,
-                        count))
-
-                samples)
-                |> Array.concat
+                let rng = Random()   // each thread has its own RNG
+                Traverse.traverse iter deal rng)
+            |> Inference.complete iter modelOpt
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.

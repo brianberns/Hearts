@@ -15,7 +15,7 @@ module Inference =
 
     let private getStrategies infoSets modelOpt =
         match modelOpt with
-            | Some model ->
+            | Some (model : AdvantageModel) ->
                 Strategy.getFromAdvantage infoSets model
             | None ->
                 infoSets
@@ -50,7 +50,7 @@ module Inference =
                     |> Seq.toArray
                     |> Array.unzip
             (getStrategies ids modelOpt, conts)
-                ||> Array.Parallel.map2 (|>)
+                ||> Array.map2 (|>)
         assert(batch |> Seq.forall (_.IsGetStrategy >> not))
 
             // replace GS nodes in the correct order
@@ -73,33 +73,36 @@ module Inference =
         |]
 
     /// Recursively drives the given nodes to completion.
-    let complete modelOpt (nodes : Node[]) =
+    let complete iter modelOpt (nodes : Node[]) =
 
-        let rec loop (nodeArrays : Node[][]) : Node[][] =
+        let rec loop depth (nodeArrays : Node[][]) : Node[][] =
             if Array.isEmpty nodeArrays then
                 Array.empty
             else
                     // replace initial nodes
                 let nonInitialArrays =
                     replaceGetStrategy modelOpt nodeArrays
+                let nonInitials = Array.concat nonInitialArrays
+                settings.Writer.add_scalar(
+                    $"advantage samples/iter%03d{iter}",
+                    float32 nonInitials.Length,
+                    depth)
 
                     // drive children of in-progress nodes to completion
                 let comps =
                     let childArrays, conts =
-                        nonInitialArrays
-                            |> Seq.concat
-                            |> Seq.choose (function
+                        nonInitials
+                            |> Array.choose (function
                                 | GetStrategy _ -> failwith "Unexpected"
                                 | GetUtility gu ->
                                     Some (gu.Results, gu.Continuation)
                                 | _ -> None)
-                            |> Seq.toArray
                             |> Array.unzip
                     let comps =
-                        loop childArrays
+                        loop (depth + 1) childArrays
                             |> Array.map (Array.map getComp)
                     (comps, conts)
-                        ||> Array.Parallel.map2 (|>)
+                        ||> Array.map2 (|>)
 
                     // replace in-progress nodes
                 (nonInitialArrays, comps)
@@ -108,6 +111,6 @@ module Inference =
                         | GetUtility _ -> None
                         | Complete _ as node -> Some node)
 
-        loop [| nodes |]
+        loop 0 [| nodes |]
             |> Array.exactlyOne
             |> Array.collect (getComp >> getSamples)
