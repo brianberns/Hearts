@@ -50,7 +50,7 @@ module Inference =
                     |> Seq.toArray
                     |> Array.unzip
             (getStrategies ids modelOpt, conts)
-                ||> Array.map2 (|>)
+                ||> Array.Parallel.map2 (|>)
         assert(batch |> Seq.forall (_.IsGetStrategy >> not))
 
             // replace GS nodes in the correct order
@@ -84,7 +84,7 @@ module Inference =
                     replaceGetStrategy modelOpt nodeArrays
                 let nonInitials = Array.concat nonInitialArrays
                 settings.Writer.add_scalar(
-                    $"advantage inferences/iter%03d{iter}",
+                    $"advantage samples/iter%03d{iter}",
                     float32 nonInitials.Length,
                     depth)
 
@@ -102,7 +102,7 @@ module Inference =
                         loop (depth + 1) childArrays
                             |> Array.map (Array.map getComp)
                     (comps, conts)
-                        ||> Array.map2 (|>)
+                        ||> Array.Parallel.map2 (|>)
 
                     // replace in-progress nodes
                 (nonInitialArrays, comps)
