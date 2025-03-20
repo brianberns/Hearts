@@ -49,11 +49,12 @@ module Strategy =
     let getFromAdvantage infoSets model =
         if Array.length infoSets > 0 then
             use advantages =
-                AdvantageModel.getAdvantage infoSets model
+                AdvantageModel.getAdvantages infoSets model
             assert(advantages.shape[0] = infoSets.Length)
             [|
                 for i, infoSet in Seq.indexed infoSets do
-                    advantages[i].data<float32>()
+                    use advantage = advantages[i]
+                    advantage.data<float32>()
                         |> DenseVector.ofSeq
                         |> toNarrow infoSet.LegalActions
                         |> matchRegrets

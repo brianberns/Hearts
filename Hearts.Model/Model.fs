@@ -78,7 +78,7 @@ type AdvantageModel(
 module AdvantageModel =
 
     /// Gets advantages for the given info sets.
-    let getAdvantage infoSets (model : AdvantageModel) =
+    let getAdvantages infoSets (model : AdvantageModel) =
         use _ = torch.no_grad()
         use input =
             let encoded =
