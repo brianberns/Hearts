@@ -102,7 +102,7 @@ module Traverse =
                     infoSet.LegalActionType legalActions[0]   // forced action
             else
                     // get utility of current player's strategy
-                let rnd = rng.NextDouble()
+                let rnd = lock rng (fun () -> rng.NextDouble())
                 let threshold =
                     settings.SampleDecay
                         / (settings.SampleDecay + float depth)
@@ -156,7 +156,8 @@ module Traverse =
         /// sampling a single action.
         and getOneUtility infoSet deal depth strategy =
             let result =
-                Vector.sample rng strategy
+                lock rng (fun () ->
+                    Vector.sample rng strategy)
                     |> Array.get infoSet.LegalActions
                     |> addLoop deal (depth+1) infoSet.LegalActionType
             Node.getUtility
