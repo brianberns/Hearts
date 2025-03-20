@@ -36,6 +36,9 @@ type Settings =
         /// Number of deals to traverse during each iteration.
         NumTraversals : int
 
+        /// Number of deals to traverse in each batch.
+        TraversalBatchSize : int
+
         /// Number of iterations to perform.
         NumIterations : int
 
@@ -78,6 +81,7 @@ module Settings =
                 AdvantageSubBatchSize = 80_000
                 NumAdvantageSamples = 50_000_000
                 NumTraversals = 16000
+                TraversalBatchSize = 200
                 NumIterations = 25
                 NumEvaluationDeals = 10000
                 Device = torch.CUDA
@@ -115,6 +119,9 @@ module Settings =
         writer.add_text(
             $"settings/NumTraversals",
             string settings.NumTraversals, 0)
+        writer.add_text(
+            $"settings/TraversalBatchSize",
+            string settings.TraversalBatchSize, 0)
         writer.add_text(
             $"settings/NumIterations",
             string settings.NumIterations, 0)
