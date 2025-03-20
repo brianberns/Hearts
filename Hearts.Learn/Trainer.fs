@@ -39,7 +39,12 @@ module Trainer =
 
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
-        let chunkSize = 100
+
+        settings.Writer.add_scalar(
+            $"advantage samples/iter%03d{iter}",
+            0f, 0)
+
+        let chunkSize = 200
         let rng = Random()
         Array.zeroCreate<int> settings.NumTraversals
             |> Array.chunkBySize chunkSize
@@ -47,18 +52,17 @@ module Trainer =
             |> Array.collect (fun (i, chunk) ->
 
                 let samples =
-                    let numTraverals = chunk.Length
                     OpenDeal.generate
                         rng
-                        numTraverals
+                        chunk.Length
                         (fun deal ->
                             let rng = Random()   // each thread has its own RNG
                             Traverse.traverse iter deal rng)
-                    |> Inference.complete modelOpt
+                        |> Inference.complete modelOpt
 
                 settings.Writer.add_scalar(
                     $"advantage samples/iter%03d{iter}",
-                    float32 samples.Length,
+                    float32 samples.Length / float32 chunkSize,
                     (i + 1) * chunkSize)
 
                 samples)
