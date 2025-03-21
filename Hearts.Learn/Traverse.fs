@@ -109,7 +109,7 @@ module Traverse =
     let traverse iter deal (rng : Random) =
 
         /// Top-level loop.
-        let rec loop deal depth : Node =
+        let rec loop deal depth =
             match ZeroSum.tryGetPayoff deal with
                 | Some payoff ->
                     Node.complete   // deal is over
@@ -140,7 +140,7 @@ module Traverse =
                 Node.getStrategy infoSet cont
 
         /// Adds the given action to the given deal and loops.
-        and addLoop deal depth actionType action : Node =
+        and addLoop deal depth actionType action =
             let deal = OpenDeal.addAction actionType action deal
             loop deal depth
 
