@@ -6,6 +6,7 @@ module Array =
 
     module Parallel =
 
+        /// Maps the given arrays using the given function .
         let map2 mapping array1 array2 =
             Array.zip array1 array2
                 |> Array.Parallel.map (fun (val1, val2) ->
@@ -13,13 +14,18 @@ module Array =
 
 module Inference =
 
+    /// Gets strategies for the given batch of info sets.
     let private getStrategies infoSets modelOpt =
         match modelOpt with
+
+                // batch inference
             | Some (model : AdvantageModel) ->
                 infoSets
                     |> Array.chunkBySize settings.AdvantageSubBatchSize
                     |> Array.collect (
                         Strategy.getFromAdvantage model)
+
+                // no model yet, random strategies
             | None ->
                 infoSets
                     |> Array.map (fun infoSet ->
@@ -62,10 +68,12 @@ module Inference =
                 | GetStrategy _ -> None
                 | node -> Some node)
 
+    /// Extracts details from the given complete node.
     let private getComp = function
         | Complete comp -> comp
         | _ -> failwith "Unexpected"
 
+    /// Extract samples from the given complete node.
     let rec private getSamples comp =
         [|
             match comp.SampleOpt with

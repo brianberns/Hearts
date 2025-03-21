@@ -45,7 +45,6 @@ module Trainer =
             0f, 0)
 
         let chunkSize = settings.TraversalBatchSize
-        let rng = Random()
         Array.zeroCreate<int> settings.NumTraversals
             |> Array.chunkBySize chunkSize
             |> Array.indexed
@@ -53,7 +52,7 @@ module Trainer =
 
                 let samples =
                     OpenDeal.generate
-                        rng
+                        (Random())
                         chunk.Length
                         (fun deal ->
                             let rng = Random()   // each thread has its own RNG
