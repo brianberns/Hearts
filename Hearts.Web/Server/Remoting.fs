@@ -24,10 +24,6 @@ module Model =
         model.load(path) |> ignore
         model
 
-    /// Finds the strategy for the given info set.
-    let getStrategy infoSet model =
-        Strategy.getFromAdvantage model infoSet
-
 module Remoting =
 
     /// Hearts API.
@@ -50,7 +46,9 @@ module Remoting =
                 fun infoSet ->
                     async {
                         let strategy =
-                            Model.getStrategy [|infoSet|] model
+                            Strategy.getFromAdvantage
+                                model
+                                [|infoSet|]
                                 |> Array.exactlyOne
                         return strategy.ToArray()
                             |> Array.map float
