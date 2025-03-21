@@ -77,11 +77,14 @@ type AdvantageModel(
 
 module AdvantageModel =
 
-    /// Gets the advantage for the given info set.
-    let getAdvantage infoSet (model : AdvantageModel) =
+    /// Gets advantages for the given info sets.
+    let getAdvantages infoSets (model : AdvantageModel) =
         use _ = torch.no_grad()
         use input =
-            let encoded = Encoding.encode infoSet
+            let encoded =
+                infoSets
+                    |> Array.map Encoding.encode
+                    |> array2D
             tensor(
                 encoded, device = model.Device,
                 dtype = ScalarType.Float32)

@@ -13,9 +13,6 @@ type Settings =
         /// Optimizer learning rate.
         LearningRate : float
 
-        /// Maximum degree of parallelism.
-        MaxDegreeOfParallelism : int
-
         /// Sample decay control. Greater values cause greater
         /// branching.
         /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
@@ -35,6 +32,9 @@ type Settings =
 
         /// Number of deals to traverse during each iteration.
         NumTraversals : int
+
+        /// Number of deals to traverse in each batch.
+        TraversalBatchSize : int
 
         /// Number of iterations to perform.
         NumIterations : int
@@ -71,13 +71,13 @@ module Settings =
             {
                 HiddenSize = Encoding.encodedLength * 4
                 LearningRate = 1e-3
-                MaxDegreeOfParallelism = Environment.ProcessorCount
                 SampleDecay = 0.15
                 NumAdvantageTrainEpochs = 1000
                 AdvantageBatchSize = 1_000_000
-                AdvantageSubBatchSize = 50_000
+                AdvantageSubBatchSize = 80_000
                 NumAdvantageSamples = 50_000_000
                 NumTraversals = 16000
+                TraversalBatchSize = 200
                 NumIterations = 25
                 NumEvaluationDeals = 10000
                 Device = torch.CUDA
@@ -94,9 +94,6 @@ module Settings =
         writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
-        writer.add_text(
-            $"settings/MaxDegreeOfParallelism",
-            string settings.MaxDegreeOfParallelism, 0)
         writer.add_text(
             $"settings/SampleDecay",
             string settings.SampleDecay, 0)
@@ -115,6 +112,9 @@ module Settings =
         writer.add_text(
             $"settings/NumTraversals",
             string settings.NumTraversals, 0)
+        writer.add_text(
+            $"settings/TraversalBatchSize",
+            string settings.TraversalBatchSize, 0)
         writer.add_text(
             $"settings/NumIterations",
             string settings.NumIterations, 0)

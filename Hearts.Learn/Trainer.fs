@@ -4,8 +4,6 @@ open System
 open System.Diagnostics
 open System.IO
 
-open TorchSharp
-
 open Hearts
 open Hearts.Model
 
@@ -42,42 +40,32 @@ module Trainer =
     /// Generates training data using the given model.
     let private generateSamples iter modelOpt =
 
-        let mutable count = 0     // ugly, but just for logging
-        let lockable = new obj()
+        settings.Writer.add_scalar(
+            $"advantage samples/iter%03d{iter}",
+            0f, 0)
 
-            // move model to CPU for faster inference
-        modelOpt
-            |> Option.iter (fun (model : AdvantageModel) ->
-                model.MoveTo(torch.CPU))
-
-            // function to get strategy for a given info set
-        let getStrategy =
-            match modelOpt with
-                | Some model ->
-                    fun infoSet ->
-                        Strategy.getFromAdvantage infoSet model
-                | None ->
-                    fun infoSet ->
-                        Strategy.random infoSet.LegalActions.Length
-
-        OpenDeal.generate
-            (Random())
-            settings.NumTraversals
-            (fun deal ->
+        let chunkSize = settings.TraversalBatchSize
+        let rng = Random()
+        Array.zeroCreate<int> settings.NumTraversals
+            |> Array.chunkBySize chunkSize
+            |> Array.indexed
+            |> Array.collect (fun (i, chunk) ->
 
                 let samples =
-                    let rng = Random()   // each thread has its own RNG
-                    Traverse.traverse iter deal rng getStrategy
+                    OpenDeal.generate
+                        rng
+                        chunk.Length
+                        (fun deal ->
+                            let rng = Random()   // each thread has its own RNG
+                            Traverse.traverse iter deal rng)
+                        |> Inference.complete modelOpt
 
-                lock lockable (fun () ->
-                    count <- count + 1
-                    settings.Writer.add_scalar(
-                        $"advantage samples/iter%03d{iter}",
-                        float32 samples.Length,
-                        count))
+                settings.Writer.add_scalar(
+                    $"advantage samples/iter%03d{iter}",
+                    float32 samples.Length / float32 chunkSize,
+                    (i + 1) * chunkSize)
 
                 samples)
-                |> Array.concat
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
@@ -138,7 +126,8 @@ module Trainer =
 
         let act infoSet =
             let strategy =
-                Strategy.getFromAdvantage infoSet model
+                Strategy.getFromAdvantage model [|infoSet|]
+                    |> Array.exactlyOne
             let action =
                 Vector.sample rng strategy
                     |> Array.get infoSet.LegalActions
@@ -149,8 +138,6 @@ module Trainer =
     /// Evaluates the given model by playing it against a
     /// standard.
     let private evaluate iter (model : AdvantageModel) =
-
-        model.MoveTo(torch.CPU)   // faster inference on CPU
 
         let avgPayoff =
             Tournament.run

@@ -1,7 +1,7 @@
 ﻿namespace Hearts.Model
 
+open TorchSharp
 open MathNet.Numerics.LinearAlgebra
-
 open PlayingCards
 
 module Strategy =
@@ -29,7 +29,7 @@ module Strategy =
 
     /// Converts a wide vector (indexed by entire deck) to
     /// a narrow vector (indexed by legal actions).
-    let private toNarrow legalActions (wide : Vector<_>) =
+    let private toNarrow (legalActions : _[]) (wide : Vector<_>) =
         assert(wide.Count = Card.numCards)
         legalActions
             |> Seq.map (
@@ -44,12 +44,30 @@ module Strategy =
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    /// Computes strategy for the given info set using the
+    /// Computes strategies for the given info sets using the
     /// given advantage model.
-    let getFromAdvantage infoSet model =
-        use advantage =
-            AdvantageModel.getAdvantage infoSet model
-        advantage.data<float32>()
-            |> DenseVector.ofSeq
-            |> toNarrow infoSet.LegalActions
-            |> matchRegrets
+    let getFromAdvantage model infoSets =
+
+        if Array.length infoSets > 0 then
+
+                // run model on GPU
+            use advantages =
+                AdvantageModel.getAdvantages infoSets model
+            assert(advantages.shape[0] = infoSets.Length)
+
+                // access data on CPU
+            let nCols = int advantages.shape[1]
+            assert(nCols = Network.outputSize)
+            let data =
+                use accessor = advantages.data<float32>()
+                accessor.ToArray()
+            [|
+                for iRow, infoSet in Seq.indexed infoSets do
+                    let iStart = iRow * nCols
+                    data[iStart .. iStart + nCols - 1]
+                        |> DenseVector.ofSeq
+                        |> toNarrow infoSet.LegalActions
+                        |> matchRegrets
+            |]
+
+        else Array.empty
