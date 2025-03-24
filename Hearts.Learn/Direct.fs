@@ -1,5 +1,6 @@
 ﻿namespace Hearts.Learn
 
+open System
 open System.IO
 
 open MathNet.Numerics.LinearAlgebra
@@ -9,38 +10,36 @@ open Hearts.Model
 
 module Direct =
 
+    /// Random number generator.
+    let private rng = Random()
+
     /// Generates training data using a standard player.
     let private generateTrainingData (player : Player) numDeals =
 
         let rec loop deal =
             seq {
                 let play, sampleOpt =
-                    let hand =
-                        let seat = OpenDeal.currentPlayer deal
-                        deal.UnplayedCardMap[seat]
-                    let legalPlays =
-                        ClosedDeal.legalPlays hand deal.ClosedDeal
-                            |> Seq.toArray
-                    if legalPlays.Length = 1 then
-                        Array.exactlyOne legalPlays,
+                    let infoSet = OpenDeal.currentInfoSet deal
+                    let legalActions = infoSet.LegalActions
+                    if legalActions.Length = 1 then
+                        Array.exactlyOne legalActions,
                         None
                     else
-                        let play = player.Play hand deal.ClosedDeal
+                        let _, action = player.Act infoSet
                         let regrets =
                             let strategy =
                                 [|
-                                    for card in legalPlays do
-                                        if card = play then 1.0f
+                                    for card in legalActions do
+                                        if card = action then 1.0f
                                         else 0.0f
                                 |]
                             let mean = Array.average strategy
                             strategy
                                 |> Array.map (fun x -> x - mean)
                                 |> DenseVector.ofArray
-                                |> Strategy.toWide legalPlays
-                        play,
-                        AdvantageSample.create
-                            hand deal.ClosedDeal regrets 1
+                                |> Strategy.toWide legalActions
+                        action,
+                        AdvantageSample.create infoSet regrets 1
                             |> Some
 
                 match sampleOpt with
@@ -54,7 +53,7 @@ module Direct =
             }
 
         OpenDeal.generate
-            settings.Random
+            rng
             numDeals
             (loop >> Seq.toArray)
                 |> Array.concat
@@ -70,7 +69,10 @@ module Direct =
         printfn $"Number of samples: {samples.Length}"
 
             // train model
-        let model = new AdvantageModel(settings.Device)
+        let model =
+            new AdvantageModel(
+                settings.HiddenSize,
+                settings.Device)
         AdvantageModel.train 0 samples model
 
             // save trained model
@@ -83,7 +85,7 @@ module Direct =
             // evaluate trained model
         let avgPayoff =
             Tournament.run
-                settings.Random
+                rng
                 Trickster.player
                 (Trainer.createPlayer model)
         settings.Writer.add_scalar(

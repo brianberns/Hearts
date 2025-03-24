@@ -10,6 +10,51 @@ open Hearts.Web.Client   // ugly - force AutoOpen
 
 module Deal =
 
+    /// Runs the exchange of the given deal.
+    let private exchange
+        dir
+        (surface : JQueryElement)
+        persState
+        handViews =
+
+            // create pass chooser
+        let chooser = PassChooser.create dir
+        surface.append(chooser.Element)
+
+            // get animations for each seat
+        let exchangeMap =
+            handViews
+                |> Seq.map (fun (seat : Seat, handView) ->
+
+                    let animCardPass =
+                        let anim =
+                            if seat.IsUser then OpenHandView.passAnim
+                            else ClosedHandView.passAnim
+                        anim seat dir handView
+
+                    let animCardsReceive =
+                        let anim =
+                            if seat.IsUser then
+                                OpenHandView.receivePassAnim
+                            else
+                                ClosedHandView.receivePassAnim
+                        anim seat dir handView
+
+                    let tuple =
+                        handView,
+                        animCardPass,
+                        animCardsReceive
+
+                    seat, tuple)
+                |> Map
+
+            // run the exchange
+        async {
+            let! persState' = Exchange.run persState chooser exchangeMap
+            chooser.Element.remove()
+            return persState'
+        }
+
     /// Runs the playout of the given deal.
     let private playout
         (surface : JQueryElement)
@@ -155,8 +200,13 @@ module Deal =
                             console.log($"Dealer is {Seat.toString dealer}")
                         let deal =
                             Deck.shuffle rng
-                                |> OpenDeal.fromDeck dealer ExchangeDirection.Hold
-                                |> OpenDeal.startPlay
+                                |> OpenDeal.fromDeck
+                                    dealer persState.ExchangeDirection
+                        let deal =
+                            if deal.ClosedDeal.ExchangeDirection   // can start play immediately?
+                                = ExchangeDirection.Hold then
+                                OpenDeal.startPlay deal
+                            else deal
                         let persState =
                             { persState with
                                 RandomState = rng.State
@@ -169,6 +219,14 @@ module Deal =
             let! seatViews =
                 DealView.start surface dealer deal
                     |> Async.AwaitPromise
+
+                // run the exchange?
+            let! persState =
+                let dir = deal.ClosedDeal.ExchangeDirection
+                if dir <> ExchangeDirection.Hold then
+                    exchange dir surface persState seatViews
+                else
+                    async.Return(persState)
 
                 // run the playout
             let! persState = playout surface persState seatViews
@@ -198,7 +256,10 @@ module Deal =
                     let persState' =
                         { persState with
                             GameScore = gameScore
-                            Dealer = persState.Dealer.Next
+                            Dealer = Seat.next persState.Dealer
+                            ExchangeDirection =
+                                ExchangeDirection.next
+                                    persState.ExchangeDirection
                             DealOpt = None }
                     if winners.IsEmpty then
                         PersistentState.save persState'

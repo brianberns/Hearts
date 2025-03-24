@@ -1,90 +1,93 @@
 ﻿namespace Hearts
 
-open PlayingCards
-
-/// Direction in which cards are passed prior to playout.
-type ExchangeDirection =
-    | Left = 1
-    | Right = -1
-    | Across = 2
-    | Hold = 0
-
-module ExchangeDirection =
-
-    /// Next exchange direction, according to Hearts rules (not numerically).
-    let next = function
-        | ExchangeDirection.Left -> ExchangeDirection.Right
-        | ExchangeDirection.Right -> ExchangeDirection.Across
-        | ExchangeDirection.Across -> ExchangeDirection.Hold
-        | ExchangeDirection.Hold -> ExchangeDirection.Left
-        | _ -> failwith "Unexpected"
-
-    /// Applies the given exchange direction to the given seat.
-    let apply seat (dir : ExchangeDirection) =
-        assert(dir <> ExchangeDirection.Hold)
-        seat |> Seat.incr (int dir)
-
-/// Cards passed from one player to another.
+/// All cards passed in a deal.
 type Exchange =
     {
-        /// Dealer passes last.
-        Dealer : Seat
+        /// Player whose turn it is to pass, if the exchange
+        /// is not yet complete.
+        CurrentPasserOpt : Option<Seat>
 
-        /// Card exchange direction.
-        ExchangeDirection : ExchangeDirection
-
-        /// Cards passed by each player in reverse chronological
-        /// order.
-        Passes : List<Set<Card>>
+        /// Passes made by each player so far.
+        PassMap : Map<Seat, Pass>
     }
 
 module Exchange =
 
-    /// Creates an empty exchange.
-    let create dealer dir =
+    /// Creates an exchange
+    let create currentPasser =
         {
-            Dealer = dealer
-            ExchangeDirection = dir
-            Passes = List.empty
+            CurrentPasserOpt = Some currentPasser
+            PassMap = Map [ currentPasser, Pass.empty ]
         }
 
-    /// No exchange?
-    let isHold exchange =
-        exchange.ExchangeDirection = ExchangeDirection.Hold
-
-    /// Number of cards passed by each player.
-    let numCards = 3
-
-    /// Whose turn is it to pass cards in the given exchange?
-    let currentPasser exchange =
-        assert(exchange |> isHold |> not)
-        assert(exchange.Passes.Length < Seat.numSeats)
-        exchange.Dealer
-            |> Seat.incr (exchange.Passes.Length + 1)
-
-    /// Adds current passer's cards to the given exchange.
-    let addPass cards exchange =
-        assert(exchange |> isHold |> not)
-        assert(exchange.Passes.Length < Seat.numSeats)
-        assert(cards |> Set.count = numCards)
-        {
-            exchange with
-                Passes = cards :: exchange.Passes
-        }
-
-    /// Cards passed by each player in the given exchange, in
-    /// chronological order.
-    let seatPasses exchange =
-        assert(exchange |> isHold |> not)
-        let seats = exchange.Dealer.Next |> Seat.cycle
-        let passes = exchange.Passes |> List.rev
-        Seq.zip seats passes
-
-    /// An exchange is complete when it is a hold hand, or all
-    /// players have passed cards.
+    /// An exchange is complete when all players have passed the
+    /// full number of cards.
     let isComplete exchange =
         assert(
-            exchange |> isHold |> not
-                || exchange.Passes.IsEmpty)
-        isHold exchange
-            || exchange.Passes.Length = Seat.numSeats
+            exchange.CurrentPasserOpt.IsSome
+                || (exchange.PassMap.Count = Seat.numSeats
+                    && exchange.PassMap.Values
+                        |> Seq.forall (fun pass ->
+                            pass.Count = Pass.numCards)))
+        exchange.CurrentPasserOpt.IsNone
+
+    /// Whose turn is it to pass cards in the given incomplete
+    /// exchange?
+    let currentPasser exchange =
+        assert(isComplete exchange |> not)
+        match exchange.CurrentPasserOpt with
+            | Some passer -> passer
+            | None -> failwith "Exchange is complete"
+
+    /// Adds the given card to the given exchange.
+    let addPass card exchange =
+        assert(isComplete exchange |> not)
+
+            // get current pass
+        let curPasser = currentPasser exchange
+        let curPass = exchange.PassMap[curPasser]
+        assert(curPass.Count < Pass.numCards)
+
+            // add given card to current pass
+        let curPass = Pass.add card curPass
+        assert(curPass.Count <= Pass.numCards)
+
+            // update current pass in pass map
+        let passMap =
+            exchange.PassMap
+                |> Map.add curPasser curPass
+        assert(passMap.Count <= Seat.numSeats)
+
+            // update exchange
+        let curPasserOpt, passMap =
+
+                // current pass continues?
+            if curPass.Count < Pass.numCards then
+                Some curPasser, passMap
+
+                // start a new pass?
+            elif passMap.Count < Seat.numSeats then
+                let curPasser = Seat.next curPasser
+                Some curPasser,
+                passMap |> Map.add curPasser Pass.empty
+
+                // exchange is complete
+            else
+                assert(curPass.Count = Pass.numCards)
+                None, passMap
+
+        {
+            CurrentPasserOpt = curPasserOpt
+            PassMap = passMap
+        }
+
+    /// Gets passes from and to the given player in the
+    /// given exchange, if any.
+    let getPassOpts player dir exchange =
+        let outOpt =
+            exchange.PassMap |> Map.tryFind player
+        let inOpt =
+            let sender =
+                ExchangeDirection.unapply player dir
+            exchange.PassMap |> Map.tryFind sender
+        outOpt, inOpt

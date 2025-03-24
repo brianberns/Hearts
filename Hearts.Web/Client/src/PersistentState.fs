@@ -25,6 +25,9 @@ type PersistentState =
         /// Current dealer.
         Dealer : Seat
 
+        /// Exchange direction.
+        ExchangeDirection : ExchangeDirection
+
         /// Current deal, if any.
         DealOpt : Option<OpenDeal>
     }
@@ -40,11 +43,12 @@ module PersistentState =
     /// Initial persistent state.
     let private initial =
         {
-            VersionNum = 6   // full deck
+            VersionNum = 7   // exchange direction
             GamesWon = Score.zero
             GameScore = Score.zero
             RandomState = Random().State   // start with arbitrary seed
             Dealer = Seat.South
+            ExchangeDirection = ExchangeDirection.Left
             DealOpt = None
         }
 

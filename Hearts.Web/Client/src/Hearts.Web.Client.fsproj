@@ -18,7 +18,10 @@
     <Compile Include="..\..\..\Hearts\Seat.fs" />
     <Compile Include="..\..\..\Hearts\Trick.fs" />
     <Compile Include="..\..\..\Hearts\Score.fs" />
+    <Compile Include="..\..\..\Hearts\ExchangeDirection.fs" />
     <Compile Include="..\..\..\Hearts\ClosedDeal.fs" />
+    <Compile Include="..\..\..\Hearts\Pass.fs" />
+    <Compile Include="..\..\..\Hearts\InformationSet.fs" />
     <Compile Include="..\..\..\Hearts\Exchange.fs" />
     <Compile Include="..\..\..\Hearts\OpenDeal.fs" />
     <Compile Include="..\..\..\Hearts\Game.fs" />
@@ -28,19 +31,21 @@
     <Compile Include="Settings.fs" />
     <Compile Include="Animation.fs" />
     <Compile Include="CardView.fs" />
+    <Compile Include="ExchangeView.fs" />
     <Compile Include="TrickView.fs" />
     <Compile Include="HandView.fs" />
     <Compile Include="DealView.fs" />
     <Compile Include="PersistentState.fs" />
+    <Compile Include="Exchange.fs" />
     <Compile Include="Playout.fs" />
     <Compile Include="Deal.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Browser.Css" Version="2.5.0" />
-    <PackageReference Include="Fable.Browser.Dom" Version="2.18.0" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.18.1" />
     <PackageReference Include="Fable.Browser.Url" Version="1.4.0" />
-    <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Core" Version="4.5.0" />
     <PackageReference Include="Fable.Promise" Version="3.2.0" />
     <PackageReference Include="Fable.Remoting.Client" Version="7.32.0" />
     <PackageReference Include="Fable.SimpleJson" Version="3.24.0" />

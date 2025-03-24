@@ -146,7 +146,7 @@ module DealView =
         }
 
     /// Creates hand views for the given deal.
-    let start surface dealer deal =
+    let start surface dealer (deal : OpenDeal) =
         if ClosedDeal.numCardsPlayed deal.ClosedDeal = 0 then
             animate surface dealer deal
         else
@@ -204,7 +204,7 @@ module DealView =
         $"void{Seat.toChar seat}{Suit.toChar suit}"
 
     /// Displays current deal status.
-    let displayStatus deal =
+    let displayStatus (deal : OpenDeal) =
 
             // current score for each player
         for seat in Enum.getValues<Seat> do

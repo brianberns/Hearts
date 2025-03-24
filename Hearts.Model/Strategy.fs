@@ -1,7 +1,7 @@
 ﻿namespace Hearts.Model
 
+open TorchSharp
 open MathNet.Numerics.LinearAlgebra
-
 open PlayingCards
 
 module Strategy =
@@ -28,28 +28,46 @@ module Strategy =
                 else 0.0f)
 
     /// Converts a wide vector (indexed by entire deck) to
-    /// a narrow vector (indexed by legal plays).
-    let toNarrow (legalPlays : _[]) (wide : Vector<_>) =
+    /// a narrow vector (indexed by legal actions).
+    let private toNarrow (legalActions : _[]) (wide : Vector<_>) =
         assert(wide.Count = Card.numCards)
-        legalPlays
+        legalActions
             |> Seq.map (
                 Card.toIndex >> Vector.get wide)
             |> DenseVector.ofSeq
 
-    /// Converts a narrow vector (indexed by legal plays) to
+    /// Converts a narrow vector (indexed by legal actions) to
     /// a wide vector (indexed by entire deck).
-    let toWide (legalPlays : _[]) (narrow : Vector<float32>) =
-        assert(narrow.Count = legalPlays.Length)
-        Seq.zip legalPlays narrow
+    let toWide (legalActions : _[]) (narrow : Vector<float32>) =
+        assert(narrow.Count = legalActions.Length)
+        Seq.zip legalActions narrow
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    /// Computes strategy for the given info set (hand + deal)
-    /// using the given advantage model.
-    let getFromAdvantage model hand deal legalPlays =
-        use advantage =
-            AdvantageModel.getAdvantage hand deal model
-        advantage.data<float32>()
-            |> DenseVector.ofSeq
-            |> toNarrow legalPlays
-            |> matchRegrets
+    /// Computes strategies for the given info sets using the
+    /// given advantage model.
+    let getFromAdvantage model infoSets =
+
+        if Array.length infoSets > 0 then
+
+                // run model on GPU
+            use advantages =
+                AdvantageModel.getAdvantages infoSets model
+            assert(advantages.shape[0] = infoSets.Length)
+
+                // access data on CPU
+            let nCols = int advantages.shape[1]
+            assert(nCols = Network.outputSize)
+            let data =
+                use accessor = advantages.data<float32>()
+                accessor.ToArray()
+            [|
+                for iRow, infoSet in Seq.indexed infoSets do
+                    let iStart = iRow * nCols
+                    data[iStart .. iStart + nCols - 1]
+                        |> DenseVector.ofSeq
+                        |> toNarrow infoSet.LegalActions
+                        |> matchRegrets
+            |]
+
+        else Array.empty

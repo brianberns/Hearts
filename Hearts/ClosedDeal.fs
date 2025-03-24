@@ -2,11 +2,18 @@
 
 open PlayingCards
 
-/// A deal is a round of play within a game. A closed deal contains
-/// no information about how unplayed cards are distributed among
-/// the players. Cards played during a deal are grouped into tricks.
+/// A deal is a round of play within a game. A closed deal is the
+/// "public" view of a deal, so it contains no information about
+/// how unplayed cards are distributed among the players, and no
+/// information about the exchange (other than its direction).
 type ClosedDeal =
     {
+        /// Player who dealt this deal.
+        Dealer : Seat
+
+        /// Card exchange direction.
+        ExchangeDirection : ExchangeDirection
+
         /// Current active trick, if play is in progress. No
         /// trick is active during an exchange, nor after the
         /// last card of the deal is played.
@@ -30,9 +37,11 @@ type ClosedDeal =
 
 module ClosedDeal =
 
-    /// Initial state of all closed deals.
-    let initial =
+    /// Creates a closed deal.
+    let create dealer dir =
         {
+            Dealer = dealer
+            ExchangeDirection = dir
             CurrentTrickOpt = None
             CompletedTricks = List.empty
             UnplayedCards = set Card.allCards
@@ -80,7 +89,9 @@ module ClosedDeal =
             | Some trick -> trick
             | None -> failwith "No current trick"
 
-    /// Current player in the given deal.
+    /// Current player in the given deal, once the exchange
+    /// has completed. (There is no current player during the
+    /// exchange from the public point of view.)
     let currentPlayer deal =
         deal
             |> currentTrick
@@ -211,12 +222,13 @@ module ClosedDeal =
             else voids
 
         {
-            CurrentTrickOpt = curTrickOpt
-            CompletedTricks = completedTricks
-            HeartsBroken = heartsBroken
-            UnplayedCards = unplayedCards
-            Voids = voids
-            Score = score
+            deal with
+                CurrentTrickOpt = curTrickOpt
+                CompletedTricks = completedTricks
+                HeartsBroken = heartsBroken
+                UnplayedCards = unplayedCards
+                Voids = voids
+                Score = score
         }
 
     /// Tricks in the given deal, in chronological order, including the

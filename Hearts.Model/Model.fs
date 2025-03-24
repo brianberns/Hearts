@@ -15,9 +15,6 @@ module Network =
     /// Size of neural network input.
     let inputSize = Encoding.encodedLength
 
-    /// Size of a neural network hidden layer.
-    let hiddenSize = Encoding.encodedLength * 4
-
     /// Size of neural network output.
     let outputSize = Card.numCards
 
@@ -31,7 +28,9 @@ type SkipConnection(inner : Network) as this =
         x + input
 
 /// Model used for learning advantages.
-type AdvantageModel(device : torch.Device) as this =
+type AdvantageModel(
+    hiddenSize : int,
+    device : torch.Device) as this =
     inherit Network("AdvantageModel")
 
     let mutable curDevice = device
@@ -43,7 +42,7 @@ type AdvantageModel(device : torch.Device) as this =
 
             Linear(
                 Network.inputSize,
-                Network.hiddenSize,
+                hiddenSize,
                 device = device),
             ReLU(),
             Dropout(),
@@ -51,14 +50,14 @@ type AdvantageModel(device : torch.Device) as this =
             SkipConnection(
                 Sequential(
                     Linear(
-                        Network.hiddenSize,
-                        Network.hiddenSize,
+                        hiddenSize,
+                        hiddenSize,
                         device = device),
                     ReLU(),
                     Dropout())),
 
             Linear(
-                Network.hiddenSize,
+                hiddenSize,
                 Network.outputSize,
                 device = device))
 
@@ -78,11 +77,14 @@ type AdvantageModel(device : torch.Device) as this =
 
 module AdvantageModel =
 
-    /// Gets the advantage for the given info set (hand + deal).
-    let getAdvantage hand deal (model : AdvantageModel) =
+    /// Gets advantages for the given info sets.
+    let getAdvantages infoSets (model : AdvantageModel) =
         use _ = torch.no_grad()
         use input =
-            let encoded = Encoding.encode hand deal
+            let encoded =
+                infoSets
+                    |> Array.map Encoding.encode
+                    |> array2D
             tensor(
                 encoded, device = model.Device,
                 dtype = ScalarType.Float32)

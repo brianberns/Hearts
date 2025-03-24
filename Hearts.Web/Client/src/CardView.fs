@@ -5,7 +5,7 @@ open Browser.Dom
 open Fable.Core.JsInterop
 open PlayingCards
 
-/// Avoid Fable's attempt to invoke illegal constructors.
+/// Constructors missing from Fable.
 [<AutoOpen>]
 module HTMLElement =
 
@@ -17,13 +17,6 @@ module HTMLElement =
                 :?> HTMLDivElement
 
     let HTMLDivElement = HTMLDivElementType()
-
-    type HTMLButtonElementType() =
-        member _.Create() =
-            document.createElement("button")
-                :?> HTMLButtonElement
-
-    let HTMLButtonElement = HTMLButtonElementType()
 
     type HTMLTableHeaderCellElementType() =
         member _.Create() =
@@ -158,6 +151,39 @@ module CardView =
         assert(isBack cardView |> not)
         cardView.attr("data-card")
             |> Card.fromString
+
+/// Widget that prompts the user to choose a legal pass.
+type PassChooser =
+    {
+        /// Underlying HTML element.
+        Element : JQueryElement
+    }
+
+module PassChooser =
+
+    open Hearts
+
+    /// Creates a chooser.
+    let create dir =
+
+            // create an element to prompt the user
+        let div =
+            let sDir =
+                (ExchangeDirection.toString dir)
+                    .ToLower()
+            assert(Pass.numCards = 3)
+            ~~HTMLDivElement.Create(innerText = $"Pass three cards {sDir}")
+        div.addClass("play-chooser")
+
+        { Element = div }
+
+    /// Makes the given chooser visible.
+    let display chooser =
+        chooser.Element.css {| display = "block" |}
+
+    /// Makes the given chooser invisible.
+    let hide chooser =
+        chooser.Element.css {| display = "none" |}
 
 /// Widget that prompts the user to choose a legal play.
 type PlayChooser =

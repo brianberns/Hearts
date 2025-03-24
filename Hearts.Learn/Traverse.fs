@@ -1,12 +1,87 @@
 ﻿namespace Hearts.Learn
 
+open System
+
 open MathNet.Numerics.LinearAlgebra
 
 open Hearts
 open Hearts.Model
 
+/// Initial node state, awaiting strategy.
+type GetStrategy =
+    {
+        /// Information set in this node.
+        InformationSet : InformationSet
+
+        /// Leads to a node in one of the other two states.
+        Continuation : Vector<float32> (*per-action strategy*) -> Node
+    }
+
+/// Node state awaiting complete children.
+and GetUtility =
+    {
+        /// Information set in this node.
+        InformationSet : InformationSet
+
+        /// Incomplete child nodes.
+        Children : Node[]
+
+        /// Leads to a completed node.
+        Continuation : Complete[] (*children*) -> Node
+    }
+
+/// Final node state.
+and Complete =
+    {
+        /// Per-action utility of this node.
+        Utilities : float32[]
+
+        /// Sample representing this node.
+        SampleOpt : Option<AdvantageSample>
+
+        /// Complete children.
+        Children : Complete[]
+    }
+
+/// Game state.
+and Node =
+
+    /// Awaiting strategy.
+    | GetStrategy of GetStrategy
+
+    /// Awaiting utility.
+    | GetUtility of GetUtility
+
+    /// Final.
+    | Complete of Complete
+
+module Node =
+
+    /// Creates a node.
+    let getStrategy infoSet cont =
+        GetStrategy {
+            InformationSet = infoSet
+            Continuation = cont
+        }
+
+    /// Creates a node.
+    let getUtility infoSet children cont =
+        GetUtility {
+            InformationSet = infoSet
+            Children = children
+            Continuation = cont
+        }
+
+    /// Creates a node.
+    let complete utilities sampleOpt children =
+        Complete {
+            Utilities = utilities
+            SampleOpt = sampleOpt
+            Children = children
+        }
+
 /// Model Hearts as a zero-sum game.
-module ZeroSum =
+module private ZeroSum =
 
     /// Gets the payoff for the given deal score from each
     /// player's point of view.
@@ -30,88 +105,90 @@ module ZeroSum =
 
 module Traverse =
 
-    /// Appends an item to the end of an array.
-    let private append items item =
-        [| yield! items; yield item |]
-
     /// Evaluates the utility of the given deal.
-    let traverse iter deal getStrategy =
+    let traverse iter deal (rng : Random) =
 
         /// Top-level loop.
         let rec loop deal depth =
-            assert(depth
-                = ClosedDeal.numCardsPlayed deal.ClosedDeal)
             match ZeroSum.tryGetPayoff deal with
                 | Some payoff ->
-                    payoff, Array.empty   // deal is over
+                    Node.complete   // deal is over
+                        payoff
+                        None
+                        Array.empty
                 | None ->
                     loopNonTerminal deal depth
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal depth =
-            let hand = OpenDeal.currentHand deal
-            let legalPlays =
-                deal.ClosedDeal
-                    |> ClosedDeal.legalPlays hand
-                    |> Seq.toArray
-            if legalPlays.Length = 1 then
-                addLoop deal depth legalPlays[0]   // forced play
+            let infoSet = OpenDeal.currentInfoSet deal
+            let legalActions = infoSet.LegalActions
+            if legalActions.Length = 1 then
+                addLoop deal depth
+                    infoSet.LegalActionType legalActions[0]   // forced action
             else
                     // get utility of current player's strategy
-                let player = OpenDeal.currentPlayer deal
-                let strategy : Vector<float32> =
-                    getStrategy
-                        hand deal.ClosedDeal legalPlays
-                let rnd =
-                    lock settings.Random (fun () ->
-                        settings.Random.NextDouble())
+                let rnd = lock rng (fun () -> rng.NextDouble())
                 let threshold =
                     settings.SampleDecay
                         / (settings.SampleDecay + float depth)
-                if rnd <= threshold then
-                    getFullUtility
-                        hand player deal depth legalPlays strategy
-                else
-                    getOneUtility deal depth legalPlays strategy
+                let getUtility =
+                    if rnd <= threshold then getFullUtility
+                    else getOneUtility
+                let cont =
+                    getUtility infoSet deal depth
+                Node.getStrategy infoSet cont
 
-        /// Adds the given play to the given deal and loops.
-        and addLoop deal depth play =
-            let deal = OpenDeal.addPlay play deal
-            loop deal (depth + 1)
+        /// Adds the given action to the given deal and loops.
+        and addLoop deal depth actionType action =
+            let deal = OpenDeal.addAction actionType action deal
+            loop deal depth
 
-        /// Gets the full utility of the given info set (hand + deal).
-        and getFullUtility hand player deal depth legalPlays strategy =
+        /// Gets the full utility of the given info set.
+        and getFullUtility infoSet deal depth strategy =
+            let legalActions = infoSet.LegalActions
+            let results =
+                legalActions
+                    |> Array.map (
+                        addLoop deal (depth+1) infoSet.LegalActionType)
 
-                // get utility of each action
-            let actionUtilities, samples =
-                let utilityArrays, sampleArrays =
-                    legalPlays
-                        |> Array.map (addLoop deal depth)
-                        |> Array.unzip
-                DenseMatrix.ofColumnArrays utilityArrays,
-                Array.concat sampleArrays
-            assert(actionUtilities.ColumnCount = legalPlays.Length)
-            assert(actionUtilities.RowCount = Seat.numSeats)
+            let cont children =
 
-                // utility of this info set is action utilities weighted by action probabilities
-            let utility = actionUtilities * strategy
-            assert(utility.Count = Seat.numSeats)
-            let samples =
-                let wideRegrets =
-                    let idx = int player
-                    (actionUtilities.Row(idx) - utility[idx])
-                        |> Strategy.toWide legalPlays
-                AdvantageSample.create
-                    hand deal.ClosedDeal wideRegrets iter
-                    |> append samples
-            utility.ToArray(), samples
+                    // get utility of each action
+                let actionUtilities =
+                    children
+                        |> Array.map _.Utilities
+                        |> DenseMatrix.ofColumnArrays
+                assert(actionUtilities.ColumnCount = legalActions.Length)
+                assert(actionUtilities.RowCount = Seat.numSeats)
 
-        /// Gets the utility of the given info set (hand + deal)
-        /// by sampling a single action.
-        and getOneUtility deal depth legalPlays strategy =
-            lock settings.Random (fun () ->
-                Vector.sample settings.Random strategy)
-                |> Array.get legalPlays
-                |> addLoop deal depth
+                    // utility of this info set is action utilities weighted by action probabilities
+                let utility = actionUtilities * strategy
+                assert(utility.Count = Seat.numSeats)
+                let sample =
+                    let wideRegrets =
+                        let idx = int infoSet.Player
+                        (actionUtilities.Row(idx) - utility[idx])
+                            |> Strategy.toWide legalActions
+                    AdvantageSample.create infoSet wideRegrets iter
+                Node.complete
+                    (utility.ToArray())
+                    (Some sample)
+                    children
 
-        loop deal 0 |> snd
+            Node.getUtility infoSet results cont
+
+        /// Gets the utility of the given info set by
+        /// sampling a single action.
+        and getOneUtility infoSet deal depth strategy =
+            let result =
+                lock rng (fun () ->
+                    Vector.sample rng strategy)
+                    |> Array.get infoSet.LegalActions
+                    |> addLoop deal (depth+1) infoSet.LegalActionType
+            Node.getUtility
+                infoSet
+                [|result|]
+                (Array.exactlyOne >> Complete)
+
+        loop deal 0

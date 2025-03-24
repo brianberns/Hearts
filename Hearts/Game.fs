@@ -2,13 +2,6 @@
 
 open PlayingCards
 
-/// Interface for a Hearts player.
-type Player =
-    {
-        /// Plays a card from the given hand on the given deal.
-        Play : Hand -> ClosedDeal -> Card
-    }
-
 module Game =
 
     /// Answers the seat of the player who shot the moon, if

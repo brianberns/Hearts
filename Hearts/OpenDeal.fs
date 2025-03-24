@@ -2,13 +2,16 @@
 
 open PlayingCards
 
+/// An open deal contains all information about a deal,
+/// including private information, such as each player's
+/// hand.
 type OpenDeal =
     {
-        /// Cards passed by each player.
-        Exchange : Exchange
-
         /// Base deal.
         ClosedDeal : ClosedDeal
+
+        /// Cards passed by each player on non-hold deals.
+        ExchangeOpt : Option<Exchange>
 
         /// Each player's unplayed cards.
         UnplayedCardMap : Map<Seat, Hand>
@@ -27,8 +30,13 @@ module OpenDeal =
                     |> Seq.length
             nCards = Card.numCards)
         {
-            Exchange = Exchange.create dealer dir
-            ClosedDeal = ClosedDeal.initial
+            ClosedDeal = ClosedDeal.create dealer dir
+            ExchangeOpt =
+                if dir = ExchangeDirection.Hold then None
+                else
+                    Seat.next dealer   // dealer passes last
+                        |> Exchange.create
+                        |> Some
             UnplayedCardMap = handMap
         }
 
@@ -48,66 +56,90 @@ module OpenDeal =
             |> Map
             |> fromHands dealer dir
 
-    /// Passes the given cards in the given deal.
-    let addPass cards deal =
-        assert(cards |> Set.count = Exchange.numCards)
-        assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
+    /// Gets the exchange in the given deal.
+    let getExchange deal =
+        match deal.ExchangeOpt with
+            | Some exchange -> exchange
+            | None -> failwith "No exchange"
 
-            // remove outgoing cards from passer's hand
-        let cardMap = deal.UnplayedCardMap
-        let passer =
-            deal.Exchange |> Exchange.currentPasser
-        assert(cardMap[passer].Count = ClosedDeal.numCardsPerHand)
-        let unplayedCards = cardMap[passer]
-        assert(Set.intersect unplayedCards cards = cards)
-        let unplayedCards = Set.difference unplayedCards cards
-        let cardMap = cardMap |> Map.add passer unplayedCards
+    /// Passes the given card in the given deal.
+    let addPass card deal =
+        assert(
+            ClosedDeal.numCardsPlayed deal.ClosedDeal = 0)
+        assert(
+            deal.ClosedDeal.ExchangeDirection
+                <> ExchangeDirection.Hold)
+
+            // remove outgoing card from passer's hand
+        let exchange = getExchange deal
+        let cardMap =
+            let passer = Exchange.currentPasser exchange
+            let cardMap = deal.UnplayedCardMap
+            let unplayedCards =
+                assert(cardMap[passer].Contains(card))
+                cardMap[passer] |> Set.remove card
+            cardMap |> Map.add passer unplayedCards
 
         {
             deal with
-                Exchange =
-                    deal.Exchange |> Exchange.addPass cards
+                ExchangeOpt =
+                    exchange
+                        |> Exchange.addPass card
+                        |> Some
                 UnplayedCardMap = cardMap
         }
 
     /// Receives cards from the given passer in the given deal.
-    let private receivePass passer cards deal =
+    let private receivePass passer (cards : Pass) deal =
+        assert(deal.ExchangeOpt.IsSome)
+        assert(
+            deal.ClosedDeal.ExchangeDirection
+                <> ExchangeDirection.Hold)
 
             // add incoming cards to receiver's hand
-        let cardMap = deal.UnplayedCardMap
-        let receiver =
-            deal.Exchange.ExchangeDirection
-                |> ExchangeDirection.apply passer
-        let unplayedCards = cardMap[receiver]
-        assert(Set.intersect unplayedCards cards |> Set.isEmpty)
-        let unplayedCards = Set.union unplayedCards cards
-        let cardMap = cardMap |> Map.add receiver unplayedCards
+        let cardMap =
+            let receiver =
+                deal.ClosedDeal.ExchangeDirection
+                    |> ExchangeDirection.apply passer
+            let cardMap = deal.UnplayedCardMap
+            let unplayedCards =
+                assert(
+                    Set.intersect cardMap[receiver] cards
+                        |> Set.isEmpty)
+                Set.union cardMap[receiver] cards
+            cardMap |> Map.add receiver unplayedCards
 
         {
             deal with
                 UnplayedCardMap = cardMap
         }
 
-    /// Starts play in the given deal.
+    /// Receives passed cards (if any) and starts play in the
+    /// given deal.
     let startPlay deal =
-        assert(deal.Exchange |> Exchange.isComplete)
-        assert(deal.ClosedDeal |> ClosedDeal.numCardsPlayed = 0)
+        assert(
+            deal.ClosedDeal
+                |> ClosedDeal.numCardsPlayed = 0)
+        assert(
+            match deal.ClosedDeal.ExchangeDirection, deal.ExchangeOpt with
+                | ExchangeDirection.Hold, None -> true
+                | _, Some exchange -> Exchange.isComplete exchange
+                | _, None -> false)
 
             // receive passed cards?
         let deal =
-            if deal.Exchange |> Exchange.isHold then deal
-            else
-                assert(
-                    deal.UnplayedCardMap
-                        |> Map.forall (fun _ cards ->
-                            cards.Count =
-                                ClosedDeal.numCardsPerHand - Exchange.numCards))
-                let seatPasses =
-                    deal.Exchange
-                        |> Exchange.seatPasses
-                (deal, seatPasses)
-                    ||> Seq.fold (fun deal (passer, cards) ->
-                        receivePass passer cards deal)
+            match deal.ExchangeOpt with
+                | Some exchange ->
+                    assert(Exchange.isComplete exchange)
+                    assert(
+                        deal.UnplayedCardMap
+                            |> Map.forall (fun _ cards ->
+                                cards.Count =
+                                    ClosedDeal.numCardsPerHand - Pass.numCards))
+                    (deal, exchange.PassMap)
+                        ||> Seq.fold (fun deal (KeyValue(passer, pass)) ->
+                            receivePass passer pass deal)
+                | None -> deal
 
             // determine first trick leader (must wait until cards are passed)
         let leader =
@@ -120,22 +152,43 @@ module OpenDeal =
                 |> Seq.find (fun (_, cards) ->
                     cards.Contains(ClosedDeal.lowestClub))
                 |> fst
+
         {
             deal with
                 ClosedDeal =
-                    deal.ClosedDeal |> ClosedDeal.startPlay leader
+                    deal.ClosedDeal
+                        |> ClosedDeal.startPlay leader
         }
 
     /// Current player in the given deal.
     let currentPlayer deal =
-        if deal.Exchange |> Exchange.isComplete then
-            deal.ClosedDeal |> ClosedDeal.currentPlayer
-        else
-            deal.Exchange |> Exchange.currentPasser
+        match deal.ExchangeOpt with
+            | Some exchange
+                when not (Exchange.isComplete exchange) ->
+                assert(
+                    deal.ClosedDeal.ExchangeDirection
+                        <> ExchangeDirection.Hold)
+                Exchange.currentPasser exchange
+            | _ ->
+                ClosedDeal.currentPlayer deal.ClosedDeal
 
     /// Answers the current player's unplayed cards.
     let currentHand deal =
         deal.UnplayedCardMap[currentPlayer deal]
+
+    /// Answers the current player's information set.
+    let currentInfoSet deal =
+        let player = currentPlayer deal
+        let hand = deal.UnplayedCardMap[player]
+        let outOpt, inOpt =
+            deal.ExchangeOpt
+                |> Option.map (
+                    Exchange.getPassOpts
+                        player
+                        deal.ClosedDeal.ExchangeDirection)
+                |> Option.defaultValue (None, None)
+        InformationSet.create
+            player hand outOpt inOpt deal.ClosedDeal
 
     /// Plays the given card on the given deal.
     let addPlay card deal =
@@ -163,17 +216,25 @@ module OpenDeal =
 
             // applies only at trick boundaries
         let isApplicable =
-            deal.ClosedDeal.CurrentTrickOpt
-                |> Option.map (fun trick -> trick.Cards.IsEmpty)
-                |> Option.defaultValue true
+            match deal.ExchangeOpt,
+                deal.ClosedDeal.CurrentTrickOpt with
+                | Some exchange, _
+                    when not (
+                        Exchange.isComplete exchange) -> false
+                | _, Some trick -> trick.Cards.IsEmpty
+                | _, None ->
+                    assert(
+                        ClosedDeal.isComplete deal.ClosedDeal)
+                    true   // end of deal
+
         if isApplicable then
 
                 // deal is actually complete?
-            if deal.ClosedDeal |> ClosedDeal.isComplete then
+            if ClosedDeal.isComplete deal.ClosedDeal then
                 Some Score.zero
 
                 // all points have been taken?
-            elif deal.ClosedDeal.Score |> Score.sum = numPointsPerDeal then
+            elif Score.sum deal.ClosedDeal.Score = numPointsPerDeal then
                 Some Score.zero
 
                 // current player takes all remaining tricks?
@@ -207,7 +268,7 @@ module OpenDeal =
                             assert(rank <> card.Rank)
                             rank < card.Rank)
 
-                        // player's cards are all winners?
+                    // player's cards are all winners?
                 let hand = deal.UnplayedCardMap[player]
                 if hand |> Seq.forall isWinner then
                     let points =

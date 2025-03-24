@@ -16,9 +16,9 @@ module Remoting =
             |> Remoting.buildProxy<IHeartsApi>
 
     /// Chooses an action for the given info set.
-    let getActionIndex hand deal =
+    let getActionIndex infoSet =
         async {
-            match! Async.Catch(api.GetPlayIndex hand deal) with
+            match! Async.Catch(api.GetActionIndex infoSet) with
                 | Choice1Of2 index -> return index
                 | Choice2Of2 exn ->
                     failwith exn.Message   // is there a better way to handle this?
@@ -26,9 +26,9 @@ module Remoting =
         }
 
     /// Gets the strategy for the given info set.
-    let getStrategy hand deal =
+    let getStrategy infoSet =
         async {
-            match! Async.Catch(api.GetStrategy hand deal) with
+            match! Async.Catch(api.GetStrategy infoSet) with
                 | Choice1Of2 strategy -> return strategy
                 | Choice2Of2 exn ->
                     failwith exn.Message   // is there a better way to handle this?
@@ -40,22 +40,20 @@ module WebPlayer =
 
     open Hearts
 
-    /// Plays a card in the given deal.
-    let makePlay (deal : OpenDeal) =
+    /// Takes an action in the given deal.
+    let takeAction deal =
 
-            // get legal plays in this situation
-        let hand = OpenDeal.currentHand deal
-        let legalPlays =
-            ClosedDeal.legalPlays hand deal.ClosedDeal
-                |> Seq.toArray
+            // get legal actions in this situation
+        let infoSet = OpenDeal.currentInfoSet deal
+        let legalActions = infoSet.LegalActions
 
             // choose play
-        match legalPlays.Length with
+        match legalActions.Length with
             | 0 -> failwith "Unexpected"
-            | 1 -> async { return legalPlays[0] }
+            | 1 -> async { return legalActions[0] }
             | _ ->
                 async {
                     let! iAction =
-                        Remoting.getActionIndex hand deal.ClosedDeal
-                    return legalPlays[iAction]
+                        Remoting.getActionIndex infoSet
+                    return legalActions[iAction]
                 }

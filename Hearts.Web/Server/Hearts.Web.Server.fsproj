@@ -7,9 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="AdvantageModel.pt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <Compile Include="..\Shared\SharedTypes.fs" />
     <Compile Include="Remoting.fs" />
     <Compile Include="WebPart.fs" />

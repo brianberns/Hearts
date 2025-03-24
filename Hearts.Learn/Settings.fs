@@ -2,12 +2,13 @@
 
 open System
 open TorchSharp
+open Hearts.Model
 
 /// Hyperparameters.
 type Settings =
     {
-        /// Random number generator.
-        Random : Random
+        /// Size of a neural network hidden layer.
+        HiddenSize : int
 
         /// Optimizer learning rate.
         LearningRate : float
@@ -31,6 +32,9 @@ type Settings =
 
         /// Number of deals to traverse during each iteration.
         NumTraversals : int
+
+        /// Number of deals to traverse in each batch.
+        TraversalBatchSize : int
 
         /// Number of iterations to perform.
         NumIterations : int
@@ -60,29 +64,22 @@ module Settings =
         torch.utils.tensorboard.SummaryWriter(
             $"runs/run%05d{int timespan.TotalSeconds}")
 
-    /// RNG seed.
-    let seed = 0
-
     /// Hyperparameters.
     let settings =
 
-        torch.manual_seed(seed) |> ignore
-        torch.cuda.manual_seed_all(seed)
-        writer.add_text(
-            $"settings/seed", string seed, 0)
-
         let settings =
             {
-                Random = Random(seed)
-                LearningRate = 2e-3
-                SampleDecay = 0.8
-                NumAdvantageTrainEpochs = 500
+                HiddenSize = Encoding.encodedLength * 4
+                LearningRate = 1e-3
+                SampleDecay = 0.17
+                NumAdvantageTrainEpochs = 1000
                 AdvantageBatchSize = 1_000_000
-                AdvantageSubBatchSize = 50_000
-                NumAdvantageSamples = 12_000_000
-                NumTraversals = 8000
+                AdvantageSubBatchSize = 80_000
+                NumAdvantageSamples = 100_000_000
+                NumTraversals = 16000
+                TraversalBatchSize = 200
                 NumIterations = 25
-                NumEvaluationDeals = 100_000
+                NumEvaluationDeals = 100000
                 Device = torch.CUDA
                 ModelDirPath = "./Models"
                 Writer = writer
@@ -93,7 +90,7 @@ module Settings =
 
         writer.add_text(
             $"settings/HiddenSize",
-            string Hearts.Model.Network.hiddenSize, 0)
+            string settings.HiddenSize, 0)
         writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
@@ -115,6 +112,9 @@ module Settings =
         writer.add_text(
             $"settings/NumTraversals",
             string settings.NumTraversals, 0)
+        writer.add_text(
+            $"settings/TraversalBatchSize",
+            string settings.TraversalBatchSize, 0)
         writer.add_text(
             $"settings/NumIterations",
             string settings.NumIterations, 0)

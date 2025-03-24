@@ -26,27 +26,28 @@ module Playout =
         }
 
     /// Logs hint information.
-    let private logHint hand deal (legalPlays : _[]) =
-        async {
-            match deal |> OpenDeal.tryFindInevitable with
+    let private logHint (infoSet : InformationSet) deal =
+        assert(infoSet.Deal = deal.ClosedDeal)
+        let legalActions = infoSet.LegalActions
+        match deal |> OpenDeal.tryFindInevitable with
 
-                | Some score ->
-                    console.log("Inevitable:")
-                    for seat, points in Map.toSeq score.ScoreMap do
-                        console.log($"   {Seat.toString seat}: {points} point(s)")
+            | Some score ->
+                console.log("Inevitable:")
+                for seat, points in Map.toSeq score.ScoreMap do
+                    console.log($"   {Seat.toString seat}: {points} point(s)")
 
-                | None when legalPlays.Length > 1 ->
-                    let! strategy =
-                        Remoting.getStrategy hand deal.ClosedDeal
+            | None when legalActions.Length > 1 ->
+                async {
+                    let! strategy = Remoting.getStrategy infoSet
                     let pairs =
-                        Array.zip legalPlays strategy
+                        Array.zip legalActions strategy
                             |> Seq.sortByDescending snd
-                    console.log("Hint:")
-                    for (card : Card), prob in pairs do
+                    console.log("Play hint:")
+                    for card, prob in pairs do
                         console.log($"   {card}: %.1f{100. * prob}%%")
+                } |> Async.StartImmediate
 
-                | _ -> ()
-        } |> Async.StartImmediate
+            | _ -> ()
 
     /// Plays the given card on the current trick, and returns the
     /// seat of the resulting trick winner, if any.
@@ -105,23 +106,20 @@ module Playout =
     /// Allows user to play a card.
     let private playUser chooser (handView : HandView) context =
 
-            // determine all legal plays
-        let hand = OpenDeal.currentHand context.Deal
-        let legalPlays =
-            context.Deal.ClosedDeal
-                |> ClosedDeal.legalPlays hand
-                |> Seq.toArray
-        assert(legalPlays.Length > 0)
+            // determine all legal actions
+        let infoSet = OpenDeal.currentInfoSet context.Deal
+        let legalActions = infoSet.LegalActions
+        assert(legalActions.Length > 0)
 
             // enable user to select one of the corresponding card views
         Promise.create(fun resolve _reject ->
 
                 // prompt user to play
             chooser |> PlayChooser.display
-            logHint hand context.Deal legalPlays
+            logHint infoSet context.Deal
 
                 // handle card clicks
-            let legalPlaySet = set legalPlays
+            let legalPlaySet = set legalActions
             for cardView in handView do
                 let card = cardView |> CardView.card
                 if legalPlaySet.Contains(card) then
@@ -147,7 +145,7 @@ module Playout =
     let private playAuto context =
         async {
                 // determine card to play
-            let! card = WebPlayer.makePlay context.Deal
+            let! card = WebPlayer.takeAction context.Deal
 
                 // create view of the selected card
             let! cardView =

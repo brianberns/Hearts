@@ -6,30 +6,23 @@ open System.IO
 open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
-open Hearts
 open Hearts.Model
 
 module Model =
 
-    /// Performance tweak.
+    /// Server is inference-only, so disable all gradient
+    /// calculations.
     let private _noGrade = TorchSharp.torch.no_grad()
 
     /// Connects to Hearts model.
     let connect dir =
         let model =
-            new AdvantageModel(TorchSharp.torch.CPU)
+            new AdvantageModel(
+                1536,
+                TorchSharp.torch.CPU)
         let path = Path.Combine(dir, "AdvantageModel.pt")
         model.load(path) |> ignore
         model
-
-    /// Finds the strategy for the given info set.
-    let getStrategy model hand deal =
-        let legalPlays =
-            deal
-                |> ClosedDeal.legalPlays hand
-                |> Seq.toArray
-        Strategy.getFromAdvantage
-            model hand deal legalPlays
 
 module Remoting =
 
@@ -39,16 +32,24 @@ module Remoting =
         let model = Model.connect dir
         model.eval()
         {
-            GetPlayIndex =
-                fun hand deal ->
+            GetActionIndex =
+                fun infoSet ->
                     async {
-                        let strategy = Model.getStrategy model hand deal
+                        let strategy =
+                            Strategy.getFromAdvantage
+                                model
+                                [|infoSet|]
+                                |> Array.exactlyOne
                         return Vector.sample rng strategy
                     }
             GetStrategy =
-                fun hand deal ->
+                fun infoSet ->
                     async {
-                        let strategy = Model.getStrategy model hand deal
+                        let strategy =
+                            Strategy.getFromAdvantage
+                                model
+                                [|infoSet|]
+                                |> Array.exactlyOne
                         return strategy.ToArray()
                             |> Array.map float
                     }
