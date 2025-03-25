@@ -15,8 +15,6 @@ type PassChooser =
 
 module PassChooser =
 
-    open Hearts
-
     /// Creates a chooser.
     let create dir =
 
