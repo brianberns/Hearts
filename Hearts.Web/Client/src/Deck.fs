@@ -62,5 +62,5 @@ module Deck =
             Cards =
                 Card.allCards
                     |> Array.clone
-                    |> knuthShuffle rng
+                    |> knuthShuffle rng   // use restartable RNG
         }
