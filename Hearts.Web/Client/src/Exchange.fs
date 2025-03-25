@@ -89,8 +89,19 @@ module Exchange =
     /// Allows user to pass a card.
     let private passUser chooser (handView : HandView) context =
         promise {
+
+                // prompt user to pass
+            chooser |> PassChooser.display
+            logHint context.Deal
+
+                // handle card clicks
+            for cardView in handView do
+                let card = cardView |> CardView.card
+                cardView.addClass("active")
+                cardView.click(fun () -> ())
+
             return context.Deal
-        }
+        } |> Async.AwaitPromise
 
         (*
             // enable user to select one of the corresponding card views
@@ -218,7 +229,7 @@ module Exchange =
                             exchangeMap[seat]
                     let passer =
                         if seat.IsUser then
-                            passUser chooser handView >> Async.AwaitPromise
+                            passUser chooser handView
                         else
                             passAuto
 

@@ -167,6 +167,8 @@ module Playout =
                 else
                     cardView.addClass("inactive"))
 
+            |> Async.AwaitPromise
+
     /// Automatically plays a card.
     let private playAuto context =
         async {
@@ -206,7 +208,7 @@ module Playout =
                             playoutMap[seat]
                     let player =
                         if seat.IsUser then
-                            playUser chooser handView >> Async.AwaitPromise
+                            playUser chooser handView
                         else
                             playAuto
 
