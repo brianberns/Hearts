@@ -7,6 +7,32 @@ open Fable.Core
 open PlayingCards
 open Hearts
 
+/// Widget that prompts the user to choose a legal play.
+type PlayChooser =
+    {
+        /// Underlying HTML element.
+        Element : JQueryElement
+    }
+
+module PlayChooser =
+
+    /// Creates a chooser.
+    let create () =
+
+            // create an element to prompt the user
+        let div = ~~HTMLDivElement.Create(innerText = "Your Play?")
+        div.addClass("play-chooser")
+
+        { Element = div }
+
+    /// Makes the given chooser visible.
+    let display chooser =
+        chooser.Element.css {| display = "block" |}
+
+    /// Makes the given chooser invisible.
+    let hide chooser =
+        chooser.Element.css {| display = "none" |}
+
 module Playout =
 
     /// Playout context.

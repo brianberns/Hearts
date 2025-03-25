@@ -6,6 +6,39 @@ open Fable.Core
 open PlayingCards
 open Hearts
 
+/// Widget that prompts the user to choose a legal pass.
+type PassChooser =
+    {
+        /// Underlying HTML element.
+        Element : JQueryElement
+    }
+
+module PassChooser =
+
+    open Hearts
+
+    /// Creates a chooser.
+    let create dir =
+
+            // create an element to prompt the user
+        let div =
+            let sDir =
+                (ExchangeDirection.toString dir)
+                    .ToLower()
+            assert(Pass.numCards = 3)
+            ~~HTMLDivElement.Create(innerText = $"Pass three cards {sDir}")
+        div.addClass("play-chooser")
+
+        { Element = div }
+
+    /// Makes the given chooser visible.
+    let display chooser =
+        chooser.Element.css {| display = "block" |}
+
+    /// Makes the given chooser invisible.
+    let hide chooser =
+        chooser.Element.css {| display = "none" |}
+
 module Exchange =
 
     /// Exchange context.
