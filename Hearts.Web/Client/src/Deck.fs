@@ -2,7 +2,7 @@
 
 open System
 
-/// Clonable random number generator.
+/// Restartable random number generator.
 /// https://en.wikipedia.org/wiki/Linear_congruential_generator
 type Random(seed) =
 
@@ -32,9 +32,6 @@ type Random(seed) =
         if range <= 0 then failwith "Invalid range"
         state <- next state
         (int (state % uint64 range)) + minValue
-
-    /// Clones the RNG in its current state.
-    member _.Clone() = Random(state)
 
     /// Current state of the RNG.
     member _.State = state
