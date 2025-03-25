@@ -11,7 +11,7 @@ module ExchangeView =
         Enum.getValues<Seat>
             |> Seq.map (fun seat ->
                 seat,   // from seat
-                ResizeArray<CardView>(Pass.numCards))
+                ResizeArray<CardView>(Pass.numCards))   // MUTABLE
             |> dict
 
     /// Center position of a card being passed to a seat.
