@@ -88,7 +88,11 @@ module Exchange =
 
     /// Allows user to pass a card.
     let private passUser chooser (handView : HandView) context =
+        promise {
+            return context.Deal
+        }
 
+        (*
             // enable user to select one of the corresponding card views
         Promise.create(fun resolve _reject ->
 
@@ -113,6 +117,7 @@ module Exchange =
                         let! deal = passCard context cardView card
                         resolve deal
                     } |> ignore))
+        *)
 
     /// Automatically passes a card.
     let private passAuto context =
