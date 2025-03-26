@@ -157,18 +157,7 @@ caption {
     transform: translate(-50%, -50%);
 }
 
-    .chooser p {
-        margin-top: 5px;
-        margin-bottom: 5px;
-    }
-
-    .chooser button {
-        font-size: inherit;
-        border: 1px solid #999;
-        box-shadow: none;
-    }
-
-    .chooser button:enabled {
+    .chooser.ready {
         background: #FFD700;
         cursor: pointer;
     }

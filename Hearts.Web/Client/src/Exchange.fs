@@ -103,37 +103,38 @@ module Exchange =
         let cardViews =
             System.Collections.Generic.HashSet<CardView>(
                 (*Pass.numCards*))   // Fable doesn't support capacity argument
-        let btn = ~~"#passChooserBtn"
         for cardView in handView do
             cardView.addClass("active")
             cardView.click(fun () ->
                 lock cardViews (fun () ->
-                    if cardViews.Remove(cardView) then
-                        OpenHandView.passDeselectAnim cardView
-                            |> Animation.run
-                            |> ignore
-                    else
-                        let flag = cardViews.Add(cardView)
-                        assert(flag)
-                        OpenHandView.passSelectAnim cardView
-                            |> Animation.run
-                            |> ignore
 
-                    btn.prop(
-                        "disabled",
-                        cardViews.Count <> Pass.numCards)))
+                    let anim =
+                        if cardViews.Remove(cardView) then
+                            OpenHandView.passDeselectAnim cardView
+                        else
+                            let flag = cardViews.Add(cardView)
+                            assert(flag)
+                            OpenHandView.passSelectAnim cardView
+                    Animation.run anim |> ignore
 
-            // handle "Ready" button click
+                    let toggleClass =
+                        if cardViews.Count = Pass.numCards then
+                            chooser.Element.addClass
+                        else chooser.Element.removeClass
+                    toggleClass("ready")))
+
+            // handle chooser click
         Promise.create(fun resolve _reject ->
-            btn.click(fun () ->
-                chooser |> PassChooser.hide
-                promise {
-                    let! deal =
-                        cardViews
-                            |> Seq.toArray
-                            |> passCards context
-                    resolve deal
-                } |> ignore))
+            chooser.Element.click(fun () ->
+                if cardViews.Count = Pass.numCards then
+                    chooser |> PassChooser.hide
+                    promise {
+                        let! deal =
+                            cardViews
+                                |> Seq.toArray
+                                |> passCards context
+                        resolve deal
+                    } |> ignore))
             |> Async.AwaitPromise
 
     /// Automatically passes a card.
