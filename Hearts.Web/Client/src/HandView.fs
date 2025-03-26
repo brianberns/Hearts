@@ -127,8 +127,8 @@ module ClosedHandView =
 
             // get incoming old card views (might be backs or fronts)
         let oldCardViews =
-            let fromSeat = ExchangeDirection.unapply seat dir
-            ExchangeView.finish fromSeat
+            ExchangeDirection.unapply seat dir
+                |> ExchangeView.finish
 
             // add incoming new card views to hand view (all backs)
         assert(cardViews |> Seq.forall CardView.isBack)
@@ -137,10 +137,9 @@ module ClosedHandView =
         Animation.Parallel [|
 
                 // replace old views with new
-            yield! Array.map2 (fun oldView newView ->
-                Animation.create oldView (ReplaceWith newView))
-                oldCardViews
-                cardViews
+            yield! (oldCardViews, cardViews)
+                ||> Array.map2 (fun oldView newView ->
+                    Animation.create oldView (ReplaceWith newView))
 
                 // move new views into the hand
             yield HandView.dealAnim seat handView
