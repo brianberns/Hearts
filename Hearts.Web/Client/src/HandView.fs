@@ -185,7 +185,7 @@ module OpenHandView =
             |> Animation.Parallel
 
     /// Vertical displacement of a card selected to be passed.
-    let private selectOffset = 3
+    let private selectOffset = 2
 
     /// Animates the selection of a card to pass from an open hand view.
     let passSelectAnim (cardView : CardView) =

@@ -83,42 +83,51 @@ module Exchange =
             return deal
         }
 
-    /// Allows user to pass a card.
+    /// Allows user to pass cards.
     let private passUser chooser (handView : HandView) context =
+
+            // prompt user to pass
+        chooser |> PassChooser.display
+        logHint context.Deal
+
+            // handle card clicks
         let passCards =
             System.Collections.Generic.HashSet<CardView>(
                 (*Pass.numCards*))
+        let btn = ~~"#passChooserBtn"
+        for cardView in handView do
+            cardView.addClass("active")
+            cardView.click(fun () ->
+                lock passCards (fun () ->
+                    if passCards.Remove(cardView) then
+                        OpenHandView.passDeselectAnim cardView
+                            |> Animation.run
+                            |> ignore
+                    else
+                        let flag = passCards.Add(cardView)
+                        assert(flag)
+                        OpenHandView.passSelectAnim cardView
+                            |> Animation.run
+                            |> ignore
+
+                    btn.prop(
+                        "disabled",
+                        passCards.Count <> Pass.numCards)))
+
+            // handle "Ready" button click
         Promise.create(fun resolve _reject ->
-
-                // prompt user to pass
-            chooser |> PassChooser.display
-            logHint context.Deal
-
-                // handle card clicks
-            for cardView in handView do
-                cardView.addClass("active")
-                cardView.click(fun () ->
-                    promise {
-                        if passCards.Remove(cardView) then
-                            do! OpenHandView.passDeselectAnim cardView
-                                |> Animation.run
-                        else
-                            let flag = passCards.Add(cardView)
-                            assert(flag)
-                            do! OpenHandView.passSelectAnim cardView
-                                |> Animation.run
-
-                        if passCards.Count = Pass.numCards then
-                            chooser |> PassChooser.hide
-                            let cards = passCards |> Seq.toArray
-                            let! deal = passCard context cards[0] (cards[0] |> CardView.card)
-                            let context = { context with Deal = deal }
-                            let! deal = passCard context cards[1] (cards[1] |> CardView.card)
-                            let context = { context with Deal = deal }
-                            let! deal = passCard context cards[2] (cards[2] |> CardView.card)
-                            resolve deal
-                    } |> ignore))
-                |> Async.AwaitPromise
+            btn.click(fun () ->
+                chooser |> PassChooser.hide
+                let cards = passCards |> Seq.toArray
+                promise {
+                    let! deal = passCard context cards[0] (cards[0] |> CardView.card)
+                    let context = { context with Deal = deal }
+                    let! deal = passCard context cards[1] (cards[1] |> CardView.card)
+                    let context = { context with Deal = deal }
+                    let! deal = passCard context cards[2] (cards[2] |> CardView.card)
+                    resolve deal
+                } |> ignore))
+            |> Async.AwaitPromise
 
         (*
             // enable user to select one of the corresponding card views
