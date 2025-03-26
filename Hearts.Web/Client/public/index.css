@@ -157,6 +157,17 @@ caption {
     transform: translate(-50%, -50%);
 }
 
+    .chooser p {
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+
+    .chooser button {
+        border: 1px solid #999;
+        box-shadow: none;
+        background: inherit;
+    }
+
 .banner {
     font-size: x-large;
     width: fit-content;

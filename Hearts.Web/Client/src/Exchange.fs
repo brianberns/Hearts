@@ -18,16 +18,13 @@ module PassChooser =
     /// Creates a chooser.
     let create dir =
 
-            // gets element to prompt the user
-        let div = ~~"#passChooser"
-        do
-            let sDir =
-                (ExchangeDirection.toString dir)
-                    .ToLower()
-            assert(Pass.numCards = 3)
-            div.text($"Pass three cards {sDir}")
+            // set exchange direction text
+        let sDir =
+            (ExchangeDirection.toString dir)
+                .ToLower()
+        (~~"#exchangeDir").text(sDir)
 
-        { Element = div }
+        { Element = ~~"#passChooser" }
 
     /// Makes the given chooser visible.
     let display chooser =
