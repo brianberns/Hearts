@@ -106,22 +106,25 @@ module Exchange =
         for cardView in handView do
             cardView.addClass("active")
             cardView.click(fun () ->
-                lock cardViews (fun () ->
+                let anim =
+                    lock cardViews (fun () ->
 
-                    let anim =
-                        if cardViews.Remove(cardView) then
-                            OpenHandView.passDeselectAnim cardView
-                        else
-                            let flag = cardViews.Add(cardView)
-                            assert(flag)
-                            OpenHandView.passSelectAnim cardView
-                    Animation.run anim |> ignore
+                        let anim =
+                            if cardViews.Remove(cardView) then
+                                OpenHandView.passDeselectAnim cardView
+                            else
+                                let flag = cardViews.Add(cardView)
+                                assert(flag)
+                                OpenHandView.passSelectAnim cardView
 
-                    let toggleClass =
-                        if cardViews.Count = Pass.numCards then
-                            chooser.Element.addClass
-                        else chooser.Element.removeClass
-                    toggleClass("ready")))
+                        let toggleClass =
+                            if cardViews.Count = Pass.numCards then
+                                chooser.Element.addClass
+                            else chooser.Element.removeClass
+                        toggleClass("ready")
+                    
+                        anim)
+                Animation.run anim |> ignore)
 
             // handle chooser click
         Promise.create(fun resolve _reject ->
