@@ -25,7 +25,7 @@ module PassChooser =
                     .ToLower()
             assert(Pass.numCards = 3)
             ~~HTMLDivElement.Create(innerText = $"Pass three cards {sDir}")
-        div.addClass("play-chooser")
+        div.addClass("chooser")
 
         { Element = div }
 
