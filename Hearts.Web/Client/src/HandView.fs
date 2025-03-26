@@ -243,25 +243,23 @@ module OpenHandView =
 
             // get incoming card backs
         let backs =
-            let fromSeat = ExchangeDirection.unapply seat dir
-            ExchangeView.finish fromSeat
+            ExchangeDirection.unapply seat dir
+                |> ExchangeView.finish
         assert(backs |> Seq.forall CardView.isBack)
 
             // add incoming card fronts to hand view
         assert(cardViews |> Seq.forall (CardView.isBack >> not))
         handView.AddRange(cardViews)
+        let getKey = CardView.card >> sortKey
         handView.Sort(fun viewA viewB ->
-            let keyA = CardView.card viewA |> sortKey
-            let keyB = CardView.card viewB |> sortKey
-            compare keyA keyB)
+            compare (getKey viewA) (getKey viewB))
 
         Animation.Serial [|
 
                 // replace backs with fronts
-            yield! Array.map2 (fun back front ->
-                Animation.create back (ReplaceWith front))
-                backs
-                cardViews
+            yield! (backs, cardViews)
+                ||> Array.map2 (fun back front ->
+                    Animation.create back (ReplaceWith front))
 
                 // wait
             yield Animation.Sleep 2000
