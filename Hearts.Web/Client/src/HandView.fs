@@ -184,6 +184,21 @@ module OpenHandView =
             |> Seq.toArray
             |> Animation.Parallel
 
+    /// Vertical displacement of a card selected to be passed.
+    let private selectOffset = 3
+
+    /// Animates the selection of a card to pass from an open hand view.
+    let passSelectAnim (cardView : CardView) =
+        let pos = JQueryElement.getPosition cardView
+        AnimationAction.moveTo (pos + Position.ofInts(0, -selectOffset))
+            |> Animation.create cardView
+
+    /// Animates the deselection of a card to pass from an open hand view.
+    let passDeselectAnim (cardView : CardView) =
+        let pos = JQueryElement.getPosition cardView
+        AnimationAction.moveTo (pos + Position.ofInts(0, selectOffset))
+            |> Animation.create cardView
+
     /// Animates the passing of a card from an open hand view.
     let passAnim seat dir (handView : HandView) (cardView : CardView) =
 

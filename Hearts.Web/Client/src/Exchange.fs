@@ -101,12 +101,16 @@ module Exchange =
             for cardView in handView do
                 cardView.addClass("active")
                 cardView.click(fun () ->
-
-                    if passCards.Remove(cardView) |> not then
-                        let flag = passCards.Add(cardView)
-                        assert(flag)
-
                     promise {
+                        if passCards.Remove(cardView) then
+                            do! OpenHandView.passDeselectAnim cardView
+                                |> Animation.run
+                        else
+                            let flag = passCards.Add(cardView)
+                            assert(flag)
+                            do! OpenHandView.passSelectAnim cardView
+                                |> Animation.run
+
                         if passCards.Count = Pass.numCards then
                             let cards = passCards |> Seq.toArray
                             let! deal = passCard context cards[0] (cards[0] |> CardView.card)
