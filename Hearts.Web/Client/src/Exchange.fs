@@ -108,6 +108,7 @@ module Exchange =
             cardView.click(fun () ->
                 lock cardViews (fun () ->
 
+                        // animate (de-)selected card
                     let anim =
                         if cardViews.Remove(cardView) then
                             OpenHandView.passDeselectAnim
@@ -119,10 +120,17 @@ module Exchange =
                         |> Animation.run
                         |> ignore
 
+                        // complete pass is ready?
                     let toggleClass =
                         if cardViews.Count = Pass.numCards then
                             chooser.Element.addClass
-                        else chooser.Element.removeClass
+                        else
+                            (context.Deal, cardViews)
+                                ||> Seq.fold (fun deal cardView ->
+                                    let card = CardView.card cardView
+                                    OpenDeal.addPass card deal)
+                                |> logHint
+                            chooser.Element.removeClass
                     toggleClass("ready")))
 
             // handle chooser click
