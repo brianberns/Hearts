@@ -18,12 +18,7 @@ module PlayChooser =
 
     /// Creates a chooser.
     let create () =
-
-            // create an element to prompt the user
-        let div = ~~HTMLDivElement.Create(innerText = "Your Play?")
-        div.addClass("chooser")
-
-        { Element = div }
+        { Element = ~~"#playChooser" }
 
     /// Makes the given chooser visible.
     let display chooser =

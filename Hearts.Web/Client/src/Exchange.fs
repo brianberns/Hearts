@@ -18,14 +18,14 @@ module PassChooser =
     /// Creates a chooser.
     let create dir =
 
-            // create an element to prompt the user
-        let div =
+            // gets element to prompt the user
+        let div = ~~"#passChooser"
+        do
             let sDir =
                 (ExchangeDirection.toString dir)
                     .ToLower()
             assert(Pass.numCards = 3)
-            ~~HTMLDivElement.Create(innerText = $"Pass three cards {sDir}")
-        div.addClass("chooser")
+            div.text($"Pass three cards {sDir}")
 
         { Element = div }
 
@@ -112,6 +112,7 @@ module Exchange =
                                 |> Animation.run
 
                         if passCards.Count = Pass.numCards then
+                            chooser |> PassChooser.hide
                             let cards = passCards |> Seq.toArray
                             let! deal = passCard context cards[0] (cards[0] |> CardView.card)
                             let context = { context with Deal = deal }
