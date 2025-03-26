@@ -88,8 +88,8 @@ module Playout =
 
     /// Plays the given card in the given deal and then continues
     /// the rest of the deal.
-    let private playCard context cardView card =
-        assert(cardView |> CardView.card = card)
+    let private playCard context cardView =
+        let card = cardView |> CardView.card
         promise {
 
                 // write to log
@@ -156,7 +156,7 @@ module Playout =
 
                             // play the selected card
                         promise {
-                            let! deal = playCard context cardView card
+                            let! deal = playCard context cardView
                             resolve deal
                         } |> ignore)
                 else
@@ -177,7 +177,7 @@ module Playout =
                     |> Async.AwaitPromise
 
                 // play the card
-            return! playCard context cardView card
+            return! playCard context cardView
                 |> Async.AwaitPromise
         }
 

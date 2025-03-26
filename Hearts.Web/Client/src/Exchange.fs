@@ -64,8 +64,8 @@ module Exchange =
 
     /// Passes the given card in the given deal and then continues
     /// the rest of the deal.
-    let private passCard context cardView card =
-        assert(cardView |> CardView.card = card)
+    let private passCard context cardView =
+        let card = cardView |> CardView.card
         promise {
 
                 // write to log
@@ -120,41 +120,14 @@ module Exchange =
                 chooser |> PassChooser.hide
                 let cards = passCards |> Seq.toArray
                 promise {
-                    let! deal = passCard context cards[0] (cards[0] |> CardView.card)
+                    let! deal = passCard context cards[0]
                     let context = { context with Deal = deal }
-                    let! deal = passCard context cards[1] (cards[1] |> CardView.card)
+                    let! deal = passCard context cards[1]
                     let context = { context with Deal = deal }
-                    let! deal = passCard context cards[2] (cards[2] |> CardView.card)
+                    let! deal = passCard context cards[2]
                     resolve deal
                 } |> ignore))
             |> Async.AwaitPromise
-
-        (*
-            // enable user to select one of the corresponding card views
-        Promise.create(fun resolve _reject ->
-
-                // prompt user to pass
-            chooser |> PassChooser.display
-            logHint context.Deal
-
-                // handle card clicks
-            for cardView in handView do
-                let card = cardView |> CardView.card
-                cardView.addClass("active")
-                cardView.click(fun () ->
-
-                        // prevent further clicks
-                    chooser |> PassChooser.hide
-                    for cardView in handView do
-                        cardView.removeClass("active")
-                        cardView.off("click")
-
-                        // pass the selected card
-                    promise {
-                        let! deal = passCard context cardView card
-                        resolve deal
-                    } |> ignore))
-        *)
 
     /// Automatically passes a card.
     let private passAuto context =
@@ -169,7 +142,7 @@ module Exchange =
                     |> Async.AwaitPromise
 
                 // pass the card
-            return! passCard context cardView card
+            return! passCard context cardView
                 |> Async.AwaitPromise
         }
 
