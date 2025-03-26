@@ -3,6 +3,16 @@ namespace Hearts.Web.Client
 open PlayingCards
 open Hearts
 
+[<AutoOpen>]
+module SeatExt =
+    type Seat with
+
+        /// The user's seat.
+        static member User = Seat.South
+
+        /// Indicates whether the given seat is played by the user.
+        member seat.IsUser = (seat = Seat.User)
+
 /// Represents a (mutable) hand of cards.
 type HandView = ResizeArray<CardView>
 
@@ -22,7 +32,7 @@ module HandView =
             |> Percent
 
     /// Gets the position of a card in a hand.
-    let private getPosition centerPos numCards iCard =
+    let getPosition centerPos numCards iCard =
         { centerPos with
             left = getLeft numCards iCard + centerPos.left }
 
@@ -32,7 +42,7 @@ module HandView =
             |> AnimationAction.moveTo
 
     /// Center position of each hand.
-    let private centerPosMap =
+    let centerPosMap =
         Position.seatMap [
             Seat.West,  (20, 50)
             Seat.North, (50, 15)
@@ -186,18 +196,22 @@ module OpenHandView =
             |> Animation.Parallel
 
     /// Vertical displacement of a card selected to be passed.
-    let private selectOffset = 2
+    let private selectOffset = 3
 
     /// Animates the selection of a card to pass from an open hand view.
-    let passSelectAnim (cardView : CardView) =
-        let pos = JQueryElement.getPosition cardView
+    let passSelectAnim (cardView : CardView) numCards iCard =
+        let pos =
+            let centerPos = HandView.centerPosMap[Seat.User]
+            HandView.getPosition centerPos numCards iCard
         AnimationAction.moveTo (pos + Position.ofInts(0, -selectOffset))
             |> Animation.create cardView
 
     /// Animates the deselection of a card to pass from an open hand view.
-    let passDeselectAnim (cardView : CardView) =
-        let pos = JQueryElement.getPosition cardView
-        AnimationAction.moveTo (pos + Position.ofInts(0, selectOffset))
+    let passDeselectAnim (cardView : CardView) numCards iCard =
+        let pos =
+            let centerPos = HandView.centerPosMap[Seat.User]
+            HandView.getPosition centerPos numCards iCard
+        AnimationAction.moveTo pos
             |> Animation.create cardView
 
     /// Animates the passing of a card from an open hand view.

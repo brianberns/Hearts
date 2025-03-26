@@ -103,28 +103,27 @@ module Exchange =
         let cardViews =
             System.Collections.Generic.HashSet<CardView>(
                 (*Pass.numCards*))   // Fable doesn't support capacity argument
-        for cardView in handView do
+        for iCard, cardView in Seq.indexed handView do
             cardView.addClass("active")
             cardView.click(fun () ->
-                let anim =
-                    lock cardViews (fun () ->
+                lock cardViews (fun () ->
 
-                        let anim =
-                            if cardViews.Remove(cardView) then
-                                OpenHandView.passDeselectAnim cardView
-                            else
-                                let flag = cardViews.Add(cardView)
-                                assert(flag)
-                                OpenHandView.passSelectAnim cardView
+                    let anim =
+                        if cardViews.Remove(cardView) then
+                            OpenHandView.passDeselectAnim
+                        else
+                            let flag = cardViews.Add(cardView)
+                            assert(flag)
+                            OpenHandView.passSelectAnim
+                    anim cardView handView.Count iCard
+                        |> Animation.run
+                        |> ignore
 
-                        let toggleClass =
-                            if cardViews.Count = Pass.numCards then
-                                chooser.Element.addClass
-                            else chooser.Element.removeClass
-                        toggleClass("ready")
-                    
-                        anim)
-                Animation.run anim |> ignore)
+                    let toggleClass =
+                        if cardViews.Count = Pass.numCards then
+                            chooser.Element.addClass
+                        else chooser.Element.removeClass
+                    toggleClass("ready")))
 
             // handle chooser click
         Promise.create(fun resolve _reject ->
