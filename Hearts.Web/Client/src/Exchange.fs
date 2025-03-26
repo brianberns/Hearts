@@ -88,7 +88,10 @@ module Exchange =
 
     /// Allows user to pass a card.
     let private passUser chooser (handView : HandView) context =
-        promise {
+        let passCards =
+            System.Collections.Generic.HashSet<CardView>(
+                (*Pass.numCards*))
+        Promise.create(fun resolve _reject ->
 
                 // prompt user to pass
             chooser |> PassChooser.display
@@ -96,12 +99,24 @@ module Exchange =
 
                 // handle card clicks
             for cardView in handView do
-                let card = cardView |> CardView.card
                 cardView.addClass("active")
-                cardView.click(fun () -> ())
+                cardView.click(fun () ->
 
-            return context.Deal
-        } |> Async.AwaitPromise
+                    if passCards.Remove(cardView) |> not then
+                        let flag = passCards.Add(cardView)
+                        assert(flag)
+
+                    promise {
+                        if passCards.Count = Pass.numCards then
+                            let cards = passCards |> Seq.toArray
+                            let! deal = passCard context cards[0] (cards[0] |> CardView.card)
+                            let context = { context with Deal = deal }
+                            let! deal = passCard context cards[1] (cards[1] |> CardView.card)
+                            let context = { context with Deal = deal }
+                            let! deal = passCard context cards[2] (cards[2] |> CardView.card)
+                            resolve deal
+                    } |> ignore))
+                |> Async.AwaitPromise
 
         (*
             // enable user to select one of the corresponding card views
