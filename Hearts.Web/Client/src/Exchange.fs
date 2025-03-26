@@ -122,14 +122,16 @@ module Exchange =
 
                         // complete pass is ready?
                     let toggleClass =
-                        if cardViews.Count = Pass.numCards then
+                        let nRemaining = Pass.numCards - cardViews.Count
+                        if nRemaining = 0 then
                             chooser.Element.addClass
                         else
-                            (context.Deal, cardViews)
-                                ||> Seq.fold (fun deal cardView ->
-                                    let card = CardView.card cardView
-                                    OpenDeal.addPass card deal)
-                                |> logHint
+                            if nRemaining > 0 then
+                                (context.Deal, cardViews)
+                                    ||> Seq.fold (fun deal cardView ->
+                                        let card = CardView.card cardView
+                                        OpenDeal.addPass card deal)
+                                    |> logHint
                             chooser.Element.removeClass
                     toggleClass("ready")))
 
