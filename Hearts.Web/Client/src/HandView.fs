@@ -122,28 +122,30 @@ module ClosedHandView =
                     seat dir cardView HandView.delta
         |]
 
-    /// Animates receiving cards into a closed hand view.
-    let receivePassAnim seat dir (handView : HandView) cardViews =
+    /// Animates receiving cards for a closed hand view.
+    let receivePassAnim seat dir cardViews =
 
             // get incoming old card views (might be backs or fronts)
         let oldCardViews =
             ExchangeDirection.unapply seat dir
                 |> ExchangeView.finish
 
-            // add incoming new card views to hand view (all backs)
+            // replace old views with new (all backs)
+        assert(cardViews |> Seq.forall CardView.isBack)
+        (oldCardViews, cardViews)
+            ||> Array.map2 (fun oldView (newView : CardView) ->
+                Animation.create oldView (ReplaceWith newView))
+            |> Animation.Parallel
+
+    /// Accepts received cards into a closed hand view.
+    let acceptPassAnim seat (handView : HandView) cardViews =
+
+            // add incoming new card views (all backs) to hand view
         assert(cardViews |> Seq.forall CardView.isBack)
         handView.AddRange(cardViews)
 
-        Animation.Parallel [|
-
-                // replace old views with new
-            yield! (oldCardViews, cardViews)
-                ||> Array.map2 (fun oldView newView ->
-                    Animation.create oldView (ReplaceWith newView))
-
-                // move new views into the hand
-            yield HandView.dealAnim seat handView
-        |]
+            // move new views into the hand
+        HandView.dealAnim seat handView
 
     /// Animates the playing of a card from a closed hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
@@ -237,14 +239,23 @@ module OpenHandView =
             HandView.adjustAnim seat handView       // adjust remaining cards to fill gap
         |] |> Animation.Parallel
 
-    /// Animates receiving cards into an open hand view.
-    let receivePassAnim seat dir (handView : HandView) cardViews =
+    /// Animates receiving cards for an open hand view.
+    let receivePassAnim seat dir cardViews =
 
             // get incoming card backs
         let backs =
             ExchangeDirection.unapply seat dir
                 |> ExchangeView.finish
         assert(backs |> Seq.forall CardView.isBack)
+
+            // replace backs with fronts
+        (backs, cardViews)
+            ||> Array.map2 (fun back front ->
+                Animation.create back (ReplaceWith front))
+            |> Animation.Parallel
+
+    /// Accepts received cards into an open hand view.
+    let acceptPassAnim seat (handView : HandView) cardViews =
 
             // add incoming card fronts to hand view
         assert(cardViews |> Seq.forall (CardView.isBack >> not))
@@ -253,19 +264,8 @@ module OpenHandView =
         handView.Sort(fun viewA viewB ->
             compare (getKey viewA) (getKey viewB))
 
-        Animation.Serial [|
-
-                // replace backs with fronts
-            yield! (backs, cardViews)
-                ||> Array.map2 (fun back front ->
-                    Animation.create back (ReplaceWith front))
-
-                // wait
-            yield Animation.Sleep 2000
-
-                // move fronts into the hand
-            yield HandView.dealAnim seat handView
-        |]
+            // move fronts into the hand
+        HandView.dealAnim seat handView
 
     /// Animates the playing of a card from an open hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =

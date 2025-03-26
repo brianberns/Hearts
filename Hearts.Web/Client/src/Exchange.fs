@@ -19,6 +19,12 @@ module PassChooser =
                 .ToLower()
         (~~"#exchangeDir").text(sDir)
 
+/// Widget that prompts the user to accept a received pass.
+module AcceptChooser =
+
+    /// Chooser element.
+    let element = ~~"#acceptChooser"
+
 module Exchange =
 
     /// Exchange context.
@@ -124,8 +130,15 @@ module Exchange =
         Promise.create(fun resolve _reject ->
             PassChooser.element.click(fun () ->
                 if cardViews.Count = Pass.numCards then
+
+                        // reset UI state
+                    PassChooser.element.off("click")
                     PassChooser.element.hide()
                     PassChooser.element.removeClass("ready")
+                    for cardView in handView do
+                        cardView.off("click")
+
+                        // pass the selected cards
                     promise {
                         let! deal =
                             cardViews
@@ -200,8 +213,8 @@ module Exchange =
             return Map pairs
         }
 
-    /// Finishes the exchange in the given deal.
-    let private finish deal (exchangeMap : Map<_, _>) =
+    /// Receives the exchange in the given deal.
+    let private receive deal (exchangeMap : Map<_, _>) =
         async {
 
                 // create new card views
@@ -211,19 +224,46 @@ module Exchange =
                     deal.ClosedDeal.ExchangeDirection
                     exchange
 
-                // animate finish for each seat
+                // animate receive for each seat
             let anim =
                 Animation.Parallel [|
-                    for (KeyValue(seat, (_, _, animReceivePass)))
+                    for (KeyValue(seat, (_, _, animReceivePass, _)))
                         in exchangeMap do
                         let cardViews = cardViewMap[seat]
                         animReceivePass cardViews : Animation
                 |]
-            do! Animation.run anim |> Async.AwaitPromise
+            do! anim
+                |> Animation.run
+                |> Async.AwaitPromise
 
-                // start play
-            return OpenDeal.startPlay deal
+            return cardViewMap
         }
+
+    /// Accepts the exchange in the given deal.
+    let private accept (cardViewMap : Map<_, _>) (exchangeMap : Map<_, _>) =
+
+        AcceptChooser.element.show()
+
+        Promise.create (fun resolve _reject ->
+            AcceptChooser.element.click(fun () ->
+
+                    // reset UI state
+                AcceptChooser.element.off("click")
+                AcceptChooser.element.hide()
+
+                    // animate accept for each seat
+                Animation.Parallel [|
+                    for (KeyValue(seat : Seat, (_, _, _, animAcceptPass)))
+                        in exchangeMap do
+                        let cardViews : CardView[] = cardViewMap[seat]
+                        animAcceptPass cardViews : Animation
+                |]
+                    |> Animation.run
+                    |> ignore
+                    
+                resolve ()))
+
+            |> Async.AwaitPromise
 
     /// Runs the given deal's exchange.
     let run (persState : PersistentState) exchangeMap =
@@ -238,13 +278,15 @@ module Exchange =
                     OpenDeal.getExchange deal
                         |> Exchange.isComplete 
                 if isComplete then
-                    let! deal' = finish deal exchangeMap
+                    let! cardViewMap = receive deal exchangeMap
+                    do! accept cardViewMap exchangeMap
+                    let deal' = OpenDeal.startPlay deal
                     return { persState with DealOpt = Some deal' }
                 else
                         // prepare current passer
                     let seat = OpenDeal.currentPlayer deal
                     let (handView : HandView),
-                        animCardsPass, _ =
+                        animCardsPass, _, _ =
                             exchangeMap[seat]
                     let passer =
                         if seat.IsUser then

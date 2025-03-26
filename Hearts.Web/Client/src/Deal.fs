@@ -27,8 +27,10 @@ module Deal =
 
                     let animCardsPass =
                         let anim =
-                            if seat.IsUser then OpenHandView.passAnim
-                            else ClosedHandView.passAnim
+                            if seat.IsUser then
+                                OpenHandView.passAnim
+                            else
+                                ClosedHandView.passAnim
                         anim seat dir handView
 
                     let animCardsReceive =
@@ -37,12 +39,21 @@ module Deal =
                                 OpenHandView.receivePassAnim
                             else
                                 ClosedHandView.receivePassAnim
-                        anim seat dir handView
+                        anim seat dir
+
+                    let animCardsAccept =
+                        let anim =
+                            if seat.IsUser then
+                                OpenHandView.acceptPassAnim
+                            else
+                                ClosedHandView.acceptPassAnim
+                        anim seat handView
 
                     let tuple =
                         handView,
                         animCardsPass,
-                        animCardsReceive
+                        animCardsReceive,
+                        animCardsAccept
 
                     seat, tuple)
                 |> Map
