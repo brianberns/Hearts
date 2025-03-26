@@ -29,25 +29,25 @@ caption {
 .seat {
 }
 
-#seat-west {
+#seatWest {
     position: absolute;
     left: 1%;
     top: 50%;
 }
 
-#seat-north {
+#seatNorth {
     position: absolute;
     left: 48%;
     top: 2%;
 }
 
-#seat-east {
+#seatEast {
     position: absolute;
     left: 96%;
     top: 50%;
 }
 
-#seat-south {
+#seatSouth {
     position: absolute;
     left: 48%;
     top: 94%;
