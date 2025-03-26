@@ -9,7 +9,7 @@ open Hearts
 /// Widget that prompts the user to choose a legal pass.
 module PassChooser =
 
-    /// Pass chooser element.
+    /// Chooser element.
     let element = ~~"#passChooser"
 
     /// Sets the chooser's exchange direction.
@@ -18,14 +18,6 @@ module PassChooser =
             (ExchangeDirection.toString dir)
                 .ToLower()
         (~~"#exchangeDir").text(sDir)
-
-    /// Makes the chooser visible.
-    let show () =
-        element.css {| display = "block" |}
-
-    /// Makes the chooser invisible.
-    let hide () =
-        element.css {| display = "none" |}
 
 module Exchange =
 
@@ -89,7 +81,7 @@ module Exchange =
     let private passUser (handView : HandView) context =
 
             // prompt user to pass
-        PassChooser.show ()
+        PassChooser.element.show()
         logHint context.Deal
 
             // handle card clicks
@@ -132,7 +124,7 @@ module Exchange =
         Promise.create(fun resolve _reject ->
             PassChooser.element.click(fun () ->
                 if cardViews.Count = Pass.numCards then
-                    PassChooser.hide ()
+                    PassChooser.element.hide()
                     PassChooser.element.removeClass("ready")
                     promise {
                         let! deal =

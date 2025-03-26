@@ -48,20 +48,13 @@ module Deal =
                 |> Map
 
             // run the exchange
-        async {
-            let! persState' = Exchange.run persState exchangeMap
-            return persState'
-        }
+        Exchange.run persState exchangeMap
 
     /// Runs the playout of the given deal.
     let private playout
         (surface : JQueryElement)
         persState
         handViews =
-
-            // create play chooser
-        let chooser = PlayChooser.create ()
-        surface.append(chooser.Element)
 
             // get animations for each seat
         let playoutMap =
@@ -83,11 +76,7 @@ module Deal =
                 |> Map
 
             // run the playout
-        async {
-            let! persState' = Playout.run persState chooser playoutMap
-            chooser.Element.remove()
-            return persState'
-        }
+        Playout.run persState playoutMap
 
     /// Elements tracking current game score.
     let private gameScoreMap =

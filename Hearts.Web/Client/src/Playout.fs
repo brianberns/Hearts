@@ -8,25 +8,10 @@ open PlayingCards
 open Hearts
 
 /// Widget that prompts the user to choose a legal play.
-type PlayChooser =
-    {
-        /// Underlying HTML element.
-        Element : JQueryElement
-    }
-
 module PlayChooser =
 
-    /// Creates a chooser.
-    let create () =
-        { Element = ~~"#playChooser" }
-
-    /// Makes the given chooser visible.
-    let display chooser =
-        chooser.Element.css {| display = "block" |}
-
-    /// Makes the given chooser invisible.
-    let hide chooser =
-        chooser.Element.css {| display = "none" |}
+    /// Chooser element.
+    let element = ~~"#playChooser"
 
 module Playout =
 
@@ -125,7 +110,7 @@ module Playout =
         }
 
     /// Allows user to play a card.
-    let private playUser chooser (handView : HandView) context =
+    let private playUser (handView : HandView) context =
 
             // determine all legal actions
         let infoSet = OpenDeal.currentInfoSet context.Deal
@@ -136,7 +121,7 @@ module Playout =
         Promise.create(fun resolve _reject ->
 
                 // prompt user to play
-            chooser |> PlayChooser.display
+            PlayChooser.element.show()
             logHint infoSet context.Deal
 
                 // handle card clicks
@@ -148,7 +133,7 @@ module Playout =
                     cardView.click(fun () ->
 
                             // prevent further clicks
-                        chooser |> PlayChooser.hide
+                        PlayChooser.element.hide()
                         for cardView in handView do
                             cardView.removeClass("active")
                             cardView.removeClass("inactive")
@@ -182,7 +167,7 @@ module Playout =
         }
 
     /// Runs the given deal's playout
-    let run (persState : PersistentState) chooser (playoutMap : Map<_, _>) =
+    let run (persState : PersistentState) (playoutMap : Map<_, _>) =
 
         let dealer = persState.Dealer
 
@@ -203,7 +188,7 @@ module Playout =
                             playoutMap[seat]
                     let player =
                         if seat.IsUser then
-                            playUser chooser handView
+                            playUser handView
                         else
                             playAuto
 
