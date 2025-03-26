@@ -45,8 +45,8 @@ module Exchange =
             /// Current deal.
             Deal : OpenDeal
 
-            /// Animation of passing a card.
-            AnimCardPass : CardView -> Animation
+            /// Animation of passing cards.
+            AnimCardsPass : CardView[] -> Animation
         }
 
     /// Logs hint information.
@@ -62,21 +62,30 @@ module Exchange =
                 console.log($"   {card}: %.1f{100. * prob}%%")
         } |> Async.StartImmediate
 
-    /// Passes the given card in the given deal and then continues
+    /// Passes the given cards in the given deal and then continues
     /// the rest of the deal.
-    let private passCard context cardView =
-        let card = cardView |> CardView.card
+    let private passCards context cardViews =
+        let cards =
+            cardViews
+                |> Array.map CardView.card
         promise {
 
                 // write to log
             let seat = OpenDeal.currentPlayer context.Deal
-            console.log($"{Seat.toString seat} passes {card}")
+            let str =
+                cards
+                    |> Seq.map _.String
+                    |> String.concat ", "
+            console.log($"{Seat.toString seat} passes {str}")
 
-                // add the card to the deal
-            let deal = OpenDeal.addPass card context.Deal
+                // add the cards to the deal
+            let deal =
+                (context.Deal, cards)
+                    ||> Seq.fold (fun deal card ->
+                        OpenDeal.addPass card deal)
 
-                // pass the card
-            do! context.AnimCardPass cardView
+                // pass the cards
+            do! context.AnimCardsPass cardViews
                 |> Animation.run
             DealView.displayStatus deal
 
@@ -91,20 +100,20 @@ module Exchange =
         logHint context.Deal
 
             // handle card clicks
-        let passCards =
+        let cardViews =
             System.Collections.Generic.HashSet<CardView>(
-                (*Pass.numCards*))
+                (*Pass.numCards*))   // Fable doesn't support capacity argument
         let btn = ~~"#passChooserBtn"
         for cardView in handView do
             cardView.addClass("active")
             cardView.click(fun () ->
-                lock passCards (fun () ->
-                    if passCards.Remove(cardView) then
+                lock cardViews (fun () ->
+                    if cardViews.Remove(cardView) then
                         OpenHandView.passDeselectAnim cardView
                             |> Animation.run
                             |> ignore
                     else
-                        let flag = passCards.Add(cardView)
+                        let flag = cardViews.Add(cardView)
                         assert(flag)
                         OpenHandView.passSelectAnim cardView
                             |> Animation.run
@@ -112,19 +121,17 @@ module Exchange =
 
                     btn.prop(
                         "disabled",
-                        passCards.Count <> Pass.numCards)))
+                        cardViews.Count <> Pass.numCards)))
 
             // handle "Ready" button click
         Promise.create(fun resolve _reject ->
             btn.click(fun () ->
                 chooser |> PassChooser.hide
-                let cards = passCards |> Seq.toArray
                 promise {
-                    let! deal = passCard context cards[0]
-                    let context = { context with Deal = deal }
-                    let! deal = passCard context cards[1]
-                    let context = { context with Deal = deal }
-                    let! deal = passCard context cards[2]
+                    let! deal =
+                        cardViews
+                            |> Seq.toArray
+                            |> passCards context
                     resolve deal
                 } |> ignore))
             |> Async.AwaitPromise
@@ -142,7 +149,7 @@ module Exchange =
                     |> Async.AwaitPromise
 
                 // pass the card
-            return! passCard context cardView
+            return! passCards context [|cardView|]
                 |> Async.AwaitPromise
         }
 
@@ -224,7 +231,7 @@ module Exchange =
                         // prepare current passer
                     let seat = OpenDeal.currentPlayer deal
                     let (handView : HandView),
-                        animCardPass, _ =
+                        animCardsPass, _ =
                             exchangeMap[seat]
                     let passer =
                         if seat.IsUser then
@@ -237,7 +244,7 @@ module Exchange =
                         passer {
                             Dealer = dealer
                             Deal = deal
-                            AnimCardPass = animCardPass
+                            AnimCardsPass = animCardsPass
                         }
 
                         // recurse until exchange is complete

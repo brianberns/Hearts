@@ -85,7 +85,8 @@ module ClosedHandView =
         ResizeArray(cardViews)
 
     /// Animates the passing of a card from a closed hand view.
-    let passAnim seat dir (handView : HandView) (_cardView : CardView) =
+    let passAnim seat dir (handView : HandView) _cardViews =
+        assert(_cardViews |> Array.length = 1)
 
             // remove arbitrary card from hand instead
         let cardView = handView |> Seq.last
@@ -200,28 +201,21 @@ module OpenHandView =
             |> Animation.create cardView
 
     /// Animates the passing of a card from an open hand view.
-    let passAnim seat dir (handView : HandView) (cardView : CardView) =
+    let passAnim seat dir (handView : HandView) cardViews =
 
-            // remove selected card from hand
-        let flag = handView.Remove(cardView)
-        assert(flag)
+            // remove selected cards from hand
+        for cardView in cardViews do
+            let flag = handView.Remove(cardView)
+            assert(flag)
 
-            // animate card being passed
-        let animPass =
-            [|
+            // animate cards being passed
+        [|
+            for cardView in cardViews do
                 AnimationAction.BringToFront        // bring card to front
                     |> Animation.create cardView
                 ExchangeView.passAnim               // slide card to opponent
                     seat dir cardView HandView.delta
-            |] |> Animation.Serial
-
-            // animate adjustment of remaining cards to fill gap
-        let animAdjust = HandView.adjustAnim seat handView
-
-            // animate in parallel
-        [|
-            animPass
-            animAdjust
+            HandView.adjustAnim seat handView       // adjust remaining cards to fill gap
         |] |> Animation.Parallel
 
     /// Animates receiving cards into an open hand view.

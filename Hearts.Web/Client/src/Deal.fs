@@ -26,7 +26,7 @@ module Deal =
             handViews
                 |> Seq.map (fun (seat : Seat, handView) ->
 
-                    let animCardPass =
+                    let animCardsPass =
                         let anim =
                             if seat.IsUser then OpenHandView.passAnim
                             else ClosedHandView.passAnim
@@ -42,7 +42,7 @@ module Deal =
 
                     let tuple =
                         handView,
-                        animCardPass,
+                        animCardsPass,
                         animCardsReceive
 
                     seat, tuple)
