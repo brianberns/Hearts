@@ -7,32 +7,25 @@ open PlayingCards
 open Hearts
 
 /// Widget that prompts the user to choose a legal pass.
-type PassChooser =
-    {
-        /// Underlying HTML element.
-        Element : JQueryElement
-    }
-
 module PassChooser =
 
-    /// Creates a chooser.
-    let create dir =
+    /// Pass chooser element.
+    let element = ~~"#passChooser"
 
-            // set exchange direction text
+    /// Sets the chooser's exchange direction.
+    let setExchangeDirection dir =
         let sDir =
             (ExchangeDirection.toString dir)
                 .ToLower()
         (~~"#exchangeDir").text(sDir)
 
-        { Element = ~~"#passChooser" }
+    /// Makes the chooser visible.
+    let show () =
+        element.css {| display = "block" |}
 
-    /// Makes the given chooser visible.
-    let display chooser =
-        chooser.Element.css {| display = "block" |}
-
-    /// Makes the given chooser invisible.
-    let hide chooser =
-        chooser.Element.css {| display = "none" |}
+    /// Makes the chooser invisible.
+    let hide () =
+        element.css {| display = "none" |}
 
 module Exchange =
 
@@ -93,10 +86,10 @@ module Exchange =
         }
 
     /// Allows user to pass cards.
-    let private passUser chooser (handView : HandView) context =
+    let private passUser (handView : HandView) context =
 
             // prompt user to pass
-        chooser |> PassChooser.display
+        PassChooser.show ()
         logHint context.Deal
 
             // handle card clicks
@@ -124,7 +117,7 @@ module Exchange =
                     let toggleClass =
                         let nRemaining = Pass.numCards - cardViews.Count
                         if nRemaining = 0 then
-                            chooser.Element.addClass
+                            PassChooser.element.addClass
                         else
                             if nRemaining > 0 then
                                 (context.Deal, cardViews)
@@ -132,14 +125,15 @@ module Exchange =
                                         let card = CardView.card cardView
                                         OpenDeal.addPass card deal)
                                     |> logHint
-                            chooser.Element.removeClass
+                            PassChooser.element.removeClass
                     toggleClass("ready")))
 
             // handle chooser click
         Promise.create(fun resolve _reject ->
-            chooser.Element.click(fun () ->
+            PassChooser.element.click(fun () ->
                 if cardViews.Count = Pass.numCards then
-                    chooser |> PassChooser.hide
+                    PassChooser.hide ()
+                    PassChooser.element.removeClass("ready")
                     promise {
                         let! deal =
                             cardViews
@@ -240,7 +234,7 @@ module Exchange =
         }
 
     /// Runs the given deal's exchange.
-    let run (persState : PersistentState) chooser exchangeMap =
+    let run (persState : PersistentState) exchangeMap =
 
         let dealer = persState.Dealer
 
@@ -262,7 +256,7 @@ module Exchange =
                             exchangeMap[seat]
                     let passer =
                         if seat.IsUser then
-                            passUser chooser handView
+                            passUser handView
                         else
                             passAuto
 

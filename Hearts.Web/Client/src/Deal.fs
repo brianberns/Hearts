@@ -17,9 +17,8 @@ module Deal =
         persState
         handViews =
 
-            // create pass chooser
-        let chooser = PassChooser.create dir
-        surface.append(chooser.Element)
+            // set exchange direction
+        PassChooser.setExchangeDirection dir
 
             // get animations for each seat
         let exchangeMap =
@@ -50,8 +49,7 @@ module Deal =
 
             // run the exchange
         async {
-            let! persState' = Exchange.run persState chooser exchangeMap
-            chooser.Element.remove()
+            let! persState' = Exchange.run persState exchangeMap
             return persState'
         }
 
