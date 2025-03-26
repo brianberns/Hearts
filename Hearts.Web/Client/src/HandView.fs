@@ -94,26 +94,32 @@ module ClosedHandView =
         assert(cardViews |> Seq.forall CardView.isBack)
         ResizeArray(cardViews)
 
-    /// Animates the passing of a card from a closed hand view.
-    let passAnim seat dir (handView : HandView) _cardViews =
-        assert(_cardViews |> Array.length = 1)
+    /// Animates the passing of cards from a closed hand view.
+    let passAnim seat dir (handView : HandView) (cardViews : CardView[]) =
 
-            // remove arbitrary card from hand instead
-        let cardView = handView |> Seq.last
-        assert(CardView.isBack cardView)
-        let flag = handView.Remove(cardView)
-        assert(flag)
+            // remove arbitrary cards from hand instead
+        let cardViews =
+            handView
+                |> Seq.rev
+                |> Seq.take cardViews.Length
+                |> Seq.rev
+                |> Seq.toArray
+        assert(Seq.forall CardView.isBack cardViews)
+        for cardView in cardViews do
+            let flag = handView.Remove(cardView)
+            assert(flag)
 
             // animate pass
         Animation.Parallel [|
+            for cardView in cardViews do
 
-                // bring card to front
-            AnimationAction.BringToFront
-                |> Animation.create cardView
+                    // bring card to front
+                AnimationAction.BringToFront
+                    |> Animation.create cardView
 
-                // slide card to opponent's receiving position
-            ExchangeView.passAnim
-                seat dir cardView HandView.delta
+                    // slide card to opponent's receiving position
+                ExchangeView.passAnim
+                    seat dir cardView HandView.delta
         |]
 
     /// Animates receiving cards into a closed hand view.

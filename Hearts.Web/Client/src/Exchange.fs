@@ -139,20 +139,34 @@ module Exchange =
                     } |> ignore))
             |> Async.AwaitPromise
 
-    /// Automatically passes a card.
+    /// Automatically passes cards.
     let private passAuto context =
-        async {
-                // determine card to pass
-            let! card = WebPlayer.takeAction context.Deal
 
-                // create view of the selected card
-            let! cardView =
-                card
-                    |> CardView.ofCard
+        /// Passes N cards asynchronously.
+        let rec loop n deal cards =
+            async {
+                if n <= 0 then
+                    return cards
+                else
+                    let! card = WebPlayer.takeAction deal
+                    let deal = OpenDeal.addPass card deal
+                    let cards = Set.add card cards
+                    return! loop (n - 1) deal cards
+            }            
+
+        async {
+                // determine cards to pass
+            let! cards = loop 3 context.Deal Set.empty
+
+                // create views of the selected cards
+            let! cardViews =
+                cards
+                    |> Seq.map CardView.ofCard
+                    |> Promise.all
                     |> Async.AwaitPromise
 
-                // pass the card
-            return! passCards context [|cardView|]
+                // pass the cards
+            return! passCards context cardViews
                 |> Async.AwaitPromise
         }
 
@@ -220,7 +234,7 @@ module Exchange =
 
         let dealer = persState.Dealer
 
-        /// Passes a single card and then loops recursively.
+        /// Passes a group of cards and then loops recursively.
         let rec loop (persState : PersistentState) =
             async {
                 let deal = persState.Deal
