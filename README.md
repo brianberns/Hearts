@@ -11,12 +11,14 @@ This repository solves Hearts (the card game) using a simplified version of [Dee
 
 ## Building and running
 
-1. Build and run the training program, `Hearts.Learn`. This requires a high-end computer with a fast GPU and CPU, and will take several days to complete. Models will be saved in the `/Models` directory.
+1. Build and run the training program, `Hearts.Learn`. This requires a high-end computer with a fast GPU and CPU, and will take several days to complete. Models will be saved in the `/Models` directory. You can track progress via the TensorBoard directory, `/runs`. E.g. `tensorboard --bind_all --logdir .\Hearts.Learn\bin\Release\net9.0\`.
 2. Build the web server, `Hearts.Web.Server`.
 3. Copy one of the trained models to the web server's runtime directory (e.g. `./bin/Debug` or `./bin/Release`) and rename it to `AdvantageModel.pt`.
 4. Start the web server by building and running `Hearts.Web.Harness`.
 5. In the `Hearts.Web/Client` directory, start the client via `npm install` followed by `npm start`.
-6. Browse to http://localhost:8081/ to play the game.
+6. Browse to [`http://localhost:8081/`](http://localhost:8081/) to play the game.
+
+You can also play the game online [on my website](https://www.bernsrite.com/Hearts/).
 
 ## Differences from Deep CFR
 
