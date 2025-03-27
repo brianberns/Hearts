@@ -16,3 +16,9 @@ This repository solves Hearts (the card game) using a simplified version of [Dee
 3. Copy one of the trained models to the web server's runtime directory (e.g. `./bin/Debug` or `./bin/Release`) and rename it to `AdvantageModel.pt`.
 4. Start the web server by building and running `Hearts.Web.Harness`.
 5. In the `Hearts.Web/Client` directory, start the client via `npm install` followed by `npm start`.
+6. Browse to http://localhost:8081/ to play the game.
+
+## Differences from Deep CFR
+
+* Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players share the same model.
+* For the same reason, there is no need to train a separate "strategy" model from the advantage models at the end of the run. Instead, the advantage model converges on a strategy after a few iterations.
