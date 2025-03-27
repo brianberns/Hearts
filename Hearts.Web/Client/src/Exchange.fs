@@ -265,6 +265,26 @@ module Exchange =
 
             |> Async.AwaitPromise
 
+    /// Finishes the exchange in the given deal.
+    let private finish persState deal exchangeMap =
+        async {
+
+                // receive pass
+            let! cardViewMap = receive deal exchangeMap
+
+                // wait for user to accept received pass
+            do! accept cardViewMap exchangeMap
+
+                // wait a beat before starting play
+            do! Animation.Sleep 1500
+                |> Animation.run
+                |> Async.AwaitPromise
+
+                // start play
+            let deal' = OpenDeal.startPlay deal
+            return { persState with DealOpt = Some deal' }
+        }
+
     /// Runs the given deal's exchange.
     let run (persState : PersistentState) exchangeMap =
 
@@ -278,10 +298,7 @@ module Exchange =
                     OpenDeal.getExchange deal
                         |> Exchange.isComplete 
                 if isComplete then
-                    let! cardViewMap = receive deal exchangeMap
-                    do! accept cardViewMap exchangeMap
-                    let deal' = OpenDeal.startPlay deal
-                    return { persState with DealOpt = Some deal' }
+                    return! finish persState deal exchangeMap
                 else
                         // prepare current passer
                     let seat = OpenDeal.currentPlayer deal
