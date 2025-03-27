@@ -3,6 +3,16 @@ namespace Hearts.Web.Client
 open PlayingCards
 open Hearts
 
+[<AutoOpen>]
+module SeatExt =
+    type Seat with
+
+        /// The user's seat.
+        static member User = Seat.South
+
+        /// Indicates whether the given seat is played by the user.
+        member seat.IsUser = (seat = Seat.User)
+
 /// Represents a (mutable) hand of cards.
 type HandView = ResizeArray<CardView>
 
@@ -22,7 +32,7 @@ module HandView =
             |> Percent
 
     /// Gets the position of a card in a hand.
-    let private getPosition centerPos numCards iCard =
+    let getPosition centerPos numCards iCard =
         { centerPos with
             left = getLeft numCards iCard + centerPos.left }
 
@@ -32,12 +42,12 @@ module HandView =
             |> AnimationAction.moveTo
 
     /// Center position of each hand.
-    let private centerPosMap =
+    let centerPosMap =
         Position.seatMap [
             Seat.West,  (20, 50)
-            Seat.North, (50, 16)
+            Seat.North, (50, 15)
             Seat.East,  (80, 50)
-            Seat.South, (50, 83)
+            Seat.South, (50, 84)
         ]
 
     /// Deals the cards in the given hand view into their target
@@ -84,50 +94,58 @@ module ClosedHandView =
         assert(cardViews |> Seq.forall CardView.isBack)
         ResizeArray(cardViews)
 
-    /// Animates the passing of a card from a closed hand view.
-    let passAnim seat dir (handView : HandView) (_cardView : CardView) =
+    /// Animates the passing of cards from a closed hand view.
+    let passAnim seat dir (handView : HandView) (cardViews : CardView[]) =
 
-            // remove arbitrary card from hand instead
-        let cardView = handView |> Seq.last
-        assert(CardView.isBack cardView)
-        let flag = handView.Remove(cardView)
-        assert(flag)
+            // remove arbitrary cards from hand instead
+        let cardViews =
+            handView
+                |> Seq.rev
+                |> Seq.take cardViews.Length
+                |> Seq.rev
+                |> Seq.toArray
+        assert(Seq.forall CardView.isBack cardViews)
+        for cardView in cardViews do
+            let flag = handView.Remove(cardView)
+            assert(flag)
 
             // animate pass
         Animation.Parallel [|
+            for cardView in cardViews do
 
-                // bring card to front
-            AnimationAction.BringToFront
-                |> Animation.create cardView
+                    // bring card to front
+                AnimationAction.BringToFront
+                    |> Animation.create cardView
 
-                // slide card to opponent's receiving position
-            ExchangeView.passAnim
-                seat dir cardView HandView.delta
+                    // slide card to opponent's receiving position
+                ExchangeView.passAnim
+                    seat dir cardView HandView.delta
         |]
 
-    /// Animates receiving cards into a closed hand view.
-    let receivePassAnim seat dir (handView : HandView) cardViews =
+    /// Animates receiving cards for a closed hand view.
+    let receivePassAnim seat dir cardViews =
 
             // get incoming old card views (might be backs or fronts)
         let oldCardViews =
-            let fromSeat = ExchangeDirection.unapply seat dir
-            ExchangeView.finish fromSeat
+            ExchangeDirection.unapply seat dir
+                |> ExchangeView.finish
 
-            // add incoming new card views to hand view (all backs)
+            // replace old views with new (all backs)
+        assert(cardViews |> Seq.forall CardView.isBack)
+        (oldCardViews, cardViews)
+            ||> Array.map2 (fun oldView (newView : CardView) ->
+                Animation.create oldView (ReplaceWith newView))
+            |> Animation.Parallel
+
+    /// Accepts received cards into a closed hand view.
+    let acceptPassAnim seat (handView : HandView) cardViews =
+
+            // add incoming new card views (all backs) to hand view
         assert(cardViews |> Seq.forall CardView.isBack)
         handView.AddRange(cardViews)
 
-        Animation.Parallel [|
-
-                // replace old views with new
-            yield! Array.map2 (fun oldView newView ->
-                Animation.create oldView (ReplaceWith newView))
-                oldCardViews
-                cardViews
-
-                // move new views into the hand
-            yield HandView.dealAnim seat handView
-        |]
+            // move new views into the hand
+        HandView.dealAnim seat handView
 
     /// Animates the playing of a card from a closed hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =
@@ -184,62 +202,70 @@ module OpenHandView =
             |> Seq.toArray
             |> Animation.Parallel
 
+    /// Vertical displacement of a card selected to be passed.
+    let private selectOffset = 3
+
+    /// Animates the selection of a card to pass from an open hand view.
+    let passSelectAnim (cardView : CardView) numCards iCard =
+        let pos =
+            let centerPos = HandView.centerPosMap[Seat.User]
+            HandView.getPosition centerPos numCards iCard
+        AnimationAction.moveTo (pos + Position.ofInts(0, -selectOffset))
+            |> Animation.create cardView
+
+    /// Animates the deselection of a card to pass from an open hand view.
+    let passDeselectAnim (cardView : CardView) numCards iCard =
+        let pos =
+            let centerPos = HandView.centerPosMap[Seat.User]
+            HandView.getPosition centerPos numCards iCard
+        AnimationAction.moveTo pos
+            |> Animation.create cardView
+
     /// Animates the passing of a card from an open hand view.
-    let passAnim seat dir (handView : HandView) (cardView : CardView) =
+    let passAnim seat dir (handView : HandView) cardViews =
 
-            // remove selected card from hand
-        let flag = handView.Remove(cardView)
-        assert(flag)
+            // remove selected cards from hand
+        for cardView in cardViews do
+            let flag = handView.Remove(cardView)
+            assert(flag)
 
-            // animate card being passed
-        let animPass =
-            [|
+            // animate cards being passed
+        [|
+            for cardView in cardViews do
                 AnimationAction.BringToFront        // bring card to front
                     |> Animation.create cardView
                 ExchangeView.passAnim               // slide card to opponent
                     seat dir cardView HandView.delta
-            |] |> Animation.Serial
-
-            // animate adjustment of remaining cards to fill gap
-        let animAdjust = HandView.adjustAnim seat handView
-
-            // animate in parallel
-        [|
-            animPass
-            animAdjust
+            HandView.adjustAnim seat handView       // adjust remaining cards to fill gap
         |] |> Animation.Parallel
 
-    /// Animates receiving cards into an open hand view.
-    let receivePassAnim seat dir (handView : HandView) cardViews =
+    /// Animates receiving cards for an open hand view.
+    let receivePassAnim seat dir cardViews =
 
             // get incoming card backs
         let backs =
-            let fromSeat = ExchangeDirection.unapply seat dir
-            ExchangeView.finish fromSeat
+            ExchangeDirection.unapply seat dir
+                |> ExchangeView.finish
         assert(backs |> Seq.forall CardView.isBack)
+
+            // replace backs with fronts
+        (backs, cardViews)
+            ||> Array.map2 (fun back front ->
+                Animation.create back (ReplaceWith front))
+            |> Animation.Parallel
+
+    /// Accepts received cards into an open hand view.
+    let acceptPassAnim seat (handView : HandView) cardViews =
 
             // add incoming card fronts to hand view
         assert(cardViews |> Seq.forall (CardView.isBack >> not))
         handView.AddRange(cardViews)
+        let getKey = CardView.card >> sortKey
         handView.Sort(fun viewA viewB ->
-            let keyA = CardView.card viewA |> sortKey
-            let keyB = CardView.card viewB |> sortKey
-            compare keyA keyB)
+            compare (getKey viewA) (getKey viewB))
 
-        Animation.Serial [|
-
-                // replace backs with fronts
-            yield! Array.map2 (fun back front ->
-                Animation.create back (ReplaceWith front))
-                backs
-                cardViews
-
-                // wait
-            yield Animation.Sleep 2000
-
-                // move fronts into the hand
-            yield HandView.dealAnim seat handView
-        |]
+            // move fronts into the hand
+        HandView.dealAnim seat handView
 
     /// Animates the playing of a card from an open hand view.
     let playAnim seat (handView : HandView) (cardView : CardView) =

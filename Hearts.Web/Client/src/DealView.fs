@@ -3,16 +3,6 @@
 open PlayingCards
 open Hearts
 
-[<AutoOpen>]
-module SeatExt =
-    type Seat with
-
-        /// The user's seat.
-        static member User = Seat.South
-
-        /// Indicates whether the given seat is played by the user.
-        member seat.IsUser = (seat = Seat.User)
-
 module DealView =
 
     /// Creates card backs at the center of the given surface.

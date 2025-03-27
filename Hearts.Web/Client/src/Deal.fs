@@ -17,19 +17,20 @@ module Deal =
         persState
         handViews =
 
-            // create pass chooser
-        let chooser = PassChooser.create dir
-        surface.append(chooser.Element)
+            // set exchange direction
+        PassChooser.setExchangeDirection dir
 
             // get animations for each seat
         let exchangeMap =
             handViews
                 |> Seq.map (fun (seat : Seat, handView) ->
 
-                    let animCardPass =
+                    let animCardsPass =
                         let anim =
-                            if seat.IsUser then OpenHandView.passAnim
-                            else ClosedHandView.passAnim
+                            if seat.IsUser then
+                                OpenHandView.passAnim
+                            else
+                                ClosedHandView.passAnim
                         anim seat dir handView
 
                     let animCardsReceive =
@@ -38,32 +39,33 @@ module Deal =
                                 OpenHandView.receivePassAnim
                             else
                                 ClosedHandView.receivePassAnim
-                        anim seat dir handView
+                        anim seat dir
+
+                    let animCardsAccept =
+                        let anim =
+                            if seat.IsUser then
+                                OpenHandView.acceptPassAnim
+                            else
+                                ClosedHandView.acceptPassAnim
+                        anim seat handView
 
                     let tuple =
                         handView,
-                        animCardPass,
-                        animCardsReceive
+                        animCardsPass,
+                        animCardsReceive,
+                        animCardsAccept
 
                     seat, tuple)
                 |> Map
 
             // run the exchange
-        async {
-            let! persState' = Exchange.run persState chooser exchangeMap
-            chooser.Element.remove()
-            return persState'
-        }
+        Exchange.run persState exchangeMap
 
     /// Runs the playout of the given deal.
     let private playout
         (surface : JQueryElement)
         persState
         handViews =
-
-            // create play chooser
-        let chooser = PlayChooser.create ()
-        surface.append(chooser.Element)
 
             // get animations for each seat
         let playoutMap =
@@ -85,11 +87,7 @@ module Deal =
                 |> Map
 
             // run the playout
-        async {
-            let! persState' = Playout.run persState chooser playoutMap
-            chooser.Element.remove()
-            return persState'
-        }
+        Playout.run persState playoutMap
 
     /// Elements tracking current game score.
     let private gameScoreMap =
