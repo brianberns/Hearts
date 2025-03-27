@@ -11,16 +11,16 @@ module ExchangeView =
         Enum.getValues<Seat>
             |> Seq.map (fun seat ->
                 seat,   // from seat
-                ResizeArray<CardView>(Pass.numCards))
+                ResizeArray<CardView>(Pass.numCards))   // MUTABLE
             |> dict
 
     /// Center position of a card being passed to a seat.
     let private passPosMap =
         Position.seatMap [
             Seat.West,  (20, 69)
-            Seat.North, (28, 16)
+            Seat.North, (28, 15)
             Seat.East,  (80, 31)
-            Seat.South, (72, 83)
+            Seat.South, (72, 84)
         ]
 
     /// Gets the target pass position for the given seat

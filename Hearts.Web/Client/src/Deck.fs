@@ -2,7 +2,7 @@
 
 open System
 
-/// Clonable random number generator.
+/// Restartable random number generator.
 /// https://en.wikipedia.org/wiki/Linear_congruential_generator
 type Random(seed) =
 
@@ -33,9 +33,6 @@ type Random(seed) =
         state <- next state
         (int (state % uint64 range)) + minValue
 
-    /// Clones the RNG in its current state.
-    member _.Clone() = Random(state)
-
     /// Current state of the RNG.
     member _.State = state
 
@@ -65,5 +62,5 @@ module Deck =
             Cards =
                 Card.allCards
                     |> Array.clone
-                    |> knuthShuffle rng
+                    |> knuthShuffle rng   // use restartable RNG
         }
