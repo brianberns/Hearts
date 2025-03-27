@@ -20,6 +20,10 @@ This repository solves Hearts (the card game) using a simplified version of [Dee
 
 You can also play the game online [on my website](https://www.bernsrite.com/Hearts/).
 
+## Modeling Hearts
+
+Because Hearts ends when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game, in order to avoid going over the limit. This model ignores that aspect of the game entirely, and focuses only on the score within the current deal.
+
 ## Differences from Deep CFR
 
 * Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players share the same model.
