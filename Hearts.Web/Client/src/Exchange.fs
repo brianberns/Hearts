@@ -268,7 +268,6 @@ module Exchange =
     /// Finishes the exchange in the given deal.
     let private finish persState deal exchangeMap =
         async {
-
                 // receive pass
             let! cardViewMap = receive deal exchangeMap
 

@@ -221,7 +221,10 @@ module Deal =
                 // run the exchange?
             let! persState =
                 let dir = deal.ClosedDeal.ExchangeDirection
-                if dir <> ExchangeDirection.Hold then
+                if dir <> ExchangeDirection.Hold
+                    && OpenDeal.getExchange deal
+                        |> Exchange.isComplete
+                        |> not then
                     exchange dir surface persState seatViews
                 else
                     async.Return(persState)
