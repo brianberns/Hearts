@@ -71,7 +71,9 @@ module PersistentState =
         if isNull json then
             createInitial ()
         else
-            let state = Json.parseAs<PersistentState>(json)
+            let state =
+                try Json.parseAs<PersistentState>(json)
+                with _ -> createInitial ()
             if state.VersionNum < initial.VersionNum then   // ignore obsolete state
                 createInitial ()
             else state
