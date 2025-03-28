@@ -263,13 +263,12 @@ module Deal =
                                     persState.ExchangeDirection
                             DealOpt = None }
                     if winners.IsEmpty then
-                        PersistentState.save persState'
-                        return persState'
+                        return persState'.Save()
                     else
                             // increment games won
                         let persState'' =
-                            incrGamesWon winners persState'
-                        PersistentState.save persState''
+                            (incrGamesWon winners persState')
+                                .Save()
 
                             // display game result
                         do! gameOver surface winners persState''.GamesWon
