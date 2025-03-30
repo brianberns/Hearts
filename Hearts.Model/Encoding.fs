@@ -40,9 +40,9 @@ module Encoding =
                         LanguagePrimitives.GenericZero   // encode to input type
         |]
 
-    /// Encodes the given cards as a multi-hot vector
-    /// in the deck size.
-    let private encodeCards cards =
+    /// Encodes the given unordered set of card as a single
+    /// multi-hot vector in the deck size.
+    let private encodeCardsSet (cards : Set<Card>) =
         cards
             |> Seq.map (fun card -> card, 1uy)
             |> encodeCardValues
@@ -57,13 +57,13 @@ module Encoding =
         |]
 
     /// Encodes the given pass as a multi-hot vector in
-    /// the deck size.
+    /// the deck size. The cards in a pass are unordered.
     let private encodePass (passOpt : Option<Pass>) =
         let cards =
             passOpt
                 |> Option.defaultValue Set.empty
         assert(cards.Count <= Pass.numCards)
-        encodeCards cards
+        encodeCardsSet cards
 
     /// Maximum number of cards played at the last decision
     /// point of the game. This occurs when playing the last
@@ -75,6 +75,30 @@ module Encoding =
         ((ClosedDeal.numCardsPerHand - 1)   // number of interesting tricks
             * Seat.numSeats)                // number of cards per trick
             - 1                             // last card on the last interesting trick
+
+    let private encodeSuit suitOpt =
+        [|
+            for st in Enum.getValues<Suit> do
+                if Some st = suitOpt then 1uy
+                else 0uy
+        |]
+
+    let private encodeRank rankOpt =
+        [|
+            for rk in Enum.getValues<Rank> do
+                if Some rk = rankOpt then 1uy
+                else 0uy
+        |]
+
+    let private encodeCardOpt (cardOpt : Option<Card>) =
+        [|
+            yield! cardOpt
+                |> Option.map _.Suit
+                |> encodeSuit
+            yield! cardOpt
+                |> Option.map _.Rank
+                |> encodeRank
+        |]
 
     /// Encodes all cards played so far.
     let private encodeCardsPlayed deal =
@@ -89,8 +113,7 @@ module Encoding =
                     if iCard < cards.Length then
                         Some cards[iCard]
                     else None
-                    |> Option.toArray
-                    |> encodeCards
+                    |> encodeCardOpt
         |]
 
     /// Total encoded length of an info set.
@@ -99,13 +122,14 @@ module Encoding =
             + ExchangeDirection.numDirections       // exchange direction
             + Card.numCards                         // outgoing pass
             + Card.numCards                         // incoming pass
-            + (maxNumCardsPlayed * Card.numCards)   // cards played
+            + (maxNumCardsPlayed                    // cards played
+                * (Suit.numSuits + Rank.numRanks))
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
         let encoded =
             [|
-                yield! encodeCards infoSet.Hand             // current player's hand
+                yield! encodeCardsSet infoSet.Hand          // current player's hand (unordered)
                 yield! encodeExchangeDirection              // exchange direction
                     infoSet.Deal.ExchangeDirection
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
