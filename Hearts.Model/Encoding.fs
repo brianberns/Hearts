@@ -65,11 +65,18 @@ module Encoding =
         assert(cards.Count <= Pass.numCards)
         encodeCards cards
 
+    /// Maximum number of cards played at the last decision
+    /// point of the game. This occurs when playing the last
+    /// card on the penultimiate trick. (The last trick has
+    /// no decision points, because each player has only one
+    /// card left.) In a full game of Hearts, this is (12 * 4)
+    /// - 1 = 47.
     let private maxNumCardsPlayed =
         ((ClosedDeal.numCardsPerHand - 1)   // number of interesting tricks
             * Seat.numSeats)                // number of cards per trick
             - 1                             // last card on the last interesting trick
 
+    /// Encodes all cards played so far.
     let private encodeCardsPlayed deal =
         let cards =
             ClosedDeal.tricks deal
