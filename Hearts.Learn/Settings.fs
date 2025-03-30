@@ -69,14 +69,14 @@ module Settings =
 
         let settings =
             {
-                HiddenSize = Encoding.encodedLength * 6
+                HiddenSize = 1536 // Encoding.encodedLength * 4
                 LearningRate = 1e-3
                 SampleDecay = 0.17
                 NumAdvantageTrainEpochs = 2000
                 AdvantageBatchSize = 1_000_000
                 AdvantageSubBatchSize = 80_000
                 NumAdvantageSamples = 100_000_000
-                NumTraversals = 16000
+                NumTraversals = 8000
                 TraversalBatchSize = 200
                 NumIterations = 25
                 NumEvaluationDeals = 100000

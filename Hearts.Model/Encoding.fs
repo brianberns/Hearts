@@ -65,20 +65,19 @@ module Encoding =
         assert(cards.Count <= Pass.numCards)
         encodeCards cards
 
-    /// Encodes each card in the given current trick as
-    /// a one-hot vector in the deck size and then concatenates
-    /// those vectors.
-    let private encodeTrick trickOpt =
+    let private maxNumCardsPlayed =
+        ((ClosedDeal.numCardsPerHand - 1)   // number of interesting tricks
+            * Seat.numSeats)                // number of cards per trick
+            - 1                             // last card on the last interesting trick
+
+    let private encodeCardsPlayed deal =
         let cards =
-            trickOpt
-                |> Option.map (fun trick ->
-                    trick.Cards
-                        |> List.rev
-                        |> List.toArray)
-                |> Option.defaultValue Array.empty
-        assert(cards.Length < Seat.numSeats)
+            ClosedDeal.tricks deal
+                |> Seq.collect (
+                    Trick.plays >> Seq.map snd)
+                |> Seq.toArray
         [|
-            for iCard = 0 to Seat.numSeats - 2 do
+            for iCard = 0 to maxNumCardsPlayed - 1 do
                 yield!
                     if iCard < cards.Length then
                         Some cards[iCard]
@@ -87,61 +86,24 @@ module Encoding =
                     |> encodeCards
         |]
 
-    /// Encodes the given voids as a multi-hot vector in the
-    /// number of suits times the number of other seats.
-    let private encodeVoids player voids =
-        [|
-            for suit in Enum.getValues<Suit> do
-                let seats =
-                    Seat.cycle player |> Seq.skip 1
-                for seat in seats do
-                    if Set.contains (seat, suit) voids then
-                        1uy
-                    else 0uy
-        |]
-
-    /// Encodes the given score as a vector in the number
-    /// of seats.
-    let private encodeScore player score =
-        assert(score.ScoreMap.Count = Seat.numSeats)
-        [|
-            for seat in Seat.cycle player do
-                assert(
-                    Seq.forall (fun pt ->
-                        pt <= int System.Byte.MaxValue)
-                            score.ScoreMap.Values)
-                byte score.ScoreMap[seat]
-        |]
-
     /// Total encoded length of an info set.
     let encodedLength =
-        Card.numCards                                 // current player's hand
-            + Card.numCards                           // unplayed cards not in current player's hand
-            + ExchangeDirection.numDirections         // exchange direction
-            + Card.numCards                           // outgoing pass
-            + Card.numCards                           // incoming pass
-            + ((Seat.numSeats - 1) * Card.numCards)   // current trick
-            + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
-            + Seat.numSeats                           // score
+        Card.numCards                               // current player's hand
+            + ExchangeDirection.numDirections       // exchange direction
+            + Card.numCards                         // outgoing pass
+            + Card.numCards                         // incoming pass
+            + (maxNumCardsPlayed * Card.numCards)   // cards played
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
-        let unseen =
-            infoSet.Deal.UnplayedCards - infoSet.Hand
-        let trickOpt = infoSet.Deal.CurrentTrickOpt
         let encoded =
             [|
                 yield! encodeCards infoSet.Hand             // current player's hand
-                yield! encodeCards unseen                   // unplayed cards not in current player's hand
                 yield! encodeExchangeDirection              // exchange direction
                     infoSet.Deal.ExchangeDirection
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
                 yield! encodePass infoSet.IncomingPassOpt   // incoming pass
-                yield! encodeTrick trickOpt                 // current trick
-                yield! encodeVoids                          // voids
-                    infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                          // score
-                    infoSet.Player infoSet.Deal.Score
+                yield! encodeCardsPlayed infoSet.Deal       // cards played
             |]
         assert(encoded.Length = encodedLength)
         encoded
