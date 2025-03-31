@@ -56,6 +56,15 @@ type AdvantageModel(
                     ReLU(),
                     Dropout())),
 
+            SkipConnection(
+                Sequential(
+                    Linear(
+                        hiddenSize,
+                        hiddenSize,
+                        device = device),
+                    ReLU(),
+                    Dropout())),
+
             Linear(
                 hiddenSize,
                 Network.outputSize,
