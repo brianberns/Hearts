@@ -30,6 +30,7 @@ type SkipConnection(inner : Network) as this =
 /// Model used for learning advantages.
 type AdvantageModel(
     hiddenSize : int,
+    numHiddenLayers : int,
     device : torch.Device) as this =
     inherit Network("AdvantageModel")
 
@@ -38,37 +39,33 @@ type AdvantageModel(
     let SkipConnection(inner) = new SkipConnection(inner)
 
     let sequential =
-        Sequential(
+        Sequential [|
 
+                // input layer
             Linear(
                 Network.inputSize,
                 hiddenSize,
-                device = device),
-            ReLU(),
-            Dropout(),
+                device = device) :> Network
+            ReLU()
+            Dropout()
 
-            SkipConnection(
-                Sequential(
-                    Linear(
-                        hiddenSize,
-                        hiddenSize,
-                        device = device),
-                    ReLU(),
-                    Dropout())),
+                // hidden layers
+            for _ = 1 to numHiddenLayers do
+                SkipConnection(
+                    Sequential(
+                        Linear(
+                            hiddenSize,
+                            hiddenSize,
+                            device = device),
+                        ReLU(),
+                        Dropout()))
 
-            SkipConnection(
-                Sequential(
-                    Linear(
-                        hiddenSize,
-                        hiddenSize,
-                        device = device),
-                    ReLU(),
-                    Dropout())),
-
+                // output layer
             Linear(
                 hiddenSize,
                 Network.outputSize,
-                device = device))
+                device = device)
+        |]
 
     do
         this.RegisterComponents()
