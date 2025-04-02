@@ -92,21 +92,17 @@ module Encoding =
     /// number of other seats.
     let private encodeLeads player tricks =
         let leadMap =
-            tricks
-                |> Seq.map (Trick.plays >> Seq.head)
-                |> Seq.groupBy fst
-                |> Seq.map (fun (seat, group) ->
-                    seat, Seq.map snd group)
-                |> Map
+            let acc =
+                Seq.replicate (Seat.numSeats - 1) List.empty
+                    |> System.Collections.Immutable.ImmutableArray.CreateRange
+            (acc, tricks)
+                ||> Seq.fold (fun acc trick ->
+                    let card = List.last trick.Cards
+                    let idx = (Seat.getIndex trick.Leader player) - 1
+                    acc.SetItem(idx, card :: acc[idx]))
         [|
-            let seats =
-                Seat.cycle player |> Seq.skip 1
-            for seat in seats do
-                yield!
-                    leadMap
-                        |> Map.tryFind seat
-                        |> Option.defaultValue Seq.empty
-                        |> encodeCards
+            for cards in leadMap do
+                yield! encodeCards cards
         |]
 
     /// Encodes the given voids as a multi-hot vector in the
