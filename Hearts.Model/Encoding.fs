@@ -87,6 +87,28 @@ module Encoding =
                     |> encodeCards
         |]
 
+    /// Encodes the cards lead on the given tricks as a
+    /// multi-hot vector in the number of suits times the
+    /// number of other seats.
+    let private encodeLeads player tricks =
+        let leadMap =
+            tricks
+                |> Seq.map (Trick.plays >> Seq.head)
+                |> Seq.groupBy fst
+                |> Seq.map (fun (seat, group) ->
+                    seat, Seq.map snd group)
+                |> Map
+        [|
+            let seats =
+                Seat.cycle player |> Seq.skip 1
+            for seat in seats do
+                yield!
+                    leadMap
+                        |> Map.tryFind seat
+                        |> Option.defaultValue Seq.empty
+                        |> encodeCards
+        |]
+
     /// Encodes the given voids as a multi-hot vector in the
     /// number of suits times the number of other seats.
     let private encodeVoids player voids =
@@ -121,6 +143,7 @@ module Encoding =
             + Card.numCards                           // outgoing pass
             + Card.numCards                           // incoming pass
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
+            + ((Seat.numSeats - 1) * Card.numCards)   // cards led by each player
             + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
             + Seat.numSeats                           // score
 
@@ -138,6 +161,8 @@ module Encoding =
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
                 yield! encodePass infoSet.IncomingPassOpt   // incoming pass
                 yield! encodeTrick trickOpt                 // current trick
+                yield! encodeLeads                          // cards led by each player
+                    infoSet.Player infoSet.Deal.CompletedTricks
                 yield! encodeVoids                          // voids
                     infoSet.Player infoSet.Deal.Voids
                 yield! encodeScore                          // score
