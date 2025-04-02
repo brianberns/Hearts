@@ -97,11 +97,11 @@ module Encoding =
                     |> System.Collections.Immutable.ImmutableArray.CreateRange
             (acc, tricks)
                 ||> Seq.fold (fun acc trick ->
-                    let card = List.last trick.Cards   // plays are in reverse order
                     if trick.Leader = player then acc
                     else
                         let idx =
                             (Seat.getIndex trick.Leader player) - 1
+                        let card = List.last trick.Cards   // plays are in reverse order
                         acc.SetItem(idx, card :: acc[idx]))
         [|
             for cards in leadMap do
