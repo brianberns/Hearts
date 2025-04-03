@@ -40,9 +40,9 @@ module Encoding =
                         LanguagePrimitives.GenericZero   // encode to input type
         |]
 
-    /// Encodes the given unordered set of card as a single
-    /// multi-hot vector in the deck size.
-    let private encodeCardsSet (cards : Set<Card>) =
+    /// Encodes the given cards as a multi-hot vector
+    /// in the deck size.
+    let private encodeCards cards =
         cards
             |> Seq.map (fun card -> card, 1uy)
             |> encodeCardValues
@@ -57,84 +57,81 @@ module Encoding =
         |]
 
     /// Encodes the given pass as a multi-hot vector in
-    /// the deck size. The cards in a pass are unordered.
+    /// the deck size.
     let private encodePass (passOpt : Option<Pass>) =
         let cards =
             passOpt
                 |> Option.defaultValue Set.empty
         assert(cards.Count <= Pass.numCards)
-        encodeCardsSet cards
+        encodeCards cards
 
-    /// Maximum number of cards played at the last decision
-    /// point of the game. This occurs when playing the last
-    /// card on the penultimiate trick. (The last trick has
-    /// no decision points, because each player has only one
-    /// card left.) In a full game of Hearts, this is (12 * 4)
-    /// - 1 = 47.
-    let private maxNumCardsPlayed =
-        ((ClosedDeal.numCardsPerHand - 1)   // number of interesting tricks
-            * Seat.numSeats)                // number of cards per trick
-            - 1                             // last card on the last interesting trick
-
-    let private encodeSuit suitOpt =
+    let private encodeSeat player seatOpt =
         [|
-            for st in Enum.getValues<Suit> do
-                if Some st = suitOpt then 1uy
+            for seat in Seat.cycle player do
+                if seatOpt = Some seat then 1uy
                 else 0uy
         |]
 
-    let private encodeRank rankOpt =
+    let private encodeTrick player trickOpt =
         [|
-            for rk in Enum.getValues<Rank> do
-                if Some rk = rankOpt then 1uy
-                else 0uy
-        |]
+            yield!
+                trickOpt
+                    |> Option.map _.Leader
+                    |> encodeSeat player
 
-    let private encodeCardOpt (cardOpt : Option<Card>) =
-        [|
-            yield! cardOpt
-                |> Option.map _.Suit
-                |> encodeSuit
-            yield! cardOpt
-                |> Option.map _.Rank
-                |> encodeRank
-        |]
-
-    /// Encodes all cards played so far.
-    let private encodeCardsPlayed deal =
-        let cards =
-            ClosedDeal.tricks deal
-                |> Seq.collect (
-                    Trick.plays >> Seq.map snd)
-                |> Seq.toArray
-        [|
-            for iCard = 0 to maxNumCardsPlayed - 1 do
+            let cards =
+                trickOpt
+                    |> Option.map (fun trick ->
+                        trick.Cards
+                            |> List.rev
+                            |> List.toArray)
+                    |> Option.defaultValue Array.empty
+            for iCard = 0 to Seat.numSeats - 1 do
                 yield!
                     if iCard < cards.Length then
                         Some cards[iCard]
                     else None
-                    |> encodeCardOpt
+                    |> Option.toArray
+                    |> encodeCards
+        |]
+
+    let private encodeTricks player deal =
+        let tricks =
+            ClosedDeal.tricks deal
+                |> Seq.toArray
+        assert(tricks.Length < ClosedDeal.numCardsPerHand)
+        [|
+            for iTrick = 0 to ClosedDeal.numCardsPerHand - 2 do
+                let trickOpt =
+                    if iTrick < tricks.Length then
+                        Some tricks[iTrick]
+                    else None
+                yield! encodeTrick player trickOpt
         |]
 
     /// Total encoded length of an info set.
     let encodedLength =
+        let trickLength =
+            Seat.numSeats                           // trick leader
+                + (Seat.numSeats * Card.numCards)   // cards played on trick
         Card.numCards                               // current player's hand
             + ExchangeDirection.numDirections       // exchange direction
             + Card.numCards                         // outgoing pass
             + Card.numCards                         // incoming pass
-            + (maxNumCardsPlayed                    // cards played
-                * (Suit.numSuits + Rank.numRanks))
+            + ((ClosedDeal.numCardsPerHand - 1)     // tricks
+                * trickLength)
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
         let encoded =
             [|
-                yield! encodeCardsSet infoSet.Hand          // current player's hand (unordered)
+                yield! encodeCards infoSet.Hand             // current player's hand
                 yield! encodeExchangeDirection              // exchange direction
                     infoSet.Deal.ExchangeDirection
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
                 yield! encodePass infoSet.IncomingPassOpt   // incoming pass
-                yield! encodeCardsPlayed infoSet.Deal       // cards played
+                yield! encodeTricks                         // tricks
+                    infoSet.Player infoSet.Deal
             |]
         assert(encoded.Length = encodedLength)
         encoded

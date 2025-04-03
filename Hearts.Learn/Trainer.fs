@@ -125,12 +125,15 @@ module Trainer =
         let rng = Random()   // each player has its own RNG
 
         let act infoSet =
-            let strategy =
-                Strategy.getFromAdvantage model [|infoSet|]
-                    |> Array.exactlyOne
             let action =
-                Vector.sample rng strategy
-                    |> Array.get infoSet.LegalActions
+                match Array.tryExactlyOne infoSet.LegalActions with
+                    | Some action -> action
+                    | None ->
+                        let strategy =
+                            Strategy.getFromAdvantage model [|infoSet|]
+                                |> Array.exactlyOne
+                        Vector.sample rng strategy
+                            |> Array.get infoSet.LegalActions
             infoSet.LegalActionType, action
 
         { Act = act }

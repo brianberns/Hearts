@@ -72,8 +72,8 @@ module Settings =
 
         let settings =
             {
-                HiddenSize = Encoding.encodedLength * 6
-                NumHiddenLayers = 1
+                HiddenSize = Encoding.encodedLength
+                NumHiddenLayers = 3
                 LearningRate = 1e-3
                 SampleDecay = 0.17
                 NumAdvantageTrainEpochs = 500

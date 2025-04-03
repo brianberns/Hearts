@@ -14,7 +14,7 @@ module Card =
 /// One card played by each player in turn during a deal.
 type Trick =
     {
-        /// Player who starts this trick.
+        /// Player who starts or started this trick.
         Leader : Seat
 
         /// Cards played by seat in this trick, in reverse chronological order.
