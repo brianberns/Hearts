@@ -72,6 +72,7 @@ module Direct =
         let model =
             new AdvantageModel(
                 settings.HiddenSize,
+                settings.NumHiddenLayers,
                 settings.Device)
         AdvantageModel.train 0 samples model
 

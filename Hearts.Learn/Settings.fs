@@ -10,6 +10,9 @@ type Settings =
         /// Size of a neural network hidden layer.
         HiddenSize : int
 
+        /// Number of hidden layers.
+        NumHiddenLayers : int
+
         /// Optimizer learning rate.
         LearningRate : float
 
@@ -69,7 +72,8 @@ module Settings =
 
         let settings =
             {
-                HiddenSize = 1536 // Encoding.encodedLength * 4
+                HiddenSize = Encoding.encodedLength * 6
+                NumHiddenLayers = 1
                 LearningRate = 1e-3
                 SampleDecay = 0.17
                 NumAdvantageTrainEpochs = 500
@@ -91,6 +95,9 @@ module Settings =
         writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)
+        writer.add_text(
+            $"settings/NumHiddenLayers",
+            string settings.NumHiddenLayers, 0)
         writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
