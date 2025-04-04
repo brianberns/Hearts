@@ -44,30 +44,62 @@ module Strategy =
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    /// Computes strategies for the given info sets using the
-    /// given advantage model.
-    let getFromAdvantage model infoSets =
+    module Exchange =
 
-        if Array.length infoSets > 0 then
+        /// Computes strategies for the given exchange info sets
+        /// using the given model.
+        let getFromAdvantage model infoSets =
 
-                // run model on GPU
-            use advantages =
-                AdvantageModel.getAdvantages infoSets model
-            assert(advantages.shape[0] = infoSets.Length)
+            if Array.length infoSets > 0 then
 
-                // access data on CPU
-            let nCols = int advantages.shape[1]
-            assert(nCols = Network.outputSize)
-            let data =
-                use accessor = advantages.data<float32>()
-                accessor.ToArray()
-            [|
-                for iRow, infoSet in Seq.indexed infoSets do
-                    let iStart = iRow * nCols
-                    data[iStart .. iStart + nCols - 1]
-                        |> DenseVector.ofSeq
-                        |> toNarrow infoSet.LegalActions
-                        |> matchRegrets
-            |]
+                    // run model on GPU
+                use advantages =
+                    ExchangeModel.getAdvantages infoSets model
+                assert(advantages.shape[0] = infoSets.Length)
 
-        else Array.empty
+                    // access data on CPU
+                let nCols = int advantages.shape[1]
+                assert(nCols = Card.numCards)
+                let data =
+                    use accessor = advantages.data<float32>()
+                    accessor.ToArray()
+                [|
+                    for iRow, infoSet in Seq.indexed infoSets do
+                        let iStart = iRow * nCols
+                        data[iStart .. iStart + nCols - 1]
+                            |> DenseVector.ofSeq
+                            |> toNarrow infoSet.LegalActions
+                            |> matchRegrets
+                |]
+
+            else Array.empty
+
+    module Playout =
+
+        /// Computes strategies for the given exchange info sets
+        /// using the given model.
+        let getFromAdvantage model infoSets =
+
+            if Array.length infoSets > 0 then
+
+                    // run model on GPU
+                use advantages =
+                    PlayoutModel.getAdvantages infoSets model
+                assert(advantages.shape[0] = infoSets.Length)
+
+                    // access data on CPU
+                let nCols = int advantages.shape[1]
+                assert(nCols = Card.numCards)
+                let data =
+                    use accessor = advantages.data<float32>()
+                    accessor.ToArray()
+                [|
+                    for iRow, infoSet in Seq.indexed infoSets do
+                        let iStart = iRow * nCols
+                        data[iStart .. iStart + nCols - 1]
+                            |> DenseVector.ofSeq
+                            |> toNarrow infoSet.LegalActions
+                            |> matchRegrets
+                |]
+
+            else Array.empty

@@ -10,14 +10,6 @@ open PlayingCards
 /// tensor.
 type Network = Module<Tensor, Tensor>
 
-module Network =
-
-    /// Size of neural network input.
-    let inputSize = Encoding.encodedLength
-
-    /// Size of neural network output.
-    let outputSize = Card.numCards
-
 type SkipConnection(inner : Network) as this =
     inherit Network($"{inner.GetName()}Skip")
 
@@ -27,23 +19,26 @@ type SkipConnection(inner : Network) as this =
         use x = input --> inner
         x + input
 
-/// Model used for learning advantages.
-type AdvantageModel(
+[<AutoOpen>]
+module Network =
+
+    let SkipConnection(inner) = new SkipConnection(inner)
+
+/// Model used for learning exchange advantages.
+type ExchangeModel(
     hiddenSize : int,
     numHiddenLayers : int,
     device : torch.Device) as this =
-    inherit Network("AdvantageModel")
+    inherit Network("ExchangeModel")
 
     let mutable curDevice = device
-
-    let SkipConnection(inner) = new SkipConnection(inner)
 
     let sequential =
         Sequential [|
 
                 // input layer
             Linear(
-                Network.inputSize,
+                Encoding.Exchange.encodedLength,
                 hiddenSize,
                 device = device) :> Network
             ReLU()
@@ -63,7 +58,7 @@ type AdvantageModel(
                 // output layer
             Linear(
                 hiddenSize,
-                Network.outputSize,
+                Card.numCards,
                 device = device)
         |]
 
@@ -81,15 +76,82 @@ type AdvantageModel(
     override _.forward(input) = 
         sequential.forward(input)
 
-module AdvantageModel =
+module ExchangeModel =
 
-    /// Gets advantages for the given info sets.
-    let getAdvantages infoSets (model : AdvantageModel) =
+    /// Gets advantages for the given exchange info sets.
+    let getAdvantages infoSets (model : ExchangeModel) =
         use _ = torch.no_grad()
         use input =
             let encoded =
                 infoSets
-                    |> Array.map Encoding.encode
+                    |> Array.map Encoding.Exchange.encode
+                    |> array2D
+            tensor(
+                encoded, device = model.Device,
+                dtype = ScalarType.Float32)
+        input --> model
+
+/// Model used for learning playout advantages.
+type PlayoutModel(
+    hiddenSize : int,
+    numHiddenLayers : int,
+    device : torch.Device) as this =
+    inherit Network("PlayoutModel")
+
+    let mutable curDevice = device
+
+    let sequential =
+        Sequential [|
+
+                // input layer
+            Linear(
+                Encoding.Exchange.encodedLength,
+                hiddenSize,
+                device = device) :> Network
+            ReLU()
+            Dropout()
+
+                // hidden layers
+            for _ = 1 to numHiddenLayers do
+                SkipConnection(
+                    Sequential(
+                        Linear(
+                            hiddenSize,
+                            hiddenSize,
+                            device = device),
+                        ReLU(),
+                        Dropout()))
+
+                // output layer
+            Linear(
+                hiddenSize,
+                Card.numCards,
+                device = device)
+        |]
+
+    do
+        this.RegisterComponents()
+        this.MoveTo(device)   // make sure module itself is on the right device
+
+    member _.MoveTo(device) =
+        lock this (fun () ->
+            curDevice <- device
+            this.``to``(device) |> ignore)
+
+    member _.Device = curDevice
+
+    override _.forward(input) = 
+        sequential.forward(input)
+
+module PlayoutModel =
+
+    /// Gets advantages for the given playout info sets.
+    let getAdvantages infoSets (model : PlayoutModel) =
+        use _ = torch.no_grad()
+        use input =
+            let encoded =
+                infoSets
+                    |> Array.map Encoding.Playout.encode
                     |> array2D
             tensor(
                 encoded, device = model.Device,
