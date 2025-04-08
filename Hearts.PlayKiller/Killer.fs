@@ -74,8 +74,6 @@ module Killer =
                 | Some dealer, Some dir ->
                     {
                         state with
-                            DealerOpt = None
-                            ExchangeDirectionOpt = None
                             HandMap = Map.empty
                             DealOpt =
                                 OpenDeal.fromHands dealer dir handMap
@@ -103,7 +101,7 @@ module Killer =
             |> snd
 
     /// Cards have been passed.
-    let exchangeOutgoing state (record : SeatCardsRecord) =
+    let passOutgoing state (record : SeatCardsRecord) =
         match state.DealOpt with
             | Some deal ->
                 let cards =
@@ -116,12 +114,12 @@ module Killer =
                                 deal.ClosedDeal
                                 state.HandMap[record.Seat]
                                 state.PlayerMap[record.Seat]
-                        Protocol.writeExchangeOutgoing cards
+                        Protocol.writePassOutgoing cards
                         cards
 
                         // server -> client
                     else
-                        Protocol.writeEmpty ClientRecordType.ExchangeOutgoing
+                        Protocol.writeEmpty ClientRecordType.PassOutgoing
                         record.Cards
 
                     // add pass to deal
@@ -137,8 +135,8 @@ module Killer =
 
     /// Cards have been received. (These messages are redundant and
     /// we just ignore them.)
-    let exchangeIncoming state (_ : SeatCardsRecord) =
-        Protocol.writeEmpty ClientRecordType.ExchangeIncoming
+    let passIncoming state (_ : SeatCardsRecord) =
+        Protocol.writeEmpty ClientRecordType.PassIncoming
         state : State
 
     /// A trick has started.
@@ -265,10 +263,10 @@ module Killer =
                 dealStart state record
             | Hand record ->
                 hand state record
-            | ExchangeOutgoing record ->
-                exchangeOutgoing state record
-            | ExchangeIncoming record ->
-                exchangeIncoming state record
+            | PassOutgoing record ->
+                passOutgoing state record
+            | PassIncoming record ->
+                passIncoming state record
             | TrickStart record ->
                 trickStart state record
             | Play record ->

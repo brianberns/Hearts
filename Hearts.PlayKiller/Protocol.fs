@@ -14,8 +14,8 @@ type ServerRecordType =
     | GameStart = 2
     | DealStart = 3
     | Hand = 4
-    | ExchangeOutgoing = 5
-    | ExchangeIncoming = 6
+    | PassOutgoing = 5
+    | PassIncoming = 6
     | TrickStart = 7
     | Play = 8
     | TrickFinish = 9
@@ -78,8 +78,8 @@ type ServerRecord =
     | GameStart of GameStartRecord
     | DealStart of DealStartRecord
     | Hand of SeatCardsRecord
-    | ExchangeOutgoing of SeatCardsRecord
-    | ExchangeIncoming of SeatCardsRecord
+    | PassOutgoing of SeatCardsRecord
+    | PassIncoming of SeatCardsRecord
     | TrickStart of TrickStartRecord
     | Play of SeatCardsRecord
     | TrickFinish
@@ -93,8 +93,8 @@ type ClientRecordType =
     | GameStart = 102
     | DealStart = 103
     | Hand = 104
-    | ExchangeOutgoing = 105
-    | ExchangeIncoming = 106
+    | PassOutgoing = 105
+    | PassIncoming = 106
     | TrickStart = 107
     | Play = 108
     | TrickFinish = 109
@@ -213,8 +213,8 @@ module Protocol =
                     | _ -> failwith "Unexpected"
             rank + suit
 
-    /// Reads an outgoing or incoming exchange.
-    let private readExchange (fields : _[]) =
+    /// Reads an outgoing or incoming pass.
+    let private readPass (fields : _[]) =
         {
             Seat =
                 fields.[0]
@@ -233,13 +233,13 @@ module Protocol =
                         |> set
         }
 
-    /// Reads an outgoing exchange.
-    let private readExchangeOutgoing fields =
-        fields |> readExchange |> ExchangeOutgoing
+    /// Reads an outgoing pass.
+    let private readPassOutgoing fields =
+        fields |> readPass |> PassOutgoing
 
-    /// Reads an incoming exchange.
-    let private readExchangeIncoming fields =
-        fields |> readExchange |> ExchangeIncoming
+    /// Reads an incoming pass.
+    let private readPassIncoming fields =
+        fields |> readPass |> PassIncoming
 
     /// Reads a trick start record.
     let private readTrickStart (fields : _[]) =
@@ -326,8 +326,8 @@ module Protocol =
                 | ServerRecordType.GameStart -> readGameStart
                 | ServerRecordType.DealStart -> readDealStart
                 | ServerRecordType.Hand -> readHand
-                | ServerRecordType.ExchangeOutgoing -> readExchangeOutgoing
-                | ServerRecordType.ExchangeIncoming -> readExchangeIncoming
+                | ServerRecordType.PassOutgoing -> readPassOutgoing
+                | ServerRecordType.PassIncoming -> readPassIncoming
                 | ServerRecordType.TrickStart -> readTrickStart
                 | ServerRecordType.Play -> readPlay
                 | ServerRecordType.TrickFinish -> readTrickFinish
@@ -369,11 +369,11 @@ module Protocol =
             "-1     "
         |] |> write
 
-    /// Writes an outgoing exchange containing the given cards.
-    let writeExchangeOutgoing cards =
+    /// Writes an outgoing pass containing the given cards.
+    let writePassOutgoing cards =
         let cards = cards |> Seq.toArray
         [|
-            sprintf "%-7d" <| int ClientRecordType.ExchangeOutgoing
+            sprintf "%-7d" <| int ClientRecordType.PassOutgoing
             sprintf "%-7d" <| Card.toInt cards.[0]
             sprintf "%-7d" <| Card.toInt cards.[1]
             sprintf "%-7d" <| Card.toInt cards.[2]
