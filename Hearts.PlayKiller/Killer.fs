@@ -74,6 +74,8 @@ module Killer =
                 | Some dealer, Some dir ->
                     {
                         state with
+                            DealerOpt = None   // null out pre-deal details
+                            ExchangeDirectionOpt = None
                             HandMap = Map.empty
                             DealOpt =
                                 OpenDeal.fromHands dealer dir handMap
