@@ -106,18 +106,18 @@ module Killer =
             | Some deal ->
                 let cards =
 
-                        // client -> server
+                        // we are passing
                     if record.Cards.IsEmpty then
                         let cards =
                             getPass
                                 record.Seat
                                 deal.ClosedDeal
-                                state.HandMap[record.Seat]
+                                (OpenDeal.currentHand deal)
                                 state.PlayerMap[record.Seat]
                         Protocol.writePassOutgoing cards
                         cards
 
-                        // server -> client
+                        // server is passing
                     else
                         Protocol.writeEmpty ClientRecordType.PassOutgoing
                         record.Cards
@@ -131,7 +131,8 @@ module Killer =
                     state with
                         DealOpt = Some deal
                 }
-            | None -> failwith "Unexpected"
+                
+            | _ -> failwith "Unexpected"
 
     /// Cards have been received. (These messages are redundant and
     /// we just ignore them.)
@@ -166,8 +167,8 @@ module Killer =
 
     /// A card has been played.
     let play state (record : SeatCardsRecord) =
-        match state.DealOpt with
-            | Some deal ->
+        match state.DealOpt, Map.tryFind record.Seat state.PlayerMap with
+            | Some deal, Some player ->
 
                 let card =
 

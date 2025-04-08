@@ -108,26 +108,26 @@ module Protocol =
     let private readSessionStart (fields : _[]) =
         SessionStart {
             ClientSeats =
-                let field = fields.[0] |> Int32.Parse
+                let field = fields[0] |> Int32.Parse
                 Enum.getValues<Seat>
                     |> Seq.where (fun seat ->
                         (field >>> int seat) &&& 1 = 1)
                     |> set
             HostDisplay =
-                Int32.Parse(fields.[3]) = 1
+                Int32.Parse(fields[3]) = 1
             TwoOfClubsLeads =
-                Int32.Parse(fields.[4]) = 0
+                Int32.Parse(fields[4]) = 0
         }
 
     /// Reads a game start record.
     let private readGameStart (fields : _[]) =
         GameStart {
             Dealer =
-                fields.[0]
+                fields[0]
                     |> Int32.Parse
                     |> enum<Seat>
-            DealNum = fields.[1] |> Int32.Parse
-            NumGames = fields.[3] |> Int32.Parse
+            DealNum = fields[1] |> Int32.Parse
+            NumGames = fields[3] |> Int32.Parse
         }
 
     /// Parses a score from the given fields.
@@ -136,7 +136,7 @@ module Protocol =
             Enum.getValues<Seat>
                 |> Seq.map (fun seat ->
                     let points =
-                        fields.[int seat] |> Int32.Parse
+                        fields[int seat] |> Int32.Parse
                     seat, points)
                 |> Map
         { ScoreMap = scoreMap }
@@ -146,7 +146,7 @@ module Protocol =
         DealStart {
             GameScore = parseScore fields
             ExchangeDirection =
-                match fields.[4] |> Int32.Parse with
+                match fields[4] |> Int32.Parse with
                     | 0 -> ExchangeDirection.Left
                     | 1 -> ExchangeDirection.Right
                     | 2 -> ExchangeDirection.Across
@@ -166,7 +166,7 @@ module Protocol =
 
         Hand {
             Seat =
-                fields.[0]
+                fields[0]
                     |> Int32.Parse
                     |> enum<Seat>
             Cards =
@@ -179,7 +179,7 @@ module Protocol =
                     |]
                 seq {
                     for (suit, iField) in suits do
-                        let field = fields.[iField] |> Int32.Parse
+                        let field = fields[iField] |> Int32.Parse
                         for rank in readRanks field do
                             yield Card(rank, suit)
                 } |> set
@@ -217,14 +217,14 @@ module Protocol =
     let private readPass (fields : _[]) =
         {
             Seat =
-                fields.[0]
+                fields[0]
                     |> Int32.Parse
                     |> enum<Seat>
             Cards =
                 let cardNums =
-                    fields.[2..4]
+                    fields[2..4]
                         |> Array.map Int32.Parse
-                if cardNums.[0] = -1 then
+                if cardNums[0] = -1 then
                     assert(cardNums |> Array.forall ((=) -1))
                     Set.empty
                 else
@@ -245,11 +245,11 @@ module Protocol =
     let private readTrickStart (fields : _[]) =
         TrickStart {
             Leader =
-                fields.[0]
+                fields[0]
                     |> Int32.Parse
                     |> enum<Seat>
             TrickNum =
-                fields.[1]
+                fields[1]
                     |> Int32.Parse
         }
 
@@ -257,12 +257,12 @@ module Protocol =
     let private readPlay (fields : _[]) =
         Play {
             Seat =
-                fields.[0]
+                fields[0]
                     |> Int32.Parse
                     |> enum<Seat>
             Cards =
                 let cardNum =
-                    fields.[1]
+                    fields[1]
                         |> Int32.Parse
                 if cardNum = -1 then Set.empty
                 else cardNum |> Card.fromInt |> Set.singleton
@@ -308,11 +308,11 @@ module Protocol =
             assert(nBytes = buffer.Length)
             let str = Encoding.Default.GetString(buffer)
             let chunks = str.Split(',')
-            if chunks.[0] = "HCs" && chunks.[7] = "HCe" then
+            if chunks[0] = "HCs" && chunks[7] = "HCe" then
 #if DEBUG
-                printfn $"read:  |{String.Join(',', chunks.[1..6])}|"
+                printfn $"read:  |{String.Join(',', chunks[1..6])}|"
 #endif
-                chunks.[1..6]
+                chunks[1..6]
             else
                 if sleep > 1000 then sleep
                 elif sleep > 0 then 2 * sleep
@@ -321,7 +321,7 @@ module Protocol =
 
         let fields = loop -3
         let reader =
-            match fields.[0] |> Int32.Parse |> enum<ServerRecordType> with
+            match fields[0] |> Int32.Parse |> enum<ServerRecordType> with
                 | ServerRecordType.SessionStart -> readSessionStart
                 | ServerRecordType.GameStart -> readGameStart
                 | ServerRecordType.DealStart -> readDealStart
@@ -334,8 +334,8 @@ module Protocol =
                 | ServerRecordType.DealFinish -> readDealFinish
                 | ServerRecordType.GameFinish -> readGameFinish
                 | ServerRecordType.SessionFinish -> readSessionFinish
-                | _ -> failwith $"Unexpected server record type: {fields.[0]}"
-        reader fields.[1..]
+                | _ -> failwith $"Unexpected server record type: {fields[0]}"
+        reader fields[1..]
 
     /// Writes the given fields as a message to KH.
     let private write (fields : string[]) =
@@ -374,9 +374,9 @@ module Protocol =
         let cards = cards |> Seq.toArray
         [|
             sprintf "%-7d" <| int ClientRecordType.PassOutgoing
-            sprintf "%-7d" <| Card.toInt cards.[0]
-            sprintf "%-7d" <| Card.toInt cards.[1]
-            sprintf "%-7d" <| Card.toInt cards.[2]
+            sprintf "%-7d" <| Card.toInt cards[0]
+            sprintf "%-7d" <| Card.toInt cards[1]
+            sprintf "%-7d" <| Card.toInt cards[2]
             "-1     "
             "-1     "
         |] |> write
