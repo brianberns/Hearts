@@ -298,15 +298,16 @@ module Protocol =
             if sleep >= 0 then
                 Thread.Sleep(sleep : int)
 
-            use sharedFile =
-                File.Open(
-                    "C:\Program Files\KHearts\KH_Host_Client.dat",
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.ReadWrite)
-            let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
-            assert(nBytes = buffer.Length)
-            let str = Encoding.Default.GetString(buffer)
+            let str =
+                use sharedFile =
+                    File.Open(
+                        "C:\Program Files\KHearts\KH_Host_Client.dat",
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.ReadWrite)
+                let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
+                assert(nBytes = buffer.Length)
+                Encoding.Default.GetString(buffer)
             let chunks = str.Split(',')
             if chunks[0] = "HCs" && chunks[7] = "HCe" then
 #if DEBUG
@@ -357,6 +358,8 @@ module Protocol =
                 FileAccess.ReadWrite,
                 FileShare.ReadWrite)
         sharedFile.Write(buffer, 0, buffer.Length)
+        sharedFile.Flush()
+        sharedFile.Close()
 
     /// Writes an empty message of the given type.
     let writeEmpty (recordType : ClientRecordType) =
