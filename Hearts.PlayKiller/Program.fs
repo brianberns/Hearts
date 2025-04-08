@@ -1,7 +1,6 @@
 ﻿namespace Hearts.PlayKiller
 
 open System
-open System.IO
 
 open Hearts
 open Hearts.Model
