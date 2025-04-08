@@ -168,7 +168,7 @@ module JQueryElement =
     /// Gets the position of the given element.
     // https://stackoverflow.com/a/18297116/344223
     let getPosition (elem : JQueryElement) =
-        let style = elem.get()[0].style
+        let style = elem.get().[0].style
         let parse (str : string) =
             assert(str.EndsWith('%'))
             str[0 .. str.Length-2]
