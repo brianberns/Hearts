@@ -1,28 +1,34 @@
 ﻿namespace Hearts.PlayKiller
 
 open System
+open System.IO
+
 open Hearts
-
-module Random =
-
-    let rng = Random(0)
-
-    let act infoSet =
-        let card =
-            infoSet.LegalActions
-                |> Array.randomChoiceWith rng
-        infoSet.LegalActionType, card
-
-    let player = { Act = act }
+open Hearts.Model
 
 module Program =
 
-    [<EntryPoint>]
-    let main argv =
-        try
-            let score = Killer.run Random.player
-            for (KeyValue(seat, points)) in score.ScoreMap do
-                printfn "%A: %d" seat points
-        with ex ->
-            printfn "%s" ex.Message
-        0
+    let rng = Random(0)
+
+    let model =
+        new AdvantageModel(
+            hiddenSize = Encoding.encodedLength * 6,
+            numHiddenLayers = 1,
+            device = TorchSharp.torch.CPU)
+    model.load("AdvantageModel.pt") |> ignore
+
+    let act infoSet =
+        let strategy =
+            Strategy.getFromAdvantage
+                model
+                [|infoSet|]
+                |> Array.exactlyOne
+        let idx = Vector.sample rng strategy
+        infoSet.LegalActionType,
+        infoSet.LegalActions[idx]
+
+    let player = { Act = act }
+
+    let score = Killer.run player
+    for (KeyValue(seat, points)) in score.ScoreMap do
+        printfn "%A: %d" seat points
