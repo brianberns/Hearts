@@ -288,8 +288,12 @@ module Protocol =
             SessionScore = parseScore fields
         }
 
+    /// Shared file name.
+    let private sharedFileName =
+        "C:\Program Files\KHearts\KH_Host_Client.dat"
+
     /// Buffer used for reading messages.
-    let buffer = Array.zeroCreate<byte> 55
+    let private readBuffer = Array.zeroCreate<byte> 55
 
     /// Reads a message from KH.
     let read () =
@@ -301,13 +305,14 @@ module Protocol =
             let str =
                 use sharedFile =
                     File.Open(
-                        "C:\Program Files\KHearts\KH_Host_Client.dat",
+                        sharedFileName,
                         FileMode.Open,
                         FileAccess.Read,
                         FileShare.ReadWrite)
-                let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
-                assert(nBytes = buffer.Length)
-                Encoding.Default.GetString(buffer)
+                let nBytes =
+                    sharedFile.Read(readBuffer, 0, readBuffer.Length)
+                assert(nBytes = readBuffer.Length)
+                Encoding.Default.GetString(readBuffer)
             let chunks = str.Split(',')
             if chunks[0] = "HCs" && chunks[7] = "HCe" then
 #if DEBUG
@@ -353,7 +358,7 @@ module Protocol =
         let buffer = Encoding.Default.GetBytes(str)
         use sharedFile =
             File.Open(
-                "C:\Program Files\KHearts\KH_Host_Client.dat",
+                sharedFileName,
                 FileMode.Open,
                 FileAccess.ReadWrite,
                 FileShare.ReadWrite)
