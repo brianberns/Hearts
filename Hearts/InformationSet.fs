@@ -89,5 +89,5 @@ module InformationSet =
 type Player =
     {
         /// Chooses an action in the given information set.
-        Act : InformationSet -> ActionType * Card
+        Act : InformationSet -> Card
     }

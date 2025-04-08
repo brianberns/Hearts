@@ -128,10 +128,8 @@ module Trainer =
             let strategy =
                 Strategy.getFromAdvantage model [|infoSet|]
                     |> Array.exactlyOne
-            let action =
-                Vector.sample rng strategy
-                    |> Array.get infoSet.LegalActions
-            infoSet.LegalActionType, action
+            Vector.sample rng strategy
+                |> Array.get infoSet.LegalActions
 
         { Act = act }
 

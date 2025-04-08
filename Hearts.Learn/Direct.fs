@@ -25,7 +25,7 @@ module Direct =
                         Array.exactlyOne legalActions,
                         None
                     else
-                        let _, action = player.Act infoSet
+                        let action = player.Act infoSet
                         let regrets =
                             let strategy =
                                 [|

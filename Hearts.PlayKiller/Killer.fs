@@ -91,7 +91,7 @@ module Killer =
     let private getPass seat deal (hand : Hand) player =
         ((hand, Set.empty), [1 .. Pass.numCards])
             ||> Seq.fold (fun (hand, pass) _ ->
-                let _, card =
+                let card =
                     InformationSet.create
                         seat hand (Some pass) None deal
                         |> player.Act
@@ -174,7 +174,7 @@ module Killer =
 
                         // we are playing
                     if record.Cards.IsEmpty then
-                        let _, card =
+                        let card =
                             let player = state.PlayerMap[record.Seat]
                             let infoSet =
                                 let outPassOpt =

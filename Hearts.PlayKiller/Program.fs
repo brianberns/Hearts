@@ -24,7 +24,6 @@ module Program =
                 [|infoSet|]
                 |> Array.exactlyOne
         let idx = Vector.sample rng strategy
-        infoSet.LegalActionType,
         infoSet.LegalActions[idx]
 
     let player = { Act = act }
