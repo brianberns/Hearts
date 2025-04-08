@@ -104,14 +104,6 @@ type ClientRecordType =
 /// Low-level protocol for interacting with Killer Hearts.
 module Protocol =
 
-    /// File used to send messages in both directions.
-    let sharedFile =
-        File.Open(
-            "C:\Program Files\KHearts\KH_Host_Client.dat",
-            FileMode.Open,
-            FileAccess.ReadWrite,
-            FileShare.ReadWrite)
-
     /// Reads a session start record.
     let private readSessionStart (fields : _[]) =
         SessionStart {
@@ -305,7 +297,13 @@ module Protocol =
         let rec loop sleep =
             if sleep >= 0 then
                 Thread.Sleep(sleep : int)
-            sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+
+            use sharedFile =
+                File.Open(
+                    "C:\Program Files\KHearts\KH_Host_Client.dat",
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite)
             let nBytes = sharedFile.Read(buffer, 0, buffer.Length)
             assert(nBytes = buffer.Length)
             let str = Encoding.Default.GetString(buffer)
@@ -352,9 +350,13 @@ module Protocol =
             |]
         let str = String.Join(',', chunks)
         let buffer = Encoding.Default.GetBytes(str)
-        sharedFile.Seek(0L, SeekOrigin.Begin) |> ignore
+        use sharedFile =
+            File.Open(
+                "C:\Program Files\KHearts\KH_Host_Client.dat",
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.ReadWrite)
         sharedFile.Write(buffer, 0, buffer.Length)
-        sharedFile.Flush()
 
     /// Writes an empty message of the given type.
     let writeEmpty (recordType : ClientRecordType) =

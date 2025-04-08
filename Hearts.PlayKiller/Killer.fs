@@ -95,7 +95,7 @@ module Killer =
             ||> Seq.fold (fun (hand, pass) _ ->
                 let _, card =
                     InformationSet.create
-                        seat hand None None deal
+                        seat hand (Some pass) None deal
                         |> player.Act
                 assert(hand.Contains(card))
                 hand.Remove(card),
