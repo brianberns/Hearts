@@ -100,7 +100,7 @@ module Killer =
                 pass.Add(card))
             |> snd
 
-    /// Cards have been passed.
+    /// Cards are being passed.
     let passOutgoing state (record : SeatCardsRecord) =
         match state.DealOpt with
             | Some deal ->
@@ -134,7 +134,7 @@ module Killer =
                 
             | _ -> failwith "Unexpected"
 
-    /// Cards have been received. (These messages are redundant and
+    /// Cards are being received. (These messages are redundant and
     /// we just ignore them.)
     let passIncoming state (_ : SeatCardsRecord) =
         Protocol.writeEmpty ClientRecordType.PassIncoming
@@ -165,14 +165,14 @@ module Killer =
                 DealOpt = Some deal
         }
 
-    /// A card has been played.
+    /// A card is being played.
     let play state (record : SeatCardsRecord) =
-        match state.DealOpt, Map.tryFind record.Seat state.PlayerMap with
-            | Some deal, Some player ->
+        match state.DealOpt with
+            | Some deal ->
 
                 let card =
 
-                        // client -> server
+                        // we are playing
                     if record.Cards.IsEmpty then
                         let _, card =
                             let player = state.PlayerMap[record.Seat]
@@ -188,7 +188,7 @@ module Killer =
                                         |> Option.map _.PassMap[seat]
                                 InformationSet.create
                                     record.Seat
-                                    state.HandMap[record.Seat]
+                                    (OpenDeal.currentHand deal)
                                     outPassOpt
                                     inPassOpt
                                     deal.ClosedDeal
@@ -196,7 +196,7 @@ module Killer =
                         Protocol.writePlay card
                         card
 
-                        // server -> client
+                        // server is passing
                     else
                         Protocol.writeEmpty ClientRecordType.Play
                         record.Cards |> Seq.exactlyOne
@@ -206,6 +206,7 @@ module Killer =
                         DealOpt =
                             deal |> OpenDeal.addPlay card |> Some
                 }
+
             | _ -> failwith "Unexpected"
 
     /// A trick has finished.
