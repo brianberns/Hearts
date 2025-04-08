@@ -1,8 +1,11 @@
 ﻿namespace Hearts.Model
 
-open TorchSharp
+open System
+
 open MathNet.Numerics.LinearAlgebra
+
 open PlayingCards
+open Hearts
 
 module Strategy =
 
@@ -71,3 +74,17 @@ module Strategy =
             |]
 
         else Array.empty
+
+    /// Creates a Hearts player using the given model.
+    let createPlayer model =
+
+        let rng = Random()   // each player has its own RNG
+
+        let act infoSet =
+            let strategy =
+                getFromAdvantage model [|infoSet|]
+                    |> Array.exactlyOne
+            Vector.sample rng strategy
+                |> Array.get infoSet.LegalActions
+
+        { Act = act }

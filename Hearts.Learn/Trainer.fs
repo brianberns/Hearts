@@ -119,20 +119,6 @@ module Trainer =
 
         state
 
-    /// Creates a Hearts player using the given model.
-    let createPlayer model =
-
-        let rng = Random()   // each player has its own RNG
-
-        let act infoSet =
-            let strategy =
-                Strategy.getFromAdvantage model [|infoSet|]
-                    |> Array.exactlyOne
-            Vector.sample rng strategy
-                |> Array.get infoSet.LegalActions
-
-        { Act = act }
-
     /// Evaluates the given model by playing it against a
     /// standard.
     let private evaluate iter (model : AdvantageModel) =
@@ -141,7 +127,7 @@ module Trainer =
             Tournament.run
                 (Random(0))       // use repeatable test set, not seen during training
                 Trickster.player
-                (createPlayer model)
+                (Strategy.createPlayer model)
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, iter)
 
