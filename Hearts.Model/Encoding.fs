@@ -49,7 +49,7 @@ module Encoding =
 
     module Exchange =
 
-        /// Encodes the given exchange directon as a one-hot
+        /// Encodes the given exchange direction as a one-hot
         /// vector in the number of exchange directions.
         let private encodeDirection dir =
             [|
