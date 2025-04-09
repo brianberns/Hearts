@@ -47,8 +47,8 @@ module Encoding =
             |> Seq.map (fun card -> card, 1uy)
             |> encodeCardValues
 
-    /// Encodes the given exchange directon as a one-hot
-    /// vector in the number of seats.
+    /// Encodes the given exchange direction as a one-hot
+    /// vector in the number of exchange directions.
     let private encodeExchangeDirection dir =
         [|
             for d in Enum.getValues<ExchangeDirection> do
