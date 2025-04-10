@@ -76,9 +76,9 @@ module Settings =
         let settings =
             {
                 ExchangeHiddenSize =
-                    Encoding.Exchange.encodedLength * 2
+                    Encoding.Exchange.encodedLength * 6
                 PlayoutHiddenSize =
-                    Encoding.Playout.encodedLength * 2
+                    Encoding.Playout.encodedLength * 6
                 NumHiddenLayers = 1
                 LearningRate = 1e-3
                 SampleDecay = 0.17
