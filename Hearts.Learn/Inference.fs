@@ -49,7 +49,7 @@ module Inference =
 
             // create non-GS nodes from GS nodes in one batch
         let batch =
-            let ids, conts =
+            let infoSets, conts =
                 nodeArrays
                     |> Seq.concat
                     |> Seq.choose (function
@@ -58,7 +58,7 @@ module Inference =
                         | _ -> None)
                     |> Seq.toArray
                     |> Array.unzip
-            (getStrategies ids modelOpt, conts)
+            (getStrategies infoSets modelOpt, conts)
                 ||> Array.Parallel.map2 (|>)
         assert(batch |> Seq.forall (_.IsGetStrategy >> not))
 
