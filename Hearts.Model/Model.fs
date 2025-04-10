@@ -134,6 +134,11 @@ type HeartsModel =
         PlayoutModel : PlayoutModel
     }
 
+    /// Switches the model to eval mode.
+    member this.eval() =
+        this.ExchangeModel.eval()
+        this.PlayoutModel.eval()
+
     /// Cleanup.
     member this.Dispose() =
         this.ExchangeModel.Dispose()
