@@ -12,10 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TorchSharp-cpu" Version="0.105.0" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\..\TricksterHeartsBot\TricksterHeartsBot\TricksterHeartsBot.csproj" />
+    <ProjectReference Include="..\Hearts.Learn\Hearts.Learn.fsproj" />
     <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
     <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />

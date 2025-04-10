@@ -12,7 +12,7 @@ module Program =
             device = TorchSharp.torch.CPU)
     model.load("AdvantageModel.pt") |> ignore
 
-    let player = Strategy.createPlayer model
+    let player = Hearts.Learn.Trickster.player
 
     let score = Killer.run player
     for (KeyValue(seat, points)) in score.ScoreMap do
