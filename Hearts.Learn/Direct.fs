@@ -88,6 +88,6 @@ module Direct =
             Tournament.run
                 rng
                 Trickster.player
-                (Trainer.createPlayer model)
+                (Strategy.createPlayer model)
         settings.Writer.add_scalar(
             $"advantage tournament", avgPayoff, 0)
