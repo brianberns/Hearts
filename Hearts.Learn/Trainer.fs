@@ -11,7 +11,7 @@ open Hearts.Model
 type AdvantageState =
     {
         /// Current model.
-        ModelOpt : Option<AdvantageModel>
+        ModelOpt : Option<HeartsModel>
 
         /// Reservoir of training data.
         Reservoir : Reservoir<AdvantageSample>
@@ -77,11 +77,19 @@ module Trainer =
             // train new model
         let stopwatch = Stopwatch.StartNew()
         let model =
-            new AdvantageModel(
-                settings.HiddenSize,
-                settings.NumHiddenLayers,
-                settings.Device)
-        AdvantageModel.train iter resv.Items model
+            let exchModel =
+                new ExchangeModel(
+                    settings.ExchangeHiddenSize,
+                    settings.NumHiddenLayers,
+                    settings.Device)
+            let playModel =
+                new PlayoutModel(
+                    settings.PlayoutHiddenSize,
+                    settings.NumHiddenLayers,
+                    settings.Device)
+            HeartsModel.create exchModel playModel
+        AdvantageModel.train
+            iter resv.Items model.ExchangeModel
         stopwatch.Stop()
         if settings.Verbose then
             printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \

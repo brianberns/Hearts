@@ -5,13 +5,15 @@ open type torch
 open type torch.nn
 
 open PlayingCards
+open Hearts
 
 /// Neural network that maps an input tensor to an output
 /// tensor.
-type Network = Module<Tensor, Tensor>
+type Model = Module<Tensor, Tensor>
 
-type SkipConnection(inner : Network) as this =
-    inherit Network($"{inner.GetName()}Skip")
+/// Skip connection.
+type SkipConnection(inner : Model) as this =
+    inherit Model($"{inner.GetName()}Skip")
 
     do this.register_module("inner", inner)
 
@@ -20,16 +22,20 @@ type SkipConnection(inner : Network) as this =
         x + input
 
 [<AutoOpen>]
-module Network =
+module ModelAuto =
 
+    /// Skip connection.
     let SkipConnection(inner) = new SkipConnection(inner)
 
-/// Model used for learning exchange advantages.
-type ExchangeModel(
+/// Model used for learning advantages.
+type AdvantageModel(
+    name,
+    inputSize : int,
     hiddenSize : int,
     numHiddenLayers : int,
+    outputSize : int,
     device : torch.Device) as this =
-    inherit Network("ExchangeModel")
+    inherit Model(name)
 
     let mutable curDevice = device
 
@@ -38,9 +44,9 @@ type ExchangeModel(
 
                 // input layer
             Linear(
-                Encoding.Exchange.encodedLength,
+                inputSize,
                 hiddenSize,
-                device = device) :> Network
+                device = device) :> Model
             ReLU()
             Dropout()
 
@@ -58,7 +64,7 @@ type ExchangeModel(
                 // output layer
             Linear(
                 hiddenSize,
-                Card.numCards,
+                outputSize,
                 device = device)
         |]
 
@@ -76,84 +82,66 @@ type ExchangeModel(
     override _.forward(input) = 
         sequential.forward(input)
 
-module ExchangeModel =
+module AdvantageModel =
 
-    /// Gets advantages for the given exchange info sets.
-    let getAdvantages infoSets (model : ExchangeModel) =
+    /// Gets advantages for the given info sets.
+    let getAdvantages
+        infoSets
+        (encode : InformationSet -> Encoding)
+        (model : AdvantageModel) =
+
+        assert(
+            infoSets
+                |> Seq.map _.LegalActionType
+                |> Seq.distinct
+                |> Seq.length = 1)
+
         use _ = torch.no_grad()
         use input =
             let encoded =
                 infoSets
-                    |> Array.map Encoding.Exchange.encode
+                    |> Array.map encode
                     |> array2D
             tensor(
                 encoded, device = model.Device,
                 dtype = ScalarType.Float32)
         input --> model
 
-/// Model used for learning playout advantages.
-type PlayoutModel(
-    hiddenSize : int,
-    numHiddenLayers : int,
-    device : torch.Device) as this =
-    inherit Network("PlayoutModel")
+type ExchangeModel(hiddenSize, numHiddenLayers, device) =
+    inherit AdvantageModel(
+        "ExchangeModel",
+        Encoding.Exchange.encodedLength,
+        hiddenSize,
+        numHiddenLayers,
+        Card.numCards,
+        device)
 
-    let mutable curDevice = device
+type PlayoutModel(hiddenSize, numHiddenLayers, device) =
+    inherit AdvantageModel(
+        "PlayoutModel",
+        Encoding.Playout.encodedLength,
+        hiddenSize,
+        numHiddenLayers,
+        Card.numCards,
+        device)
 
-    let sequential =
-        Sequential [|
+type HeartsModel =
+    {
+        ExchangeModel : ExchangeModel
+        PlayoutModel : PlayoutModel
+    }
 
-                // input layer
-            Linear(
-                Encoding.Exchange.encodedLength,
-                hiddenSize,
-                device = device) :> Network
-            ReLU()
-            Dropout()
+    member this.Dispose() =
+        this.ExchangeModel.Dispose()
+        this.PlayoutModel.Dispose()
 
-                // hidden layers
-            for _ = 1 to numHiddenLayers do
-                SkipConnection(
-                    Sequential(
-                        Linear(
-                            hiddenSize,
-                            hiddenSize,
-                            device = device),
-                        ReLU(),
-                        Dropout()))
+    interface System.IDisposable with
+        member this.Dispose() = this.Dispose()
 
-                // output layer
-            Linear(
-                hiddenSize,
-                Card.numCards,
-                device = device)
-        |]
+module HeartsModel =
 
-    do
-        this.RegisterComponents()
-        this.MoveTo(device)   // make sure module itself is on the right device
-
-    member _.MoveTo(device) =
-        lock this (fun () ->
-            curDevice <- device
-            this.``to``(device) |> ignore)
-
-    member _.Device = curDevice
-
-    override _.forward(input) = 
-        sequential.forward(input)
-
-module PlayoutModel =
-
-    /// Gets advantages for the given playout info sets.
-    let getAdvantages infoSets (model : PlayoutModel) =
-        use _ = torch.no_grad()
-        use input =
-            let encoded =
-                infoSets
-                    |> Array.map Encoding.Playout.encode
-                    |> array2D
-            tensor(
-                encoded, device = model.Device,
-                dtype = ScalarType.Float32)
-        input --> model
+    let create exchangeModel playoutModel =
+        {
+            ExchangeModel = exchangeModel
+            PlayoutModel = playoutModel
+        }

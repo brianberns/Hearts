@@ -1,8 +1,9 @@
 ﻿namespace Hearts.Model
 
-open TorchSharp
 open MathNet.Numerics.LinearAlgebra
+
 open PlayingCards
+open Hearts
 
 module Strategy =
 
@@ -44,17 +45,20 @@ module Strategy =
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    module Exchange =
+    /// Computes strategies for the given info sets using
+    /// the given model.
+    let getFromAdvantage model infoSets =
 
-        /// Computes strategies for the given exchange info sets
-        /// using the given model.
-        let getFromAdvantage model infoSets =
+        let inner model infoSets encode =
 
             if Array.length infoSets > 0 then
 
                     // run model on GPU
                 use advantages =
-                    ExchangeModel.getAdvantages infoSets model
+                    AdvantageModel.getAdvantages
+                        infoSets
+                        encode
+                        model
                 assert(advantages.shape[0] = infoSets.Length)
 
                     // access data on CPU
@@ -74,32 +78,17 @@ module Strategy =
 
             else Array.empty
 
-    module Playout =
-
-        /// Computes strategies for the given exchange info sets
-        /// using the given model.
-        let getFromAdvantage model infoSets =
-
-            if Array.length infoSets > 0 then
-
-                    // run model on GPU
-                use advantages =
-                    PlayoutModel.getAdvantages infoSets model
-                assert(advantages.shape[0] = infoSets.Length)
-
-                    // access data on CPU
-                let nCols = int advantages.shape[1]
-                assert(nCols = Card.numCards)
-                let data =
-                    use accessor = advantages.data<float32>()
-                    accessor.ToArray()
-                [|
-                    for iRow, infoSet in Seq.indexed infoSets do
-                        let iStart = iRow * nCols
-                        data[iStart .. iStart + nCols - 1]
-                            |> DenseVector.ofSeq
-                            |> toNarrow infoSet.LegalActions
-                            |> matchRegrets
-                |]
-
-            else Array.empty
+        let passInfoSets, playInfoSets =
+            infoSets
+                |> Array.partition (fun infoSet ->
+                    infoSet.LegalActionType = ActionType.Pass)
+        [|
+            yield! inner
+                model.ExchangeModel
+                passInfoSets
+                Encoding.Exchange.encode
+            yield! inner
+                model.PlayoutModel
+                playInfoSets
+                Encoding.Playout.encode
+        |]

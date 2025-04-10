@@ -68,11 +68,15 @@ module Encoding =
         let encode infoSet : Encoding =
             let encoded =
                 [|
-                    yield! encodeCards infoSet.Hand              // current player's hand
-                    yield! encodeDirection                       // exchange direction
+                    yield! encodeCards infoSet.Hand      // current player's unpassed cards
+                    yield! encodeDirection               // exchange direction
                         infoSet.Deal.ExchangeDirection
-                    match infoSet.OutgoingPassOpt with           // outgoing pass, so far
-                        | Some pass -> yield! encodeCards pass
+                    match infoSet.OutgoingPassOpt with   // outgoing pass, so far
+                        | Some pass ->
+                            assert(
+                                infoSet.Hand.Count + pass.Count
+                                    = ClosedDeal.numCardsPerHand)
+                            yield! encodeCards pass
                         | None -> failwith "Unexpected"
                 |]
             assert(encoded.Length = encodedLength)
@@ -167,3 +171,11 @@ module Encoding =
                 |]
             assert(encoded.Length = encodedLength)
             encoded
+
+    /// Encodes the given info set as a vector.
+    let encode infoSet =
+        let encoder =
+            match infoSet.LegalActionType with
+                | ActionType.Pass -> Exchange.encode
+                | ActionType.Play -> Playout.encode
+        encoder infoSet

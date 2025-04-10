@@ -19,7 +19,7 @@ module Inference =
         match modelOpt with
 
                 // batch inference
-            | Some (model : AdvantageModel) ->
+            | Some model ->
                 infoSets
                     |> Array.chunkBySize settings.AdvantageSubBatchSize
                     |> Array.collect (
