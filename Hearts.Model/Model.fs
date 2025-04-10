@@ -107,6 +107,7 @@ module AdvantageModel =
                 dtype = ScalarType.Float32)
         input --> model
 
+/// Model used for learning exchange advantages.
 type ExchangeModel(hiddenSize, numHiddenLayers, device) =
     inherit AdvantageModel(
         "ExchangeModel",
@@ -116,6 +117,7 @@ type ExchangeModel(hiddenSize, numHiddenLayers, device) =
         Card.numCards,
         device)
 
+/// Model used for learning playout advantages.
 type PlayoutModel(hiddenSize, numHiddenLayers, device) =
     inherit AdvantageModel(
         "PlayoutModel",
@@ -125,17 +127,21 @@ type PlayoutModel(hiddenSize, numHiddenLayers, device) =
         Card.numCards,
         device)
 
+/// Model used for learning Hearts advantages.
 type HeartsModel =
     {
         ExchangeModel : ExchangeModel
         PlayoutModel : PlayoutModel
     }
 
+    /// Cleanup.
     member this.Dispose() =
         this.ExchangeModel.Dispose()
         this.PlayoutModel.Dispose()
 
     interface System.IDisposable with
+
+        /// Cleanup.
         member this.Dispose() = this.Dispose()
 
 module HeartsModel =

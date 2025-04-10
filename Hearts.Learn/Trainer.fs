@@ -17,12 +17,15 @@ type AdvantageState =
         Reservoir : Reservoir<AdvantageSample>
     }
 
+    /// Cleanup.
+    member this.Dispose() =
+        this.ModelOpt
+            |> Option.iter _.Dispose()
+
     interface IDisposable with
 
         /// Cleanup.
-        member this.Dispose() =
-            this.ModelOpt
-                |> Option.iter _.Dispose()
+        member this.Dispose() = this.Dispose()
 
 module AdvantageState =
 

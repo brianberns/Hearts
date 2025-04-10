@@ -171,11 +171,3 @@ module Encoding =
                 |]
             assert(encoded.Length = encodedLength)
             encoded
-
-    /// Encodes the given info set as a vector.
-    let encode infoSet =
-        let encoder =
-            match infoSet.LegalActionType with
-                | ActionType.Pass -> Exchange.encode
-                | ActionType.Play -> Playout.encode
-        encoder infoSet
