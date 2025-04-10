@@ -78,6 +78,7 @@ module Strategy =
     /// the given model.
     let getFromModel model infoSets =
 
+            // partition info sets
         let passPairs, playPairs =
             infoSets
                 |> Array.indexed
@@ -86,6 +87,7 @@ module Strategy =
         let passIdxs, passInfoSets = Array.unzip passPairs
         let playIdxs, playInfoSets = Array.unzip playPairs
 
+            // get strategies for each partition
         let passStrats =
             getFromAdvantage
                 model.ExchangeModel
@@ -97,6 +99,7 @@ module Strategy =
                 playInfoSets
                 Encoding.Playout.encode
 
+            // weave strategies back together in the right order
         let strategies =
             (0, 0, 0)
                 |> Array.unfold (fun (stratIdx, passIdx, playIdx) ->

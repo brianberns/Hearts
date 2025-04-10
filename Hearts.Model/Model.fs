@@ -146,6 +146,7 @@ type HeartsModel =
 
 module HeartsModel =
 
+    /// Creates a Hearts model.
     let create exchangeModel playoutModel =
         {
             ExchangeModel = exchangeModel
