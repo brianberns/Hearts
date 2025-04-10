@@ -103,11 +103,13 @@ module Strategy =
         let strategies =
             (0, 0, 0)
                 |> Array.unfold (fun (stratIdx, passIdx, playIdx) ->
-                    if passIdxs[passIdx] = stratIdx then
+                    if passIdx < passIdxs.Length
+                        && passIdxs[passIdx] = stratIdx then
                         let strat = passStrats[passIdx]
                         let state = stratIdx + 1, passIdx + 1, playIdx
                         Some (strat, state)
-                    elif playIdxs[playIdx] = stratIdx then
+                    elif playIdx < playIdxs.Length
+                        && playIdxs[playIdx] = stratIdx then
                         let strat = playStrats[playIdx]
                         let state = stratIdx + 1, passIdx, playIdx + 1
                         Some (strat, state)
