@@ -47,48 +47,69 @@ module Strategy =
 
     /// Computes strategies for the given info sets using
     /// the given model.
-    let getFromAdvantage model infoSets =
+    let private getFromAdvantage model infoSets encode =
 
-        let inner model infoSets encode =
+        if Array.length infoSets > 0 then
 
-            if Array.length infoSets > 0 then
+                // run model on GPU
+            use advantages =
+                AdvantageModel.getAdvantages
+                    infoSets encode model
+            assert(advantages.shape[0] = infoSets.Length)
 
-                    // run model on GPU
-                use advantages =
-                    AdvantageModel.getAdvantages
-                        infoSets
-                        encode
-                        model
-                assert(advantages.shape[0] = infoSets.Length)
+                // access data on CPU
+            let nCols = int advantages.shape[1]
+            assert(nCols = Card.numCards)
+            let data =
+                use accessor = advantages.data<float32>()
+                accessor.ToArray()
+            [|
+                for iRow, infoSet in Seq.indexed infoSets do
+                    let iStart = iRow * nCols
+                    data[iStart .. iStart + nCols - 1]
+                        |> DenseVector.ofSeq
+                        |> toNarrow infoSet.LegalActions
+                        |> matchRegrets
+            |]
 
-                    // access data on CPU
-                let nCols = int advantages.shape[1]
-                assert(nCols = Card.numCards)
-                let data =
-                    use accessor = advantages.data<float32>()
-                    accessor.ToArray()
-                [|
-                    for iRow, infoSet in Seq.indexed infoSets do
-                        let iStart = iRow * nCols
-                        data[iStart .. iStart + nCols - 1]
-                            |> DenseVector.ofSeq
-                            |> toNarrow infoSet.LegalActions
-                            |> matchRegrets
-                |]
+        else Array.empty
 
-            else Array.empty
+    /// Computes strategies for the given info sets using
+    /// the given model.
+    let getFromModel model infoSets =
 
-        let passInfoSets, playInfoSets =
+        let passPairs, playPairs =
             infoSets
-                |> Array.partition (fun infoSet ->
+                |> Array.indexed
+                |> Array.partition (fun (_, infoSet) ->
                     infoSet.LegalActionType = ActionType.Pass)
-        [|
-            yield! inner
+        let passIdxs, passInfoSets = Array.unzip passPairs
+        let playIdxs, playInfoSets = Array.unzip playPairs
+
+        let passStrats =
+            getFromAdvantage
                 model.ExchangeModel
                 passInfoSets
                 Encoding.Exchange.encode
-            yield! inner
+        let playStrats =
+            getFromAdvantage
                 model.PlayoutModel
                 playInfoSets
                 Encoding.Playout.encode
-        |]
+
+        let strategies =
+            (0, 0, 0)
+                |> Array.unfold (fun (stratIdx, passIdx, playIdx) ->
+                    if passIdxs[passIdx] = stratIdx then
+                        let strat = passStrats[passIdx]
+                        let state = stratIdx + 1, passIdx + 1, playIdx
+                        Some (strat, state)
+                    elif playIdxs[playIdx] = stratIdx then
+                        let strat = playStrats[playIdx]
+                        let state = stratIdx + 1, passIdx, playIdx + 1
+                        Some (strat, state)
+                    else
+                        assert(stratIdx = infoSets.Length)
+                        None)
+        assert(strategies.Length = infoSets.Length)
+        strategies

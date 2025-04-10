@@ -68,36 +68,46 @@ module Trainer =
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
-    let private trainAdvantageModel iter samples state =
+    let private trainModel iter samples state =
 
             // cache new training data
         let resv =
             Reservoir.addMany samples state.Reservoir
 
-            // train new model
+            // train exchange model
         let stopwatch = Stopwatch.StartNew()
-        let model =
-            let exchModel =
-                new ExchangeModel(
-                    settings.ExchangeHiddenSize,
-                    settings.NumHiddenLayers,
-                    settings.Device)
-            let playModel =
-                new PlayoutModel(
-                    settings.PlayoutHiddenSize,
-                    settings.NumHiddenLayers,
-                    settings.Device)
-            HeartsModel.create exchModel playModel
-        AdvantageModel.train
-            iter resv.Items model.ExchangeModel
+        let exchangeModel =
+            new ExchangeModel(
+                settings.ExchangeHiddenSize,
+                settings.NumHiddenLayers,
+                settings.Device)
+        AdvantageModel.trainQQQ
+            iter resv.Items exchangeModel
         stopwatch.Stop()
         if settings.Verbose then
-            printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
+            printfn $"Trained exchange model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
+
+            // train playout model
+        stopwatch.Restart()
+        let playoutModel =
+            new PlayoutModel(
+                settings.PlayoutHiddenSize,
+                settings.NumHiddenLayers,
+                settings.Device)
+        AdvantageModel.trainQQQ
+            iter resv.Items playoutModel
+        stopwatch.Stop()
+        if settings.Verbose then
+            printfn $"Trained playout model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
 
         {
             Reservoir = resv
-            ModelOpt = Some model
+            ModelOpt =
+                Some (
+                    HeartsModel.create
+                        exchangeModel playoutModel)
         }
 
     /// Trains a new model using the given model.

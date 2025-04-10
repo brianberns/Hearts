@@ -186,8 +186,3 @@ module AdvantageModel =
                 $"{model.GetName()} loss/iter%03d{iter}",
                 loss, epoch)
         model.eval()
-
-module HeartsModel =
-
-    let train iter samples model =
-        

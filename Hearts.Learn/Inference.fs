@@ -23,7 +23,7 @@ module Inference =
                 infoSets
                     |> Array.chunkBySize settings.AdvantageSubBatchSize
                     |> Array.collect (
-                        Strategy.getFromAdvantage model)
+                        Strategy.getFromModel model)
 
                 // no model yet, random strategies
             | None ->
