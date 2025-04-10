@@ -110,7 +110,7 @@ module AdvantageModel =
 /// Model used for learning exchange advantages.
 type ExchangeModel(hiddenSize, numHiddenLayers, device) =
     inherit AdvantageModel(
-        "ExchangeModel",
+        "Exchange",
         Encoding.Exchange.encodedLength,
         hiddenSize,
         numHiddenLayers,
@@ -120,7 +120,7 @@ type ExchangeModel(hiddenSize, numHiddenLayers, device) =
 /// Model used for learning playout advantages.
 type PlayoutModel(hiddenSize, numHiddenLayers, device) =
     inherit AdvantageModel(
-        "PlayoutModel",
+        "Playout",
         Encoding.Playout.encodedLength,
         hiddenSize,
         numHiddenLayers,

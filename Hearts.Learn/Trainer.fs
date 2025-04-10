@@ -50,10 +50,10 @@ module Trainer =
     let private generateSamples iter modelOpt =
 
         settings.Writer.add_scalar(
-            $"exchange samples/iter%03d{iter}",
+            $"Exchange samples/iter%03d{iter}",
             0f, 0)
         settings.Writer.add_scalar(
-            $"playout samples/iter%03d{iter}",
+            $"Playout samples/iter%03d{iter}",
             0f, 0)
 
         let chunkSize = settings.TraversalBatchSize
@@ -73,11 +73,11 @@ module Trainer =
                             |> Inference.complete modelOpt
 
                     settings.Writer.add_scalar(
-                        $"exchange samples/iter%03d{iter}",
+                        $"Exchange samples/iter%03d{iter}",
                         float32 passSamples.Length / float32 chunkSize,
                         (i + 1) * chunkSize)
                     settings.Writer.add_scalar(
-                        $"playout samples/iter%03d{iter}",
+                        $"Playout samples/iter%03d{iter}",
                         float32 playSamples.Length / float32 chunkSize,
                         (i + 1) * chunkSize)
 
