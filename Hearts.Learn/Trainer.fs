@@ -50,7 +50,10 @@ module Trainer =
     let private generateSamples iter modelOpt =
 
         settings.Writer.add_scalar(
-            $"advantage samples/iter%03d{iter}",
+            $"exchange samples/iter%03d{iter}",
+            0f, 0)
+        settings.Writer.add_scalar(
+            $"playout samples/iter%03d{iter}",
             0f, 0)
 
         let chunkSize = settings.TraversalBatchSize
