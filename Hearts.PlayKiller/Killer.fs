@@ -229,13 +229,13 @@ module Killer =
         match state.DealOpt with
             | Some deal ->
                 let pointsSum, numDeals =
-                    match OpenDeal.tryFindInevitable deal with
-                        | Some inevitable ->
+                    match state.GameScoreOpt, OpenDeal.tryFindInevitable deal with
+                        | Some gameScore, Some inevitable when gameScore = Score.zero ->
                             state.PointsSum
                                 + deal.ClosedDeal.Score
                                 + inevitable,
                             state.NumDeals + 1
-                        | None ->
+                        | _ ->
                             state.PointsSum, state.NumDeals
                 {
                         // prepare for next deal
