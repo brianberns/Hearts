@@ -194,7 +194,7 @@ module Trainer =
                 Trickster.player
                 (createPlayer model)
         settings.Writer.add_scalar(
-            $"Tournament", avgPayoff, iter)
+            $"tournament", avgPayoff, iter)
 
     /// Trains a single iteration.
     let private trainIteration iter state =
