@@ -104,7 +104,7 @@ module Trainer =
         AdvantageModel.train iter resv.Items model
         stopwatch.Stop()
         if settings.Verbose then
-            printfn $"Trained {model.GetName()} on {resv.Items.Count} samples in {stopwatch.Elapsed} \
+            printfn $"Trained {model.GetName().ToLower()} model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
 
         resv
