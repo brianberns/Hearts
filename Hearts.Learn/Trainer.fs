@@ -13,8 +13,11 @@ type AdvantageState =
         /// Current model.
         ModelOpt : Option<HeartsModel>
 
-        /// Reservoir of training data.
-        Reservoir : Reservoir<AdvantageSample>
+        /// Reservoir of exchange training data.
+        ExchangeReservoir : Reservoir<AdvantageSample>
+
+        /// Reservoir of playout training data.
+        PlayoutReservoir : Reservoir<AdvantageSample>
     }
 
     /// Cleanup.
@@ -33,7 +36,10 @@ module AdvantageState =
     let create rng =
         {
             ModelOpt = None
-            Reservoir =
+            ExchangeReservoir =
+                Reservoir.create rng
+                    settings.NumAdvantageSamples
+            PlayoutReservoir =
                 Reservoir.create rng
                     settings.NumAdvantageSamples
         }
@@ -48,73 +54,87 @@ module Trainer =
             0f, 0)
 
         let chunkSize = settings.TraversalBatchSize
-        Array.zeroCreate<int> settings.NumTraversals
-            |> Array.chunkBySize chunkSize
-            |> Array.indexed
-            |> Array.map (fun (i, chunk) ->
+        let passArrays, playArrays =
+            Array.zeroCreate<int> settings.NumTraversals
+                |> Array.chunkBySize chunkSize
+                |> Array.indexed
+                |> Array.map (fun (i, chunk) ->
 
-                let passSamples, playSamples =
-                    OpenDeal.generate
-                        (Random())
-                        chunk.Length
-                        (fun deal ->
-                            let rng = Random()   // each thread has its own RNG
-                            Traverse.traverse iter deal rng)
-                        |> Inference.complete modelOpt
+                    let passSamples, playSamples =
+                        OpenDeal.generate
+                            (Random())
+                            chunk.Length
+                            (fun deal ->
+                                let rng = Random()   // each thread has its own RNG
+                                Traverse.traverse iter deal rng)
+                            |> Inference.complete modelOpt
 
-                settings.Writer.add_scalar(
-                    $"exchange samples/iter%03d{iter}",
-                    float32 passSamples.Length / float32 chunkSize,
-                    (i + 1) * chunkSize)
-                settings.Writer.add_scalar(
-                    $"playout samples/iter%03d{iter}",
-                    float32 playSamples.Length / float32 chunkSize,
-                    (i + 1) * chunkSize)
+                    settings.Writer.add_scalar(
+                        $"exchange samples/iter%03d{iter}",
+                        float32 passSamples.Length / float32 chunkSize,
+                        (i + 1) * chunkSize)
+                    settings.Writer.add_scalar(
+                        $"playout samples/iter%03d{iter}",
+                        float32 playSamples.Length / float32 chunkSize,
+                        (i + 1) * chunkSize)
 
-                passSamples, playSamples)
+                    passSamples, playSamples)
+
+                |> Array.unzip
+
+        Array.concat passArrays,
+        Array.concat playArrays
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
-    let private trainModel iter samples state =
+    let private trainAdvantageModel iter samples resv (model : Model) =
 
             // cache new training data
-        let resv =
-            Reservoir.addMany samples state.Reservoir
+        let resv = Reservoir.addMany samples resv
+        settings.Writer.add_scalar(
+            $"{model.GetName()} reservoir",
+            float32 resv.Items.Count,
+            iter)
 
-            // train exchange model
+            // train model
         let stopwatch = Stopwatch.StartNew()
+        AdvantageModel.train iter resv.Items model
+        stopwatch.Stop()
+        if settings.Verbose then
+            printfn $"Trained {model.GetName()} on {resv.Items.Count} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
+
+        resv
+
+    /// Adds the given samples to the given reservoir and then
+    /// uses the reservoir to train a new model.
+    let private trainModel iter passSamples playSamples state =
+
         let exchangeModel =
             new ExchangeModel(
                 settings.ExchangeHiddenSize,
                 settings.NumHiddenLayers,
                 settings.Device)
-        AdvantageModel.trainQQQ
-            iter resv.Items exchangeModel
-        stopwatch.Stop()
-        if settings.Verbose then
-            printfn $"Trained exchange model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
+        let exchangeResv =
+            trainAdvantageModel
+                iter passSamples state.ExchangeReservoir exchangeModel
 
-            // train playout model
-        stopwatch.Restart()
         let playoutModel =
             new PlayoutModel(
                 settings.PlayoutHiddenSize,
                 settings.NumHiddenLayers,
                 settings.Device)
-        AdvantageModel.trainQQQ
-            iter resv.Items playoutModel
-        stopwatch.Stop()
-        if settings.Verbose then
-            printfn $"Trained playout model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
+        let playoutResv =
+            trainAdvantageModel
+                iter playSamples state.PlayoutReservoir playoutModel
 
         {
-            Reservoir = resv
             ModelOpt =
                 Some (
                     HeartsModel.create
                         exchangeModel playoutModel)
+            ExchangeReservoir = exchangeResv
+            PlayoutReservoir = playoutResv
         }
 
     /// Trains a new model using the given model.
@@ -122,25 +142,26 @@ module Trainer =
 
             // generate training data from existing model
         let stopwatch = Stopwatch.StartNew()
-        let samples =
+        let passSamples, playSamples =
             generateSamples iter state.ModelOpt
         if settings.Verbose then
-            printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
+            printfn $"\n{passSamples.Length} exchange samples and {playSamples.Length} playout samples generated in {stopwatch.Elapsed}"
 
             // train a new model on GPU
         let state =
-            trainAdvantageModel iter samples state
+            trainModel iter passSamples playSamples state
         state.ModelOpt
             |> Option.iter (fun model ->
                 Path.Combine(
                     settings.ModelDirPath,
-                    $"AdvantageModel%03d{iter}.pt")
-                        |> model.save
+                    $"ExchangeModel%03d{iter}.pt")
+                        |> model.ExchangeModel.save
+                        |> ignore
+                Path.Combine(
+                    settings.ModelDirPath,
+                    $"PlayoutModel%03d{iter}.pt")
+                        |> model.PlayoutModel.save
                         |> ignore)
-        settings.Writer.add_scalar(
-            $"advantage reservoir",
-            float32 state.Reservoir.Items.Count,
-            iter)
 
         state
 
@@ -151,7 +172,7 @@ module Trainer =
 
         let act infoSet =
             let strategy =
-                Strategy.getFromAdvantage model [|infoSet|]
+                Strategy.getFromModel model [|infoSet|]
                     |> Array.exactlyOne
             let action =
                 Vector.sample rng strategy
@@ -162,7 +183,7 @@ module Trainer =
 
     /// Evaluates the given model by playing it against a
     /// standard.
-    let private evaluate iter (model : AdvantageModel) =
+    let private evaluate iter model =
 
         let avgPayoff =
             Tournament.run
@@ -183,12 +204,6 @@ module Trainer =
 
     /// Trains for the given number of iterations.
     let train () =
-
-        if settings.Verbose then
-            printfn $"Model input size: {Network.inputSize}"
-            printfn $"Model output size: {Network.outputSize}"
-
-            // run the iterations
         let state = AdvantageState.create (Random())
         let iterNums = seq { 1 .. settings.NumIterations }
         (state, iterNums)
