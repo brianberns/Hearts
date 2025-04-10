@@ -51,9 +51,9 @@ module Trainer =
         Array.zeroCreate<int> settings.NumTraversals
             |> Array.chunkBySize chunkSize
             |> Array.indexed
-            |> Array.collect (fun (i, chunk) ->
+            |> Array.map (fun (i, chunk) ->
 
-                let samples =
+                let passSamples, playSamples =
                     OpenDeal.generate
                         (Random())
                         chunk.Length
@@ -63,11 +63,15 @@ module Trainer =
                         |> Inference.complete modelOpt
 
                 settings.Writer.add_scalar(
-                    $"advantage samples/iter%03d{iter}",
-                    float32 samples.Length / float32 chunkSize,
+                    $"exchange samples/iter%03d{iter}",
+                    float32 passSamples.Length / float32 chunkSize,
+                    (i + 1) * chunkSize)
+                settings.Writer.add_scalar(
+                    $"playout samples/iter%03d{iter}",
+                    float32 playSamples.Length / float32 chunkSize,
                     (i + 1) * chunkSize)
 
-                samples)
+                passSamples, playSamples)
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
