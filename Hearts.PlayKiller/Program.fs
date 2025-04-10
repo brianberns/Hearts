@@ -14,6 +14,6 @@ module Program =
 
     let player = Strategy.createPlayer model
 
-    let score = Killer.run player
-    for (KeyValue(seat, points)) in score.ScoreMap do
-        printfn "%A: %d" seat points
+    let payoffMap = Killer.run player
+    for (KeyValue(seat, payoff)) in payoffMap do
+        printfn "%A: %g" seat payoff

@@ -13,6 +13,8 @@ type State =
         HandMap : Map<Seat, Set<Card>>
         DealOpt : Option<OpenDeal>
         SessionScoreOpt : Option<Score>
+        PointsSum : Score
+        NumDeals : int
     }
 
 module State =
@@ -27,6 +29,8 @@ module State =
             HandMap = Map.empty
             DealOpt = None
             SessionScoreOpt = None
+            PointsSum = Score.zero
+            NumDeals = 0
         }
 
 module Killer =
@@ -224,6 +228,15 @@ module Killer =
         Protocol.writeEmpty ClientRecordType.DealFinish
         match state.DealOpt with
             | Some deal ->
+                let pointsSum, numDeals =
+                    match OpenDeal.tryFindInevitable deal with
+                        | Some inevitable ->
+                            state.PointsSum
+                                + deal.ClosedDeal.Score
+                                + inevitable,
+                            state.NumDeals + 1
+                        | None ->
+                            state.PointsSum, state.NumDeals
                 {
                         // prepare for next deal
                     state with
@@ -236,6 +249,8 @@ module Killer =
                                 |> ExchangeDirection.next
                                 |> Some
                         DealOpt = None
+                        PointsSum = pointsSum
+                        NumDeals = numDeals
                 }
             | None -> failwith "Unexpected"
 
@@ -284,6 +299,19 @@ module Killer =
             | SessionFinish record ->
                 sessionFinish state record
 
+    /// Gets the payoff for the given deal score from each
+    /// player's point of view.
+    let getPayoff score =
+        let points = score.ScoreMap.Values
+        assert(points.Count = Seat.numSeats)
+        let sum = Seq.sum points
+        score.ScoreMap
+            |> Map.map (fun _ pt ->
+                let otherAvg =
+                    float32 (sum - pt)
+                        / float32 (Seat.numSeats - 1)
+                otherAvg - float32 pt)
+
     /// Runs a KH session with the given client player.
     let run player =
 
@@ -291,6 +319,11 @@ module Killer =
             let state = advance state player
             match state.SessionScoreOpt with
                 | None -> loop state
-                | Some score -> score
+                | Some score -> score, state.PointsSum, state.NumDeals
 
-        loop State.initial
+        let _, pointsSum, numDeals =
+            loop State.initial
+
+        getPayoff pointsSum
+            |> Map.map (fun _ payoff ->
+                payoff / float32 numDeals)
