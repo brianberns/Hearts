@@ -183,6 +183,6 @@ module AdvantageModel =
                         trainBatch model batch criterion optimizer
                 |]
             settings.Writer.add_scalar(
-                $"{model.GetName()} loss/iter%03d{iter}",
+                $"loss/iter%03d{iter}/{model.GetName().ToLower()}",
                 loss, epoch)
         model.eval()

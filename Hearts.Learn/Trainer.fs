@@ -50,10 +50,10 @@ module Trainer =
     let private generateSamples iter modelOpt =
 
         settings.Writer.add_scalar(
-            $"Exchange samples/iter%03d{iter}",
+            $"samples/iter%03d{iter}/exchange",
             0f, 0)
         settings.Writer.add_scalar(
-            $"Playout samples/iter%03d{iter}",
+            $"samples/iter%03d{iter}/playout",
             0f, 0)
 
         let chunkSize = settings.TraversalBatchSize
@@ -73,11 +73,11 @@ module Trainer =
                             |> Inference.complete modelOpt
 
                     settings.Writer.add_scalar(
-                        $"Exchange samples/iter%03d{iter}",
+                        $"samples/iter%03d{iter}/exchange",
                         float32 passSamples.Length / float32 chunkSize,
                         (i + 1) * chunkSize)
                     settings.Writer.add_scalar(
-                        $"Playout samples/iter%03d{iter}",
+                        $"samples/iter%03d{iter}/playout",
                         float32 playSamples.Length / float32 chunkSize,
                         (i + 1) * chunkSize)
 
@@ -95,7 +95,7 @@ module Trainer =
             // cache new training data
         let resv = Reservoir.addMany samples resv
         settings.Writer.add_scalar(
-            $"{model.GetName()} reservoir",
+            $"reservoir/{model.GetName().ToLower()}",
             float32 resv.Items.Count,
             iter)
 
