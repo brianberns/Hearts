@@ -7,8 +7,11 @@ open Hearts.Model
 /// Hyperparameters.
 type Settings =
     {
-        /// Size of a neural network hidden layer.
-        HiddenSize : int
+        /// Size of an exchange model hidden layer.
+        ExchangeHiddenSize : int
+
+        /// Size of a playout model hidden layer.
+        PlayoutHiddenSize : int
 
         /// Number of hidden layers.
         NumHiddenLayers : int
@@ -72,7 +75,10 @@ module Settings =
 
         let settings =
             {
-                HiddenSize = Encoding.encodedLength * 6
+                ExchangeHiddenSize =
+                    Encoding.Exchange.encodedLength * 6
+                PlayoutHiddenSize =
+                    Encoding.Playout.encodedLength * 6
                 NumHiddenLayers = 1
                 LearningRate = 1e-3
                 SampleDecay = 0.17
@@ -93,8 +99,11 @@ module Settings =
             |> ignore
 
         writer.add_text(
-            $"settings/HiddenSize",
-            string settings.HiddenSize, 0)
+            $"settings/ExchangeHiddenSize",
+            string settings.ExchangeHiddenSize, 0)
+        writer.add_text(
+            $"settings/PlayoutHiddenSize",
+            string settings.PlayoutHiddenSize, 0)
         writer.add_text(
             $"settings/NumHiddenLayers",
             string settings.NumHiddenLayers, 0)

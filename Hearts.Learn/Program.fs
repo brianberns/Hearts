@@ -11,4 +11,3 @@ module Program =
         printfn $"Settings: {settings}"
 
     Trainer.train () |> ignore
-    // Direct.train 20_000

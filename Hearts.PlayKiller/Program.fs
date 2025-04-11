@@ -6,11 +6,25 @@ open Hearts.Model
 module Program =
 
     let model =
-        new AdvantageModel(
-            hiddenSize = Encoding.encodedLength * 6,
-            numHiddenLayers = 1,
-            device = TorchSharp.torch.CPU)
-    model.load("AdvantageModel.pt") |> ignore
+
+        let exchangeModel =
+            new ExchangeModel(
+                hiddenSize = Encoding.Exchange.encodedLength * 6,
+                numHiddenLayers = 1,
+                device = TorchSharp.torch.CPU)
+        exchangeModel.load("ExchangeModel.pt") |> ignore
+
+        let playoutModel =
+            new PlayoutModel(
+                hiddenSize = Encoding.Playout.encodedLength * 6,
+                numHiddenLayers = 1,
+                device = TorchSharp.torch.CPU)
+        playoutModel.load("PlayoutModel.pt") |> ignore
+
+        {
+            ExchangeModel = exchangeModel
+            PlayoutModel = playoutModel
+        }
 
     let player = Strategy.createPlayer model
 

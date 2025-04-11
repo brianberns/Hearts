@@ -16,7 +16,6 @@
     <Compile Include="Inference.fs" />
     <Compile Include="Trickster.fs" />
     <Compile Include="Trainer.fs" />
-    <Compile Include="Direct.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

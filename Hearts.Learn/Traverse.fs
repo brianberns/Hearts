@@ -36,8 +36,8 @@ and Complete =
         /// Per-action utility of this node.
         Utilities : float32[]
 
-        /// Sample representing this node.
-        SampleOpt : Option<AdvantageSample>
+        /// Sample (and action type) representing this node.
+        SamplePairOpt : Option<AdvantageSample * ActionType>
 
         /// Complete children.
         Children : Complete[]
@@ -73,10 +73,10 @@ module Node =
         }
 
     /// Creates a node.
-    let complete utilities sampleOpt children =
+    let complete utilities samplePairOpt children =
         Complete {
             Utilities = utilities
-            SampleOpt = sampleOpt
+            SamplePairOpt = samplePairOpt
             Children = children
         }
 
@@ -173,7 +173,7 @@ module Traverse =
                     AdvantageSample.create infoSet wideRegrets iter
                 Node.complete
                     (utility.ToArray())
-                    (Some sample)
+                    (Some (sample, infoSet.LegalActionType))
                     children
 
             Node.getUtility infoSet results cont

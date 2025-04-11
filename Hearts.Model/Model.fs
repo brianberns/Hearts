@@ -5,21 +5,15 @@ open type torch
 open type torch.nn
 
 open PlayingCards
+open Hearts
 
 /// Neural network that maps an input tensor to an output
 /// tensor.
-type Network = Module<Tensor, Tensor>
+type Model = Module<Tensor, Tensor>
 
-module Network =
-
-    /// Size of neural network input.
-    let inputSize = Encoding.encodedLength
-
-    /// Size of neural network output.
-    let outputSize = Card.numCards
-
-type SkipConnection(inner : Network) as this =
-    inherit Network($"{inner.GetName()}Skip")
+/// Skip connection.
+type SkipConnection(inner : Model) as this =
+    inherit Model($"{inner.GetName()}Skip")
 
     do this.register_module("inner", inner)
 
@@ -27,25 +21,32 @@ type SkipConnection(inner : Network) as this =
         use x = input --> inner
         x + input
 
+[<AutoOpen>]
+module ModelAuto =
+
+    /// Skip connection.
+    let SkipConnection(inner) = new SkipConnection(inner)
+
 /// Model used for learning advantages.
 type AdvantageModel(
+    name,
+    inputSize : int,
     hiddenSize : int,
     numHiddenLayers : int,
+    outputSize : int,
     device : torch.Device) as this =
-    inherit Network("AdvantageModel")
+    inherit Model(name)
 
     let mutable curDevice = device
-
-    let SkipConnection(inner) = new SkipConnection(inner)
 
     let sequential =
         Sequential [|
 
                 // input layer
             Linear(
-                Network.inputSize,
+                inputSize,
                 hiddenSize,
-                device = device) :> Network
+                device = device) :> Model
             ReLU()
             Dropout()
 
@@ -63,7 +64,7 @@ type AdvantageModel(
                 // output layer
             Linear(
                 hiddenSize,
-                Network.outputSize,
+                outputSize,
                 device = device)
         |]
 
@@ -84,14 +85,75 @@ type AdvantageModel(
 module AdvantageModel =
 
     /// Gets advantages for the given info sets.
-    let getAdvantages infoSets (model : AdvantageModel) =
+    let getAdvantages
+        infoSets
+        (encode : InformationSet -> Encoding)
+        (model : AdvantageModel) =
+
+        assert(
+            infoSets
+                |> Seq.map _.LegalActionType
+                |> Seq.distinct
+                |> Seq.length = 1)
+
         use _ = torch.no_grad()
         use input =
             let encoded =
                 infoSets
-                    |> Array.map Encoding.encode
+                    |> Array.map encode
                     |> array2D
             tensor(
                 encoded, device = model.Device,
                 dtype = ScalarType.Float32)
         input --> model
+
+/// Model used for learning exchange advantages.
+type ExchangeModel(hiddenSize, numHiddenLayers, device) =
+    inherit AdvantageModel(
+        "Exchange",
+        Encoding.Exchange.encodedLength,
+        hiddenSize,
+        numHiddenLayers,
+        Card.numCards,
+        device)
+
+/// Model used for learning playout advantages.
+type PlayoutModel(hiddenSize, numHiddenLayers, device) =
+    inherit AdvantageModel(
+        "Playout",
+        Encoding.Playout.encodedLength,
+        hiddenSize,
+        numHiddenLayers,
+        Card.numCards,
+        device)
+
+/// Model used for learning Hearts advantages.
+type HeartsModel =
+    {
+        ExchangeModel : ExchangeModel
+        PlayoutModel : PlayoutModel
+    }
+
+    /// Switches the model to eval mode.
+    member this.eval() =
+        this.ExchangeModel.eval()
+        this.PlayoutModel.eval()
+
+    /// Cleanup.
+    member this.Dispose() =
+        this.ExchangeModel.Dispose()
+        this.PlayoutModel.Dispose()
+
+    interface System.IDisposable with
+
+        /// Cleanup.
+        member this.Dispose() = this.Dispose()
+
+module HeartsModel =
+
+    /// Creates a Hearts model.
+    let create exchangeModel playoutModel =
+        {
+            ExchangeModel = exchangeModel
+            PlayoutModel = playoutModel
+        }
