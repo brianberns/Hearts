@@ -106,7 +106,6 @@ module Encoding =
                         |> encodeCards
             |]
 
-        (*
         /// Encodes the given voids as a multi-hot vector in the
         /// number of suits times the number of other seats.
         let private encodeVoids player voids =
@@ -119,7 +118,6 @@ module Encoding =
                             1uy
                         else 0uy
             |]
-        *)
 
         /// Encodes the given score as a multi-hot vector in the
         /// number of seats.
@@ -141,9 +139,7 @@ module Encoding =
                 + Card.numCards                           // incoming pass
                 *)
                 + ((Seat.numSeats - 1) * Card.numCards)   // current trick
-                (*
                 + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
-                *)
                 + Seat.numSeats                           // score
 
         /// Encodes the given playout info set as a vector.
@@ -162,10 +158,8 @@ module Encoding =
                     yield! encodePass infoSet.IncomingPassOpt   // incoming pass
                     *)
                     yield! encodeTrick trickOpt                 // current trick
-                    (*
                     yield! encodeVoids                          // voids
                         infoSet.Player infoSet.Deal.Voids
-                    *)
                     yield! encodeScore                          // score
                         infoSet.Player infoSet.Deal.Score
                 |]
