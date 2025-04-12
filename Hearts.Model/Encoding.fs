@@ -1,5 +1,6 @@
 ﻿namespace Hearts.Model
 
+open System.Collections
 open PlayingCards
 open Hearts
 
@@ -20,9 +21,16 @@ module Card =
         index
 
 /// Encoded value for input to a model.
-type Encoding = byte[]
+type Encoding = BitArray
 
 module Encoding =
+
+    /// Converts encoded bits to float32.
+    let toFloat32 (bits : BitArray) =
+        [|
+            for i = 0 to bits.Length - 1 do
+                if bits[i] then 1f else 0f
+        |]
 
     /// Encodes the given (card, value) pairs as a
     /// vector in the deck size.
@@ -43,9 +51,14 @@ module Encoding =
     /// Encodes the given cards as a multi-hot vector
     /// in the deck size.
     let private encodeCards cards =
-        cards
-            |> Seq.map (fun card -> card, 1uy)
-            |> encodeCardValues
+        let cardIndexes =
+            cards
+                |> Seq.map Card.toIndex
+                |> set
+        [|
+            for index = 0 to Card.numCards - 1 do
+                cardIndexes.Contains(index)
+        |]
 
     module Exchange =
 
@@ -54,8 +67,7 @@ module Encoding =
         let private encodeDirection dir =
             [|
                 for d in Enum.getValues<ExchangeDirection> do
-                    if d = dir then 1uy
-                    else 0uy
+                    d = dir
             |]
  
         /// Total encoded length of an exchange info set.
@@ -67,7 +79,7 @@ module Encoding =
         /// Encodes the given exchange info set as a vector.
         let encode infoSet : Encoding =
             let encoded =
-                [|
+                BitArray [|
                     yield! encodeCards infoSet.Hand      // current player's unpassed cards
                     yield! encodeDirection               // exchange direction
                         infoSet.Deal.ExchangeDirection
@@ -127,8 +139,7 @@ module Encoding =
             assert(score.ScoreMap.Count = Seat.numSeats)
             [|
                 for seat in Seat.cycle player do
-                    if score.ScoreMap[seat] > 0 then 1uy
-                    else 0uy
+                    score.ScoreMap[seat] > 0
             |]
 
         /// Total encoded length of a playout info set.
@@ -152,7 +163,7 @@ module Encoding =
                 infoSet.Deal.UnplayedCards - infoSet.Hand
             let trickOpt = infoSet.Deal.CurrentTrickOpt
             let encoded =
-                [|
+                BitArray [|
                     yield! encodeCards infoSet.Hand             // current player's hand
                     yield! encodeCards unseen                   // unplayed cards not in current player's hand
                     (*
