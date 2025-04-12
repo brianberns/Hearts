@@ -101,11 +101,9 @@ module AdvantageModel =
             let encoded =
                 infoSets
                     |> Array.map (
-                        encode >> Encoding.toByteArray)
+                        encode >> Encoding.toFloat32)
                     |> array2D
-            tensor(
-                encoded, device = model.Device,
-                dtype = ScalarType.Float32)
+            tensor(encoded, device = model.Device)
         input --> model
 
 /// Model used for learning exchange advantages.

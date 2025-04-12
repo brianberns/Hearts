@@ -25,11 +25,11 @@ type Encoding = BitArray
 
 module Encoding =
 
-    /// Converts encoded bits to bytes.
-    let toByteArray (bits : BitArray) =
+    /// Converts encoded bits to float32.
+    let toFloat32 (bits : BitArray) =
         [|
             for i = 0 to bits.Length - 1 do
-                if bits[i] then 1uy else 0uy
+                if bits[i] then 1f else 0f
         |]
 
     /// Encodes the given (card, value) pairs as a

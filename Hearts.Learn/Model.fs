@@ -49,7 +49,7 @@ module AdvantageModel =
     type private SubBatch =
         {
             /// Encoded input rows.
-            Inputs : byte array2d
+            Inputs : float32 array2d
 
             /// Target result rows.
             Targets : float32 array2d
@@ -96,7 +96,7 @@ module AdvantageModel =
                     let inputs, targets, weights =
                         samples
                             |> Array.map (fun sample ->
-                                Encoding.toByteArray sample.Encoding,
+                                Encoding.toFloat32 sample.Encoding,
                                 sample.Regrets,
                                 Seq.singleton sample.Weight)
                             |> Array.unzip3
@@ -111,8 +111,7 @@ module AdvantageModel =
         use inputs =
             tensor(
                 subbatch.Inputs,
-                device = settings.Device,
-                dtype = ScalarType.Float32)
+                device = settings.Device)
         use targets =
             tensor(
                 subbatch.Targets,
