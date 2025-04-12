@@ -96,7 +96,7 @@ module AdvantageModel =
                     let inputs, targets, weights =
                         samples
                             |> Array.map (fun sample ->
-                                sample.Encoding,
+                                Encoding.toByteArray sample.Encoding,
                                 sample.Regrets,
                                 Seq.singleton sample.Weight)
                             |> Array.unzip3
