@@ -129,7 +129,10 @@ type PlayoutModel(hiddenSize, numHiddenLayers, device) =
 /// Model used for learning Hearts advantages.
 type HeartsModel =
     {
+        /// Exchange model.
         ExchangeModel : ExchangeModel
+
+        /// Playout model.
         PlayoutModel : PlayoutModel
     }
 
