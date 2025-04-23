@@ -89,7 +89,8 @@ module AdvantageModel =
         use input =
             let encoded =
                 infoSets
-                    |> Array.map Encoding.encode
+                    |> Array.map (
+                        Encoding.encode >> Encoding.toByteArray)
                     |> array2D
             tensor(
                 encoded, device = model.Device,
