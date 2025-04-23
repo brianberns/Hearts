@@ -58,6 +58,7 @@ module Trainer =
                             let rng = Random()   // each thread has its own RNG
                             Traverse.traverse iter deal rng)
                         |> Inference.complete modelOpt
+                GC.Collect()   // clean up continuations
 
                 settings.Writer.add_scalar(
                     $"advantage samples/iter%03d{iter}",
