@@ -1,5 +1,7 @@
 ﻿namespace Hearts.Model
 
+open System
+
 open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
@@ -45,21 +47,20 @@ module Strategy =
             |> Encoding.encodeCardValues
             |> DenseVector.ofArray
 
-    /// Computes strategies for the given info sets using
-    /// the given model.
-    let private getFromAdvantage model infoSets encode =
+    /// Computes strategies for the given info sets using the
+    /// given advantage model.
+    let getFromAdvantage model infoSets =
 
         if Array.length infoSets > 0 then
 
                 // run model on GPU
             use advantages =
-                AdvantageModel.getAdvantages
-                    infoSets encode model
+                AdvantageModel.getAdvantages infoSets model
             assert(advantages.shape[0] = infoSets.Length)
 
                 // access data on CPU
             let nCols = int advantages.shape[1]
-            assert(nCols = Card.numCards)
+            assert(nCols = Model.outputSize)
             let data =
                 use accessor = advantages.data<float32>()
                 accessor.ToArray()
@@ -74,59 +75,14 @@ module Strategy =
 
         else Array.empty
 
-    /// Computes strategies for the given info sets using
-    /// the given model.
-    let getFromModel model infoSets =
-
-            // partition info sets
-        let passPairs, playPairs =
-            infoSets
-                |> Array.indexed
-                |> Array.partition (fun (_, infoSet) ->
-                    infoSet.LegalActionType = ActionType.Pass)
-        let passIdxs, passInfoSets = Array.unzip passPairs
-        let playIdxs, playInfoSets = Array.unzip playPairs
-
-            // get strategies for each partition
-        let passStrats =
-            getFromAdvantage
-                model.ExchangeModel
-                passInfoSets
-                Encoding.Exchange.encode
-        let playStrats =
-            getFromAdvantage
-                model.PlayoutModel
-                playInfoSets
-                Encoding.Playout.encode
-
-            // weave strategies back together in the right order
-        let strategies =
-            (0, 0, 0)
-                |> Array.unfold (fun (stratIdx, passIdx, playIdx) ->
-                    if passIdx < passIdxs.Length
-                        && passIdxs[passIdx] = stratIdx then
-                        let strat = passStrats[passIdx]
-                        let state = stratIdx + 1, passIdx + 1, playIdx
-                        Some (strat, state)
-                    elif playIdx < playIdxs.Length
-                        && playIdxs[playIdx] = stratIdx then
-                        let strat = playStrats[playIdx]
-                        let state = stratIdx + 1, passIdx, playIdx + 1
-                        Some (strat, state)
-                    else
-                        assert(stratIdx = infoSets.Length)
-                        None)
-        assert(strategies.Length = infoSets.Length)
-        strategies
-
     /// Creates a Hearts player using the given model.
     let createPlayer model =
 
-        let rng = System.Random()   // each player has its own RNG
+        let rng = Random()   // each player has its own RNG
 
         let act infoSet =
             let strategy =
-                getFromModel model [|infoSet|]
+                getFromAdvantage model [|infoSet|]
                     |> Array.exactlyOne
             Vector.sample rng strategy
                 |> Array.get infoSet.LegalActions

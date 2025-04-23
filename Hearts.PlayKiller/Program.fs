@@ -1,30 +1,17 @@
 ﻿namespace Hearts.PlayKiller
 
-open Hearts
 open Hearts.Model
 
 module Program =
 
     let model =
-
-        let exchangeModel =
-            new ExchangeModel(
-                hiddenSize = Encoding.Exchange.encodedLength * 6,
+        let model =
+            new AdvantageModel(
+                hiddenSize = Encoding.encodedLength * 6,
                 numHiddenLayers = 1,
                 device = TorchSharp.torch.CPU)
-        exchangeModel.load("ExchangeModel.pt") |> ignore
-
-        let playoutModel =
-            new PlayoutModel(
-                hiddenSize = Encoding.Playout.encodedLength * 6,
-                numHiddenLayers = 1,
-                device = TorchSharp.torch.CPU)
-        playoutModel.load("PlayoutModel.pt") |> ignore
-
-        {
-            ExchangeModel = exchangeModel
-            PlayoutModel = playoutModel
-        }
+        model.load("AdvantageModel.pt") |> ignore
+        model
 
     let player = Strategy.createPlayer model
 

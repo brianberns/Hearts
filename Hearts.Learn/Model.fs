@@ -8,8 +8,6 @@ open FSharp.Core.Operators   // reclaim "float32" and other F# operators
 
 open MathNet.Numerics.LinearAlgebra
 
-open PlayingCards
-open Hearts
 open Hearts.Model
 
 /// An observed advantage event.
@@ -28,17 +26,13 @@ type AdvantageSample =
 
 module AdvantageSample =
 
-    /// Creates a sample.
+    /// Creates an advantage sample.
     let create infoSet regrets iteration =
-        assert(Vector.length regrets = Card.numCards)
+        assert(Vector.length regrets = Model.outputSize)
         assert(iteration > 0)
         assert(iteration <= settings.NumIterations)
-        let encode =
-            match infoSet.LegalActionType with
-                | ActionType.Pass -> Encoding.Exchange.encode
-                | ActionType.Play -> Encoding.Playout.encode
         {
-            Encoding = encode infoSet
+            Encoding = Encoding.encode infoSet
             Regrets = regrets
             Weight = float32 iteration |> sqrt
         }
@@ -163,7 +157,7 @@ module AdvantageModel =
         loss
 
     /// Trains the given model using the given samples.
-    let train iter samples (model : Model) =
+    let train iter samples (model : AdvantageModel) =
 
             // prepare training data
         let batches = createBatches samples
@@ -182,6 +176,6 @@ module AdvantageModel =
                         trainBatch model batch criterion optimizer
                 |]
             settings.Writer.add_scalar(
-                $"loss/iter%03d{iter}/{model.GetName().ToLower()}",
+                $"advantage loss/iter%03d{iter}",
                 loss, epoch)
         model.eval()

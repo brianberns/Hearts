@@ -68,114 +68,86 @@ module Encoding =
                 d = dir
         |]
 
-    module Exchange =
- 
-        /// Total encoded length of an exchange info set.
-        let encodedLength =
-            Card.numCards                           // current player's unpassed cards
-                + ExchangeDirection.numDirections   // exchange direction
-                + Card.numCards                     // outgoing pass, so far
+    /// Encodes the given pass as a multi-hot vector in
+    /// the deck size.
+    let private encodePass passOpt =
+        let cards : Pass =
+            passOpt
+                |> Option.defaultValue Set.empty
+        assert(cards.Count <= Pass.numCards)
+        encodeCards cards
 
-        /// Encodes the given exchange info set as a vector.
-        let encode infoSet : Encoding =
-            let encoded =
-                BitArray [|
-                    yield! encodeCards infoSet.Hand      // current player's unpassed cards
-                    yield! encodeExchangeDirection       // exchange direction
-                        infoSet.Deal.ExchangeDirection
-                    match infoSet.OutgoingPassOpt with   // outgoing pass, so far
-                        | Some pass ->
-                            assert(
-                                infoSet.Hand.Count + pass.Count
-                                    = ClosedDeal.numCardsPerHand)
-                            yield! encodeCards pass
-                        | None -> failwith "Unexpected"
-                |]
-            assert(encoded.Length = encodedLength)
-            encoded
+    /// Encodes each card in the given current trick as
+    /// a one-hot vector in the deck size and concatenates
+    /// those vectors.
+    let private encodeTrick trickOpt =
+        let cards =
+            trickOpt
+                |> Option.map (fun trick ->
+                    trick.Cards
+                        |> List.rev
+                        |> List.toArray)
+                |> Option.defaultValue Array.empty
+        assert(cards.Length < Seat.numSeats)
+        [|
+            for iCard = 0 to Seat.numSeats - 2 do
+                yield!
+                    if iCard < cards.Length then
+                        Some cards[iCard]
+                    else None
+                    |> Option.toArray
+                    |> encodeCards
+        |]
 
-    module Playout =
+    /// Encodes the given voids as a multi-hot vector in the
+    /// number of suits times the number of other seats.
+    let private encodeVoids player voids =
+        [|
+            for suit in Enum.getValues<Suit> do
+                let seats =
+                    Seat.cycle player |> Seq.skip 1
+                for seat in seats do
+                    Set.contains (seat, suit) voids
+        |]
 
-        /// Encodes the given pass as a multi-hot vector in
-        /// the deck size.
-        let private encodePass passOpt =
-            let cards : Pass =
-                passOpt
-                    |> Option.defaultValue Set.empty
-            assert(cards.Count <= Pass.numCards)
-            encodeCards cards
+    /// Encodes the given score as a multi-hot vector in the
+    /// number of seats.
+    let private encodeScore player score =
+        assert(score.ScoreMap.Count = Seat.numSeats)
+        [|
+            for seat in Seat.cycle player do
+                score.ScoreMap[seat] > 0
+        |]
 
-        /// Encodes each card in the given current trick as
-        /// a one-hot vector in the deck size and concatenates
-        /// those vectors.
-        let private encodeTrick trickOpt =
-            let cards =
-                trickOpt
-                    |> Option.map (fun trick ->
-                        trick.Cards
-                            |> List.rev
-                            |> List.toArray)
-                    |> Option.defaultValue Array.empty
-            assert(cards.Length < Seat.numSeats)
-            [|
-                for iCard = 0 to Seat.numSeats - 2 do
-                    yield!
-                        if iCard < cards.Length then
-                            Some cards[iCard]
-                        else None
-                        |> Option.toArray
-                        |> encodeCards
+    /// Total encoded length of an info set.
+    let encodedLength =
+        Card.numCards                                 // current player's hand
+            + Card.numCards                           // unplayed cards not in current player's hand
+            + ExchangeDirection.numDirections         // exchange direction
+            + Card.numCards                           // outgoing pass
+            + Card.numCards                           // incoming pass
+            + ((Seat.numSeats - 1) * Card.numCards)   // current trick
+            + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
+            + Seat.numSeats                           // score
+
+    /// Encodes the given info set as a vector.
+    let encode infoSet : Encoding =
+        let unseen =
+            infoSet.Deal.UnplayedCards - infoSet.Hand
+        let trickOpt = infoSet.Deal.CurrentTrickOpt
+        let encoded =
+            BitArray [|
+                yield! encodeCards infoSet.Hand             // current player's hand
+                yield! encodeCards unseen                   // unplayed cards not in current player's hand
+                yield! encodeExchangeDirection              // exchange direction
+                    infoSet.Deal.ExchangeDirection
+                yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
+                yield! encodePass infoSet.IncomingPassOpt   // incoming pass
+                yield! encodeTrick trickOpt                 // current trick
+                yield! encodeVoids                          // voids
+                    infoSet.Player infoSet.Deal.Voids
+                yield! encodeScore                          // score
+                    infoSet.Player infoSet.Deal.Score
             |]
-
-        /// Encodes the given voids as a multi-hot vector in the
-        /// number of suits times the number of other seats.
-        let private encodeVoids player voids =
-            [|
-                for suit in Enum.getValues<Suit> do
-                    let seats =
-                        Seat.cycle player |> Seq.skip 1
-                    for seat in seats do
-                        Set.contains (seat, suit) voids
-            |]
-
-        /// Encodes the given score as a multi-hot vector in the
-        /// number of seats.
-        let private encodeScore player score =
-            assert(score.ScoreMap.Count = Seat.numSeats)
-            [|
-                for seat in Seat.cycle player do
-                    score.ScoreMap[seat] > 0
-            |]
-
-        /// Total encoded length of a playout info set.
-        let encodedLength =
-            Card.numCards                                 // current player's hand
-                + Card.numCards                           // unplayed cards not in current player's hand
-                + ExchangeDirection.numDirections         // exchange direction
-                + Card.numCards                           // outgoing pass
-                + Card.numCards                           // incoming pass
-                + ((Seat.numSeats - 1) * Card.numCards)   // current trick
-                + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
-                + Seat.numSeats                           // score
-
-        /// Encodes the given playout info set as a vector.
-        let encode infoSet : Encoding =
-            let unseen =
-                infoSet.Deal.UnplayedCards - infoSet.Hand
-            let trickOpt = infoSet.Deal.CurrentTrickOpt
-            let encoded =
-                BitArray [|
-                    yield! encodeCards infoSet.Hand             // current player's hand
-                    yield! encodeCards unseen                   // unplayed cards not in current player's hand
-                    yield! encodeExchangeDirection              // exchange direction
-                        infoSet.Deal.ExchangeDirection
-                    yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
-                    yield! encodePass infoSet.IncomingPassOpt   // incoming pass
-                    yield! encodeTrick trickOpt                 // current trick
-                    yield! encodeVoids                          // voids
-                        infoSet.Player infoSet.Deal.Voids
-                    yield! encodeScore                          // score
-                        infoSet.Player infoSet.Deal.Score
-                |]
-            assert(encoded.Length = encodedLength)
-            encoded
+        assert(encoded.Length = encodedLength)
+        encoded

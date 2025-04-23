@@ -16,27 +16,14 @@ module Model =
 
     /// Connects to Hearts model.
     let connect dir =
-
-        let exchangeModel =
-            new ExchangeModel(
-                hiddenSize = Encoding.Exchange.encodedLength * 6,
+        let model =
+            new AdvantageModel(
+                hiddenSize = Encoding.encodedLength * 6,
                 numHiddenLayers = 1,
                 device = TorchSharp.torch.CPU)
-        let path = Path.Combine(dir, "ExchangeModel.pt")
-        exchangeModel.load(path) |> ignore
-
-        let playoutModel =
-            new PlayoutModel(
-                hiddenSize = Encoding.Playout.encodedLength * 6,
-                numHiddenLayers = 1,
-                device = TorchSharp.torch.CPU)
-        let path = Path.Combine(dir, "PlayoutModel.pt")
-        playoutModel.load(path) |> ignore
-
-        {
-            ExchangeModel = exchangeModel
-            PlayoutModel = playoutModel
-        }
+        let path = Path.Combine(dir, "AdvantageModel.pt")
+        model.load(path) |> ignore
+        model
 
 module Remoting =
 
@@ -50,7 +37,7 @@ module Remoting =
                 fun infoSet ->
                     async {
                         let strategy =
-                            Strategy.getFromModel
+                            Strategy.getFromAdvantage
                                 model
                                 [|infoSet|]
                                 |> Array.exactlyOne
@@ -60,7 +47,7 @@ module Remoting =
                 fun infoSet ->
                     async {
                         let strategy =
-                            Strategy.getFromModel
+                            Strategy.getFromAdvantage
                                 model
                                 [|infoSet|]
                                 |> Array.exactlyOne

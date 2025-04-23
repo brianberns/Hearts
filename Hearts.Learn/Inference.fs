@@ -1,6 +1,5 @@
 ﻿namespace Hearts.Learn
 
-open Hearts
 open Hearts.Model
 
 module Array =
@@ -20,11 +19,11 @@ module Inference =
         match modelOpt with
 
                 // batch inference
-            | Some model ->
+            | Some (model : AdvantageModel) ->
                 infoSets
                     |> Array.chunkBySize settings.AdvantageSubBatchSize
                     |> Array.collect (
-                        Strategy.getFromModel model)
+                        Strategy.getFromAdvantage model)
 
                 // no model yet, random strategies
             | None ->
@@ -77,8 +76,8 @@ module Inference =
     /// Extract samples from the given complete node.
     let rec private getSamples comp =
         [|
-            match comp.SamplePairOpt with
-                | Some (sample, actionType) -> sample, actionType
+            match comp.SampleOpt with
+                | Some sample -> sample
                 | None -> ()
             for child in comp.Children do
                 yield! getSamples child
@@ -120,11 +119,6 @@ module Inference =
                         | GetUtility _ -> None
                         | Complete _ as node -> Some node)
 
-        let passPairs, playPairs =
-            loop 0 [| nodes |]
-                |> Array.exactlyOne
-                |> Array.collect (getComp >> getSamples)
-                |> Array.partition (fun (_, actionType) ->
-                    actionType = ActionType.Pass)
-        Array.map fst passPairs,
-        Array.map fst playPairs
+        loop 0 [| nodes |]
+            |> Array.exactlyOne
+            |> Array.collect (getComp >> getSamples)
