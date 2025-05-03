@@ -73,7 +73,7 @@ module Settings =
         let settings =
             {
                 HiddenSize = Encoding.encodedLength * 6
-                NumHiddenLayers = 1
+                NumHiddenLayers = 2
                 LearningRate = 1e-3
                 SampleDecay = 0.17
                 NumAdvantageTrainEpochs = 500
@@ -82,7 +82,7 @@ module Settings =
                 NumAdvantageSamples = 100_000_000
                 NumTraversals = 8000
                 TraversalBatchSize = 200
-                NumIterations = 25
+                NumIterations = 50
                 NumEvaluationDeals = 20000
                 Device = torch.CUDA
                 ModelDirPath = "./Models"
