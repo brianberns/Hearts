@@ -33,7 +33,7 @@ and GetUtility =
 /// Final node state.
 and Complete =
     {
-        /// Per-action utility of this node.
+        /// Per-player utility of this node.
         Utilities : float32[]
 
         /// Sample representing this node.
