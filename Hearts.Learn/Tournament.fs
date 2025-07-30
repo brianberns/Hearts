@@ -5,7 +5,7 @@ open Hearts
 
 module Tournament =
 
-    /// Creates and plays one deal.
+    /// Plays one deal.
     let playDeal (playerMap : Map<_, _>) deal =
 
         let rec loop deal score =
