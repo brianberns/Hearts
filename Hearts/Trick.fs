@@ -23,7 +23,8 @@ type Trick =
         /// Play that takes this trick, so far, if any.
         HighPlayOpt : Option<Seat * Card>
     }
-        /// Suit of first card played in this trick, if any.
+
+    /// Suit of first card played in this trick, if any.
     member trick.SuitLedOpt =
         trick.HighPlayOpt
             |> Option.map (snd >> Card.suit)
