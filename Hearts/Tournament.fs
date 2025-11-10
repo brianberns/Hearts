@@ -3,6 +3,29 @@
 open PlayingCards
 open Hearts
 
+/// Model Hearts as a zero-sum game.
+module ZeroSum =
+
+    /// Gets the payoff for the given raw score from each
+    /// player's point of view.
+    let getPayoff score =
+        let points = score.ScoreMap.Values
+        assert(points.Count = Seat.numSeats)
+        let sum = Seq.sum points
+        [|
+            for pt in points do
+                let otherAvg =
+                    float32 (sum - pt)
+                        / float32 (Seat.numSeats - 1)
+                otherAvg - float32 pt
+        |]
+
+    /// Computes the payoff for the given deal, if it is
+    /// complete.
+    let tryGetPayoff deal =
+        Game.tryUpdateScore deal Score.zero
+            |> Option.map getPayoff
+
 module Tournament =
 
     /// Plays one deal.
@@ -28,7 +51,7 @@ module Tournament =
             |> Seq.reduce (+)
 
     /// Runs a tournament between two players.
-    let run rng champion challenger =
+    let run rng numDeals champion challenger =
         let challengerSeat = Seat.South
         let playerMap =
             Enum.getValues<Seat>
@@ -39,17 +62,8 @@ module Tournament =
                     seat, player)
                 |> Map
         let score =
-            playDeals rng
-                settings.NumEvaluationDeals
-                playerMap
+            playDeals rng numDeals playerMap
         let payoff =
             (ZeroSum.getPayoff score)[int challengerSeat]
-                / float32 settings.NumEvaluationDeals
-
-        if settings.Verbose then
-            printfn "\nTournament:"
-            for (KeyValue(seat, points)) in score.ScoreMap do
-                printfn $"   %-6s{string seat}: {points}"
-            printfn $"   Payoff: %0.5f{payoff}"
-
-        payoff
+                / float32 numDeals
+        score, payoff
