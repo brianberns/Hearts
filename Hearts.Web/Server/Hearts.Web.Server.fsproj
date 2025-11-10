@@ -13,13 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fable.Remoting.Suave" Version="4.40.0" />
+    <PackageReference Include="Fable.Remoting.Suave" Version="4.43.0" />
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Suave" Version="2.6.2">
       <ExcludeAssets>runtime</ExcludeAssets>
 	</PackageReference>
-    <PackageReference Include="TorchSharp-cpu" Version="0.105.0" />
+    <PackageReference Include="TorchSharp-cpu" Version="0.105.1" />
 	<PackageReference Update="FSharp.Core">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>

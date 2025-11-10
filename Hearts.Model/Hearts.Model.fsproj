@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
-    <PackageReference Include="TorchSharp" Version="0.105.0" />
+    <PackageReference Include="TorchSharp" Version="0.105.1" />
   </ItemGroup>
 
   <ItemGroup>
