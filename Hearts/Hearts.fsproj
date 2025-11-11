@@ -16,6 +16,7 @@
     <Compile Include="Exchange.fs" />
     <Compile Include="OpenDeal.fs" />
     <Compile Include="Game.fs" />
+    <Compile Include="Tournament.fs" />
   </ItemGroup>
 
   <ItemGroup>

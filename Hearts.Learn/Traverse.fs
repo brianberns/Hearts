@@ -80,29 +80,6 @@ module Node =
             Children = children
         }
 
-/// Model Hearts as a zero-sum game.
-module private ZeroSum =
-
-    /// Gets the payoff for the given deal score from each
-    /// player's point of view.
-    let getPayoff score =
-        let points = score.ScoreMap.Values
-        assert(points.Count = Seat.numSeats)
-        let sum = Seq.sum points
-        [|
-            for pt in points do
-                let otherAvg =
-                    float32 (sum - pt)
-                        / float32 (Seat.numSeats - 1)
-                otherAvg - float32 pt
-        |]
-
-    /// Computes the payoff for the given deal, if it is
-    /// complete.
-    let tryGetPayoff deal =
-        Game.tryUpdateScore deal Score.zero
-            |> Option.map getPayoff
-
 module Traverse =
 
     /// Evaluates the utility of the given deal.

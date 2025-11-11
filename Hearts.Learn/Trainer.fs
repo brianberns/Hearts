@@ -124,13 +124,19 @@ module Trainer =
     /// standard.
     let private evaluate iter (model : AdvantageModel) =
 
-        let avgPayoff =
+        let score, payoff =
             Tournament.run
                 (Random(0))       // use repeatable test set, not seen during training
+                settings.NumEvaluationDeals
                 Trickster.player
                 (Strategy.createPlayer model)
+        if settings.Verbose then
+            printfn "\nTournament:"
+            for (KeyValue(seat, points)) in score.ScoreMap do
+                printfn $"   %-6s{string seat}: {points}"
+            printfn $"   Payoff: %0.5f{payoff}"
         settings.Writer.add_scalar(
-            $"advantage tournament", avgPayoff, iter)
+            $"advantage tournament", payoff, iter)
 
     /// Trains a single iteration.
     let private trainIteration iter state =

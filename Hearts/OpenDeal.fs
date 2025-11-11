@@ -1,5 +1,6 @@
 ﻿namespace Hearts
 
+open System
 open PlayingCards
 
 /// An open deal contains all information about a deal,
@@ -204,6 +205,45 @@ module OpenDeal =
                     let unplayedCards = unplayedCards.Remove(card)
                     deal.UnplayedCardMap |> Map.add seat unplayedCards
         }
+
+    /// Takes the given action in the given deal.
+    let addAction actionType action deal =
+        match actionType with
+
+            | ActionType.Pass ->
+
+                    // add pass to deal
+                let deal = addPass action deal
+
+                    // start play?
+                let canStartPlay =
+                    deal.ExchangeOpt
+                        |> Option.map Exchange.isComplete
+                        |> Option.defaultValue true   // no exchange
+                if canStartPlay then
+                    startPlay deal
+                else deal
+
+            | ActionType.Play ->
+                addPlay action deal
+
+    /// Plays the given number of deals in parallel.
+    let generate (rng : Random) numDeals playFun =
+        Array.init numDeals (fun iDeal ->
+            let deck = Deck.shuffle rng
+            let dealer =
+                enum<Seat> (iDeal % Seat.numSeats)
+            let dir =
+                enum<ExchangeDirection>
+                    (iDeal % ExchangeDirection.numDirections)
+            deck, dealer, dir)
+            |> Array.Parallel.map (fun (deck, dealer, dir) ->
+                let deal =
+                    let deal = fromDeck dealer dir deck
+                    if dir = ExchangeDirection.Hold then   // can start play immediately?
+                        startPlay deal
+                    else deal
+                playFun deal)
 
     /// Total number of points in a deal.
     let numPointsPerDeal =
