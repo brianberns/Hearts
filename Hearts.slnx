@@ -10,6 +10,7 @@
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />
   <Project Path="Hearts.PlayKiller/Hearts.PlayKiller.fsproj" />
+  <Project Path="Hearts.Tree/Hearts.Tree.fsproj" />
   <Project Path="Hearts.Web/Client/src/Hearts.Web.Client.fsproj" />
   <Project Path="Hearts.Web/Harness/Hearts.Web.Harness.fsproj" />
   <Project Path="Hearts.Web/Server/Hearts.Web.Server.fsproj" />

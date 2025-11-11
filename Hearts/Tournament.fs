@@ -21,7 +21,7 @@ module ZeroSum =
         |]
 
     /// Computes the payoff for the given deal, if it is
-    /// complete.
+    /// inevitable.
     let tryGetPayoff deal =
         Game.tryUpdateScore deal Score.zero
             |> Option.map getPayoff
