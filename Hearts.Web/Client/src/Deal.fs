@@ -241,8 +241,7 @@ module Deal =
                         console.log(
                             $"{Seat.toString seat} takes {persState.Deal.ClosedDeal.Score[seat]} point(s)")
                     let shooterOpt =
-                        Game.tryFindShooter
-                            persState.Deal.ClosedDeal.Score
+                        ClosedDeal.tryFindShooter persState.Deal.ClosedDeal
                     do! dealOver surface shooterOpt
                         |> Async.AwaitPromise
 

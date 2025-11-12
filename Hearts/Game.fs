@@ -4,20 +4,6 @@ open PlayingCards
 
 module Game =
 
-    /// Answers the seat of the player who shot the moon, if
-    /// one did. The given score must not already include the
-    /// shoot reward.
-    let tryFindShooter dealScore =
-        option {
-            assert(Score.sum dealScore = OpenDeal.numPointsPerDeal)
-            let! seat, _ =
-                dealScore.ScoreMap
-                    |> Map.toSeq
-                    |> Seq.tryFind (fun (_, points) ->
-                        points = OpenDeal.numPointsPerDeal)
-            return seat
-        }
-
     /// Finds leaders in the given game score.
     let private findGameLeaders gameScore =
         let minPoints = Seq.min gameScore.ScoreMap.Values
@@ -53,7 +39,7 @@ module Game =
                     |> Seq.map (fun seat ->
                         let points =
                             if seat = shooter then 0
-                            else OpenDeal.numPointsPerDeal
+                            else ClosedDeal.numPointsPerDeal
                         seat, points)
                     |> toScore
             gameScore + dealScore
@@ -68,7 +54,7 @@ module Game =
                     |> Seq.map (fun seat ->
                         let points =
                             if seat = shooter then
-                                -OpenDeal.numPointsPerDeal
+                                -ClosedDeal.numPointsPerDeal
                             else 0
                         seat, points)
                     |> toScore
@@ -80,8 +66,8 @@ module Game =
         option {
             let! inevitable = OpenDeal.tryFindInevitable deal
             let dealScore = deal.ClosedDeal.Score + inevitable
-            assert(Score.sum dealScore = OpenDeal.numPointsPerDeal)
-            return tryFindShooter dealScore
+            assert(Score.sum dealScore = ClosedDeal.numPointsPerDeal)
+            return ClosedDeal.tryFindScoreShooter dealScore
                 |> Option.map (applyShootReward gameScore)
                 |> Option.defaultValue (gameScore + dealScore)
         }

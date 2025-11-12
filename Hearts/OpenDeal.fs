@@ -245,11 +245,6 @@ module OpenDeal =
                     else deal
                 playFun deal)
 
-    /// Total number of points in a deal.
-    let numPointsPerDeal =
-        Card.allCards
-            |> Seq.sumBy Card.pointValue
-
     /// Determines the inevitable additional score of the given deal,
     /// if possible.
     let tryFindInevitable deal =
@@ -274,7 +269,8 @@ module OpenDeal =
                 Some Score.zero
 
                 // all points have been taken?
-            elif Score.sum deal.ClosedDeal.Score = numPointsPerDeal then
+            elif Score.sum deal.ClosedDeal.Score
+                = ClosedDeal.numPointsPerDeal then
                 Some Score.zero
 
                 // current player takes all remaining tricks?
