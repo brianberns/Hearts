@@ -8,7 +8,7 @@ type Pass = Set<Card>
 module Pass =
 
     /// Number of cards passed by each player.
-    let numCards = 3
+    let numCards = 2
 
     /// Empty pass to which cards will be added.
     let empty : Pass = Set.empty
