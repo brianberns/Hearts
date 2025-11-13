@@ -1,7 +1,10 @@
 ﻿namespace Hearts.Cfr
 
 open System
+open System.Diagnostics
+
 open FastCfr
+
 open Hearts
 
 module Program =
@@ -51,14 +54,22 @@ module Program =
 
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
 
-        let numDeals = 10
-        let chunkSize = 2
+        let chunkSize = 12
+        let numDeals = chunkSize * 10
+        printfn $"Number of deals: {numDeals}"
+        printfn $"Chunk size: {chunkSize}"
+
         let rng = Random(0)
         let utility, infoSetMap =
             OpenDeal.generate rng numDeals createGameState
                 |> Seq.chunkBySize chunkSize
+                |> Seq.mapi (fun iChunk chunk ->
+                    printfn $"Chunk {iChunk}"
+                    chunk)
                 |> Trainer.train
         printfn $"Utility: {utility}"
         printfn $"Info set count: {infoSetMap.Count}"
 
+    let stopwatch = Stopwatch.StartNew()
     run ()
+    printfn $"Elapsed time: {stopwatch.Elapsed}"
