@@ -6,36 +6,59 @@ open Hearts
 
 module Program =
 
-    let rec createGameState deal =
-        match ZeroSum.tryGetPayoff deal with
-            | Some payoff ->
-                TerminalGameState.create
-                    0
-                    (float payoff[int Seat.South])
-                    |> Terminal
+    let private focusSeat = Seat.South
+    let private focusPlayerIdx = 0
+    let private _otherPlayerIdx = 1
+
+    let private createTerminalGameState score =
+        let focusPoints, otherPoints =
+            ((0, 0), Map.toSeq score.ScoreMap)
+                ||> Seq.fold (fun (focusPoints, otherPoints) (seat, point) ->
+                    if seat = focusSeat then
+                        focusPoints + point, otherPoints
+                    else
+                        focusPoints, otherPoints + point)
+        let focusPayoff =
+            (float otherPoints / float (Seat.numSeats - 1))
+                - float focusPoints
+        TerminalGameState.create focusPlayerIdx focusPayoff
+            |> Terminal
+
+    let rec private createNonTerminalGameState deal =
+        let infoSet = OpenDeal.currentInfoSet deal
+        NonTerminal {
+            ActivePlayerIdx =
+                if infoSet.Player = Seat.South then 0
+                else 1
+            InfoSetKey = infoSet
+            LegalActions = infoSet.LegalActions
+            AddAction =
+                fun action ->
+                    let deal =
+                        OpenDeal.addAction
+                            infoSet.LegalActionType action deal
+                    createGameState deal
+        }
+
+    and private createGameState deal =
+        match Game.tryUpdateScore deal Score.zero with
+            | Some score ->
+                createTerminalGameState score
             | None ->
-                let infoSet = OpenDeal.currentInfoSet deal
-                NonTerminal {
-                    ActivePlayerIdx =
-                        if infoSet.Player = Seat.South then 0
-                        else 1
-                    InfoSetKey = infoSet
-                    LegalActions = infoSet.LegalActions
-                    AddAction =
-                        fun action ->
-                            let deal =
-                                OpenDeal.addAction
-                                    infoSet.LegalActionType action deal
-                            createGameState deal
-                }
+                createNonTerminalGameState deal
 
-    printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
+    let run () =
 
-    let numDeals = 2
-    let chunkSize = 2
-    let rng = Random(0)
-    let utility, infoSetMap =
-        OpenDeal.generate rng numDeals createGameState
-            |> Seq.chunkBySize 100
-            |> Trainer.train
-    printfn $"{utility}"
+        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
+
+        let numDeals = 10
+        let chunkSize = 2
+        let rng = Random(0)
+        let utility, infoSetMap =
+            OpenDeal.generate rng numDeals createGameState
+                |> Seq.chunkBySize chunkSize
+                |> Trainer.train
+        printfn $"Utility: {utility}"
+        printfn $"Info set count: {infoSetMap.Count}"
+
+    run ()
