@@ -6,6 +6,7 @@
   <Folder Name="/Solution Items/">
     <File Path="README.md" />
   </Folder>
+  <Project Path="FastCfr/FastCfr/FastCfr.fsproj" />
   <Project Path="Hearts.Cfr/Hearts.Cfr.fsproj" Id="3911a9e5-b4b8-4a45-9512-3d7967001d11" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />
