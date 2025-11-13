@@ -54,8 +54,9 @@ module Program =
 
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
 
-        let chunkSize = 12
-        let numDeals = chunkSize * 10
+        let chunkSize = 16
+        let numChunks = 4
+        let numDeals = chunkSize * numChunks
         printfn $"Number of deals: {numDeals}"
         printfn $"Chunk size: {chunkSize}"
 
@@ -68,7 +69,19 @@ module Program =
                     chunk)
                 |> Trainer.train
         printfn $"Utility: {utility}"
-        printfn $"Info set count: {infoSetMap.Count}"
+
+        let visitCounts =
+            infoSetMap.Values
+                |> Seq.groupBy _.NumVisits
+                |> Seq.map (fun (nVisits, group) ->
+                    {|
+                        NumVisits = nVisits
+                        Count = Seq.length group
+                    |})
+                |> Seq.sortBy _.NumVisits
+        printfn "# visits, Count"
+        for visitCount in visitCounts do
+            printfn $"{visitCount.NumVisits}, {visitCount.Count}"
 
     let stopwatch = Stopwatch.StartNew()
     run ()
