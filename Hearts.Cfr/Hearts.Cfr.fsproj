@@ -13,4 +13,9 @@
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Hearts\Hearts.fsproj" />
+    <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
+  </ItemGroup>
+
 </Project>

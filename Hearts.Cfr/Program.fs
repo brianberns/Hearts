@@ -2,6 +2,7 @@
 
 open System
 open MathNet.Numerics.LinearAlgebra
+open Hearts
 
 /// An information set is a set of nodes in a game tree that are
 /// indistinguishable for a given player. This type gathers regrets
@@ -64,106 +65,65 @@ module InfoSetAcc =
     let getAverageStrategy infoSetAcc =
         normalize infoSetAcc.StrategySum
 
-module LeducCfrTrainer =
+module Trainer =
 
-    /// Obtains an info set accumulator corresponding to the given key.
-    let private getInfoSetAcc infoSetKey infoSetAccMap numActions =
-        match Map.tryFind infoSetKey infoSetAccMap with
-            | Some infoSetAcc ->
-                assert(infoSetAcc.RegretSum.Count = numActions)
-                assert(infoSetAcc.StrategySum.Count = numActions)
-                infoSetAcc
+    /// Obtains an accumulator for the given info set.
+    let private getAccumulator (infoSet : InformationSet) accumMap =
+        let nActions = infoSet.LegalActions.Length
+        match Map.tryFind infoSet accumMap with
+            | Some accum ->
+                assert(accum.RegretSum.Count = nActions)
+                assert(accum.StrategySum.Count = nActions)
+                accum
             | None ->
-                InfoSetAcc.zero numActions   // first visit
+                InfoSetAcc.zero nActions   // first visit
 
     /// Updates the active player's reach probability to reflect
     /// the probability of an action.
-    let private updateReachProbabilities reachProbs activePlayer actionProb =
+    let private updateReachProbabilities
+        reachProbs (activePlayer : Seat) actionProb =
         reachProbs
             |> Vector.mapi (fun i x ->
-                if i = activePlayer then
+                if i = int activePlayer then
                     x * actionProb
                 else x)
 
-    /// Negates opponent's utilties (assuming a zero-zum game).
-    let private getActiveUtilities utilities =
-        utilities
-            |> Seq.map (~-)
-            |> DenseVector.ofSeq
-
     /// Evaluates the utility of the given deal via counterfactual
     /// regret minimization.
-    let private cfr infoSetAccMap playerCards communityCard =
+    let private cfr accumMap (deal : OpenDeal) =
 
         /// Top-level CFR loop.
-        let rec loop (history : string) reachProbs =
-            let rounds = history.Split('d')
-
-                // game is over?
-            if LeducHoldem.isTerminal rounds then
-                let payoff =
-                    LeducHoldem.getPayoff
-                        playerCards
-                        communityCard
-                        rounds
-                float payoff, Array.empty
-
-                // first round is over?
-            elif LeducHoldem.isRoundEnd (Array.last rounds) then
-                let sign =
-                    match history with
-                        | "xbc" | "brc" -> -1.0
-                        | _ -> 1.0   // active player to play again
-                let utility, keyedInfoSetAccs =
-                    loop (history + "d") reachProbs
-                sign * utility, keyedInfoSetAccs
-
-                // player action
-            else
-                let activePlayer =
-                    (Array.last rounds).Length
-                        % LeducHoldem.numPlayers
-                let infoSetKey =
-                    sprintf "%s%s %s"
-                        playerCards[activePlayer]
-                        (if rounds.Length = 2 then communityCard
-                         else "")
-                        history
-                loopNonTerminal
-                    history
-                    activePlayer
-                    infoSetKey
-                    reachProbs
+        let rec loop reachProbs deal =
+            match ZeroSum.tryGetPayoff deal with
+                | Some payoff ->
+                    payoff, Array.empty
+                | None ->
+                    loopNonTerminal reachProbs deal
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal
-            history
-            activePlayer
-            infoSetKey
-            reachProbs =
+        and loopNonTerminal reachProbs deal =
 
-                // get info set for current state from this player's point of view
-            let actions = LeducHoldem.getLegalActions history
-            let infoSetAcc =
-                getInfoSetAcc infoSetKey infoSetAccMap actions.Length
-
-                // get player's current strategy for this info set
-            let strategy = InfoSetAcc.getStrategy infoSetAcc
+                // get current player's strategy for this info set
+            let infoSet = OpenDeal.currentInfoSet deal
+            let accum = getAccumulator infoSet accumMap
+            let strategy = InfoSetAcc.getStrategy accum
 
                 // get utility of each action
-            let actionUtilities, keyedInfoSetAccs =
-                let utilities, keyedInfoSetAccArrays =
-                    (actions, strategy.ToArray())
+            let actionUtilities, keyedAccums =
+                let utilities, keyedAccumArrays =
+                    (infoSet.LegalActions, strategy.ToArray())
                         ||> Array.map2 (fun action actionProb ->
                             let reachProbs =
                                 updateReachProbabilities
                                     reachProbs
-                                    activePlayer
+                                    infoSet.Player
                                     actionProb
-                            loop (history + action) reachProbs)
+                            let deal =
+                                OpenDeal.addAction
+                                    infoSet.LegalActionType action deal
+                            loop reachProbs deal)
                         |> Array.unzip
-                getActiveUtilities utilities,
-                Array.concat keyedInfoSetAccArrays
+                utilities, Array.concat keyedAccumArrays
 
                 // utility of this info set is action utilities weighted by action probabilities
             let utility = actionUtilities * strategy
@@ -251,7 +211,7 @@ module Program =
         let numIterations = 50000
         printfn $"Running Leduc Hold'em parallel CFR for {numIterations} iterations"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
-        let util, infoSetAccMap = LeducCfrTrainer.train numIterations
+        let util, infoSetAccMap = Trainer.train numIterations
 
             // expected overall utility
         printfn $"Average game value for first player: %0.5f{util}\n"
