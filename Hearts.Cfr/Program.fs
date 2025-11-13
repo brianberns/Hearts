@@ -29,11 +29,31 @@ module Program =
 
     let rec private createNonTerminalGameState deal =
         let infoSet = OpenDeal.currentInfoSet deal
+        let shootStatus =
+            let seats =
+                infoSet.Deal.Score.ScoreMap
+                    |> Map.toSeq
+                    |> Seq.choose (fun (seat, point) ->
+                        if point > 0 then Some seat
+                        else None)
+                    |> Seq.toArray
+            match seats.Length with
+                | 0 -> Choice1Of3 ()
+                | 1 -> Choice2Of3 seats[0]
+                | _ -> Choice3Of3 ()
+        let infoSetKey =
+            {|
+                Hand = infoSet.Hand
+                LegalActions = infoSet.LegalActions
+                UnplayedCards = infoSet.Deal.UnplayedCards
+                Voids = infoSet.Deal.Voids
+                ShootStatus = shootStatus
+            |}
         NonTerminal {
             ActivePlayerIdx =
                 if infoSet.Player = Seat.South then 0
                 else 1
-            InfoSetKey = infoSet
+            InfoSetKey = infoSetKey
             LegalActions = infoSet.LegalActions
             AddAction =
                 fun action ->
