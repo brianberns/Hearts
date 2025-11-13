@@ -24,10 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\TricksterHeartsBot\TricksterHeartsBot\TricksterHeartsBot.csproj" />
     <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
     <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
+    <ProjectReference Include="..\TricksterHeartsBot\TricksterHeartsBot\TricksterHeartsBot.csproj" />
   </ItemGroup>
 
 </Project>
