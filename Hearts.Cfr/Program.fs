@@ -31,8 +31,8 @@ module Program =
 
     printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
 
-    let numDeals = 1
-    let chunkSize = 1
+    let numDeals = 2
+    let chunkSize = 2
     let rng = Random(0)
     let utility, infoSetMap =
         OpenDeal.generate rng numDeals createGameState
