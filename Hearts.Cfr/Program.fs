@@ -1,7 +1,6 @@
 ﻿namespace Hearts.Cfr
 
 open System
-open System.Collections
 open System.Diagnostics
 
 open FastCfr
