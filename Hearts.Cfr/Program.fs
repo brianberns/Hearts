@@ -8,43 +8,15 @@ open FastCfr
 open Hearts
 open Hearts.Model
 
-[<CustomComparison; CustomEquality>]
-type InfoSetKey =
-    {
-        Key : Encoding
-    }
+module Encoding =
 
-    member this.CompareTo(other : InfoSetKey) =
-        let thisLen = this.Key.Length
-        let otherLen = other.Key.Length
-        let minLen = min thisLen otherLen
-
-        let rec loop i =
-            if i = minLen then
-                compare thisLen otherLen
-            else
-                let result = compare this.Key[i] other.Key[i]
-                if result = 0 then loop (i + 1)
-                else result
-
-        loop 0
-
-    override this.Equals(other) =
-        compare this (other :?> InfoSetKey) = 0
-
-    override this.GetHashCode() =
-        hash [|
-            for bit in this.Key do
-                if bit then 1uy else 0uy
-        |]
-
-    interface IComparable<InfoSetKey> with
-        member this.CompareTo(other) =
-            this.CompareTo(other)
-
-    interface IComparable with
-        member this.CompareTo (other) = 
-            this.CompareTo(other :?> InfoSetKey)
+    let toString (encoding : Encoding) =
+        assert(encoding.Length = Encoding.encodedLength)
+        let bytes =
+            let nBytes = (encoding.Length + 7) >>> 3
+            Array.zeroCreate<byte> nBytes
+        encoding.CopyTo(bytes, 0)
+        Convert.ToBase64String(bytes)
 
 module Program =
 
@@ -73,7 +45,9 @@ module Program =
                 if infoSet.Player = Seat.South then 0
                 else 1
             InfoSetKey =
-                { Key = Encoding.encode infoSet }
+                infoSet
+                    |> Encoding.encode
+                    |> Encoding.toString
             LegalActions = infoSet.LegalActions
             AddAction =
                 fun action ->
