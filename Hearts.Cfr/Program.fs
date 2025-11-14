@@ -12,27 +12,32 @@ open Hearts.Model
 [<CustomComparison; CustomEquality>]
 type InfoSetKey =
     {
-        Key : BitArray
+        Key : Encoding
     }
 
-    member private this.Values =
-        Seq.cast<bool> this.Key
-
     member this.CompareTo(other : InfoSetKey) =
-        let resultOpt =
-            Seq.map2 compare this.Values other.Values
-                |> Seq.tryFind ((<>) 0)
-        match resultOpt with
-            | Some result -> result
-            | None -> compare this.Key.Length other.Key.Length
+        let thisLen = this.Key.Length
+        let otherLen = other.Key.Length
+        let minLen = min thisLen otherLen
+
+        let rec loop i =
+            if i = minLen then
+                compare thisLen otherLen
+            else
+                let result = compare this.Key[i] other.Key[i]
+                if result = 0 then loop (i + 1)
+                else result
+
+        loop 0
 
     override this.Equals(other) =
         compare this (other :?> InfoSetKey) = 0
 
     override this.GetHashCode() =
-        this.Values
-            |> Seq.toArray
-            |> hash
+        hash [|
+            for bit in this.Key do
+                if bit then 1uy else 0uy
+        |]
 
     interface IComparable<InfoSetKey> with
         member this.CompareTo(other) =
