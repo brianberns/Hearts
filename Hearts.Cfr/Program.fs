@@ -10,13 +10,23 @@ open Hearts.Model
 
 module Encoding =
 
+    /// "Latin Extended-A" block is printable.
+    let private charOffset = 0x100
+
+    /// Converts a byte array to a compact, printable Unicode string.
+    let private compact bytes =
+        bytes
+            |> Array.map (fun (b : byte) ->
+                char (int b + charOffset))
+            |> String
+
     let toString (encoding : Encoding) =
         assert(encoding.Length = Encoding.encodedLength)
         let bytes =
             let nBytes = (encoding.Length + 7) >>> 3
             Array.zeroCreate<byte> nBytes
         encoding.CopyTo(bytes, 0)
-        Convert.ToBase64String(bytes)
+        compact bytes
 
 module Program =
 
@@ -97,6 +107,7 @@ module Program =
         for visitCount in visitCounts do
             printfn $"{visitCount.NumVisits}, {visitCount.Count}"
 
+    Console.OutputEncoding <- System.Text.Encoding.UTF8
     let stopwatch = Stopwatch.StartNew()
     run ()
     printfn $"Elapsed time: {stopwatch.Elapsed}"
