@@ -1,11 +1,46 @@
 ﻿namespace Hearts.Cfr
 
 open System
+open System.Collections
 open System.Diagnostics
 
 open FastCfr
 
 open Hearts
+open Hearts.Model
+
+[<CustomComparison; CustomEquality>]
+type InfoSetKey =
+    {
+        Key : BitArray
+    }
+
+    member private this.Values =
+        Seq.cast<bool> this.Key
+
+    member this.CompareTo(other : InfoSetKey) =
+        let resultOpt =
+            Seq.map2 compare this.Values other.Values
+                |> Seq.tryFind ((<>) 0)
+        match resultOpt with
+            | Some result -> result
+            | None -> compare this.Key.Length other.Key.Length
+
+    override this.Equals(other) =
+        compare this (other :?> InfoSetKey) = 0
+
+    override this.GetHashCode() =
+        this.Values
+            |> Seq.toArray
+            |> hash
+
+    interface IComparable<InfoSetKey> with
+        member this.CompareTo(other) =
+            this.CompareTo(other)
+
+    interface IComparable with
+        member this.CompareTo (other) = 
+            this.CompareTo(other :?> InfoSetKey)
 
 module Program =
 
@@ -22,38 +57,19 @@ module Program =
                     else
                         focusPoints, otherPoints + point)
         let focusPayoff =
-            (float otherPoints / float (Seat.numSeats - 1))
-                - float focusPoints
+            (float32 otherPoints / float32 (Seat.numSeats - 1))
+                - float32 focusPoints
         TerminalGameState.create focusPlayerIdx focusPayoff
             |> Terminal
 
     let rec private createNonTerminalGameState deal =
         let infoSet = OpenDeal.currentInfoSet deal
-        let shootStatus =
-            let seats =
-                infoSet.Deal.Score.ScoreMap
-                    |> Map.toSeq
-                    |> Seq.choose (fun (seat, point) ->
-                        if point > 0 then Some seat
-                        else None)
-                    |> Seq.toArray
-            match seats.Length with
-                | 0 -> Choice1Of3 ()
-                | 1 -> Choice2Of3 seats[0]
-                | _ -> Choice3Of3 ()
-        let infoSetKey =
-            {|
-                Hand = infoSet.Hand
-                LegalActions = infoSet.LegalActions
-                UnplayedCards = infoSet.Deal.UnplayedCards
-                Voids = infoSet.Deal.Voids
-                ShootStatus = shootStatus
-            |}
         NonTerminal {
             ActivePlayerIdx =
                 if infoSet.Player = Seat.South then 0
                 else 1
-            InfoSetKey = infoSetKey
+            InfoSetKey =
+                { Key = Encoding.encode infoSet }
             LegalActions = infoSet.LegalActions
             AddAction =
                 fun action ->
@@ -75,7 +91,7 @@ module Program =
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
 
         let chunkSize = 16
-        let numChunks = 4
+        let numChunks = 10
         let numDeals = chunkSize * numChunks
         printfn $"Number of deals: {numDeals}"
         printfn $"Chunk size: {chunkSize}"

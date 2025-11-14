@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FastCfr\FastCfr\FastCfr.fsproj" />
+    <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
     <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
   </ItemGroup>
