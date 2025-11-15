@@ -81,14 +81,24 @@ module Program =
     let run () =
 
             // settings for this run
-        let chunkSize = 800
+        let chunkSize = 200
         printfn $"Chunk size: {chunkSize}"
 
             // train on chunks of deals lazily
         let tuples =
             let rng = Random(0)
             OpenDeal.generate rng
-                |> Seq.map createGameState
+                |> Seq.collect (fun deal ->
+                    [
+                        for shift = 0 to Seat.numSeats - 1 do
+                            let handMap =
+                                Map [
+                                    for (seat, hand) in Map.toSeq deal.UnplayedCardMap do
+                                        Seat.incr shift seat, hand
+                                ]
+                            createGameState
+                                { deal with UnplayedCardMap = handMap }
+                    ])
                 |> Seq.chunkBySize chunkSize
                 |> Trainer.trainScan
 
