@@ -78,8 +78,8 @@ module Program =
 
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
 
-        let chunkSize = 16
-        let numChunks = 10
+        let chunkSize = 800
+        let numChunks = 100
         let numDeals = chunkSize * numChunks
         printfn $"Number of deals: {numDeals}"
         printfn $"Chunk size: {chunkSize}"
