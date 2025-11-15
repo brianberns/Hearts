@@ -51,14 +51,17 @@ module Program =
 
     let rec private createNonTerminalGameState deal =
         let infoSet = OpenDeal.currentInfoSet deal
+        let iPlayer =
+            if infoSet.Player = Seat.South then 0
+            else 1
         NonTerminal {
-            ActivePlayerIdx =
-                if infoSet.Player = Seat.South then 0
-                else 1
+            ActivePlayerIdx = iPlayer
             InfoSetKey =
-                infoSet
-                    |> Encoding.encode
-                    |> Encoding.toString
+                let str =
+                    infoSet
+                        |> Encoding.encode
+                        |> Encoding.toString
+                $"{iPlayer}{str}"
             LegalActions = infoSet.LegalActions
             AddAction =
                 fun action ->
@@ -78,7 +81,7 @@ module Program =
     let run () =
 
             // settings for this run
-        let chunkSize = 80
+        let chunkSize = 800
         printfn $"Chunk size: {chunkSize}"
 
             // train on chunks of deals lazily
@@ -98,6 +101,11 @@ module Program =
 
             let utility = utilities / float32 nGames
             printfn $"Utility: {utility}"
+
+            let infoSetMap =
+                infoSetMap
+                    |> Map.filter (fun key _ ->
+                        key[0] = '0')
 
             let visitCounts =
                 infoSetMap.Values
