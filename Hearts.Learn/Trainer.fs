@@ -51,7 +51,7 @@ module Trainer =
             |> Array.collect (fun (i, chunk) ->
 
                 let samples =
-                    OpenDeal.generate
+                    OpenDeal.playDeals
                         (Random())
                         chunk.Length
                         (fun deal ->

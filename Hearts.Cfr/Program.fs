@@ -79,15 +79,13 @@ module Program =
 
             // settings for this run
         let chunkSize = 80
-        let numChunks = 1000
-        let numDeals = chunkSize * numChunks
-        printfn $"Number of deals: {numDeals}"
         printfn $"Chunk size: {chunkSize}"
 
-            // train on each chunk of deals lazily
+            // train on chunks of deals lazily
         let tuples =
             let rng = Random(0)
-            OpenDeal.generate rng numDeals createGameState
+            OpenDeal.generate rng
+                |> Seq.map createGameState
                 |> Seq.chunkBySize chunkSize
                 |> Trainer.trainScan
 
