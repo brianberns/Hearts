@@ -77,22 +77,21 @@ module Program =
 
     let run () =
 
-        Console.OutputEncoding <- Encoding.UTF8
-        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
-
+            // settings for this run
         let chunkSize = 80
         let numChunks = 1000
         let numDeals = chunkSize * numChunks
         printfn $"Number of deals: {numDeals}"
         printfn $"Chunk size: {chunkSize}"
 
-        let stopwatch = Stopwatch.StartNew()
-        let rng = Random(0)
+            // train on each chunk of deals lazily
         let tuples =
+            let rng = Random(0)
             OpenDeal.generate rng numDeals createGameState
                 |> Seq.chunkBySize chunkSize
                 |> Trainer.trainScan
 
+        let stopwatch = Stopwatch.StartNew()
         for (iChunk, (infoSetMap, nGames, utilities)) in Seq.indexed tuples do
             printfn ""
             printfn $"Chunk: {iChunk}"
@@ -115,4 +114,6 @@ module Program =
             for visitCount in visitCounts do
                 printfn $"{visitCount.NumVisits}, {visitCount.Count}"
 
+    Console.OutputEncoding <- Encoding.UTF8
+    printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
     run ()
