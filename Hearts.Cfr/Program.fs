@@ -80,35 +80,39 @@ module Program =
         Console.OutputEncoding <- Encoding.UTF8
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
 
-        let chunkSize = 800
-        let numChunks = 100
+        let chunkSize = 80
+        let numChunks = 1000
         let numDeals = chunkSize * numChunks
         printfn $"Number of deals: {numDeals}"
         printfn $"Chunk size: {chunkSize}"
 
         let stopwatch = Stopwatch.StartNew()
         let rng = Random(0)
-        let utility, infoSetMap =
+        let tuples =
             OpenDeal.generate rng numDeals createGameState
                 |> Seq.chunkBySize chunkSize
-                |> Seq.mapi (fun iChunk chunk ->
-                    printfn $"Chunk {iChunk}"
-                    chunk)
-                |> Trainer.train
-        printfn $"Utility: {utility}"
-        printfn $"Elapsed time: {stopwatch.Elapsed}"
+                |> Trainer.trainScan
 
-        let visitCounts =
-            infoSetMap.Values
-                |> Seq.groupBy _.NumVisits
-                |> Seq.map (fun (nVisits, group) ->
-                    {|
-                        NumVisits = nVisits
-                        Count = Seq.length group
-                    |})
-                |> Seq.sortBy _.NumVisits
-        printfn "# visits, Count"
-        for visitCount in visitCounts do
-            printfn $"{visitCount.NumVisits}, {visitCount.Count}"
+        for (iChunk, (infoSetMap, nGames, utilities)) in Seq.indexed tuples do
+            printfn ""
+            printfn $"Chunk: {iChunk}"
+            printfn $"Elapsed time: {stopwatch.Elapsed}"
+            stopwatch.Restart()
+
+            let utility = utilities / float32 nGames
+            printfn $"Utility: {utility}"
+
+            let visitCounts =
+                infoSetMap.Values
+                    |> Seq.groupBy _.NumVisits
+                    |> Seq.map (fun (nVisits, group) ->
+                        {|
+                            NumVisits = nVisits
+                            Count = Seq.length group
+                        |})
+                    |> Seq.sortBy _.NumVisits
+            printfn "# visits, Count"
+            for visitCount in visitCounts do
+                printfn $"{visitCount.NumVisits}, {visitCount.Count}"
 
     run ()
