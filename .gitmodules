@@ -1,0 +1,3 @@
+[submodule "TricksterHeartsBot"]
+	path = TricksterHeartsBot
+	url = https://github.com/brianberns/TricksterHeartsBot

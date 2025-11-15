@@ -241,3 +241,27 @@ module ClosedDeal =
                 | Some trick -> yield trick
                 | None -> ()
         }
+
+    /// Total number of points in a deal.
+    let numPointsPerDeal =
+        Card.allCards
+            |> Seq.sumBy Card.pointValue
+
+    /// Answers the seat of the player who shot the moon in the
+    /// given deal score, if someone did.
+    let tryFindScoreShooter dealScore =
+        assert(Score.sum dealScore = numPointsPerDeal)
+        option {
+            let! seat, _ =
+                dealScore.ScoreMap
+                    |> Map.toSeq
+                    |> Seq.tryFind (fun (_, points) ->
+                        points = numPointsPerDeal)
+            return seat
+        }
+
+    /// Answers the seat of the player who shot the moon in the
+    /// given deal, if someone did.
+    let tryFindShooter deal =
+        assert(isComplete deal)
+        tryFindScoreShooter deal.Score

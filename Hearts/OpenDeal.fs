@@ -227,28 +227,26 @@ module OpenDeal =
             | ActionType.Play ->
                 addPlay action deal
 
-    /// Plays the given number of deals in parallel.
-    let generate (rng : Random) numDeals playFun =
-        Array.init numDeals (fun iDeal ->
-            let deck = Deck.shuffle rng
-            let dealer =
-                enum<Seat> (iDeal % Seat.numSeats)
+    /// Generates an infinite sequence of deals.
+    let generate (rng : Random) =
+        Seq.initInfinite (fun iDeal ->
             let dir =
                 enum<ExchangeDirection>
                     (iDeal % ExchangeDirection.numDirections)
-            deck, dealer, dir)
-            |> Array.Parallel.map (fun (deck, dealer, dir) ->
-                let deal =
-                    let deal = fromDeck dealer dir deck
-                    if dir = ExchangeDirection.Hold then   // can start play immediately?
-                        startPlay deal
-                    else deal
-                playFun deal)
+            let deal =
+                let deck = Deck.shuffle rng
+                let dealer = enum<Seat> (iDeal % Seat.numSeats)
+                fromDeck dealer dir deck
+            if dir = ExchangeDirection.Hold then   // can start play immediately?
+                startPlay deal
+            else deal)
 
-    /// Total number of points in a deal.
-    let numPointsPerDeal =
-        Card.allCards
-            |> Seq.sumBy Card.pointValue
+    /// Plays the given number of deals in parallel.
+    let playDeals rng numDeals playFun =
+        generate rng
+            |> Seq.take numDeals
+            |> Seq.toArray
+            |> Array.Parallel.map playFun
 
     /// Determines the inevitable additional score of the given deal,
     /// if possible.
@@ -274,7 +272,8 @@ module OpenDeal =
                 Some Score.zero
 
                 // all points have been taken?
-            elif Score.sum deal.ClosedDeal.Score = numPointsPerDeal then
+            elif Score.sum deal.ClosedDeal.Score
+                = ClosedDeal.numPointsPerDeal then
                 Some Score.zero
 
                 // current player takes all remaining tricks?

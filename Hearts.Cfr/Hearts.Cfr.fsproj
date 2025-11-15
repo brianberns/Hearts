@@ -6,13 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Protocol.fs" />
-    <Compile Include="Killer.fs" />
     <Compile Include="Program.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="TorchSharp-cpu" Version="0.105.1" />
   </ItemGroup>
 
   <ItemGroup>

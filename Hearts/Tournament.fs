@@ -46,7 +46,7 @@ module Tournament =
 
     /// Plays the given number of deals.
     let playDeals rng numDeals playerMap =
-        OpenDeal.generate rng numDeals (
+        OpenDeal.playDeals rng numDeals (
             playDeal playerMap)
             |> Seq.reduce (+)
 
