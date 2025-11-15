@@ -2,6 +2,7 @@
 
 open System
 open System.Diagnostics
+open System.Text
 
 open FastCfr
 
@@ -76,6 +77,7 @@ module Program =
 
     let run () =
 
+        Console.OutputEncoding <- Encoding.UTF8
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
 
         let chunkSize = 800
@@ -84,6 +86,7 @@ module Program =
         printfn $"Number of deals: {numDeals}"
         printfn $"Chunk size: {chunkSize}"
 
+        let stopwatch = Stopwatch.StartNew()
         let rng = Random(0)
         let utility, infoSetMap =
             OpenDeal.generate rng numDeals createGameState
@@ -93,6 +96,7 @@ module Program =
                     chunk)
                 |> Trainer.train
         printfn $"Utility: {utility}"
+        printfn $"Elapsed time: {stopwatch.Elapsed}"
 
         let visitCounts =
             infoSetMap.Values
@@ -107,7 +111,4 @@ module Program =
         for visitCount in visitCounts do
             printfn $"{visitCount.NumVisits}, {visitCount.Count}"
 
-    Console.OutputEncoding <- System.Text.Encoding.UTF8
-    let stopwatch = Stopwatch.StartNew()
     run ()
-    printfn $"Elapsed time: {stopwatch.Elapsed}"
