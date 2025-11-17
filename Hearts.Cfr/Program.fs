@@ -76,30 +76,8 @@ module Program =
 
         let stopwatch = Stopwatch.StartNew()
         for (iChunk, (infoSetMap, nGames, utilities)) in Seq.indexed tuples do
-            printfn ""
-            printfn $"Chunk: {iChunk}"
-            printfn $"Elapsed time: {stopwatch.Elapsed}"
+            printfn $"{iChunk}, {infoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
             stopwatch.Restart()
-
-            printfn ""
-            printfn "Utilities:"
-            let utilities = utilities / float32 nGames
-            for i = 0 to Seat.numSeats - 1 do
-                printfn $"    {enum<Seat> i}: {utilities[i]}"
-
-            printfn ""
-            let visitCounts =
-                infoSetMap.Values
-                    |> Seq.groupBy _.NumVisits
-                    |> Seq.map (fun (nVisits, group) ->
-                        {|
-                            NumVisits = nVisits
-                            Count = Seq.length group
-                        |})
-                    |> Seq.sortBy _.NumVisits
-            printfn "# visits, Count"
-            for visitCount in visitCounts do
-                printfn $"{visitCount.NumVisits}, {visitCount.Count}"
 
     Console.OutputEncoding <- Encoding.UTF8
     printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
