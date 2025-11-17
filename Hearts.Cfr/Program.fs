@@ -2,32 +2,10 @@
 
 open System
 open System.Diagnostics
-open System.Text
 
 open FastCfr
 
 open Hearts
-open Hearts.Model
-
-module Encoding =
-
-    /// "Latin Extended-A" block is printable.
-    let private charOffset = 0x100
-
-    /// Converts a byte array to a compact, printable Unicode string.
-    let private compact bytes =
-        bytes
-            |> Array.map (fun (b : byte) ->
-                char (int b + charOffset))
-            |> String
-
-    let toString (encoding : Encoding) =
-        assert(encoding.Length = Encoding.encodedLength)
-        let bytes =
-            let nBytes = (encoding.Length + 7) >>> 3
-            Array.zeroCreate<byte> nBytes
-        encoding.CopyTo(bytes, 0)
-        compact bytes
 
 module Program =
 
@@ -79,6 +57,6 @@ module Program =
             printfn $"{iChunk}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
             stopwatch.Restart()
 
-    Console.OutputEncoding <- Encoding.UTF8
+    Console.OutputEncoding <- System.Text.Encoding.UTF8
     printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
     run ()

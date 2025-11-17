@@ -1,6 +1,8 @@
-﻿namespace Hearts.Model
+﻿namespace Hearts.Cfr
 
+open System
 open System.Collections
+
 open PlayingCards
 open Hearts
 
@@ -24,13 +26,6 @@ module Card =
 type Encoding = BitArray
 
 module Encoding =
-
-    /// Converts encoded bits to float32.
-    let toFloat32 (bits : BitArray) =
-        [|
-            for i = 0 to bits.Length - 1 do
-                if bits[i] then 1f else 0f
-        |]
 
     /// Encodes the given (card, value) pairs as a
     /// vector in the deck size.
@@ -59,23 +54,6 @@ module Encoding =
             for index = 0 to Card.numCards - 1 do
                 cardIndexes.Contains(index)
         |]
-
-    /// Encodes the given exchange direction as a one-hot
-    /// vector in the number of exchange directions.
-    let private encodeExchangeDirection dir =
-        [|
-            for d in Enum.getValues<ExchangeDirection> do
-                d = dir
-        |]
-
-    /// Encodes the given pass as a multi-hot vector in
-    /// the deck size.
-    let private encodePass passOpt =
-        let cards : Pass =
-            passOpt
-                |> Option.defaultValue Set.empty
-        assert(cards.Count <= Pass.numCards)
-        encodeCards cards
 
     /// Encodes each card in the given current trick as
     /// a one-hot vector in the deck size and concatenates
@@ -123,9 +101,6 @@ module Encoding =
     let encodedLength =
         Card.numCards                                 // current player's hand
             + Card.numCards                           // unplayed cards not in current player's hand
-            + ExchangeDirection.numDirections         // exchange direction
-            + Card.numCards                           // outgoing pass
-            + Card.numCards                           // incoming pass
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
             + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
             + Seat.numSeats                           // score
@@ -137,17 +112,31 @@ module Encoding =
         let trickOpt = infoSet.Deal.CurrentTrickOpt
         let encoded =
             BitArray [|
-                yield! encodeCards infoSet.Hand             // current player's hand
-                yield! encodeCards unseen                   // unplayed cards not in current player's hand
-                yield! encodeExchangeDirection              // exchange direction
-                    infoSet.Deal.ExchangeDirection
-                yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
-                yield! encodePass infoSet.IncomingPassOpt   // incoming pass
-                yield! encodeTrick trickOpt                 // current trick
-                yield! encodeVoids                          // voids
+                yield! encodeCards infoSet.Hand         // current player's hand
+                yield! encodeCards unseen               // unplayed cards not in current player's hand
+                yield! encodeTrick trickOpt             // current trick
+                yield! encodeVoids                      // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                          // score
+                yield! encodeScore                      // score
                     infoSet.Player infoSet.Deal.Score
             |]
         assert(encoded.Length = encodedLength)
         encoded
+
+    /// "Latin Extended-A" block is printable.
+    let private charOffset = 0x100
+
+    /// Converts a byte array to a compact, printable Unicode string.
+    let private compact bytes =
+        bytes
+            |> Array.map (fun (b : byte) ->
+                char (int b + charOffset))
+            |> String
+
+    let toString (encoding : Encoding) =
+        assert(encoding.Length = encodedLength)
+        let bytes =
+            let nBytes = (encoding.Length + 7) >>> 3
+            Array.zeroCreate<byte> nBytes
+        encoding.CopyTo(bytes, 0)
+        compact bytes
