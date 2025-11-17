@@ -63,7 +63,7 @@ module Program =
     let run () =
 
             // settings for this run
-        let chunkSize = 200
+        let chunkSize = 100
         printfn $"Chunk size: {chunkSize}"
 
             // train on chunks of deals lazily
@@ -81,14 +81,13 @@ module Program =
             printfn $"Elapsed time: {stopwatch.Elapsed}"
             stopwatch.Restart()
 
-            let utility = utilities / float32 nGames
-            printfn $"Utility: {utility}"
+            printfn ""
+            printfn "Utilities:"
+            let utilities = utilities / float32 nGames
+            for i = 0 to Seat.numSeats - 1 do
+                printfn $"    {enum<Seat> i}: {utilities[i]}"
 
-            let infoSetMap =
-                infoSetMap
-                    |> Map.filter (fun key _ ->
-                        key[0] = '0')
-
+            printfn ""
             let visitCounts =
                 infoSetMap.Values
                     |> Seq.groupBy _.NumVisits
