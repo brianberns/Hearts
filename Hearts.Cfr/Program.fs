@@ -31,37 +31,19 @@ module Encoding =
 
 module Program =
 
-    let private focusSeat = Seat.South
-    let private focusPlayerIdx = 0
-    let private _otherPlayerIdx = 1
-
     let private createTerminalGameState score =
-        let focusPoints, otherPoints =
-            ((0, 0), Map.toSeq score.ScoreMap)
-                ||> Seq.fold (fun (focusPoints, otherPoints) (seat, point) ->
-                    if seat = focusSeat then
-                        focusPoints + point, otherPoints
-                    else
-                        focusPoints, otherPoints + point)
-        let focusPayoff =
-            (float32 otherPoints / float32 (Seat.numSeats - 1))
-                - float32 focusPoints
-        TerminalGameState.create focusPlayerIdx focusPayoff
+        ZeroSum.getPayoff score
+            |> TerminalGameState.create
             |> Terminal
 
     let rec private createNonTerminalGameState deal =
         let infoSet = OpenDeal.currentInfoSet deal
-        let iPlayer =
-            if infoSet.Player = Seat.South then 0
-            else 1
         NonTerminal {
-            ActivePlayerIdx = iPlayer
+            ActivePlayerIdx = int infoSet.Player
             InfoSetKey =
-                let str =
-                    infoSet
-                        |> Encoding.encode
-                        |> Encoding.toString
-                $"{iPlayer}{str}"
+                infoSet
+                    |> Encoding.encode
+                    |> Encoding.toString
             LegalActions = infoSet.LegalActions
             AddAction =
                 fun action ->
@@ -88,19 +70,9 @@ module Program =
         let tuples =
             let rng = Random(0)
             OpenDeal.generate rng
-                |> Seq.collect (fun deal ->
-                    [
-                        for shift = 0 to Seat.numSeats - 1 do
-                            let handMap =
-                                Map [
-                                    for (seat, hand) in Map.toSeq deal.UnplayedCardMap do
-                                        Seat.incr shift seat, hand
-                                ]
-                            createGameState
-                                { deal with UnplayedCardMap = handMap }
-                    ])
+                |> Seq.map createGameState
                 |> Seq.chunkBySize chunkSize
-                |> Trainer.trainScan
+                |> Trainer.trainScan Seat.numSeats
 
         let stopwatch = Stopwatch.StartNew()
         for (iChunk, (infoSetMap, nGames, utilities)) in Seq.indexed tuples do
