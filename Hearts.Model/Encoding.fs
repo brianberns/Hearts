@@ -123,9 +123,11 @@ module Encoding =
     let encodedLength =
         Card.numCards                                 // current player's hand
             + Card.numCards                           // unplayed cards not in current player's hand
+            (*
             + ExchangeDirection.numDirections         // exchange direction
             + Card.numCards                           // outgoing pass
             + Card.numCards                           // incoming pass
+            *)
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
             + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
             + Seat.numSeats                           // score
@@ -139,10 +141,12 @@ module Encoding =
             BitArray [|
                 yield! encodeCards infoSet.Hand             // current player's hand
                 yield! encodeCards unseen                   // unplayed cards not in current player's hand
+                (*
                 yield! encodeExchangeDirection              // exchange direction
                     infoSet.Deal.ExchangeDirection
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
                 yield! encodePass infoSet.IncomingPassOpt   // incoming pass
+                *)
                 yield! encodeTrick trickOpt                 // current trick
                 yield! encodeVoids                          // voids
                     infoSet.Player infoSet.Deal.Voids

@@ -75,8 +75,8 @@ module Program =
                 |> Trainer.trainScan Seat.numSeats
 
         let stopwatch = Stopwatch.StartNew()
-        for (iChunk, (infoSetMap, nGames, utilities)) in Seq.indexed tuples do
-            printfn $"{iChunk}, {infoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
+        for (iChunk, state) in Seq.indexed tuples do
+            printfn $"{iChunk}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
             stopwatch.Restart()
 
     Console.OutputEncoding <- Encoding.UTF8
