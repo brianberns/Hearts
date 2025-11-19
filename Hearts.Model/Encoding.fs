@@ -50,7 +50,7 @@ module Encoding =
 
     /// Encodes the given cards as a multi-hot vector
     /// in the deck size.
-    let private encodeCards cards =
+    let encodeCards cards =
         let flags = Array.zeroCreate Card.numCards
         for index in Seq.map Card.toIndex cards do
             flags[index] <- true   // use mutation for speed
@@ -58,7 +58,7 @@ module Encoding =
 
     /// Encodes the given exchange direction as a one-hot
     /// vector in the number of exchange directions.
-    let private encodeExchangeDirection dir =
+    let encodeExchangeDirection dir =
         [|
             for d in Enum.getValues<ExchangeDirection> do
                 d = dir
@@ -66,7 +66,7 @@ module Encoding =
 
     /// Encodes the given pass as a multi-hot vector in
     /// the deck size.
-    let private encodePass passOpt =
+    let encodePass passOpt =
         let cards : Pass =
             passOpt
                 |> Option.defaultValue Set.empty
@@ -76,7 +76,7 @@ module Encoding =
     /// Encodes each card in the given current trick as
     /// a one-hot vector in the deck size and concatenates
     /// those vectors.
-    let private encodeTrick trickOpt =
+    let encodeTrick trickOpt =
         let cards =
             trickOpt
                 |> Option.map (_.Cards >> Seq.toArray)
@@ -94,7 +94,7 @@ module Encoding =
 
     /// Encodes the given voids as a multi-hot vector in the
     /// number of suits times the number of other seats.
-    let private encodeVoids player voids =
+    let encodeVoids player voids =
         let flags =
             Array.zeroCreate ((Seat.numSeats - 1) * Suit.numSuits)
         for (seat, suit) in voids do
@@ -108,7 +108,7 @@ module Encoding =
 
     /// Encodes the given score as a multi-hot vector in the
     /// number of seats.
-    let private encodeScore player score =
+    let encodeScore player score =
         assert(score.Points.Length = Seat.numSeats)
         [|
             for seat in Seat.cycle player do

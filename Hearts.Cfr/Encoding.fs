@@ -5,93 +5,9 @@ open System.Collections
 
 open PlayingCards
 open Hearts
-
-module Card =
-
-    /// Rank of lowest card in the deck.
-    let private minRank =
-        Seq.min Enum.getValues<Rank>
-
-    /// Converts the given card to an integer, 0..N-1,
-    /// where N is number of cards in the deck.
-    let toIndex (card : Card) =
-        let index =
-            (int card.Suit * Rank.numRanks)
-                + int card.Rank - int minRank
-        assert(index >= 0)
-        assert(index < Card.numCards)
-        index
-
-/// Encoded value for input to a model.
-type Encoding = BitArray
+open Hearts.Model
 
 module Encoding =
-
-    /// Encodes the given (card, value) pairs as a
-    /// vector in the deck size.
-    let inline encodeCardValues pairs =
-        let valueMap =
-            pairs
-                |> Seq.map (fun (card, value) ->
-                    Card.toIndex card, value)
-                |> Map
-        [|
-            for index = 0 to Card.numCards - 1 do
-                valueMap
-                    |> Map.tryFind index
-                    |> Option.defaultValue
-                        LanguagePrimitives.GenericZero   // encode to input type
-        |]
-
-    /// Encodes the given cards as a multi-hot vector
-    /// in the deck size.
-    let private encodeCards cards =
-        let flags = Array.zeroCreate Card.numCards
-        for index in Seq.map Card.toIndex cards do
-            flags[index] <- true   // use mutation for speed
-        flags
-
-    /// Encodes each card in the given current trick as
-    /// a one-hot vector in the deck size and concatenates
-    /// those vectors.
-    let private encodeTrick trickOpt =
-        let cards =
-            trickOpt
-                |> Option.map (_.Cards >> Seq.toArray)
-                |> Option.defaultValue Array.empty
-        assert(cards.Length < Seat.numSeats)
-        [|
-            for iCard = 0 to Seat.numSeats - 2 do
-                yield!
-                    if iCard < cards.Length then
-                        Some cards[cards.Length - 1 - iCard]   // unreverse into chronological order
-                    else None
-                    |> Option.toArray
-                    |> encodeCards
-        |]
-
-    /// Encodes the given voids as a multi-hot vector in the
-    /// number of suits times the number of other seats.
-    let private encodeVoids player voids =
-        let flags =
-            Array.zeroCreate ((Seat.numSeats - 1) * Suit.numSuits)
-        for (seat, suit) in voids do
-            if seat <> player then
-                let suitOffset = (Seat.numSeats - 1) * int suit
-                let seatOffset =
-                    ((int seat - int player - 1) + Seat.numSeats)
-                        % Seat.numSeats
-                flags[suitOffset + seatOffset] <- true   // use mutation for speed
-        flags
-
-    /// Encodes the given score as a multi-hot vector in the
-    /// number of seats.
-    let private encodeScore player score =
-        assert(score.Points.Length = Seat.numSeats)
-        [|
-            for seat in Seat.cycle player do
-                score[seat] > 0
-        |]
 
     /// Total encoded length of an info set.
     let encodedLength =
@@ -108,12 +24,12 @@ module Encoding =
         let trickOpt = infoSet.Deal.CurrentTrickOpt
         let encoded =
             BitArray [|
-                yield! encodeCards infoSet.Hand         // current player's hand
-                yield! encodeCards unseen               // unplayed cards not in current player's hand
-                yield! encodeTrick trickOpt             // current trick
-                yield! encodeVoids                      // voids
+                yield! Encoding.encodeCards infoSet.Hand         // current player's hand
+                yield! Encoding.encodeCards unseen               // unplayed cards not in current player's hand
+                yield! Encoding.encodeTrick trickOpt             // current trick
+                yield! Encoding.encodeVoids                      // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                      // score
+                yield! Encoding.encodeScore                      // score
                     infoSet.Player infoSet.Deal.Score
             |]
         assert(encoded.Length = encodedLength)
