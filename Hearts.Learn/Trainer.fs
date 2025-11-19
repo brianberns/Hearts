@@ -132,7 +132,7 @@ module Trainer =
                 (Strategy.createPlayer model)
         if settings.Verbose then
             printfn "\nTournament:"
-            for (KeyValue(seat, points)) in score.ScoreMap do
+            for (seat, points) in Score.indexed score do
                 printfn $"   %-6s{string seat}: {points}"
             printfn $"   Payoff: %0.5f{payoff}"
         settings.Writer.add_scalar(

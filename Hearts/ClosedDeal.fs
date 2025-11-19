@@ -253,8 +253,7 @@ module ClosedDeal =
         assert(Score.sum dealScore = numPointsPerDeal)
         option {
             let! seat, _ =
-                dealScore.ScoreMap
-                    |> Map.toSeq
+                Score.indexed dealScore
                     |> Seq.tryFind (fun (_, points) ->
                         points = numPointsPerDeal)
             return seat

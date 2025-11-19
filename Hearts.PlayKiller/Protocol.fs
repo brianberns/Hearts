@@ -132,14 +132,10 @@ module Protocol =
 
     /// Parses a score from the given fields.
     let private parseScore (fields : _[]) =
-        let scoreMap =
-            Enum.getValues<Seat>
-                |> Seq.map (fun seat ->
-                    let points =
-                        fields[int seat] |> Int32.Parse
-                    seat, points)
-                |> Map
-        { ScoreMap = scoreMap }
+        Enum.getValues<Seat>
+            |> Array.map (fun seat ->
+                fields[int seat] |> Int32.Parse)
+            |> Score.ofPoints
 
     /// Reads a deal start record.
     let readDealStart fields =

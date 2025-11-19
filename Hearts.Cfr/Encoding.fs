@@ -90,10 +90,10 @@ module Encoding =
     /// Encodes the given score as a multi-hot vector in the
     /// number of seats.
     let private encodeScore player score =
-        assert(score.ScoreMap.Count = Seat.numSeats)
+        assert(score.Points.Length = Seat.numSeats)
         [|
             for seat in Seat.cycle player do
-                score.ScoreMap[seat] > 0
+                score[seat] > 0
         |]
 
     /// Total encoded length of an info set.

@@ -9,8 +9,8 @@ module ZeroSum =
     /// Gets the payoff for the given raw score from each
     /// player's point of view.
     let getPayoff score =
-        let points = score.ScoreMap.Values
-        assert(points.Count = Seat.numSeats)
+        let points = score.Points
+        assert(points.Length = Seat.numSeats)
         let sum = Seq.sum points
         [|
             for pt in points do
