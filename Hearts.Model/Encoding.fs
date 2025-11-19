@@ -102,13 +102,16 @@ module Encoding =
     /// Encodes the given voids as a multi-hot vector in the
     /// number of suits times the number of other seats.
     let private encodeVoids player voids =
-        let seats =
-            Seat.cycle player |> Seq.skip 1
-        [|
-            for suit in Enum.getValues<Suit> do
-                for seat in seats do
-                    Set.contains (seat, suit) voids
-        |]
+        let flags =
+            Array.zeroCreate ((Seat.numSeats - 1) * Suit.numSuits)
+        for (seat, suit) in voids do
+            if seat <> player then
+                let suitOffset = (Seat.numSeats - 1) * int suit
+                let seatOffset =
+                    ((int seat - int player - 1) + Seat.numSeats)
+                        % Seat.numSeats
+                flags[suitOffset + seatOffset] <- true   // use mutation for speed
+        flags
 
     /// Encodes the given score as a multi-hot vector in the
     /// number of seats.
