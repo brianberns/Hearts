@@ -51,14 +51,10 @@ module Encoding =
     /// Encodes the given cards as a multi-hot vector
     /// in the deck size.
     let private encodeCards cards =
-        let cardIndexes =
-            cards
-                |> Seq.map Card.toIndex
-                |> set
-        [|
-            for index = 0 to Card.numCards - 1 do
-                cardIndexes.Contains(index)
-        |]
+        let flags = Array.zeroCreate Card.numCards
+        for index in Seq.map Card.toIndex cards do
+            flags[index] <- true   // use mutation for speed
+        flags
 
     /// Encodes the given exchange direction as a one-hot
     /// vector in the number of exchange directions.
