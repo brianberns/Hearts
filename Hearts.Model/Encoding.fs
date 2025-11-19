@@ -79,17 +79,14 @@ module Encoding =
     let private encodeTrick trickOpt =
         let cards =
             trickOpt
-                |> Option.map (fun trick ->
-                    trick.Cards
-                        |> List.rev
-                        |> List.toArray)
+                |> Option.map (_.Cards >> Seq.toArray)
                 |> Option.defaultValue Array.empty
         assert(cards.Length < Seat.numSeats)
         [|
             for iCard = 0 to Seat.numSeats - 2 do
                 yield!
                     if iCard < cards.Length then
-                        Some cards[iCard]
+                        Some cards[cards.Length - 1 - iCard]   // unreverse into chronological order
                     else None
                     |> Option.toArray
                     |> encodeCards
