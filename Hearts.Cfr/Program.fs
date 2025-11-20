@@ -61,13 +61,16 @@ module Program =
 
             // prepare insert command
         use cmd =
-            conn.CreateCommand(CommandText =
-                """
-                insert into Strategy (Key, Action)
-                values ($Key, $Action)
-                """)
+            conn.CreateCommand(
+                CommandText =
+                    """
+                    insert into Strategy (Key, Action)
+                    values ($Key, $Action)
+                    """,
+                Transaction = conn.BeginTransaction())
         let keyParam = cmd.Parameters.Add("$Key", SqliteType.Text)
         let actionParam = cmd.Parameters.Add("$Action", SqliteType.Integer)
+        cmd.Prepare()
 
         for (key : string, infoSet) in Map.toSeq infoSetMap do
             keyParam.Value <- key
@@ -78,6 +81,7 @@ module Program =
                     |> fst
             let nRows = cmd.ExecuteNonQuery()
             assert(nRows = 1)
+        cmd.Transaction.Commit()
 
     let run () =
 
