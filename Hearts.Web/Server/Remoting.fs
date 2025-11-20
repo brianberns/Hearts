@@ -3,12 +3,14 @@
 open System
 open System.IO
 
+open Microsoft.Data.Sqlite
+
 open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
-open Hearts.Model
-
 module AdvantageModel =
+
+    open Hearts.Model
 
     /// Server is inference-only, so disable all gradient
     /// calculations.
@@ -56,14 +58,38 @@ module AdvantageModel =
 
 module Cfr =
 
+    open Hearts.Cfr
+
     let heartsApi dir =
         {
             GetActionIndex =
                 fun infoSet ->
-                    failwith "boom"
+                    async {
+                        let path = Path.Combine(dir, "Hearts.db")
+                        use conn = new SqliteConnection($"Data Source={path}")
+                        conn.Open()
+
+                        use cmd =
+                            conn.CreateCommand(
+                                CommandText =
+                                    "select Action from Strategy where Key = $Key")
+                        let key =
+                            infoSet
+                                |> Encoding.encode
+                                |> Encoding.toString
+                        cmd.Parameters.AddWithValue("$Key", key)
+                            |> ignore
+
+                        let action = cmd.ExecuteScalar()
+                        return
+                            if isNull action then 0
+                            else action :?> int64 |> int
+                    }
             GetStrategy =
                 fun infoSet ->
-                    failwith "boom"
+                    async {
+                        return Array.empty
+                    }
         }
 
 module Remoting =

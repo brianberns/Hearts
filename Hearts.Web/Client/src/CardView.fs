@@ -64,6 +64,7 @@ module CardView =
     /// literals.)
     let private srcMap =
         [
+            (*
             Card.fromString "2C", importDefault "./assets/card_images/2C.svg"
             Card.fromString "2D", importDefault "./assets/card_images/2D.svg"
             Card.fromString "2H", importDefault "./assets/card_images/2H.svg"
@@ -103,6 +104,7 @@ module CardView =
             Card.fromString "9D", importDefault "./assets/card_images/9D.svg"
             Card.fromString "9H", importDefault "./assets/card_images/9H.svg"
             Card.fromString "9S", importDefault "./assets/card_images/9S.svg"
+            *)
 
             Card.fromString "TC", importDefault "./assets/card_images/TC.svg"
             Card.fromString "TD", importDefault "./assets/card_images/TD.svg"
@@ -124,10 +126,12 @@ module CardView =
             Card.fromString "KH", importDefault "./assets/card_images/KH.svg"
             Card.fromString "KS", importDefault "./assets/card_images/KS.svg"
 
+            (*
             Card.fromString "AC", importDefault "./assets/card_images/AC.svg"
             Card.fromString "AD", importDefault "./assets/card_images/AD.svg"
             Card.fromString "AH", importDefault "./assets/card_images/AH.svg"
             Card.fromString "AS", importDefault "./assets/card_images/AS.svg"
+            *)
         ] |> Map
 
     /// Creates a view of the given card.
