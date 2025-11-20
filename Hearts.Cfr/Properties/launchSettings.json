@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Hearts.Cfr": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1",
+        "DOTNET_ConcurrentGarbageCollection": "1"
+      }
+    }
+  }
+}
