@@ -5,41 +5,56 @@ open PlayingCards
 /// Points taken by each player in a deal or game.
 type Score =
     {
-        ScoreMap : Map<Seat, int>
+        /// Number of points taken by each player,
+        /// indexed by seat.
+        Points : int[]
     }
 
     /// Number of points taken by the given player.
     member score.Item
-        with get(seat) = score.ScoreMap[seat]
+        with get(seat : Seat) = score.Points[int seat]
 
     /// Adds two scores.
     static member (+) (scoreA : Score, scoreB : Score) =
         {
-            ScoreMap =
+            Points =
                 Enum.getValues<Seat>
-                    |> Seq.map (fun seat ->
-                        let sum = scoreA[seat] + scoreB[seat]
-                        seat, sum)
-                    |> Map
+                    |> Array.map (fun seat ->
+                        scoreA[seat] + scoreB[seat])
         }
 
 module Score =
 
-    /// Initial score.
-    let private zeroMap =
-        Enum.getValues<Seat>
-            |> Seq.map (fun seat -> seat, 0)
-            |> Map
+    /// Creates a score from the given per-seat points.
+    let ofPoints points =
+        { Points = points }
 
     /// Initial score.
-    let zero = { ScoreMap = zeroMap }
+    let zero =
+        Array.zeroCreate Seat.numSeats
+            |> ofPoints
 
     /// Creates a score for the given seat.
-    let create seat points =
-        {
-            ScoreMap = Map.add seat points zeroMap
-        }
+    let create (seat : Seat) points =
+        Array.init Seat.numSeats (fun iSeat ->
+            if iSeat = int seat then points
+            else 0)
+            |> ofPoints
+
+    /// Indexes the given score by seat.
+    let indexed score =
+        score.Points
+            |> Seq.indexed
+            |> Seq.map (fun (iSeat, points) ->
+                enum<Seat> iSeat, points)
+
+    /// Creates a new score by applying the given mapping
+    /// to each player's points.
+    let map mapping score =
+        Enum.getValues<Seat>
+            |> Array.map mapping
+            |> ofPoints
 
     /// Sum of all points in the given score.
     let sum score =
-        Seq.sum score.ScoreMap.Values
+        Seq.sum score.Points

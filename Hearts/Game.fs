@@ -6,9 +6,8 @@ module Game =
 
     /// Finds leaders in the given game score.
     let private findGameLeaders gameScore =
-        let minPoints = Seq.min gameScore.ScoreMap.Values
-        gameScore.ScoreMap
-            |> Map.toSeq
+        let minPoints = Seq.min gameScore.Points
+        Score.indexed gameScore
             |> Seq.where (snd >> (=) minPoints)
             |> Seq.map fst
             |> set
@@ -19,7 +18,7 @@ module Game =
     /// Finds game winners, if any, in the given game score.
     let findGameWinners gameScore =
         let isOver =
-            gameScore.ScoreMap.Values
+            gameScore.Points
                 |> Seq.exists (fun points ->
                     points >= endThreshold)
         if isOver then findGameLeaders gameScore
@@ -29,19 +28,14 @@ module Game =
     /// the given shooter.
     let private applyShootReward gameScore shooter =
 
-        let toScore seatPoints =
-            { ScoreMap = Map seatPoints }
-
             // add points to non-shooters
         let gameScore' =
             let dealScore =
                 Enum.getValues<Seat>
-                    |> Seq.map (fun seat ->
-                        let points =
-                            if seat = shooter then 0
-                            else ClosedDeal.numPointsPerDeal
-                        seat, points)
-                    |> toScore
+                    |> Array.map (fun seat ->
+                        if seat = shooter then 0
+                        else ClosedDeal.numPointsPerDeal)
+                    |> Score.ofPoints
             gameScore + dealScore
 
             // subtract points from shooter instead?
@@ -51,13 +45,11 @@ module Game =
         else
             let dealScore =
                 Enum.getValues<Seat>
-                    |> Seq.map (fun seat ->
-                        let points =
-                            if seat = shooter then
-                                -ClosedDeal.numPointsPerDeal
-                            else 0
-                        seat, points)
-                    |> toScore
+                    |> Array.map (fun seat ->
+                        if seat = shooter then
+                            -ClosedDeal.numPointsPerDeal
+                        else 0)
+                    |> Score.ofPoints
             gameScore + dealScore
 
     /// Updates the given game score, including shoot reward, if

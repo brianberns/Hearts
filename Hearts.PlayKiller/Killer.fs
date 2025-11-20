@@ -302,15 +302,15 @@ module Killer =
     /// Gets the payoff for the given deal score from each
     /// player's point of view.
     let getPayoff score =
-        let points = score.ScoreMap.Values
-        assert(points.Count = Seat.numSeats)
-        let sum = Seq.sum points
-        score.ScoreMap
-            |> Map.map (fun _ pt ->
+        let sum = Score.sum score
+        Score.indexed score
+            |> Seq.map (fun (seat, pt) ->
                 let otherAvg =
                     float32 (sum - pt)
                         / float32 (Seat.numSeats - 1)
-                otherAvg - float32 pt)
+                let payoff = otherAvg - float32 pt
+                seat, payoff)
+            |> Map
 
     /// Runs a KH session with the given client player.
     let run player =

@@ -15,6 +15,7 @@
   <ItemGroup>
     <PackageReference Include="Fable.Remoting.Suave" Version="4.43.0" />
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Suave" Version="2.6.2">
       <ExcludeAssets>runtime</ExcludeAssets>
@@ -26,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Hearts.Cfr\Hearts.Cfr.fsproj" />
     <ProjectReference Include="..\..\Hearts.Model\Hearts.Model.fsproj" />
   </ItemGroup>
 

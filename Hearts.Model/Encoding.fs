@@ -50,19 +50,15 @@ module Encoding =
 
     /// Encodes the given cards as a multi-hot vector
     /// in the deck size.
-    let private encodeCards cards =
-        let cardIndexes =
-            cards
-                |> Seq.map Card.toIndex
-                |> set
-        [|
-            for index = 0 to Card.numCards - 1 do
-                cardIndexes.Contains(index)
-        |]
+    let encodeCards cards =
+        let flags = Array.zeroCreate Card.numCards
+        for index in Seq.map Card.toIndex cards do
+            flags[index] <- true   // use mutation for speed
+        flags
 
     /// Encodes the given exchange direction as a one-hot
     /// vector in the number of exchange directions.
-    let private encodeExchangeDirection dir =
+    let encodeExchangeDirection dir =
         [|
             for d in Enum.getValues<ExchangeDirection> do
                 d = dir
@@ -70,7 +66,7 @@ module Encoding =
 
     /// Encodes the given pass as a multi-hot vector in
     /// the deck size.
-    let private encodePass passOpt =
+    let encodePass passOpt =
         let cards : Pass =
             passOpt
                 |> Option.defaultValue Set.empty
@@ -80,20 +76,17 @@ module Encoding =
     /// Encodes each card in the given current trick as
     /// a one-hot vector in the deck size and concatenates
     /// those vectors.
-    let private encodeTrick trickOpt =
+    let encodeTrick trickOpt =
         let cards =
             trickOpt
-                |> Option.map (fun trick ->
-                    trick.Cards
-                        |> List.rev
-                        |> List.toArray)
+                |> Option.map (_.Cards >> Seq.toArray)
                 |> Option.defaultValue Array.empty
         assert(cards.Length < Seat.numSeats)
         [|
             for iCard = 0 to Seat.numSeats - 2 do
                 yield!
                     if iCard < cards.Length then
-                        Some cards[iCard]
+                        Some cards[cards.Length - 1 - iCard]   // unreverse into chronological order
                     else None
                     |> Option.toArray
                     |> encodeCards
@@ -101,22 +94,25 @@ module Encoding =
 
     /// Encodes the given voids as a multi-hot vector in the
     /// number of suits times the number of other seats.
-    let private encodeVoids player voids =
-        [|
-            for suit in Enum.getValues<Suit> do
-                let seats =
-                    Seat.cycle player |> Seq.skip 1
-                for seat in seats do
-                    Set.contains (seat, suit) voids
-        |]
+    let encodeVoids player voids =
+        let flags =
+            Array.zeroCreate ((Seat.numSeats - 1) * Suit.numSuits)
+        for (seat, suit) in voids do
+            if seat <> player then
+                let suitOffset = (Seat.numSeats - 1) * int suit
+                let seatOffset =
+                    ((int seat - int player - 1) + Seat.numSeats)
+                        % Seat.numSeats
+                flags[suitOffset + seatOffset] <- true   // use mutation for speed
+        flags
 
     /// Encodes the given score as a multi-hot vector in the
     /// number of seats.
-    let private encodeScore player score =
-        assert(score.ScoreMap.Count = Seat.numSeats)
+    let encodeScore player score =
+        assert(score.Points.Length = Seat.numSeats)
         [|
             for seat in Seat.cycle player do
-                score.ScoreMap[seat] > 0
+                score[seat] > 0
         |]
 
     /// Total encoded length of an info set.

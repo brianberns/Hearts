@@ -165,7 +165,7 @@ module Exchange =
 
         async {
                 // determine cards to pass
-            let! cards = loop 3 context.Deal Set.empty
+            let! cards = loop Pass.numCards context.Deal Set.empty
 
                 // create views of the selected cards
             let! cardViews =

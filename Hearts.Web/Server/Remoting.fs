@@ -3,19 +3,21 @@
 open System
 open System.IO
 
+open Microsoft.Data.Sqlite
+
 open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
-open Hearts.Model
+module AdvantageModel =
 
-module Model =
+    open Hearts.Model
 
     /// Server is inference-only, so disable all gradient
     /// calculations.
     let private _noGrade = TorchSharp.torch.no_grad()
 
     /// Connects to Hearts model.
-    let connect dir =
+    let private connect dir =
         let model =
             new AdvantageModel(
                 hiddenSize = Encoding.encodedLength * 6,
@@ -25,12 +27,10 @@ module Model =
         model.load(path) |> ignore
         model
 
-module Remoting =
-
     /// Hearts API.
-    let private heartsApi dir =
+    let heartsApi dir =
         let rng = Random(0)
-        let model = Model.connect dir
+        let model = connect dir
         model.eval()
         {
             GetActionIndex =
@@ -56,8 +56,53 @@ module Remoting =
                     }
         }
 
+module Cfr =
+
+    open Hearts.Cfr
+
+    let tryGetKey dir infoSet =
+        let path = Path.Combine(dir, "Hearts.db")
+        use conn = new SqliteConnection($"Data Source={path}")
+        conn.Open()
+
+        use cmd =
+            conn.CreateCommand(
+                CommandText =
+                    "select Action from Strategy where Key = $Key")
+        let key =
+            infoSet
+                |> Encoding.encode
+                |> Encoding.toString
+        cmd.Parameters.AddWithValue("$Key", key)
+            |> ignore
+
+        let action = cmd.ExecuteScalar()
+        if isNull action then None
+        else action :?> int64 |> int |> Some
+
+    let heartsApi dir =
+        {
+            GetActionIndex =
+                fun infoSet ->
+                    async {
+                        return tryGetKey dir infoSet
+                            |> Option.defaultValue 0
+                    }
+            GetStrategy =
+                fun infoSet ->
+                    async {
+                        let keyOpt = tryGetKey dir infoSet
+                        let nActions = infoSet.LegalActions.Length
+                        return Array.init nActions (fun i ->
+                            if Some i = keyOpt then 1
+                            else 0)
+                    }
+        }
+
+module Remoting =
+
     /// Build API.
     let webPart dir =
         Remoting.createApi()
-            |> Remoting.fromValue (heartsApi dir)
+            |> Remoting.fromValue (Cfr.heartsApi dir)
             |> Remoting.buildWebPart

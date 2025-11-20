@@ -39,7 +39,7 @@ module Playout =
 
             | Some score ->
                 console.log("Inevitable:")
-                for seat, points in Map.toSeq score.ScoreMap do
+                for seat, points in Score.indexed score do
                     console.log($"   {Seat.toString seat}: {points} point(s)")
 
             | None when legalActions.Length > 1 ->
