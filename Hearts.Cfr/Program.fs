@@ -97,9 +97,10 @@ module Program =
                 |> Seq.chunkBySize chunkSize
                 |> Trainer.trainScan Seat.numSeats
 
+        printfn "Iteration, # Info Sets, Duration (ms), Saved"
         let stopwatch = Stopwatch.StartNew()
-        for (iChunk, state) in Seq.indexed tuples do
-            printf $"{iChunk}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
+        for (iter, state) in Seq.indexed tuples do
+            printf $"{iter}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
             saveStrategy state.InfoSetMap
             printfn ", saved"
             stopwatch.Restart()
