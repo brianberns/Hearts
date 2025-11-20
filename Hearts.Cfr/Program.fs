@@ -3,8 +3,8 @@
 open System
 open System.Diagnostics
 
+open Microsoft.Data.Sqlite
 open FastCfr
-
 open Hearts
 
 module Program =
@@ -38,6 +38,47 @@ module Program =
             | None ->
                 createNonTerminalGameState deal
 
+    let executeCmd (conn : SqliteConnection) sql =
+        use cmd = conn.CreateCommand(CommandText = sql)
+        cmd.ExecuteNonQuery() |> ignore
+
+    let saveStrategy infoSetMap =
+        use conn = new SqliteConnection("Data Source=Hearts.db")
+        conn.Open()
+
+        executeCmd conn "drop table if exists Strategy"
+        executeCmd conn
+            """
+            create table Strategy (
+                Key text primary key,
+                Action integer not null)
+            """
+        executeCmd conn
+            """
+            pragma journal_mode = OFF;
+            pragma synchronous = OFF
+            """
+
+            // prepare insert command
+        use cmd =
+            conn.CreateCommand(CommandText =
+                """
+                insert into Strategy (Key, Action)
+                values ($Key, $Action)
+                """)
+        let keyParam = cmd.Parameters.Add("$Key", SqliteType.Text)
+        let actionParam = cmd.Parameters.Add("$Action", SqliteType.Integer)
+
+        for (key : string, infoSet) in Map.toSeq infoSetMap do
+            keyParam.Value <- key
+            actionParam.Value <-
+                infoSet.StrategySum
+                    |> Seq.indexed
+                    |> Seq.maxBy snd
+                    |> fst
+            let nRows = cmd.ExecuteNonQuery()
+            assert(nRows = 1)
+
     let run () =
 
             // settings for this run
@@ -55,6 +96,7 @@ module Program =
         let stopwatch = Stopwatch.StartNew()
         for (iChunk, state) in Seq.indexed tuples do
             printfn $"{iChunk}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
+            saveStrategy state.InfoSetMap
             stopwatch.Restart()
 
     Console.OutputEncoding <- System.Text.Encoding.UTF8
