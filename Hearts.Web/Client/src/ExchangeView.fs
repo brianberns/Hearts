@@ -29,8 +29,12 @@ module ExchangeView =
 
             // horizontal offset (-1, 0, 1)
         let offset =
+(*
             assert(Pass.numCards = 3)
             float (n - 1) * delta
+*)
+            assert(Pass.numCards = 1)
+            0
 
         let toSeat =
             ExchangeDirection.apply fromSeat dir
