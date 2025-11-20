@@ -8,14 +8,14 @@ open Fable.Remoting.Suave
 
 open Hearts.Model
 
-module Model =
+module AdvantageModel =
 
     /// Server is inference-only, so disable all gradient
     /// calculations.
     let private _noGrade = TorchSharp.torch.no_grad()
 
     /// Connects to Hearts model.
-    let connect dir =
+    let private connect dir =
         let model =
             new AdvantageModel(
                 hiddenSize = Encoding.encodedLength * 6,
@@ -25,12 +25,10 @@ module Model =
         model.load(path) |> ignore
         model
 
-module Remoting =
-
     /// Hearts API.
-    let private heartsApi dir =
+    let heartsApi dir =
         let rng = Random(0)
-        let model = Model.connect dir
+        let model = connect dir
         model.eval()
         {
             GetActionIndex =
@@ -56,8 +54,22 @@ module Remoting =
                     }
         }
 
+module Cfr =
+
+    let heartsApi dir =
+        {
+            GetActionIndex =
+                fun infoSet ->
+                    failwith "boom"
+            GetStrategy =
+                fun infoSet ->
+                    failwith "boom"
+        }
+
+module Remoting =
+
     /// Build API.
     let webPart dir =
         Remoting.createApi()
-            |> Remoting.fromValue (heartsApi dir)
+            |> Remoting.fromValue (Cfr.heartsApi dir)
             |> Remoting.buildWebPart
