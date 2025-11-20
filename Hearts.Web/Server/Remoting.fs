@@ -60,35 +60,42 @@ module Cfr =
 
     open Hearts.Cfr
 
+    let tryGetKey dir infoSet =
+        let path = Path.Combine(dir, "Hearts.db")
+        use conn = new SqliteConnection($"Data Source={path}")
+        conn.Open()
+
+        use cmd =
+            conn.CreateCommand(
+                CommandText =
+                    "select Action from Strategy where Key = $Key")
+        let key =
+            infoSet
+                |> Encoding.encode
+                |> Encoding.toString
+        cmd.Parameters.AddWithValue("$Key", key)
+            |> ignore
+
+        let action = cmd.ExecuteScalar()
+        if isNull action then None
+        else action :?> int64 |> int |> Some
+
     let heartsApi dir =
         {
             GetActionIndex =
                 fun infoSet ->
                     async {
-                        let path = Path.Combine(dir, "Hearts.db")
-                        use conn = new SqliteConnection($"Data Source={path}")
-                        conn.Open()
-
-                        use cmd =
-                            conn.CreateCommand(
-                                CommandText =
-                                    "select Action from Strategy where Key = $Key")
-                        let key =
-                            infoSet
-                                |> Encoding.encode
-                                |> Encoding.toString
-                        cmd.Parameters.AddWithValue("$Key", key)
-                            |> ignore
-
-                        let action = cmd.ExecuteScalar()
-                        return
-                            if isNull action then 0
-                            else action :?> int64 |> int
+                        return tryGetKey dir infoSet
+                            |> Option.defaultValue 0
                     }
             GetStrategy =
                 fun infoSet ->
                     async {
-                        return Array.empty
+                        let keyOpt = tryGetKey dir infoSet
+                        let nActions = infoSet.LegalActions.Length
+                        return Array.init nActions (fun i ->
+                            if Some i = keyOpt then 1
+                            else 0)
                     }
         }
 
