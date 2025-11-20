@@ -6,6 +6,8 @@
   <Folder Name="/Solution Items/">
     <File Path="README.md" />
   </Folder>
+  <Project Path="FastCfr/FastCfr/FastCfr.fsproj" />
+  <Project Path="Hearts.Cfr/Hearts.Cfr.fsproj" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />
   <Project Path="Hearts.PlayKiller/Hearts.PlayKiller.fsproj" />
