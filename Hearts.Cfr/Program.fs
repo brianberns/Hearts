@@ -95,8 +95,9 @@ module Program =
 
         let stopwatch = Stopwatch.StartNew()
         for (iChunk, state) in Seq.indexed tuples do
-            printfn $"{iChunk}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
+            printf $"{iChunk}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
             saveStrategy state.InfoSetMap
+            printfn ", saved"
             stopwatch.Restart()
 
     Console.OutputEncoding <- System.Text.Encoding.UTF8
