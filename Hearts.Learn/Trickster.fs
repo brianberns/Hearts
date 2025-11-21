@@ -98,7 +98,9 @@ module Trickster =
                 let suit =
                     match card.suit with
                         | cloud.Suit.Clubs -> Suit.Clubs
+                        (*
                         | cloud.Suit.Diamonds -> Suit.Diamonds
+                        *)
                         | cloud.Suit.Hearts -> Suit.Hearts
                         | cloud.Suit.Spades -> Suit.Spades
                         | _ -> failwith "Unexpected"

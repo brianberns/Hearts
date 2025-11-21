@@ -40,14 +40,19 @@ module DealView =
             let! backs = getCardBacks surface
             let closed1 = closedView 0 backs
             let closed2 = closedView 1 backs
+            (*
             let closed3 = closedView 2 backs
             let closed0 = closedView 3 backs   // dealer receives cards last
+            *)
+            let closed0 = closedView 2 backs   // dealer receives cards last
             let closedHandViews =
                 [|
                     closed0
                     closed1
                     closed2
+                    (*
                     closed3
+                    *)
                 |]
 
                 // create open hand view for user
@@ -61,7 +66,9 @@ module DealView =
                 let seat iPlayer = Seat.incr iPlayer dealer
                 let anim1 = HandView.dealAnim (seat 1) closed1
                 let anim2 = HandView.dealAnim (seat 2) closed2
+                (*
                 let anim3 = HandView.dealAnim (seat 3) closed3
+                *)
                 let anim0 = HandView.dealAnim (seat 0) closed0
 
                     // animate user's hand reveal
@@ -73,7 +80,9 @@ module DealView =
                 [|
                     anim1
                     anim2
+                    (*
                     anim3
+                    *)
                     anim0
                     animReveal
                 |] |> Animation.Serial 
@@ -119,7 +128,9 @@ module DealView =
             let! closedHandViewPairs =
                 [
                     Seat.West
+(*
                     Seat.North
+*)
                     Seat.East
                 ]
                     |> Seq.map closedViewPair
@@ -146,7 +157,9 @@ module DealView =
     let private dealScoreElemMap =
         Map [
             Seat.West,  ~~"#wDealScore"
+(*
             Seat.North, ~~"#nDealScore"
+*)
             Seat.East,  ~~"#eDealScore"
             Seat.South, ~~"#sDealScore"
         ]
@@ -155,7 +168,9 @@ module DealView =
     let private suitElemMap =
         Map [
             Suit.Clubs,    ~~"#deckClubs"
+            (*
             Suit.Diamonds, ~~"#deckDiamonds"
+            *)
             Suit.Hearts,   ~~"#deckHearts"
             Suit.Spades,   ~~"#deckSpades"
         ]

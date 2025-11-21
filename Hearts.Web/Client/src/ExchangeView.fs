@@ -18,7 +18,9 @@ module ExchangeView =
     let private passPosMap =
         Position.seatMap [
             Seat.West,  (20, 69)
+(*
             Seat.North, (28, 15)
+*)
             Seat.East,  (80, 31)
             Seat.South, (72, 84)
         ]

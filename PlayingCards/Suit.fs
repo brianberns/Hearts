@@ -3,9 +3,13 @@
 /// The suit of a card.
 type Suit =
     | Clubs    = 0
+(*
     | Diamonds = 1
     | Hearts   = 2
     | Spades   = 3
+*)
+    | Hearts   = 1
+    | Spades   = 2
 
 module Suit =
 
@@ -15,7 +19,10 @@ module Suit =
 
     /// Converts the given suit to a character.
     let toChar suit =
+        (*
         "♣♦♥♠"[int suit]
+        *)
+        "♣♥♠"[int suit]
 
     /// Converts the given suit to a letter character.
     let toLetter suit =
@@ -24,7 +31,9 @@ module Suit =
     /// Converts the given character to a rank.
     let fromChar = function
         | 'C' | '♣' -> Suit.Clubs
+(*
         | 'D' | '♦' -> Suit.Diamonds
+*)
         | 'H' | '♥' -> Suit.Hearts
         | 'S' | '♠' -> Suit.Spades
         | c -> failwith $"Unexpected suit char: |{c}|"

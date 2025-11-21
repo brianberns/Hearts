@@ -45,7 +45,9 @@ module HandView =
     let centerPosMap =
         Position.seatMap [
             Seat.West,  (20, 50)
+(*
             Seat.North, (50, 15)
+*)
             Seat.East,  (80, 50)
             Seat.South, (50, 84)
         ]
@@ -180,7 +182,9 @@ module OpenHandView =
                 | Suit.Spades   -> 1   // black
                 | Suit.Hearts   -> 2   // red
                 | Suit.Clubs    -> 3   // black
+                (*
                 | Suit.Diamonds -> 4   // red
+                *)
                 | _ -> failwith "Unexpected"
         let rankKey = -1 * int card.Rank
         suitKey, rankKey

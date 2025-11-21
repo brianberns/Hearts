@@ -6,8 +6,11 @@ open PlayingCards
 type ExchangeDirection =
     | Left = 0
     | Right = 1
+    (*
     | Across = 2
     | Hold = 3
+    *)
+    | Hold = 2
 
 module ExchangeDirection =
 
@@ -20,7 +23,7 @@ module ExchangeDirection =
     let toString = function
         | ExchangeDirection.Left -> "Left"
         | ExchangeDirection.Right -> "Right"
-        | ExchangeDirection.Across -> "Across"
+        // | ExchangeDirection.Across -> "Across"
         | ExchangeDirection.Hold -> "Hold"
         | _ -> failwith "Unexpected exchange direction"
 #endif
@@ -31,8 +34,11 @@ module ExchangeDirection =
             match dir with
                 | ExchangeDirection.Hold -> 0
                 | ExchangeDirection.Left -> 1
+                (*
                 | ExchangeDirection.Across -> 2
                 | ExchangeDirection.Right -> 3
+                *)
+                | ExchangeDirection.Right -> 2
                 | _ -> failwith "Unexpected"
         seat |> Seat.incr n
 
@@ -41,8 +47,11 @@ module ExchangeDirection =
         let n =
             match dir with
                 | ExchangeDirection.Hold -> 0
+                (*
                 | ExchangeDirection.Left -> 3
                 | ExchangeDirection.Across -> 2
+                *)
+                | ExchangeDirection.Left -> 2
                 | ExchangeDirection.Right -> 1
                 | _ -> failwith "Unexpected"
         seat |> Seat.incr n
