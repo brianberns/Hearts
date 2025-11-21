@@ -145,7 +145,9 @@ module Protocol =
                 match fields[4] |> Int32.Parse with
                     | 0 -> ExchangeDirection.Left
                     | 1 -> ExchangeDirection.Right
+                    (*
                     | 2 -> ExchangeDirection.Across
+                    *)
                     | 3 -> ExchangeDirection.Hold
                     | _ -> failwith "Unexpected"
         }

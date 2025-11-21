@@ -128,7 +128,7 @@ module Trainer =
             Tournament.run
                 (Random(0))       // use repeatable test set, not seen during training
                 settings.NumEvaluationDeals
-                Trickster.player
+                (Hearts.Cfr.Cfr.player ".")
                 (Strategy.createPlayer model)
         if settings.Verbose then
             printfn "\nTournament:"

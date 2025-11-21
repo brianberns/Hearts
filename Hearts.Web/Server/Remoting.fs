@@ -60,41 +60,20 @@ module Cfr =
 
     open Hearts.Cfr
 
-    let tryGetKey dir infoSet =
-        let path = Path.Combine(dir, "Hearts.db")
-        use conn = new SqliteConnection($"Data Source={path}")
-        conn.Open()
-
-        use cmd =
-            conn.CreateCommand(
-                CommandText =
-                    "select Action from Strategy where Key = $Key")
-        let key =
-            infoSet
-                |> Encoding.encode
-                |> Encoding.toString
-        cmd.Parameters.AddWithValue("$Key", key)
-            |> ignore
-
-        let action = cmd.ExecuteScalar()
-        if isNull action then None
-        else action :?> int64 |> int |> Some
-
     let heartsApi dir =
         {
             GetActionIndex =
                 fun infoSet ->
                     async {
-                        return tryGetKey dir infoSet
-                            |> Option.defaultValue 0
+                        return Cfr.getActionIndex dir infoSet
                     }
             GetStrategy =
                 fun infoSet ->
                     async {
-                        let keyOpt = tryGetKey dir infoSet
+                        let actionIdxOpt = Cfr.tryGetActionIndex dir infoSet
                         let nActions = infoSet.LegalActions.Length
                         return Array.init nActions (fun i ->
-                            if Some i = keyOpt then 1
+                            if Some i = actionIdxOpt then 1
                             else 0)
                     }
         }
