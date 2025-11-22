@@ -7,18 +7,23 @@ open Hearts
 
 module Cfr =
 
-    let tryGetActionIndex dir infoSet =
+    let private openConnection dir =
         let path = Path.Combine(dir, "Hearts.db")
-        use conn = new SqliteConnection($"Data Source={path}")
+        let conn = new SqliteConnection($"Data Source={path}")
         conn.Open()
+        conn
 
-        do
-            use pragmaCmd =
-                conn.CreateCommand(
-                    CommandText = "PRAGMA journal_mode = WAL;")   // performance optimization
-            pragmaCmd.ExecuteNonQuery() |> ignore
+    let private optimize dir =
+        use conn = openConnection dir
+        use cmd =
+            conn.CreateCommand(
+                CommandText = "PRAGMA journal_mode = WAL;")
+        cmd.ExecuteNonQuery() |> ignore
 
-        use selectCmd =
+    let tryGetActionIndex dir infoSet =
+        use conn = openConnection dir
+
+        use cmd =
             conn.CreateCommand(
                 CommandText =
                     "select Action from Strategy where Key = $Key")
@@ -26,10 +31,10 @@ module Cfr =
             infoSet
                 |> Encoding.encode
                 |> Encoding.toString
-        selectCmd.Parameters.AddWithValue("$Key", key)
+        cmd.Parameters.AddWithValue("$Key", key)
             |> ignore
 
-        let actionObj = selectCmd.ExecuteScalar()
+        let actionObj = cmd.ExecuteScalar()
         if isNull actionObj then None
         else
             let actionIdx = actionObj :?> int64 |> int
@@ -46,4 +51,6 @@ module Cfr =
         let iAction = getActionIndex dir infoSet
         infoSet.LegalActions[iAction]
 
-    let player dir = { Act = act dir }
+    let player dir =
+        optimize dir   // one-time performance optimization
+        { Act = act dir }
