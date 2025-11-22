@@ -7,21 +7,24 @@ open Hearts
 
 module Cfr =
 
-    let private openConnection dir =
+    let private openConnection dir readOnly =
         let path = Path.Combine(dir, "Hearts.db")
-        let conn = new SqliteConnection($"Data Source={path}")
+        let modeStr =
+            if readOnly then "Mode=ReadOnly"
+            else ""
+        let conn = new SqliteConnection($"Data Source={path};{modeStr}")
         conn.Open()
         conn
 
     let private optimize dir =
-        use conn = openConnection dir
+        use conn = openConnection dir false
         use cmd =
             conn.CreateCommand(
                 CommandText = "PRAGMA journal_mode = WAL;")
         cmd.ExecuteNonQuery() |> ignore
 
     let tryGetActionIndex dir infoSet =
-        use conn = openConnection dir
+        use conn = openConnection dir true
 
         use cmd =
             conn.CreateCommand(
