@@ -12,7 +12,13 @@ module Cfr =
         use conn = new SqliteConnection($"Data Source={path}")
         conn.Open()
 
-        use cmd =
+        do
+            use pragmaCmd =
+                conn.CreateCommand(
+                    CommandText = "PRAGMA journal_mode = WAL;")   // performance optimization
+            pragmaCmd.ExecuteNonQuery() |> ignore
+
+        use selectCmd =
             conn.CreateCommand(
                 CommandText =
                     "select Action from Strategy where Key = $Key")
@@ -20,10 +26,10 @@ module Cfr =
             infoSet
                 |> Encoding.encode
                 |> Encoding.toString
-        cmd.Parameters.AddWithValue("$Key", key)
+        selectCmd.Parameters.AddWithValue("$Key", key)
             |> ignore
 
-        let actionObj = cmd.ExecuteScalar()
+        let actionObj = selectCmd.ExecuteScalar()
         if isNull actionObj then None
         else
             let actionIdx = actionObj :?> int64 |> int
