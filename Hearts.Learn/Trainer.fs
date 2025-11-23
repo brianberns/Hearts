@@ -32,7 +32,7 @@ module AdvantageState =
             ModelOpt = None
             Reservoir =
                 Reservoir.create rng
-                    settings.NumAdvantageSamples
+                    settings.SampleReservoirCapacity
         }
 
 module Trainer =

@@ -81,10 +81,10 @@ module AdvantageModel =
             |> Seq.toArray
             |> Array.randomShuffle
             |> Array.chunkBySize     // e.g. sub-batches of 10,000 rows each
-                settings.AdvantageSubBatchSize
+                settings.TrainingSubBatchSize
             |> Array.chunkBySize (   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
-                settings.AdvantageBatchSize
-                    / settings.AdvantageSubBatchSize)
+                settings.TrainingBatchSize
+                    / settings.TrainingSubBatchSize)
             |> Array.map (
                 Array.map (fun samples ->
                     let inputs, targets, weights =
@@ -127,7 +127,7 @@ module AdvantageModel =
                 // scale loss
             let scale =
                 float32 (subbatch.Inputs.GetLength(0))
-                    / float32 settings.AdvantageBatchSize
+                    / float32 settings.TrainingBatchSize
             rawLoss * scale
 
             // backward pass
@@ -169,7 +169,7 @@ module AdvantageModel =
                 settings.LearningRate)
         use criterion = MSELoss()
         model.train()
-        for epoch = 1 to settings.NumAdvantageTrainEpochs do
+        for epoch = 1 to settings.NumTrainingEpochs do
             let loss =
                 Array.last [|
                     for batch in batches do

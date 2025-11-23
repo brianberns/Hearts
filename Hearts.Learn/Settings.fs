@@ -22,32 +22,33 @@ type Settings =
         /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
         SampleBranchRate : float
 
-        /// Size of a neural network hidden layer.
+        /// Maximum number of samples to keep in the reservoir.
+        SampleReservoirCapacity : int
+
+        /// Input and output size of a hidden layer within the neural
+        /// network.
         HiddenSize : int
 
-        /// Number of hidden layers.
+        /// Number of hidden layers within the neural network.
         NumHiddenLayers : int
 
-        /// Optimizer learning rate.
+        /// Number of epochs to use when training the model.
+        NumTrainingEpochs : int
+
+        /// Batch size to use when training the model.
+        TrainingBatchSize : int
+
+        /// Sub-batch size to use when training the model.
+        TrainingSubBatchSize : int
+
+        /// Optimizer learning rate to use when training the model.
         LearningRate : float
 
-        /// Number of epochs to use when training advantage models.
-        NumAdvantageTrainEpochs : int
-
-        /// Batch size to use when training advantage models.
-        AdvantageBatchSize : int
-
-        /// Sub-batch size to use when training advantage models.
-        AdvantageSubBatchSize : int
-
-        /// Number of advantage samples to keep.
-        NumAdvantageSamples : int
+        /// Number of deals to evaluate model after training.
+        NumEvaluationDeals : int
 
         /// Number of iterations to perform.
         NumIterations : int
-
-        /// Number of deals to evaluate model.
-        NumEvaluationDeals : int
 
         /// Device to use for training and running models.
         Device : torch.Device
@@ -79,13 +80,13 @@ module Settings =
                 NumDealsPerIteration = 8000
                 DealBatchSize = 200
                 SampleBranchRate = 1.5
+                SampleReservoirCapacity = 100_000_000
                 HiddenSize = Encoding.encodedLength * 6
                 NumHiddenLayers = 2
+                NumTrainingEpochs = 500
+                TrainingBatchSize = 1_000_000
+                TrainingSubBatchSize = 80_000
                 LearningRate = 1e-3
-                NumAdvantageTrainEpochs = 500
-                AdvantageBatchSize = 1_000_000
-                AdvantageSubBatchSize = 80_000
-                NumAdvantageSamples = 100_000_000
                 NumIterations = 50
                 NumEvaluationDeals = 20000
                 Device = torch.CUDA
@@ -97,35 +98,35 @@ module Settings =
             |> ignore
 
         writer.add_text(
+            $"settings/NumDealsPerIteration",
+            string settings.NumDealsPerIteration, 0)
+        writer.add_text(
+            $"settings/DealBatchSize",
+            string settings.DealBatchSize, 0)
+        writer.add_text(
+            $"settings/SampleBranchRate",
+            string settings.SampleBranchRate, 0)
+        writer.add_text(
+            $"settings/SampleReservoirCapacity",
+            string settings.SampleReservoirCapacity, 0)
+        writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)
         writer.add_text(
             $"settings/NumHiddenLayers",
             string settings.NumHiddenLayers, 0)
         writer.add_text(
+            $"settings/NumTrainingEpochs",
+            string settings.NumTrainingEpochs, 0)
+        writer.add_text(
+            $"settings/TrainingBatchSize",
+            string settings.TrainingBatchSize, 0)
+        writer.add_text(
+            $"settings/TrainingSubBatchSize",
+            string settings.TrainingSubBatchSize, 0)
+        writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
-        writer.add_text(
-            $"settings/SampleDecay",
-            string settings.SampleBranchRate, 0)
-        writer.add_text(
-            $"settings/NumAdvantageTrainEpochs",
-            string settings.NumAdvantageTrainEpochs, 0)
-        writer.add_text(
-            $"settings/NumAdvantageSamples",
-            string settings.NumAdvantageSamples, 0)
-        writer.add_text(
-            $"settings/AdvantageBatchSize",
-            string settings.AdvantageBatchSize, 0)
-        writer.add_text(
-            $"settings/AdvantageSubBatchSize",
-            string settings.AdvantageSubBatchSize, 0)
-        writer.add_text(
-            $"settings/NumTraversals",
-            string settings.NumDealsPerIteration, 0)
-        writer.add_text(
-            $"settings/TraversalBatchSize",
-            string settings.DealBatchSize, 0)
         writer.add_text(
             $"settings/NumIterations",
             string settings.NumIterations, 0)
