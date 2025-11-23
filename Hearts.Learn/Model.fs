@@ -29,7 +29,7 @@ module AdvantageSample =
     /// Creates an advantage sample.
     let create infoSet regrets iteration =
         assert(Vector.length regrets = Model.outputSize)
-        assert(iteration > 0)
+        assert(iteration >= 1)
         assert(iteration <= settings.NumIterations)
         {
             Encoding = Encoding.encode infoSet
@@ -70,9 +70,11 @@ module AdvantageModel =
                 ]
                     |> Seq.distinct
                     |> Seq.length = 1)
+            assert(subbatch.Weights.GetLength(1) = 1)
             subbatch
 
-    /// A batch of training data.
+    /// A logical batch of training data, although it
+    /// might be too large to fit on the GPU.
     type private Batch = SubBatch[]
 
     /// Breaks the given samples into batches.
