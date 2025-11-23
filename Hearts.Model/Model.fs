@@ -18,6 +18,7 @@ module Model =
     /// Size of neural network output.
     let outputSize = Card.numCards
 
+/// Skip connection module.
 type SkipConnection(inner : Model) as this =
     inherit Model($"{inner.GetName()}Skip")
 
@@ -34,8 +35,7 @@ type AdvantageModel(
     device : torch.Device) as this =
     inherit Model("AdvantageModel")
 
-    let mutable curDevice = device
-
+    /// Skip connection DSL support.
     let SkipConnection(inner) = new SkipConnection(inner)
 
     let sequential =
@@ -44,8 +44,7 @@ type AdvantageModel(
                 // input layer
             Linear(
                 Model.inputSize,
-                hiddenSize,
-                device = device) :> Model
+                hiddenSize) :> Model
             ReLU()
             Dropout()
 
@@ -55,28 +54,21 @@ type AdvantageModel(
                     Sequential(
                         Linear(
                             hiddenSize,
-                            hiddenSize,
-                            device = device),
+                            hiddenSize),
                         ReLU(),
                         Dropout()))
 
                 // output layer
             Linear(
                 hiddenSize,
-                Model.outputSize,
-                device = device)
+                Model.outputSize)
         |]
 
     do
         this.RegisterComponents()
-        this.MoveTo(device)   // make sure module itself is on the right device
+        this.``to``(device) |> ignore
 
-    member _.MoveTo(device) =
-        lock this (fun () ->
-            curDevice <- device
-            this.``to``(device) |> ignore)
-
-    member _.Device = curDevice
+    member _.Device = device
 
     override _.forward(input) = 
         sequential.forward(input)
