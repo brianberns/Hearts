@@ -120,13 +120,14 @@ module AdvantageModel =
             // forward pass
         use loss =
 
+                // compute loss for this sub-batch
             use rawLoss =
                 use outputs = inputs --> model
                 use outputs' = weights * outputs
                 use targets' = weights * targets
                 criterion.forward(outputs', targets')
 
-                // scale loss
+                // scale loss to batch size
             let scale =
                 float32 (subbatch.Inputs.GetLength(0))
                     / float32 settings.TrainingBatchSize
