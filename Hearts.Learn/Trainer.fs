@@ -44,8 +44,8 @@ module Trainer =
             $"advantage samples/iter%03d{iter}",
             0f, 0)
 
-        let chunkSize = settings.TraversalBatchSize
-        Array.zeroCreate<int> settings.NumTraversals
+        let chunkSize = settings.DealBatchSize
+        Array.zeroCreate<int> settings.NumDealsPerIteration
             |> Array.chunkBySize chunkSize
             |> Array.indexed
             |> Array.collect (fun (i, chunk) ->

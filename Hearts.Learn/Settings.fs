@@ -7,6 +7,21 @@ open Hearts.Model
 /// Hyperparameters.
 type Settings =
     {
+        /// Total number of deals to create when generating sample
+        /// data at the start of each iteration.
+        NumDealsPerIteration : int
+
+        /// Number of deals to create per batch when generating
+        /// sample data at the start of each iteration. E.g. 8000
+        /// deals at 200 deals/batch is 40 batches.
+        DealBatchSize : int
+
+        /// Branch rate of the move tree when generating sample data
+        /// at the start of each iteration. Larger values generate
+        /// more samples.
+        /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
+        SampleBranchRate : float
+
         /// Size of a neural network hidden layer.
         HiddenSize : int
 
@@ -15,11 +30,6 @@ type Settings =
 
         /// Optimizer learning rate.
         LearningRate : float
-
-        /// Sample decay control. Greater values cause greater
-        /// branching.
-        /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
-        SampleDecay : float
 
         /// Number of epochs to use when training advantage models.
         NumAdvantageTrainEpochs : int
@@ -32,12 +42,6 @@ type Settings =
 
         /// Number of advantage samples to keep.
         NumAdvantageSamples : int
-
-        /// Number of deals to traverse during each iteration.
-        NumTraversals : int
-
-        /// Number of deals to traverse in each batch.
-        TraversalBatchSize : int
 
         /// Number of iterations to perform.
         NumIterations : int
@@ -72,16 +76,16 @@ module Settings =
 
         let settings =
             {
+                NumDealsPerIteration = 8000
+                DealBatchSize = 200
+                SampleBranchRate = 1.5
                 HiddenSize = Encoding.encodedLength * 6
                 NumHiddenLayers = 2
                 LearningRate = 1e-3
-                SampleDecay = 1.5
                 NumAdvantageTrainEpochs = 500
                 AdvantageBatchSize = 1_000_000
                 AdvantageSubBatchSize = 80_000
                 NumAdvantageSamples = 100_000_000
-                NumTraversals = 8000
-                TraversalBatchSize = 200
                 NumIterations = 50
                 NumEvaluationDeals = 20000
                 Device = torch.CUDA
@@ -103,7 +107,7 @@ module Settings =
             string settings.LearningRate, 0)
         writer.add_text(
             $"settings/SampleDecay",
-            string settings.SampleDecay, 0)
+            string settings.SampleBranchRate, 0)
         writer.add_text(
             $"settings/NumAdvantageTrainEpochs",
             string settings.NumAdvantageTrainEpochs, 0)
@@ -118,10 +122,10 @@ module Settings =
             string settings.AdvantageSubBatchSize, 0)
         writer.add_text(
             $"settings/NumTraversals",
-            string settings.NumTraversals, 0)
+            string settings.NumDealsPerIteration, 0)
         writer.add_text(
             $"settings/TraversalBatchSize",
-            string settings.TraversalBatchSize, 0)
+            string settings.DealBatchSize, 0)
         writer.add_text(
             $"settings/NumIterations",
             string settings.NumIterations, 0)
