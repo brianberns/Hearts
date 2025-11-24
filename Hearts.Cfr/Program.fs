@@ -101,7 +101,7 @@ module Program =
         let stopwatch = Stopwatch.StartNew()
         for (iter, state) in Seq.indexed tuples do
             printf $"{iter}, {state.InfoSetMap.Count}, {stopwatch.ElapsedMilliseconds}"
-            if (iter + 1) % 10 = 0 then
+            if iter % 10 = 0 then
                 saveStrategy state.InfoSetMap
                 printfn ", saved"
             else
