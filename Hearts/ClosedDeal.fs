@@ -215,10 +215,12 @@ module ClosedDeal =
             if card.Suit = Suit.Hearts
                 && not deal.HeartsBroken
                 && updatedTrick.Leader = player then
-                deal.Voids
-                    .Add(player, Suit.Clubs)
-                    .Add(player, Suit.Diamonds)
-                    .Add(player, Suit.Spades)
+                let suits =
+                    Enum.getValues<Suit>
+                        |> Seq.where ((<>) Suit.Hearts)
+                (deal.Voids, suits)
+                    ||> Seq.fold (fun voids suit ->
+                        voids.Add(player, suit))
             else voids
 
         {

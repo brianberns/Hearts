@@ -145,7 +145,9 @@ module Protocol =
                 match fields[4] |> Int32.Parse with
                     | 0 -> ExchangeDirection.Left
                     | 1 -> ExchangeDirection.Right
+                    (*
                     | 2 -> ExchangeDirection.Across
+                    *)
                     | 3 -> ExchangeDirection.Hold
                     | _ -> failwith "Unexpected"
         }
@@ -171,7 +173,9 @@ module Protocol =
                         Suit.Spades, 1
                         Suit.Hearts, 2
                         Suit.Clubs, 3
+                        (*
                         Suit.Diamonds, 4
+                        *)
                     |]
                 seq {
                     for (suit, iField) in suits do
@@ -192,7 +196,9 @@ module Protocol =
                     | 0 -> Suit.Spades
                     | 1 -> Suit.Hearts
                     | 2 -> Suit.Clubs
+                    (*
                     | 3 -> Suit.Diamonds
+                    *)
                     | _ -> failwith "Unexpected"
             Card(rank, suit)
 
@@ -205,7 +211,9 @@ module Protocol =
                     | Suit.Spades   -> 0
                     | Suit.Hearts   -> 1
                     | Suit.Clubs    -> 2
+                    (*
                     | Suit.Diamonds -> 3
+                    *)
                     | _ -> failwith "Unexpected"
             rank + suit
 

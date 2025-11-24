@@ -32,7 +32,7 @@ module AdvantageState =
             ModelOpt = None
             Reservoir =
                 Reservoir.create rng
-                    settings.NumAdvantageSamples
+                    settings.SampleReservoirCapacity
         }
 
 module Trainer =
@@ -44,8 +44,8 @@ module Trainer =
             $"advantage samples/iter%03d{iter}",
             0f, 0)
 
-        let chunkSize = settings.TraversalBatchSize
-        Array.zeroCreate<int> settings.NumTraversals
+        let chunkSize = settings.DealBatchSize
+        Array.zeroCreate<int> settings.NumDealsPerIteration
             |> Array.chunkBySize chunkSize
             |> Array.indexed
             |> Array.collect (fun (i, chunk) ->
@@ -128,7 +128,7 @@ module Trainer =
             Tournament.run
                 (Random(0))       // use repeatable test set, not seen during training
                 settings.NumEvaluationDeals
-                Trickster.player
+                (Hearts.Cfr.Cfr.player ".")
                 (Strategy.createPlayer model)
         if settings.Verbose then
             printfn "\nTournament:"

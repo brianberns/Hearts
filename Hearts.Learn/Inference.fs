@@ -21,7 +21,7 @@ module Inference =
                 // batch inference
             | Some (model : AdvantageModel) ->
                 infoSets
-                    |> Array.chunkBySize settings.AdvantageSubBatchSize
+                    |> Array.chunkBySize settings.TrainingSubBatchSize
                     |> Array.collect (
                         Strategy.getFromAdvantage model)
 

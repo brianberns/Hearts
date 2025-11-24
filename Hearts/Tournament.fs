@@ -35,7 +35,10 @@ module Tournament =
             let deal =
                 let infoSet = OpenDeal.currentInfoSet deal
                 let action =
-                    playerMap[infoSet.Player].Act infoSet
+                    infoSet.LegalActions
+                        |> Seq.tryExactlyOne
+                        |> Option.defaultWith (fun () ->
+                            playerMap[infoSet.Player].Act infoSet)
                 OpenDeal.addAction
                     infoSet.LegalActionType action deal
             match Game.tryUpdateScore deal score with

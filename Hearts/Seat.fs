@@ -5,9 +5,13 @@ open PlayingCards
 /// A location occupied by a player.
 type Seat =
     | West  = 0
+(*
     | North = 1
     | East  = 2
     | South = 3
+*)
+    | East  = 1
+    | South = 2
 
 module Seat =
 
@@ -17,13 +21,16 @@ module Seat =
 
     /// Converts the given seat to a character.
     let toChar (seat : Seat) =
-        "WNES"[int seat]
+        // "WNES"[int seat]
+        "WES"[int seat]
 
 #if FABLE_COMPILER
     /// Display name.
     let toString = function
         | Seat.West -> "West"
+(*
         | Seat.North -> "North"
+*)
         | Seat.East -> "East"
         | Seat.South -> "South"
         | _ -> failwith "Unexpected seat"
@@ -32,7 +39,9 @@ module Seat =
     /// Converts the given character to a seat.
     let fromChar = function
         | 'W' -> Seat.West
+(*
         | 'N' -> Seat.North
+*)
         | 'E' -> Seat.East
         | 'S' -> Seat.South
         | _ -> failwith "Unexpected seat"
