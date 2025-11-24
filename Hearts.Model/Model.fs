@@ -32,6 +32,7 @@ type SkipConnection(inner : Model) as this =
 type AdvantageModel(
     hiddenSize : int,
     numHiddenLayers : int,
+    dropoutRate : float,
     device : torch.Device) as this =
     inherit Model("AdvantageModel")
 
@@ -46,7 +47,7 @@ type AdvantageModel(
                 Model.inputSize,
                 hiddenSize) :> Model
             ReLU()
-            Dropout(0.2)
+            Dropout(dropoutRate)
 
                 // hidden layers
             for _ = 1 to numHiddenLayers do
@@ -56,7 +57,7 @@ type AdvantageModel(
                             hiddenSize,
                             hiddenSize),
                         ReLU(),
-                        Dropout(0.2)))
+                        Dropout(dropoutRate)))
 
                 // output layer
             Linear(

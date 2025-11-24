@@ -81,6 +81,7 @@ module Trainer =
             new AdvantageModel(
                 settings.HiddenSize,
                 settings.NumHiddenLayers,
+                settings.DropoutRate,
                 settings.Device)
         AdvantageModel.train iter resv.Items model
         stopwatch.Stop()
