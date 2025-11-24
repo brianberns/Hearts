@@ -3,8 +3,6 @@
 open System
 open System.IO
 
-open Microsoft.Data.Sqlite
-
 open Fable.Remoting.Server
 open Fable.Remoting.Suave
 
@@ -22,6 +20,7 @@ module AdvantageModel =
             new AdvantageModel(
                 hiddenSize = Encoding.encodedLength * 6,
                 numHiddenLayers = 1,
+                dropoutRate = 0.2,
                 device = TorchSharp.torch.CPU)
         let path = Path.Combine(dir, "AdvantageModel.pt")
         model.load(path) |> ignore

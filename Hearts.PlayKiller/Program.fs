@@ -9,6 +9,7 @@ module Program =
             new AdvantageModel(
                 hiddenSize = Encoding.encodedLength * 6,
                 numHiddenLayers = 2,
+                dropoutRate = 0.2,
                 device = TorchSharp.torch.CPU)
         model.load("AdvantageModel.pt") |> ignore
         model

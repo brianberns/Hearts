@@ -41,6 +41,9 @@ type Settings =
         /// Sub-batch size to use when training the model.
         TrainingSubBatchSize : int
 
+        /// Dropout rate to use when training the model.
+        DropoutRate : float
+
         /// Optimizer learning rate to use when training the model.
         LearningRate : float
 
@@ -86,6 +89,7 @@ module Settings =
                 NumTrainingEpochs = 500
                 TrainingBatchSize = 1_000_000
                 TrainingSubBatchSize = 80_000
+                DropoutRate = 0.2
                 LearningRate = 1e-3
                 NumIterations = 50
                 NumEvaluationDeals = 20000
