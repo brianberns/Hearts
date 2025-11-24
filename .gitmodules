@@ -1,3 +1,6 @@
 [submodule "TricksterHeartsBot"]
 	path = TricksterHeartsBot
 	url = https://github.com/brianberns/TricksterHeartsBot
+[submodule "FastCfr"]
+	path = FastCfr
+	url = https://github.com/brianberns/FastCfr
