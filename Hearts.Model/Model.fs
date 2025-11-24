@@ -46,7 +46,7 @@ type AdvantageModel(
                 Model.inputSize,
                 hiddenSize) :> Model
             ReLU()
-            Dropout()
+            Dropout(0.2)
 
                 // hidden layers
             for _ = 1 to numHiddenLayers do
@@ -56,7 +56,7 @@ type AdvantageModel(
                             hiddenSize,
                             hiddenSize),
                         ReLU(),
-                        Dropout()))
+                        Dropout(0.2)))
 
                 // output layer
             Linear(
