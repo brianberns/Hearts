@@ -45,6 +45,7 @@ module Encoding =
                 char (int b + charOffset))
             |> String
 
+    /// Converts the given encoding to a string.
     let toString (encoding : Encoding) =
         assert(encoding.Length = encodedLength)
         let bytes =

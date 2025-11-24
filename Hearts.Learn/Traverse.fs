@@ -107,8 +107,8 @@ module Traverse =
                     // get utility of current player's strategy
                 let rnd = lock rng (fun () -> rng.NextDouble())
                 let threshold =
-                    settings.SampleDecay
-                        / (settings.SampleDecay + float depth)
+                    settings.SampleBranchRate
+                        / (settings.SampleBranchRate + float depth)   // nodes near the root have a higher chance of being expanded
                 let getUtility =
                     if rnd <= threshold then getFullUtility
                     else getOneUtility

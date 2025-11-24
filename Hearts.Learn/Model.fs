@@ -29,7 +29,7 @@ module AdvantageSample =
     /// Creates an advantage sample.
     let create infoSet regrets iteration =
         assert(Vector.length regrets = Model.outputSize)
-        assert(iteration > 0)
+        assert(iteration >= 1)
         assert(iteration <= settings.NumIterations)
         {
             Encoding = Encoding.encode infoSet
@@ -70,9 +70,11 @@ module AdvantageModel =
                 ]
                     |> Seq.distinct
                     |> Seq.length = 1)
+            assert(subbatch.Weights.GetLength(1) = 1)
             subbatch
 
-    /// A batch of training data.
+    /// A logical batch of training data, although it
+    /// might be too large to fit on the GPU.
     type private Batch = SubBatch[]
 
     /// Breaks the given samples into batches.
@@ -81,10 +83,10 @@ module AdvantageModel =
             |> Seq.toArray
             |> Array.randomShuffle
             |> Array.chunkBySize     // e.g. sub-batches of 10,000 rows each
-                settings.AdvantageSubBatchSize
+                settings.TrainingSubBatchSize
             |> Array.chunkBySize (   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
-                settings.AdvantageBatchSize
-                    / settings.AdvantageSubBatchSize)
+                settings.TrainingBatchSize
+                    / settings.TrainingSubBatchSize)
             |> Array.map (
                 Array.map (fun samples ->
                     let inputs, targets, weights =
@@ -118,16 +120,17 @@ module AdvantageModel =
             // forward pass
         use loss =
 
+                // compute loss for this sub-batch
             use rawLoss =
                 use outputs = inputs --> model
                 use outputs' = weights * outputs
                 use targets' = weights * targets
                 criterion.forward(outputs', targets')
 
-                // scale loss
+                // scale loss to batch size
             let scale =
                 float32 (subbatch.Inputs.GetLength(0))
-                    / float32 settings.AdvantageBatchSize
+                    / float32 settings.TrainingBatchSize
             rawLoss * scale
 
             // backward pass
@@ -169,7 +172,7 @@ module AdvantageModel =
                 settings.LearningRate)
         use criterion = MSELoss()
         model.train()
-        for epoch = 1 to settings.NumAdvantageTrainEpochs do
+        for epoch = 1 to settings.NumTrainingEpochs do
             let loss =
                 Array.last [|
                     for batch in batches do
