@@ -82,14 +82,14 @@ module Settings =
             {
                 NumDealsPerIteration = 8000
                 DealBatchSize = 200
-                SampleBranchRate = 1.5
+                SampleBranchRate = 2.5
                 SampleReservoirCapacity = 100_000_000
                 HiddenSize = Encoding.encodedLength * 6
                 NumHiddenLayers = 2
                 NumTrainingEpochs = 500
                 TrainingBatchSize = 1_000_000
                 TrainingSubBatchSize = 80_000
-                DropoutRate = 0.2
+                DropoutRate = 0.3
                 LearningRate = 1e-3
                 NumIterations = 50
                 NumEvaluationDeals = 20000
