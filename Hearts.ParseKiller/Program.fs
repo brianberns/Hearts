@@ -140,32 +140,34 @@ let parseAutoPasses (dir : ExchangeDirection) =
         return Map playerPasses
     }
 
-let applyPasses deal autoPasses =
+let applyPasses deal (autoPasses : Map<_, _>) =
     let cards =
-        [
-            for seat in Seat.cycle (OpenDeal.currentPlayer deal) do
-                for iPass = 0 to Pass.numCards - 1 do
-                    let passes : List<Card> =
-                        Map.find seat autoPasses
-                    passes[iPass]
-        ]
-    let deal =
-        List.fold (fun deal card ->
-            OpenDeal.addPass card deal) deal cards
-    OpenDeal.startPlay deal
+        let seats =
+            Seat.cycle (OpenDeal.currentPlayer deal)
+        seq {
+            for seat in seats do
+                yield! autoPasses[seat]
+        }
+    (deal, cards)
+        ||> Seq.fold (fun deal card ->
+            OpenDeal.addPass card deal)
+        |> OpenDeal.startPlay
 
 let parseDeal =
     parse {
         let! deal = parseInitialDeal
-        if deal.ClosedDeal.ExchangeDirection <> ExchangeDirection.Hold then
-            let! passes = parseAutoPasses deal.ClosedDeal.ExchangeDirection
+        let isHold =
+            deal.ClosedDeal.ExchangeDirection = ExchangeDirection.Hold
+        if isHold then
+            return deal
+        else
+            let! passes =
+                parseAutoPasses deal.ClosedDeal.ExchangeDirection
             let deal = applyPasses deal passes
             do! skipNewline
             do! spaces
             let! dealCheck = parseInitialDeal
             assert(dealCheck.UnplayedCardMap = deal.UnplayedCardMap)
-            return deal
-        else
             return deal
     }
 
