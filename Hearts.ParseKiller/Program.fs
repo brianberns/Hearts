@@ -76,7 +76,6 @@ module InitialDeal =
 
     /// E.g. "W: T9542         654           AQ64          T            ".
     let private parsePlayerHand seat =
-
         parse {
             do! skipString $"{Seat.toChar seat}: "
             let! spades = parseSuitCards Suit.Spades
@@ -105,7 +104,7 @@ module InitialDeal =
             do! skipString "hearts" >>. spaces
             do! skipString "clubs" >>. spaces
             do! skipString "diamonds" >>. spaces
-            let! _dealNumber = pint32   // ignore for now
+            let! _ = pint32   // ignore deal number
             let! dealer = parseSeatChar
             let! dir = parseDirectionChar
             do! skipRestOfLine true
@@ -126,20 +125,18 @@ module InitialDeal =
 module Exchange =
 
     /// E.g. "W->TD6HAC".
-    let parsePlayerPasses =
+    let private parsePlayerPasses =
         parse {
             let! seat = parseSeatChar
             do! skipString "->"
-            let! cardA = parseCard
-            let! cardB = parseCard
-            let! cardC = parseCard
-            let cards = [ cardA; cardB; cardC ]
+            let! cards = many1 parseCard
+            assert(cards.Length = Pass.numCards)
             assert(List.distinct cards = cards)
             return seat, cards
         }
 
     /// E.g. "left auto passes: W->TD6HAC N->KHQH9H E->ASJC8H S->AHJHTH".
-    let parse (dir : ExchangeDirection) =
+    let private parseAutoPasses (dir : ExchangeDirection) =
         parse {
             do! skipString $"{dir.ToString().ToLower()} auto passes: "
             let! playerPasses =
@@ -148,7 +145,7 @@ module Exchange =
             return Map playerPasses
         }
 
-    let apply deal (passMap : Map<_, _>) =
+    let private apply deal (passMap : Map<_, _>) =
         let cards =
             let seats =
                 Seat.cycle (OpenDeal.currentPlayer deal)
@@ -161,25 +158,67 @@ module Exchange =
                 OpenDeal.addPass card deal)
             |> OpenDeal.startPlay
 
-let parseDeal =
-    parse {
-        let! deal = InitialDeal.parse
+    let parse deal =
         let isHold =
             deal.ClosedDeal.ExchangeDirection
                 = ExchangeDirection.Hold
-        if isHold then
-            return deal
-        else
-            let! passes =
-                Exchange.parse deal.ClosedDeal.ExchangeDirection
-            let deal = Exchange.apply deal passes
-            do! skipNewline
+        parse {
+            if isHold then
+                return deal
+            else
+                let! passes =
+                    parseAutoPasses deal.ClosedDeal.ExchangeDirection
+                let deal = apply deal passes
+                do! skipNewline
+                do! spaces
+                let! afterExchangeDeal = InitialDeal.parse
+                assert(
+                    afterExchangeDeal.UnplayedCardMap
+                        = deal.UnplayedCardMap)
+                return deal
+        }
+
+module Playout =
+
+    let parsePlay =
+        parse {
+            let! seat = parseSeatChar
+            do! skipChar ':'
+            let! card = parseCard
+            return seat, card
+        }
+
+    let private apply deal tricks =
+        let plays = List.concat tricks
+        (deal, plays)
+            ||> Seq.fold (fun deal (seat, card) ->
+                assert(OpenDeal.currentPlayer deal = seat)
+                OpenDeal.addPass card deal)
+            |> OpenDeal.startPlay
+
+    let private parseTrick =
+        parse {
+            do! skipString "trick"
             do! spaces
-            let! afterExchangeDeal = InitialDeal.parse
-            assert(
-                afterExchangeDeal.UnplayedCardMap
-                    = deal.UnplayedCardMap)
-            return deal
+            let! _ = pint32   // ignore trick number
+            do! skipString ": "
+            let! plays = sepBy parsePlay spaces
+            assert(plays.Length = Seat.numSeats)
+            return plays
+        }
+
+    let parse deal =
+        parse {
+            let! tricks = sepBy1 parseTrick newline
+            return apply deal tricks
+        }
+
+let parseDeal =
+    parse {
+        let! deal = InitialDeal.parse
+        let! deal = Exchange.parse deal
+        let! deal = Playout.parse deal
+        return deal
     }
 
 let parseLog =
