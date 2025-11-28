@@ -156,7 +156,6 @@ module Exchange =
         (deal, cards)
             ||> Seq.fold (fun deal card ->
                 OpenDeal.addPass card deal)
-            |> OpenDeal.startPlay
 
     let parse deal =
         let isHold =
@@ -164,22 +163,27 @@ module Exchange =
                 = ExchangeDirection.Hold
         parse {
             if isHold then
-                return deal
+                return OpenDeal.startPlay deal
             else
+                    // parse and apply the auto passes
                 let! passes =
                     parseAutoPasses deal.ClosedDeal.ExchangeDirection
                 let deal = apply deal passes
+                let deal = OpenDeal.startPlay deal
+
+                    // verify exchange
                 do! skipNewline
                 do! spaces
-                let! afterExchangeDeal = InitialDeal.parse
+                let! afterDeal = InitialDeal.parse
                 assert(
-                    afterExchangeDeal.UnplayedCardMap
-                        = deal.UnplayedCardMap)
+                    afterDeal.UnplayedCardMap = deal.UnplayedCardMap)
+
                 return deal
         }
 
 module Playout =
 
+    /// E.g. "W:TS".
     let parsePlay =
         parse {
             let! seat = parseSeatChar
@@ -193,23 +197,23 @@ module Playout =
         (deal, plays)
             ||> Seq.fold (fun deal (seat, card) ->
                 assert(OpenDeal.currentPlayer deal = seat)
-                OpenDeal.addPass card deal)
-            |> OpenDeal.startPlay
+                OpenDeal.addPlay card deal)
 
+    /// E.g. "trick  1: W:TS  N:KH  E:AS  S:3D".
     let private parseTrick =
         parse {
             do! skipString "trick"
             do! spaces
             let! _ = pint32   // ignore trick number
             do! skipString ": "
-            let! plays = sepBy parsePlay spaces
+            let! plays = sepBy parsePlay (pstring "  ")
             assert(plays.Length = Seat.numSeats)
             return plays
         }
 
     let parse deal =
         parse {
-            let! tricks = sepBy1 parseTrick newline
+            let! tricks = many1 (parseTrick .>> newline)
             return apply deal tricks
         }
 
