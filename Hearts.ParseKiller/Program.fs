@@ -104,7 +104,7 @@ module InitialDeal =
             do! skipString "hearts" >>. spaces
             do! skipString "clubs" >>. spaces
             do! skipString "diamonds" >>. spaces
-            let! _ = pint32   // ignore deal number
+            let! dealNum = pint32   // ignore deal number
             let! dealer = parseSeatChar
             let! dir = parseDirectionChar
             do! skipRestOfLine true
@@ -119,7 +119,10 @@ module InitialDeal =
                     Seat.East, eastCards
                     Seat.South, southCards
                 ]
-            return OpenDeal.fromHands dealer dir handMap
+            return {|
+                DealNumber = dealNum
+                OpenDeal = OpenDeal.fromHands dealer dir handMap
+            |}
         }
 
 module Exchange =
@@ -176,7 +179,8 @@ module Exchange =
                 do! spaces
                 let! afterDeal = InitialDeal.parse
                 assert(
-                    afterDeal.UnplayedCardMap = deal.UnplayedCardMap)
+                    afterDeal.OpenDeal.UnplayedCardMap
+                        = deal.UnplayedCardMap)
 
                 return deal
         }
@@ -219,10 +223,9 @@ module Playout =
 
 let parseDeal =
     parse {
-        let! deal = InitialDeal.parse
-        let! deal = Exchange.parse deal
-        let! deal = Playout.parse deal
-        return deal
+        let! killerDeal = InitialDeal.parse
+        let! openDeal = Exchange.parse killerDeal.OpenDeal
+        return! Playout.parse openDeal
     }
 
 let parseLog =
