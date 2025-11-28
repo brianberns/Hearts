@@ -47,71 +47,6 @@ let parseSuitChar =
         pchar 'D' >>% Suit.Diamonds
     ]
 
-/// E.g. "T9542".
-let parseRankChars =
-    choice [
-        skipChar '-' >>% []
-        many1 parseRankChar
-    ]
-
-/// E.g. "T9542         ".
-let parseSuitCards suit =
-    parse {
-        let! ranks = parseRankChars
-        do! spaces
-        assert(List.distinct ranks = ranks)
-        return
-            List.map (fun rank ->
-                Card.create rank suit) ranks
-    }
-
-/// E.g. "W: T9542         654           AQ64          T            ".
-let parsePlayerHand seat =
-    parse {
-        do! skipString $"{Seat.toChar seat}: "
-        let! spades = parseSuitCards Suit.Spades
-        let! hearts = parseSuitCards Suit.Hearts
-        let! clubs = parseSuitCards Suit.Clubs
-        let! diamonds = parseSuitCards Suit.Diamonds
-        return set [
-            yield! spades
-            yield! hearts
-            yield! clubs
-            yield! diamonds
-        ]
-    }
-
-(*
- *    spades        hearts        clubs         diamonds   439063SL 0 0 0 0
- * W: T9542         654           AQ64          T            
- * N: -             KQ97          KT87532       A4           
- * E: AKJ           82            J             KQJ9863      
- * S: Q8763         AJT3          9             752          
- *)
-let parseInitialDeal =
-    parse {
-        do! skipString "spades" >>. spaces
-        do! skipString "hearts" >>. spaces
-        do! skipString "clubs" >>. spaces
-        do! skipString "diamonds" >>. spaces
-        let! _dealNumber = pint32   // ignore for now
-        let! dealer = parseSeatChar
-        let! dir = parseDirectionChar
-        do! skipRestOfLine true
-        let! westCards = parsePlayerHand Seat.West
-        let! northCards = parsePlayerHand Seat.North
-        let! eastCards = parsePlayerHand Seat.East
-        let! southCards = parsePlayerHand Seat.South
-        let handMap =
-            Map [
-                Seat.West, westCards
-                Seat.North, northCards
-                Seat.East, eastCards
-                Seat.South, southCards
-            ]
-        return OpenDeal.fromHands dealer dir handMap
-    }
-
 let parseCard =
     parse {
         let! rank = parseRankChar
@@ -119,55 +54,131 @@ let parseCard =
         return Card.create rank suit
     }
 
-let parsePlayerPasses =
-    parse {
-        let! seat = parseSeatChar
-        do! skipString "->"
-        let! cardA = parseCard
-        let! cardB = parseCard
-        let! cardC = parseCard
-        let cards = [ cardA; cardB; cardC ]
-        assert(List.distinct cards = cards)
-        return seat, cards
-    }
+module InitialDeal =
 
-let parseAutoPasses (dir : ExchangeDirection) =
-    parse {
-        do! skipString $"{dir.ToString().ToLower()} auto passes: "
-        let! playerPasses =
-            sepBy parsePlayerPasses (skipChar ' ')
-        do! skipNewline
-        return Map playerPasses
-    }
+    /// E.g. "T9542".
+    let private parseRankChars =
+        choice [
+            skipChar '-' >>% []
+            many1 parseRankChar
+        ]
 
-let applyPasses deal (autoPasses : Map<_, _>) =
-    let cards =
-        let seats =
-            Seat.cycle (OpenDeal.currentPlayer deal)
-        seq {
-            for seat in seats do
-                yield! autoPasses[seat]
+    /// E.g. "T9542         ".
+    let private parseSuitCards suit =
+        parse {
+            let! ranks = parseRankChars
+            do! spaces
+            assert(List.distinct ranks = ranks)
+            return
+                List.map (fun rank ->
+                    Card.create rank suit) ranks
         }
-    (deal, cards)
-        ||> Seq.fold (fun deal card ->
-            OpenDeal.addPass card deal)
-        |> OpenDeal.startPlay
+
+    /// E.g. "W: T9542         654           AQ64          T            ".
+    let private parsePlayerHand seat =
+
+        parse {
+            do! skipString $"{Seat.toChar seat}: "
+            let! spades = parseSuitCards Suit.Spades
+            let! hearts = parseSuitCards Suit.Hearts
+            let! clubs = parseSuitCards Suit.Clubs
+            let! diamonds = parseSuitCards Suit.Diamonds
+            return set [
+                yield! spades
+                yield! hearts
+                yield! clubs
+                yield! diamonds
+            ]
+        }
+
+    (*
+     *    spades        hearts        clubs         diamonds   439063SL 0 0 0 0
+     * W: T9542         654           AQ64          T            
+     * N: -             KQ97          KT87532       A4           
+     * E: AKJ           82            J             KQJ9863      
+     * S: Q8763         AJT3          9             752          
+     *)
+    let parse =
+
+        parse {
+            do! skipString "spades" >>. spaces
+            do! skipString "hearts" >>. spaces
+            do! skipString "clubs" >>. spaces
+            do! skipString "diamonds" >>. spaces
+            let! _dealNumber = pint32   // ignore for now
+            let! dealer = parseSeatChar
+            let! dir = parseDirectionChar
+            do! skipRestOfLine true
+            let! westCards = parsePlayerHand Seat.West
+            let! northCards = parsePlayerHand Seat.North
+            let! eastCards = parsePlayerHand Seat.East
+            let! southCards = parsePlayerHand Seat.South
+            let handMap =
+                Map [
+                    Seat.West, westCards
+                    Seat.North, northCards
+                    Seat.East, eastCards
+                    Seat.South, southCards
+                ]
+            return OpenDeal.fromHands dealer dir handMap
+        }
+
+module Exchange =
+
+    /// E.g. "W->TD6HAC".
+    let parsePlayerPasses =
+        parse {
+            let! seat = parseSeatChar
+            do! skipString "->"
+            let! cardA = parseCard
+            let! cardB = parseCard
+            let! cardC = parseCard
+            let cards = [ cardA; cardB; cardC ]
+            assert(List.distinct cards = cards)
+            return seat, cards
+        }
+
+    /// E.g. "left auto passes: W->TD6HAC N->KHQH9H E->ASJC8H S->AHJHTH".
+    let parse (dir : ExchangeDirection) =
+        parse {
+            do! skipString $"{dir.ToString().ToLower()} auto passes: "
+            let! playerPasses =
+                sepBy parsePlayerPasses (skipChar ' ')
+            do! skipNewline
+            return Map playerPasses
+        }
+
+    let apply deal (passMap : Map<_, _>) =
+        let cards =
+            let seats =
+                Seat.cycle (OpenDeal.currentPlayer deal)
+            seq {
+                for seat in seats do
+                    yield! passMap[seat]
+            }
+        (deal, cards)
+            ||> Seq.fold (fun deal card ->
+                OpenDeal.addPass card deal)
+            |> OpenDeal.startPlay
 
 let parseDeal =
     parse {
-        let! deal = parseInitialDeal
+        let! deal = InitialDeal.parse
         let isHold =
-            deal.ClosedDeal.ExchangeDirection = ExchangeDirection.Hold
+            deal.ClosedDeal.ExchangeDirection
+                = ExchangeDirection.Hold
         if isHold then
             return deal
         else
             let! passes =
-                parseAutoPasses deal.ClosedDeal.ExchangeDirection
-            let deal = applyPasses deal passes
+                Exchange.parse deal.ClosedDeal.ExchangeDirection
+            let deal = Exchange.apply deal passes
             do! skipNewline
             do! spaces
-            let! dealCheck = parseInitialDeal
-            assert(dealCheck.UnplayedCardMap = deal.UnplayedCardMap)
+            let! afterExchangeDeal = InitialDeal.parse
+            assert(
+                afterExchangeDeal.UnplayedCardMap
+                    = deal.UnplayedCardMap)
             return deal
     }
 
