@@ -39,13 +39,22 @@ let parseRankChar =
         pchar 'A' >>% Rank.Ace
     ]
 
+let parseSuitChar =
+    choice [
+        pchar 'S' >>% Suit.Spades
+        pchar 'H' >>% Suit.Hearts
+        pchar 'C' >>% Suit.Clubs
+        pchar 'D' >>% Suit.Diamonds
+    ]
+
+/// E.g. "T9542".
 let parseRankChars =
     choice [
         skipChar '-' >>% []
         many1 parseRankChar
     ]
 
-/// E.g. "T9542".
+/// E.g. "T9542         ".
 let parseSuitCards suit =
     parse {
         let! ranks = parseRankChars
@@ -72,13 +81,20 @@ let parsePlayerHand seat =
         ]
     }
 
-let parseHands =
+(*
+ *    spades        hearts        clubs         diamonds   439063SL 0 0 0 0
+ * W: T9542         654           AQ64          T            
+ * N: -             KQ97          KT87532       A4           
+ * E: AKJ           82            J             KQJ9863      
+ * S: Q8763         AJT3          9             752          
+ *)
+let parseInitialDeal =
     parse {
         do! skipString "spades" >>. spaces
         do! skipString "hearts" >>. spaces
         do! skipString "clubs" >>. spaces
         do! skipString "diamonds" >>. spaces
-        let! dealNumber = pint32
+        let! _dealNumber = pint32   // ignore for now
         let! dealer = parseSeatChar
         let! dir = parseDirectionChar
         do! skipRestOfLine true
@@ -93,14 +109,65 @@ let parseHands =
                 Seat.East, eastCards
                 Seat.South, southCards
             ]
-        return {|
-            DealNumber = dealNumber
-            Deal = OpenDeal.fromHands dealer dir handMap
-        |}
+        return OpenDeal.fromHands dealer dir handMap
     }
 
+let parseCard =
+    parse {
+        let! rank = parseRankChar
+        let! suit = parseSuitChar
+        return Card.create rank suit
+    }
+
+let parsePlayerPasses =
+    parse {
+        let! seat = parseSeatChar
+        do! skipString "->"
+        let! cardA = parseCard
+        let! cardB = parseCard
+        let! cardC = parseCard
+        let cards = [ cardA; cardB; cardC ]
+        assert(List.distinct cards = cards)
+        return seat, cards
+    }
+
+let parseAutoPasses (dir : ExchangeDirection) =
+    parse {
+        do! skipString $"{dir.ToString().ToLower()} auto passes: "
+        let! playerPasses =
+            sepBy parsePlayerPasses (skipChar ' ')
+        do! skipNewline
+        return Map playerPasses
+    }
+
+let applyPasses deal autoPasses =
+    let cards =
+        [
+            for seat in Seat.cycle (OpenDeal.currentPlayer deal) do
+                for iPass = 0 to Pass.numCards - 1 do
+                    let passes : List<Card> =
+                        Map.find seat autoPasses
+                    passes[iPass]
+        ]
+    let deal =
+        List.fold (fun deal card ->
+            OpenDeal.addPass card deal) deal cards
+    OpenDeal.startPlay deal
+
 let parseDeal =
-    parseHands
+    parse {
+        let! deal = parseInitialDeal
+        if deal.ClosedDeal.ExchangeDirection <> ExchangeDirection.Hold then
+            let! passes = parseAutoPasses deal.ClosedDeal.ExchangeDirection
+            let deal = applyPasses deal passes
+            do! skipNewline
+            do! spaces
+            let! dealCheck = parseInitialDeal
+            assert(dealCheck.UnplayedCardMap = deal.UnplayedCardMap)
+            return deal
+        else
+            return deal
+    }
 
 let parseLog =
     many1
