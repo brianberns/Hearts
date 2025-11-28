@@ -10,6 +10,7 @@
   <Project Path="Hearts.Cfr/Hearts.Cfr.fsproj" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />
+  <Project Path="Hearts.ParseKiller/Hearts.ParseKiller.fsproj" Id="80fa113e-2770-480b-ba90-7b62a571d748" />
   <Project Path="Hearts.PlayKiller/Hearts.PlayKiller.fsproj" />
   <Project Path="Hearts.Web/Client/src/Hearts.Web.Client.fsproj" />
   <Project Path="Hearts.Web/Harness/Hearts.Web.Harness.fsproj" />
