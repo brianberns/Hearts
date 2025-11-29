@@ -313,8 +313,8 @@ module Json =
         override _.Read(reader, _typeToConvert, _options) =
             failwith "Not implemented"
 
-        static member WriteArray<'t>(
-            writer : Utf8JsonWriter,
+    type Utf8JsonWriter with
+        member writer.WriteArray<'t>(
             items : seq<'t>,
             options : JsonSerializerOptions) =
             let converter = options.GetConverter<'t>()
@@ -351,7 +351,7 @@ module Json =
 
                     // cards passed
                 writer.WritePropertyName("Pass")
-                WriteOnlyConverter.WriteArray(writer, pass, options)
+                writer.WriteArray(pass, options)
 
                 writer.WriteEndObject()
 
@@ -369,8 +369,7 @@ module Json =
 
                 // cards played
             writer.WritePropertyName("Cards")
-            WriteOnlyConverter.WriteArray(
-                writer, List.rev trick.Cards, options)
+            writer.WriteArray(List.rev trick.Cards, options)
 
             writer.WriteEndObject()
 
@@ -399,7 +398,7 @@ module Json =
                     |> Seq.where (fun trick ->
                             trick.Cards.Length > 0)
             writer.WritePropertyName("Tricks")
-            WriteOnlyConverter.WriteArray(writer, tricks, options)
+            writer.WriteArray(tricks, options)
 
             writer.WriteEndObject()
 
