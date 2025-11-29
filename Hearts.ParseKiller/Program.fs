@@ -6,6 +6,14 @@ open FParsec
 open PlayingCards
 open Hearts
 
+let parseSeat =
+    choice [
+        pstring "West" >>% Seat.West
+        pstring "North" >>% Seat.North
+        pstring "East" >>% Seat.East
+        pstring "South" >>% Seat.South
+    ]
+
 let parseSeatChar =
     choice [
         pchar 'W' >>% Seat.West
@@ -221,18 +229,71 @@ module Playout =
             return apply deal tricks
         }
 
+module GameScore =
+
+    let private parsePlayerPoints =
+        parse {
+            let! seat = parseSeatChar
+            do! skipString " = "
+            let! points = pint32
+            return seat, points
+        }
+
+    let parse =
+        parse {
+            let! playerPoints =
+                many1 (parsePlayerPoints .>> skipChar ' ')
+            do! skipRestOfLine true
+            return playerPoints
+                |> Seq.sortBy fst
+                |> Seq.map snd
+                |> Seq.toArray
+                |> Score.ofPoints
+        }
+
+let skipEndOfGameComment =
+    parse {
+        do! skipString "End of game:"
+        do! skipRestOfLine true
+    }
+
+let skipShootComment =
+    parse {
+        do! parseSeat |>> ignore
+        do! skipString " Shoot"
+        do! skipRestOfLine true
+    }
+
 let parseDeal =
     parse {
         let! killerDeal = InitialDeal.parse
         let! openDeal = Exchange.parse killerDeal.OpenDeal
-        return! Playout.parse openDeal
+        let! openDeal = Playout.parse openDeal
+        do! optional skipEndOfGameComment
+        do! optional skipShootComment
+        let! score = GameScore.parse   // game score after deal is complete
+        return {|
+            DealNumber = killerDeal.DealNumber
+            OpenDeal = openDeal
+            GameScore = score
+        |}
     }
 
+let parseEntry =
+    parse {
+        do! skipCharsTillString "spades" false Int32.MaxValue
+        return! parseDeal
+    } |> attempt
+
 let parseLog =
-    many1
-        (attempt
-            (skipCharsTillString "spades" false Int32.MaxValue
-            >>. parseDeal))
+    parse {
+        let! entries = many1 parseEntry
+        return (Score.zero, entries)
+            ||> Seq.mapFold (fun score entry ->
+                {| entry with GameScore = score |},   // game score at start of deal
+                entry.GameScore)
+            |> fst
+    }
 
 let run () =
 
