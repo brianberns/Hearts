@@ -12,10 +12,15 @@ open Hearts
 module JsonExt =
 
     type JsonSerializerOptions with
+
         member this.GetConverter<'t>() =
             this.GetConverter(typeof<'t>) :?> JsonConverter<'t>
 
     type Utf8JsonWriter with
+
+        member this.Write(value, options : JsonSerializerOptions) =
+            let converter = options.GetConverter()
+            converter.Write(this, value, options)
 
         member writer.WriteObject() =
             writer.WriteStartObject()
@@ -33,11 +38,10 @@ module JsonExt =
                         writer.WriteEndArray()
             }
 
-        member writer.WriteArray<'t>(
-            items : seq<'t>,
-            options : JsonSerializerOptions) =
+        member writer.WriteArray(
+            items, options : JsonSerializerOptions) =
             use _ = writer.WriteArray()
-            let converter = options.GetConverter<'t>()
+            let converter = options.GetConverter()
             for item in items do
                 converter.Write(writer, item, options)
 
@@ -69,8 +73,7 @@ type ExchangeConverter() =
 
                 // seat passing cards
             writer.WritePropertyName("Seat")
-            let converter = options.GetConverter<Seat>()
-            converter.Write(writer, seat, options)
+            writer.Write(seat, options)
 
                 // cards passed
             writer.WritePropertyName("Pass")
@@ -83,7 +86,7 @@ type TrickConverter() =
 
             // trick leader
         writer.WritePropertyName("Leader")
-        JsonSerializer.Serialize(writer, trick.Leader, options)
+        writer.Write(trick.Leader, options)
 
             // cards played
         writer.WritePropertyName("Cards")
@@ -104,8 +107,7 @@ type OpenDealConverter() =
         match deal.ExchangeOpt with
             | Some exchange ->
                 writer.WritePropertyName("Passes")
-                let converter = options.GetConverter<Exchange>()
-                converter.Write(writer, exchange, options)
+                writer.Write(exchange, options)
             | None -> ()
 
             // tricks
