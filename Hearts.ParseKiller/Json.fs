@@ -17,15 +17,6 @@ module JsonExt =
 
     type Utf8JsonWriter with
 
-        member writer.WriteArray<'t>(
-            items : seq<'t>,
-            options : JsonSerializerOptions) =
-            let converter = options.GetConverter<'t>()
-            writer.WriteStartArray()
-            for item in items do
-                converter.Write(writer, item, options)
-            writer.WriteEndArray()
-
         member writer.WriteObject() =
             writer.WriteStartObject()
             {
@@ -33,6 +24,22 @@ module JsonExt =
                     member _.Dispose() =
                         writer.WriteEndObject()
             }
+
+        member writer.WriteArray() =
+            writer.WriteStartArray()
+            {
+                new IDisposable with
+                    member _.Dispose() =
+                        writer.WriteEndArray()
+            }
+
+        member writer.WriteArray<'t>(
+            items : seq<'t>,
+            options : JsonSerializerOptions) =
+            use _ = writer.WriteArray()
+            let converter = options.GetConverter<'t>()
+            for item in items do
+                converter.Write(writer, item, options)
 
 [<AbstractClass>]
 type WriteOnlyConverter<'t>() =
@@ -55,8 +62,7 @@ type CardConverter() =
 type ExchangeConverter() =
     inherit WriteOnlyConverter<Exchange>()
     override _.Write(writer, exchange, options) =
-
-        writer.WriteStartArray()
+        use _ = writer.WriteArray()
 
         for seat, pass in Map.toSeq exchange.PassMap do
             use _ = writer.WriteObject()
@@ -69,8 +75,6 @@ type ExchangeConverter() =
                 // cards passed
             writer.WritePropertyName("Pass")
             writer.WriteArray(pass, options)
-
-        writer.WriteEndArray()
 
 type TrickConverter() =
     inherit WriteOnlyConverter<Trick>()
