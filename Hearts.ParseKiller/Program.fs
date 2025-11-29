@@ -287,8 +287,7 @@ let parseEntry =
 
 let parseLog =
     parse {
-        // let! entries = many1 parseEntry
-        let! entries = parseEntry |>> List.singleton
+        let! entries = many1 parseEntry
         return (Score.zero, entries)
             ||> Seq.mapFold (fun score entry ->
                 {| entry with GameScore = score |},   // game score at start of deal
@@ -402,6 +401,17 @@ module Json =
 
             writer.WriteEndObject()
 
+    type ScoreConverter() =
+        inherit WriteOnlyConverter<Score>()
+
+        override _.Write(writer, score, _options) =
+            writer.WriteStartObject()
+            for seat in Enum.getValues<Seat> do
+                writer.WriteNumber(
+                    string (Seat.toChar seat),
+                    score[seat])
+            writer.WriteEndObject()
+
     let saveEntries entries =
         let options =
 #if DEBUG
@@ -416,6 +426,7 @@ module Json =
             ExchangeConverter()
             TrickConverter()
             OpenDealConverter()
+            ScoreConverter()
         ] do options.Converters.Add(converter)
         use stream = new FileStream("KHearts.json", FileMode.Create)
         JsonSerializer.Serialize(stream, entries, options)
