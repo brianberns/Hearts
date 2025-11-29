@@ -1,5 +1,8 @@
 ﻿open System
+open System.IO
 open System.Text
+open System.Text.Json
+open System.Text.Json.Serialization
 
 open FParsec
 
@@ -295,6 +298,13 @@ let parseLog =
             |> fst
     }
 
+let saveEntries entries =
+    let options =
+        JsonSerializerOptions(WriteIndented = true)
+    options.Converters.Add(JsonStringEnumConverter())
+    use stream = new FileStream("KHearts.json", FileMode.Create)
+    JsonSerializer.Serialize(stream, entries, options)
+
 let run () =
 
     Console.OutputEncoding <- Encoding.UTF8
@@ -307,7 +317,7 @@ let run () =
             Encoding.ASCII
 
     match result with
-        | Success(result, _, _)   -> printfn "Success: %A" result
+        | Success(entries, _, _)   -> saveEntries entries
         | Failure(errorMsg, _, _) -> printfn "Failure: %s" errorMsg
 
 run ()
