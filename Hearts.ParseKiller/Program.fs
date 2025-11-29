@@ -1,8 +1,5 @@
 ﻿open System
-open System.IO
 open System.Text
-open System.Text.Json
-open System.Text.Json.Serialization
 
 open FParsec
 
@@ -290,7 +287,8 @@ let parseEntry =
 
 let parseLog =
     parse {
-        let! entries = many1 parseEntry
+        // let! entries = many1 parseEntry
+        let! entries = parseEntry |>> List.singleton
         return (Score.zero, entries)
             ||> Seq.mapFold (fun score entry ->
                 {| entry with GameScore = score |},   // game score at start of deal
@@ -298,12 +296,51 @@ let parseLog =
             |> fst
     }
 
-let saveEntries entries =
-    let options =
-        JsonSerializerOptions(WriteIndented = true)
-    options.Converters.Add(JsonStringEnumConverter())
-    use stream = new FileStream("KHearts.json", FileMode.Create)
-    JsonSerializer.Serialize(stream, entries, options)
+module Json =
+
+    open System.IO
+    open System.Text.Json
+    open System.Text.Json.Serialization
+
+    [<AbstractClass>]
+    type WriteOnlyConverter<'t>() =
+        inherit JsonConverter<'t>()
+        override _.Read(reader, _typeToConvert, _options) =
+            failwith "Not implemented"
+
+    type CardConverter() =
+        inherit WriteOnlyConverter<Card>()
+        override _.Write(writer, card, _options) =
+            writer.WriteStringValue(
+                $"{Rank.toChar card.Rank}{Suit.toLetter card.Suit}")
+
+    type TrickConverter() =
+        inherit WriteOnlyConverter<Trick>()
+        override _.Write(writer, trick, options) =
+
+            writer.WriteStartObject()
+
+                // leader
+            writer.WriteString("Leader", $"Seat.toChar trick.Leader")
+
+                // cards
+            writer.WriteStartArray("Cards")
+            for card in List.rev trick.Cards do
+                JsonSerializer.Serialize(writer, card, options)
+            writer.WriteEndArray()
+
+            writer.WriteEndObject()
+
+    let saveEntries entries =
+        let options =
+            JsonSerializerOptions(WriteIndented = true)
+        for converter in [
+            JsonStringEnumConverter() :> JsonConverter
+            CardConverter()
+            TrickConverter()
+        ] do options.Converters.Add(converter)
+        use stream = new FileStream("KHearts.json", FileMode.Create)
+        JsonSerializer.Serialize(stream, entries, options)
 
 let run () =
 
@@ -317,7 +354,7 @@ let run () =
             Encoding.ASCII
 
     match result with
-        | Success(entries, _, _)   -> saveEntries entries
+        | Success(entries, _, _)   -> Json.saveEntries entries
         | Failure(errorMsg, _, _) -> printfn "Failure: %s" errorMsg
 
 run ()
