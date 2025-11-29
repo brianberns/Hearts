@@ -309,8 +309,19 @@ module Json =
     [<AbstractClass>]
     type WriteOnlyConverter<'t>() =
         inherit JsonConverter<'t>()
+
         override _.Read(reader, _typeToConvert, _options) =
             failwith "Not implemented"
+
+        static member WriteArray<'t>(
+            writer : Utf8JsonWriter,
+            items : seq<'t>,
+            options : JsonSerializerOptions) =
+            let converter = options.GetConverter<'t>()
+            writer.WriteStartArray()
+            for item in items do
+                converter.Write(writer, item, options)
+            writer.WriteEndArray()
 
     type SeatConverter() =
         inherit WriteOnlyConverter<Seat>()
@@ -340,11 +351,7 @@ module Json =
 
                     // cards passed
                 writer.WritePropertyName("Pass")
-                writer.WriteStartArray()
-                let converter = options.GetConverter<Card>()
-                for card in pass do
-                    converter.Write(writer, card, options)
-                writer.WriteEndArray()
+                WriteOnlyConverter.WriteArray(writer, pass, options)
 
                 writer.WriteEndObject()
 
@@ -362,11 +369,8 @@ module Json =
 
                 // cards played
             writer.WritePropertyName("Cards")
-            writer.WriteStartArray()
-            let converter = options.GetConverter<Card>()
-            for card in List.rev trick.Cards do
-                converter.Write(writer, card, options)
-            writer.WriteEndArray()
+            WriteOnlyConverter.WriteArray(
+                writer, List.rev trick.Cards, options)
 
             writer.WriteEndObject()
 
@@ -390,16 +394,12 @@ module Json =
                 | None -> ()
 
                 // tricks
-            writer.WritePropertyName("Tricks")
-            writer.WriteStartArray()
             let tricks =
                 ClosedDeal.tricks deal.ClosedDeal
                     |> Seq.where (fun trick ->
                             trick.Cards.Length > 0)
-            let converter = options.GetConverter<Trick>()
-            for trick in tricks do
-                converter.Write(writer, trick, options)
-            writer.WriteEndArray()
+            writer.WritePropertyName("Tricks")
+            WriteOnlyConverter.WriteArray(writer, tricks, options)
 
             writer.WriteEndObject()
 
