@@ -1,5 +1,6 @@
 ﻿namespace Hearts.ParseKiller
 
+open System
 open System.IO
 open System.Text.Json
 open System.Text.Json.Serialization
@@ -15,6 +16,7 @@ module JsonExt =
             this.GetConverter(typeof<'t>) :?> JsonConverter<'t>
 
     type Utf8JsonWriter with
+
         member writer.WriteArray<'t>(
             items : seq<'t>,
             options : JsonSerializerOptions) =
@@ -23,6 +25,14 @@ module JsonExt =
             for item in items do
                 converter.Write(writer, item, options)
             writer.WriteEndArray()
+
+        member writer.WriteObject() =
+            writer.WriteStartObject()
+            {
+                new IDisposable with
+                    member _.Dispose() =
+                        writer.WriteEndObject()
+            }
 
 [<AbstractClass>]
 type WriteOnlyConverter<'t>() =
@@ -49,8 +59,7 @@ type ExchangeConverter() =
         writer.WriteStartArray()
 
         for seat, pass in Map.toSeq exchange.PassMap do
-
-            writer.WriteStartObject()
+            use _ = writer.WriteObject()
 
                 // seat passing cards
             writer.WritePropertyName("Seat")
@@ -61,15 +70,12 @@ type ExchangeConverter() =
             writer.WritePropertyName("Pass")
             writer.WriteArray(pass, options)
 
-            writer.WriteEndObject()
-
         writer.WriteEndArray()
 
 type TrickConverter() =
     inherit WriteOnlyConverter<Trick>()
     override _.Write(writer, trick, options) =
-
-        writer.WriteStartObject()
+        use _ = writer.WriteObject()
 
             // trick leader
         writer.WritePropertyName("Leader")
@@ -79,13 +85,11 @@ type TrickConverter() =
         writer.WritePropertyName("Cards")
         writer.WriteArray(List.rev trick.Cards, options)
 
-        writer.WriteEndObject()
-
 type OpenDealConverter() =
     inherit WriteOnlyConverter<OpenDeal>()
 
     override _.Write(writer, deal, options) =
-        writer.WriteStartObject()
+        use _ = writer.WriteObject()
 
             // exchange direction
         writer.WriteString(
@@ -108,18 +112,15 @@ type OpenDealConverter() =
         writer.WritePropertyName("Tricks")
         writer.WriteArray(tricks, options)
 
-        writer.WriteEndObject()
-
 type ScoreConverter() =
     inherit WriteOnlyConverter<Score>()
 
     override _.Write(writer, score, _options) =
-        writer.WriteStartObject()
+        use _ = writer.WriteObject()
         for seat in Enum.getValues<Seat> do
             writer.WriteNumber(
                 string (Seat.toChar seat),
                 score[seat])
-        writer.WriteEndObject()
 
 module Json =
 
