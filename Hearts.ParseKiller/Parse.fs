@@ -299,12 +299,14 @@ module Killer =
                 |> fst
         }
 
-    let parseLog path =
+    let parseLog inputPath outputPath =
 
         let result =
             runParserOnFile
-                parseEntries () path Encoding.ASCII
+                parseEntries () inputPath Encoding.ASCII
 
         match result with
-            | Success(entries, _, _)   -> Json.saveEntries entries
-            | Failure(errorMsg, _, _) -> printfn "Failure: %s" errorMsg
+            | Success(entries, _, _) ->
+                Json.saveEntries outputPath entries
+            | Failure(errorMsg, _, _) ->
+                printfn "Failure: %s" errorMsg
