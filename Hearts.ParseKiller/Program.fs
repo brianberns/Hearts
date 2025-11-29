@@ -129,7 +129,7 @@ module InitialDeal =
                 ]
             return {|
                 DealNumber = dealNum
-                OpenDeal = OpenDeal.fromHands dealer dir handMap
+                Deal = OpenDeal.fromHands dealer dir handMap
             |}
         }
 
@@ -187,7 +187,7 @@ module Exchange =
                 do! spaces
                 let! afterDeal = InitialDeal.parse
                 assert(
-                    afterDeal.OpenDeal.UnplayedCardMap
+                    afterDeal.Deal.UnplayedCardMap
                         = deal.UnplayedCardMap)
 
                 return deal
@@ -267,14 +267,14 @@ let skipShootComment =
 let parseDeal =
     parse {
         let! killerDeal = InitialDeal.parse
-        let! openDeal = Exchange.parse killerDeal.OpenDeal
+        let! openDeal = Exchange.parse killerDeal.Deal
         let! openDeal = Playout.parse openDeal
         do! optional skipEndOfGameComment
         do! optional skipShootComment
         let! score = GameScore.parse   // game score after deal is complete
         return {|
             DealNumber = killerDeal.DealNumber
-            OpenDeal = openDeal
+            Deal = openDeal
             GameScore = score
         |}
     }
@@ -287,8 +287,7 @@ let parseEntry =
 
 let parseLog =
     parse {
-        // let! entries = many1 parseEntry
-        let! entries = parseEntry |>> List.singleton
+        let! entries = many1 parseEntry
         return (Score.zero, entries)
             ||> Seq.mapFold (fun score entry ->
                 {| entry with GameScore = score |},   // game score at start of deal
