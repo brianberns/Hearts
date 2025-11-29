@@ -321,7 +321,7 @@ module Json =
             writer.WriteStartObject()
 
                 // leader
-            writer.WriteString("Leader", $"Seat.toChar trick.Leader")
+            writer.WriteString("Leader", $"{Seat.toChar trick.Leader}")
 
                 // cards
             writer.WriteStartArray("Cards")
@@ -331,12 +331,44 @@ module Json =
 
             writer.WriteEndObject()
 
+    type OpenDealConverter() =
+        inherit WriteOnlyConverter<OpenDeal>()
+
+        override _.Write(writer, deal, options) =
+            writer.WriteStartObject()
+
+                // dealer
+            writer.WriteString(
+                "Dealer",
+                $"{Seat.toChar deal.ClosedDeal.Dealer}")
+
+                // exchange direction
+            writer.WriteString(
+                "ExchangeDirection",
+                string deal.ClosedDeal.ExchangeDirection)
+
+                // tricks
+            writer.WriteStartArray("Tricks")
+            let tricks =
+                ClosedDeal.tricks deal.ClosedDeal
+                    |> Seq.where (fun trick ->
+                            trick.Cards.Length > 0)
+            JsonSerializer.Serialize(writer, tricks, options)
+            writer.WriteEndArray()
+
+            writer.WriteEndObject()
+
     let saveEntries entries =
         let options =
-            JsonSerializerOptions(WriteIndented = true)
+#if DEBUG
+            let indent = true
+#else
+            let indent = false
+#endif
+            JsonSerializerOptions(WriteIndented = indent)
         for converter in [
-            JsonStringEnumConverter() :> JsonConverter
-            CardConverter()
+            CardConverter() :> JsonConverter
+            OpenDealConverter()
             TrickConverter()
         ] do options.Converters.Add(converter)
         use stream = new FileStream("KHearts.json", FileMode.Create)
