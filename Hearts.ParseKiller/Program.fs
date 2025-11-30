@@ -2,6 +2,6 @@
 
 module Program =
 
-    Killer.parseLog
+    Log.convertToJson
         @"C:\Users\brian\OneDrive\Desktop\KHearts.log"
         "KHearts.json"
