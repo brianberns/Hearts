@@ -198,8 +198,14 @@ type TrickConverter() =
         writer.WritePropertyName("Cards")
         writer.WriteArray(List.rev trick.Cards, options)
 
-    override _.Read(reader, _typeToConvert, _options) =
-        failwith "Not implemented"
+    override _.Read(reader, _typeToConvert, options) =
+        let map =
+            JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
+        let leader = map["Leader"].Deserialize<Seat>(options)
+        let cards = map["Cards"].Deserialize<Card[]>(options)
+        (Trick.create leader, cards)
+            ||> Seq.fold (fun trick card ->
+                Trick.addPlay card trick)
 
 /// LogEntry.
 type LogEntryConverter() =
@@ -251,7 +257,8 @@ type LogEntryConverter() =
         writer.WriteArray(tricks, options)
 
     override _.Read(reader, _typeToConvert, options) =
-        let map = JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
+        let map =
+            JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
         let dealNum = map["DealNumber"].GetInt32()
         let gameScore = map["Score"].Deserialize<Score>(options)
         let dir =
@@ -264,7 +271,8 @@ type LogEntryConverter() =
             OpenDeal.fromHands dealer dir handMap
         let finalDeal =
             let passes = map["Passes"].Deserialize<Exchange>(options)
-            printfn "%A" passes
+            let tricks = map["Tricks"].Deserialize<Trick[]>(options)
+            ()
         {
             DealNumber = dealNum
             GameScore = gameScore
