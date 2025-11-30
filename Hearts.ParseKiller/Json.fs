@@ -82,18 +82,22 @@ type CardConverter() =
 
 type HandConverter() =
     inherit WriteOnlyConverter<Hand>()
-    override _.Write(writer, hand, options) =
+
+    override _.Write(writer, hand, _options) =
+
+            // organize cards by suit
         let suitRanks =
             hand
                 |> Seq.groupBy _.Suit
-                |> Seq.sortBy fst
+                |> Seq.sortByDescending fst    // sort suits high to low
                 |> Seq.map (fun (suit, cards) ->
                     suit,
                     cards
-                        |> Seq.rev   // sort ranks high to low
+                        |> Seq.sortDescending   // sort ranks high to low
                         |> Seq.map (fun card -> Rank.toChar card.Rank)
                         |> Seq.toArray
                         |> String)
+
         use _ = writer.WriteObject()
         for suit, ranks in suitRanks do
             writer.WritePropertyName($"{Suit.toLetter suit}")
