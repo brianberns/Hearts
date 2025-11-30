@@ -294,8 +294,7 @@ module Log =
 
     let private parseEntries =
         parse {
-            // let! entries = many1 parseEntry
-            let! entries = parseEntry |>> List.singleton
+            let! entries = many1 parseEntry
             return (Score.zero, entries)
                 ||> Seq.mapFold (fun score entry ->
                     { entry with GameScore = score },   // game score at start of deal

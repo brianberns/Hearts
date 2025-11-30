@@ -67,7 +67,6 @@ type SeatConverter() =
 
 type ScoreConverter() =
     inherit WriteOnlyConverter<Score>()
-
     override _.Write(writer, score, _options) =
         use _ = writer.WriteObject()
         for seat in Enum.getValues<Seat> do
@@ -80,6 +79,25 @@ type CardConverter() =
     override _.Write(writer, card, _options) =
         writer.WriteStringValue(
             $"{Rank.toChar card.Rank}{Suit.toLetter card.Suit}")
+
+type HandConverter() =
+    inherit WriteOnlyConverter<Hand>()
+    override _.Write(writer, hand, options) =
+        let suitRanks =
+            hand
+                |> Seq.groupBy _.Suit
+                |> Seq.sortBy fst
+                |> Seq.map (fun (suit, cards) ->
+                    suit,
+                    cards
+                        |> Seq.rev   // sort ranks high to low
+                        |> Seq.map (fun card -> Rank.toChar card.Rank)
+                        |> Seq.toArray
+                        |> String)
+        use _ = writer.WriteObject()
+        for suit, ranks in suitRanks do
+            writer.WritePropertyName($"{Suit.toLetter suit}")
+            writer.WriteStringValue(ranks)
 
 type ExchangeConverter() =
     inherit WriteOnlyConverter<Exchange>()
@@ -99,6 +117,7 @@ type ExchangeConverter() =
 
 type TrickConverter() =
     inherit WriteOnlyConverter<Trick>()
+
     override _.Write(writer, trick, options) =
         use _ = writer.WriteObject()
 
@@ -121,7 +140,15 @@ type LogEntryConverter() =
             "DealNumber", entry.DealNumber)
 
             // initial hands
-
+        let seatHands =
+            Map.toSeq entry.InitialDeal.UnplayedCardMap
+        writer.WritePropertyName("Hands")
+        do
+            use _ = writer.WriteArray()
+            for seat, hand in seatHands do
+                use _ = writer.WriteObject()
+                writer.WritePropertyName($"{Seat.toChar seat}")
+                writer.Write(hand, options)
 
             // exchange direction
         writer.WriteString(
@@ -157,6 +184,7 @@ module Json =
             SeatConverter() :> JsonConverter
             ScoreConverter()
             CardConverter()
+            HandConverter()
             ExchangeConverter()
             TrickConverter()
             LogEntryConverter()
