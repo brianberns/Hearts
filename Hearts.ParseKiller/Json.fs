@@ -8,6 +8,14 @@ open System.Text.Json.Serialization
 open PlayingCards
 open Hearts
 
+type LogEntry =
+    {
+        DealNumber : int
+        InitialDeal : OpenDeal
+        FinalDeal : OpenDeal
+        GameScore : Score
+    }
+
 [<AutoOpen>]
 module JsonExt =
 
@@ -57,6 +65,16 @@ type SeatConverter() =
     override _.Write(writer, seat, _options) =
         writer.WriteStringValue($"{Seat.toChar seat}")  
 
+type ScoreConverter() =
+    inherit WriteOnlyConverter<Score>()
+
+    override _.Write(writer, score, _options) =
+        use _ = writer.WriteObject()
+        for seat in Enum.getValues<Seat> do
+            writer.WriteNumber(
+                string (Seat.toChar seat),
+                score[seat])
+
 type CardConverter() =
     inherit WriteOnlyConverter<Card>()
     override _.Write(writer, card, _options) =
@@ -92,19 +110,26 @@ type TrickConverter() =
         writer.WritePropertyName("Cards")
         writer.WriteArray(List.rev trick.Cards, options)
 
-type OpenDealConverter() =
-    inherit WriteOnlyConverter<OpenDeal>()
+type LogEntryConverter() =
+    inherit WriteOnlyConverter<LogEntry>()
 
-    override _.Write(writer, deal, options) =
+    override _.Write(writer, entry, options) =
         use _ = writer.WriteObject()
+
+            // deal number
+        writer.WriteNumber(
+            "DealNumber", entry.DealNumber)
+
+            // initial hands
+
 
             // exchange direction
         writer.WriteString(
             "PassDirection",
-            string deal.ClosedDeal.ExchangeDirection)
+            string entry.InitialDeal.ClosedDeal.ExchangeDirection)
 
             // exchange
-        match deal.ExchangeOpt with
+        match entry.FinalDeal.ExchangeOpt with
             | Some exchange ->
                 writer.WritePropertyName("Passes")
                 writer.Write(exchange, options)
@@ -112,25 +137,15 @@ type OpenDealConverter() =
 
             // tricks
         let tricks =
-            ClosedDeal.tricks deal.ClosedDeal
+            ClosedDeal.tricks entry.FinalDeal.ClosedDeal
                 |> Seq.where (fun trick ->
                         trick.Cards.Length > 0)
         writer.WritePropertyName("Tricks")
         writer.WriteArray(tricks, options)
 
-type ScoreConverter() =
-    inherit WriteOnlyConverter<Score>()
-
-    override _.Write(writer, score, _options) =
-        use _ = writer.WriteObject()
-        for seat in Enum.getValues<Seat> do
-            writer.WriteNumber(
-                string (Seat.toChar seat),
-                score[seat])
-
 module Json =
 
-    let saveEntries path entries =
+    let saveEntries path (entries : seq<LogEntry>) =
         let options =
 #if DEBUG
             let indent = true
@@ -140,11 +155,11 @@ module Json =
             JsonSerializerOptions(WriteIndented = indent)
         for converter in [
             SeatConverter() :> JsonConverter
+            ScoreConverter()
             CardConverter()
             ExchangeConverter()
             TrickConverter()
-            OpenDealConverter()
-            ScoreConverter()
+            LogEntryConverter()
         ] do options.Converters.Add(converter)
         use stream = new FileStream(path, FileMode.Create)
         JsonSerializer.Serialize(stream, entries, options)

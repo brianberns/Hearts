@@ -66,12 +66,6 @@ module Killer =
             return Card.create rank suit
         }
 
-type InitialDeal =
-    {
-        DealNumber : int
-        Deal : OpenDeal
-    }
-
 module InitialDeal =
 
     /// E.g. "T9542".
@@ -137,10 +131,8 @@ module InitialDeal =
                     Seat.East, eastCards
                     Seat.South, southCards
                 ]
-            return {
-                DealNumber = dealNum
-                Deal = OpenDeal.fromHands dealer dir handMap
-            }
+            let deal = OpenDeal.fromHands dealer dir handMap
+            return dealNum, deal
         }
 
 module Exchange =
@@ -195,9 +187,9 @@ module Exchange =
                     // verify exchange
                 do! skipNewline
                 do! spaces
-                let! afterDeal = InitialDeal.parse
+                let! _, afterDeal = InitialDeal.parse
                 assert(
-                    afterDeal.Deal.UnplayedCardMap
+                    afterDeal.UnplayedCardMap
                         = deal.UnplayedCardMap)
 
                 return deal
@@ -261,13 +253,6 @@ module GameScore =
                 |> Score.ofPoints
         }
 
-type LogEntry =
-    {
-        InitialDeal : InitialDeal
-        FinalDeal : OpenDeal
-        GameScore : Score
-    }
-
 module Log =
 
     let private skipEndOfGameComment =
@@ -285,15 +270,16 @@ module Log =
 
     let private parseDeal =
         parse {
-            let! initialDeal = InitialDeal.parse
+            let! dealNum, initialDeal = InitialDeal.parse
             let! finalDeal =
-                initialDeal.Deal
+                initialDeal
                     |> Exchange.parse 
                     >>= Playout.parse
             do! optional skipEndOfGameComment
             do! optional skipShootComment
             let! finalScore = GameScore.parse   // game score after deal is complete
             return {
+                DealNumber = dealNum
                 InitialDeal = initialDeal
                 FinalDeal = finalDeal
                 GameScore = finalScore
@@ -312,7 +298,7 @@ module Log =
             let! entries = parseEntry |>> List.singleton
             return (Score.zero, entries)
                 ||> Seq.mapFold (fun score entry ->
-                    {| entry with GameScore = score |},   // game score at start of deal
+                    { entry with GameScore = score },   // game score at start of deal
                     entry.GameScore)
                 |> fst
         }
