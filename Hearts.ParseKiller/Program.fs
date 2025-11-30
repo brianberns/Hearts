@@ -1,5 +1,8 @@
 ﻿namespace Hearts.ParseKiller
 
+open System
+open System.Text
+
 module Program =
 
     let write () =
@@ -11,4 +14,5 @@ module Program =
         Json.loadEntries "KHearts.json"
             |> printfn "%A'"
 
+    Console.OutputEncoding <- Encoding.Unicode
     read ()

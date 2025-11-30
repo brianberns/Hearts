@@ -8,14 +8,23 @@ open System.Text.Json.Serialization
 open PlayingCards
 open Hearts
 
+/// Entry in a log file describing a Hearts deal.
 type LogEntry =
     {
+        /// Killer Hearts deal number.
         DealNumber : int
+
+        /// Game score at the beginning of this deal.
         GameScore : Score
+
+        /// Initial state of deal before exchange and playout.
         InitialDeal : OpenDeal
+
+        /// Final state of deal after exchange and playout.
         FinalDeal : OpenDeal
     }
 
+/// JSON serializer extensions.
 [<AutoOpen>]
 module JsonExt =
 
@@ -53,6 +62,7 @@ module JsonExt =
             for item in items do
                 converter.Write(writer, item, options)
 
+/// Seat.
 type SeatConverter() =
     inherit JsonConverter<Seat>()
 
@@ -71,6 +81,7 @@ type SeatConverter() =
         reader, _typeToConvert, _options) =
         SeatConverter.ReadChar(reader)
 
+/// Score.
 type ScoreConverter() =
     inherit JsonConverter<Score>()
 
@@ -88,6 +99,7 @@ type ScoreConverter() =
             |> Seq.toArray
             |> Score.ofPoints
 
+/// Card.
 type CardConverter() =
     inherit JsonConverter<Card>()
 
@@ -99,6 +111,7 @@ type CardConverter() =
         reader.GetString()
             |> Card.fromString
 
+/// Hand.
 type HandConverter() =
     inherit JsonConverter<Hand>()
 
@@ -137,6 +150,7 @@ type HandConverter() =
                         Card.create rank suit))
             |> set
 
+/// Exchange.
 type ExchangeConverter() =
     inherit JsonConverter<Exchange>()
 
@@ -154,9 +168,22 @@ type ExchangeConverter() =
             writer.WritePropertyName("Pass")
             writer.WriteArray(pass, options)
 
-    override _.Read(reader, _typeToConvert, _options) =
-        failwith "Not implemented"
+    override _.Read(reader, _typeToConvert, options) =
+        let maps =
+            JsonSerializer.Deserialize<Map<string, JsonElement>[]>(&reader)
+        let passMap =
+            Map [
+                for map in maps do
+                    let seat = map["Seat"].Deserialize<Seat>(options)
+                    let cards = map["Pass"].Deserialize<Card[]>(options)   // can't deserialize directly to Pass, because it's idential to Hand
+                    seat, set cards
+            ]
+        {
+            CurrentPasserOpt = None
+            PassMap = passMap
+        }
 
+/// Trick.
 type TrickConverter() =
     inherit JsonConverter<Trick>()
 
@@ -174,6 +201,7 @@ type TrickConverter() =
     override _.Read(reader, _typeToConvert, _options) =
         failwith "Not implemented"
 
+/// LogEntry.
 type LogEntryConverter() =
     inherit JsonConverter<LogEntry>()
 
@@ -226,14 +254,17 @@ type LogEntryConverter() =
         let map = JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
         let dealNum = map["DealNumber"].GetInt32()
         let gameScore = map["Score"].Deserialize<Score>(options)
-        let handMap =
-            map["Hands"].Deserialize<Map<Seat, Hand>>(options)
-        let dealer = map["Dealer"].Deserialize<Seat>(options)
         let dir =
             map["PassDirection"].GetString()
-                |> Enum.Parse<ExchangeDirection>
+                |> Enum.Parse<ExchangeDirection>   // can't use JsonStringEnumConverter?
         let initialDeal =
+            let handMap =
+                map["Hands"].Deserialize<Map<Seat, Hand>>(options)
+            let dealer = map["Dealer"].Deserialize<Seat>(options)
             OpenDeal.fromHands dealer dir handMap
+        let finalDeal =
+            let passes = map["Passes"].Deserialize<Exchange>(options)
+            printfn "%A" passes
         {
             DealNumber = dealNum
             GameScore = gameScore
