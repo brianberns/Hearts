@@ -184,6 +184,10 @@ type LogEntryConverter() =
         writer.WriteNumber(
             "DealNumber", entry.DealNumber)
 
+            // dealer
+        writer.WritePropertyName("Dealer")
+        writer.Write(entry.InitialDeal.ClosedDeal.Dealer, options)
+
             // initial score
         writer.WritePropertyName("Score")
         writer.Write(entry.GameScore, options)
@@ -222,10 +226,18 @@ type LogEntryConverter() =
         let map = JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
         let dealNum = map["DealNumber"].GetInt32()
         let gameScore = map["Score"].Deserialize<Score>(options)
+        let handMap =
+            map["Hands"].Deserialize<Map<Seat, Hand>>(options)
+        let dealer = map["Dealer"].Deserialize<Seat>(options)
+        let dir =
+            map["PassDirection"].GetString()
+                |> Enum.Parse<ExchangeDirection>
+        let initialDeal =
+            OpenDeal.fromHands dealer dir handMap
         {
             DealNumber = dealNum
             GameScore = gameScore
-            InitialDeal = failwith "Not implemented"
+            InitialDeal = initialDeal
             FinalDeal = failwith "Not implemented"
         }
 

@@ -110,13 +110,12 @@ module InitialDeal =
         * S: Q8763         AJT3          9             752          
         *)
     let parse =
-
         parse {
             do! skipString "spades" >>. spaces
             do! skipString "hearts" >>. spaces
             do! skipString "clubs" >>. spaces
             do! skipString "diamonds" >>. spaces
-            let! dealNum = pint32   // ignore deal number
+            let! dealNum = pint32
             let! dealer = Killer.parseSeatChar
             let! dir = Killer.parseDirectionChar
             do! skipRestOfLine true
@@ -294,7 +293,8 @@ module Log =
 
     let private parseEntries =
         parse {
-            let! entries = many1 parseEntry
+            // let! entries = many1 parseEntry
+            let! entries = parseEntry |>> List.singleton
             return (Score.zero, entries)
                 ||> Seq.mapFold (fun score entry ->
                     { entry with GameScore = score },   // game score at start of deal
