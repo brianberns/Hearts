@@ -11,4 +11,4 @@ module Program =
         Json.loadEntries "KHearts.json"
             |> printfn "%A'"
 
-    write ()
+    read ()

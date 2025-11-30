@@ -11,9 +11,9 @@ open Hearts
 type LogEntry =
     {
         DealNumber : int
+        GameScore : Score
         InitialDeal : OpenDeal
         FinalDeal : OpenDeal
-        GameScore : Score
     }
 
 [<AutoOpen>]
@@ -67,6 +67,10 @@ type SeatConverter() =
     override _.Read(reader, _typeToConvert, _options) =
         SeatConverter.ReadChar(reader)
 
+    override _.ReadAsPropertyName(
+        reader, _typeToConvert, _options) =
+        SeatConverter.ReadChar(reader)
+
 type ScoreConverter() =
     inherit JsonConverter<Score>()
 
@@ -78,8 +82,9 @@ type ScoreConverter() =
                 score[seat])
 
     override _.Read(reader, _typeToConvert, options) =
-        JsonSerializer.Deserialize<Map<string, int>>(&reader, options)
-            |> Map.values
+        JsonSerializer.Deserialize<Map<Seat, int>>(
+            &reader, options)
+            |> Map.values   // sorted by seat
             |> Seq.toArray
             |> Score.ofPoints
 
@@ -113,12 +118,24 @@ type HandConverter() =
                         |> String)
 
         use _ = writer.WriteObject()
-        for suit, ranks in suitRanks do
+        for suit, ranksStr in suitRanks do
             writer.WritePropertyName($"{Suit.toLetter suit}")
-            writer.WriteStringValue(ranks)
+            writer.WriteStringValue(ranksStr)
 
-    override _.Read(reader, _typeToConvert, _options) =
-        failwith "Not implemented"
+    override _.Read(reader, _typeToConvert, options) =
+        JsonSerializer.Deserialize<Map<string, string>>(
+            &reader, options)
+            |> Map.toSeq
+            |> Seq.collect (fun (suitLetter, ranksStr) ->
+                let suit =
+                    suitLetter
+                        |> Seq.exactlyOne
+                        |> Suit.fromChar
+                ranksStr
+                    |> Seq.map (fun rankChar ->
+                        let rank = Rank.fromChar rankChar
+                        Card.create rank suit))
+            |> set
 
 type ExchangeConverter() =
     inherit JsonConverter<Exchange>()
@@ -201,8 +218,16 @@ type LogEntryConverter() =
         writer.WritePropertyName("Tricks")
         writer.WriteArray(tricks, options)
 
-    override _.Read(reader, _typeToConvert, _options) =
-        failwith "Not implemented"
+    override _.Read(reader, _typeToConvert, options) =
+        let map = JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
+        let dealNum = map["DealNumber"].GetInt32()
+        let gameScore = map["Score"].Deserialize<Score>(options)
+        {
+            DealNumber = dealNum
+            GameScore = gameScore
+            InitialDeal = failwith "Not implemented"
+            FinalDeal = failwith "Not implemented"
+        }
 
 module Json =
 
