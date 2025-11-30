@@ -53,20 +53,24 @@ module JsonExt =
             for item in items do
                 converter.Write(writer, item, options)
 
-[<AbstractClass>]
-type WriteOnlyConverter<'t>() =
-    inherit JsonConverter<'t>()
+type SeatConverter() =
+    inherit JsonConverter<Seat>()
+
+    override _.Write(writer, seat, _options) =
+        writer.WriteStringValue($"{Seat.toChar seat}")
+
+    static member ReadChar(reader : Utf8JsonReader) =
+        reader.GetString()
+            |> Seq.exactlyOne
+            |> Seat.fromChar
 
     override _.Read(reader, _typeToConvert, _options) =
-        failwith "Not implemented"
-
-type SeatConverter() =
-    inherit WriteOnlyConverter<Seat>()
-    override _.Write(writer, seat, _options) =
-        writer.WriteStringValue($"{Seat.toChar seat}")  
+        SeatConverter.ReadChar(reader)
 
 type ScoreConverter() =
-    inherit WriteOnlyConverter<Score>()
+
+    inherit JsonConverter<Score>()
+
     override _.Write(writer, score, _options) =
         use _ = writer.WriteObject()
         for seat in Enum.getValues<Seat> do
@@ -74,14 +78,21 @@ type ScoreConverter() =
                 string (Seat.toChar seat),
                 score[seat])
 
+    override _.Read(reader, _typeToConvert, _options) =
+        failwith "Not implemented"
+
 type CardConverter() =
-    inherit WriteOnlyConverter<Card>()
+    inherit JsonConverter<Card>()
+
     override _.Write(writer, card, _options) =
         writer.WriteStringValue(
             $"{Rank.toChar card.Rank}{Suit.toLetter card.Suit}")
 
+    override _.Read(reader, _typeToConvert, _options) =
+        failwith "Not implemented"
+
 type HandConverter() =
-    inherit WriteOnlyConverter<Hand>()
+    inherit JsonConverter<Hand>()
 
     override _.Write(writer, hand, _options) =
 
@@ -103,8 +114,12 @@ type HandConverter() =
             writer.WritePropertyName($"{Suit.toLetter suit}")
             writer.WriteStringValue(ranks)
 
+    override _.Read(reader, _typeToConvert, _options) =
+        failwith "Not implemented"
+
 type ExchangeConverter() =
-    inherit WriteOnlyConverter<Exchange>()
+    inherit JsonConverter<Exchange>()
+
     override _.Write(writer, exchange, options) =
         use _ = writer.WriteArray()
 
@@ -119,8 +134,11 @@ type ExchangeConverter() =
             writer.WritePropertyName("Pass")
             writer.WriteArray(pass, options)
 
+    override _.Read(reader, _typeToConvert, _options) =
+        failwith "Not implemented"
+
 type TrickConverter() =
-    inherit WriteOnlyConverter<Trick>()
+    inherit JsonConverter<Trick>()
 
     override _.Write(writer, trick, options) =
         use _ = writer.WriteObject()
@@ -133,8 +151,11 @@ type TrickConverter() =
         writer.WritePropertyName("Cards")
         writer.WriteArray(List.rev trick.Cards, options)
 
+    override _.Read(reader, _typeToConvert, _options) =
+        failwith "Not implemented"
+
 type LogEntryConverter() =
-    inherit WriteOnlyConverter<LogEntry>()
+    inherit JsonConverter<LogEntry>()
 
     override _.Write(writer, entry, options) =
         use _ = writer.WriteObject()
@@ -142,6 +163,10 @@ type LogEntryConverter() =
             // deal number
         writer.WriteNumber(
             "DealNumber", entry.DealNumber)
+
+            // initial score
+        writer.WritePropertyName("Score")
+        writer.Write(entry.GameScore, options)
 
             // initial hands
         let seatHands =
@@ -173,6 +198,9 @@ type LogEntryConverter() =
                         trick.Cards.Length > 0)
         writer.WritePropertyName("Tricks")
         writer.WriteArray(tricks, options)
+
+    override _.Read(reader, _typeToConvert, _options) =
+        failwith "Not implemented"
 
 module Json =
 
