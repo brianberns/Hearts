@@ -68,7 +68,6 @@ type SeatConverter() =
         SeatConverter.ReadChar(reader)
 
 type ScoreConverter() =
-
     inherit JsonConverter<Score>()
 
     override _.Write(writer, score, _options) =
@@ -78,8 +77,11 @@ type ScoreConverter() =
                 string (Seat.toChar seat),
                 score[seat])
 
-    override _.Read(reader, _typeToConvert, _options) =
-        failwith "Not implemented"
+    override _.Read(reader, _typeToConvert, options) =
+        JsonSerializer.Deserialize<Map<string, int>>(&reader, options)
+            |> Map.values
+            |> Seq.toArray
+            |> Score.ofPoints
 
 type CardConverter() =
     inherit JsonConverter<Card>()
@@ -89,7 +91,8 @@ type CardConverter() =
             $"{Rank.toChar card.Rank}{Suit.toLetter card.Suit}")
 
     override _.Read(reader, _typeToConvert, _options) =
-        failwith "Not implemented"
+        reader.GetString()
+            |> Card.fromString
 
 type HandConverter() =
     inherit JsonConverter<Hand>()
@@ -173,9 +176,8 @@ type LogEntryConverter() =
             Map.toSeq entry.InitialDeal.UnplayedCardMap
         writer.WritePropertyName("Hands")
         do
-            use _ = writer.WriteArray()
+            use _ = writer.WriteObject()
             for seat, hand in seatHands do
-                use _ = writer.WriteObject()
                 writer.WritePropertyName($"{Seat.toChar seat}")
                 writer.Write(hand, options)
 
@@ -204,7 +206,8 @@ type LogEntryConverter() =
 
 module Json =
 
-    let saveEntries path (entries : seq<LogEntry>) =
+    let private createOptions () =
+
         let options =
 #if DEBUG
             let indent = true
@@ -212,6 +215,7 @@ module Json =
             let indent = false
 #endif
             JsonSerializerOptions(WriteIndented = indent)
+
         for converter in [
             SeatConverter() :> JsonConverter
             ScoreConverter()
@@ -221,5 +225,15 @@ module Json =
             TrickConverter()
             LogEntryConverter()
         ] do options.Converters.Add(converter)
+
+        options
+
+    let saveEntries path (entries : seq<LogEntry>) =
+        let options = createOptions ()
         use stream = new FileStream(path, FileMode.Create)
         JsonSerializer.Serialize(stream, entries, options)
+
+    let loadEntries path =
+        let options = createOptions ()
+        use stream = new FileStream(path, FileMode.Open)
+        JsonSerializer.Deserialize<LogEntry[]>(stream, options)

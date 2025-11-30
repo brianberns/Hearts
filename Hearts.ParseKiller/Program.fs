@@ -2,6 +2,13 @@
 
 module Program =
 
-    Log.convertToJson
-        @"C:\Users\brian\OneDrive\Desktop\KHearts.log"
-        "KHearts.json"
+    let write () =
+        Log.convertToJson
+            @"C:\Users\brian\OneDrive\Desktop\KHearts.log"
+            "KHearts.json"
+
+    let read () =
+        Json.loadEntries "KHearts.json"
+            |> printfn "%A'"
+
+    write ()
