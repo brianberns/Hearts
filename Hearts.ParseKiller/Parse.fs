@@ -157,19 +157,7 @@ module Exchange =
             return Map playerPasses
         }
 
-    let private apply deal (passMap : Map<_, _>) =
-        let cards =
-            let seats =
-                Seat.cycle (OpenDeal.currentPlayer deal)
-            seq {
-                for seat in seats do
-                    yield! passMap[seat]
-            }
-        (deal, cards)
-            ||> Seq.fold (fun deal card ->
-                OpenDeal.addPass card deal)
-
-    let parse deal =
+    let parseAndApply deal =
         let isHold =
             deal.ClosedDeal.ExchangeDirection
                 = ExchangeDirection.Hold
@@ -178,9 +166,9 @@ module Exchange =
                 return OpenDeal.startPlay deal
             else
                     // parse and apply the auto passes
-                let! passes =
+                let! passMap =
                     parseAutoPasses deal.ClosedDeal.ExchangeDirection
-                let deal = apply deal passes
+                let deal = PassMap.apply passMap deal
                 let deal = OpenDeal.startPlay deal
 
                     // verify exchange
@@ -205,15 +193,8 @@ module Playout =
             return seat, card
         }
 
-    let private apply deal tricks =
-        let plays = List.concat tricks
-        (deal, plays)
-            ||> Seq.fold (fun deal (seat, card) ->
-                assert(OpenDeal.currentPlayer deal = seat)
-                OpenDeal.addPlay card deal)
-
     /// E.g. "trick  1: W:TS  N:KH  E:AS  S:3D".
-    let private parseTrick =
+    let private parseTrickPlays =
         parse {
             do! skipString "trick"
             do! spaces
@@ -224,10 +205,12 @@ module Playout =
             return plays
         }
 
-    let parse deal =
+    let parseAndApply deal =
         parse {
-            let! tricks = many1 (parseTrick .>> newline)
-            return apply deal tricks
+            let! plays =
+                many1 (parseTrickPlays .>> newline)
+                    |>> List.concat
+            return TrickPlay.apply plays deal
         }
 
 module GameScore =
@@ -267,13 +250,13 @@ module Log =
             do! skipRestOfLine true
         }
 
-    let private parseDeal =
+    let private parseLogEntry =
         parse {
             let! dealNum, initialDeal = InitialDeal.parse
             let! finalDeal =
                 initialDeal
-                    |> Exchange.parse 
-                    >>= Playout.parse
+                    |> Exchange.parseAndApply 
+                    >>= Playout.parseAndApply
             do! optional skipEndOfGameComment
             do! optional skipShootComment
             let! finalScore = GameScore.parse   // game score after deal is complete
@@ -285,16 +268,16 @@ module Log =
             }
         }
 
-    let private parseEntry =
+    let private skipToAndParseEntry =
         parse {
             do! skipCharsTillString "spades" false Int32.MaxValue
-            return! parseDeal
+            return! parseLogEntry
         } |> attempt
 
     let private parseEntries =
         parse {
-            // let! entries = many1 parseEntry
-            let! entries = parseEntry |>> List.singleton
+            let! entries = many1 skipToAndParseEntry
+            // let! entries = skipToAndParseEntry |>> List.singleton
             return (Score.zero, entries)
                 ||> Seq.mapFold (fun score entry ->
                     { entry with GameScore = score },   // game score at start of deal

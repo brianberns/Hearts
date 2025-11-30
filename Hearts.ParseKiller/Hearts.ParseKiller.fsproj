@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Apply.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="Parse.fs" />
     <Compile Include="Program.fs" />

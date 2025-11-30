@@ -12,7 +12,7 @@ module Program =
 
     let read () =
         Json.loadEntries "KHearts.json"
-            |> printfn "%A'"
+            |> Json.saveEntries "KHearts.copy.json"
 
     Console.OutputEncoding <- Encoding.Unicode
     read ()

@@ -178,10 +178,13 @@ type ExchangeConverter() =
                     let cards = map["Pass"].Deserialize<Card[]>(options)   // can't deserialize directly to Pass, because it's idential to Hand
                     seat, set cards
             ]
-        {
-            CurrentPasserOpt = None
-            PassMap = passMap
-        }
+        let exchange =
+            {
+                CurrentPasserOpt = None
+                PassMap = passMap
+            }
+        assert(Exchange.isComplete exchange)
+        exchange
 
 /// Trick.
 type TrickConverter() =
@@ -207,7 +210,7 @@ type TrickConverter() =
             ||> Seq.fold (fun trick card ->
                 Trick.addPlay card trick)
 
-/// LogEntry.
+/// Log entry.
 type LogEntryConverter() =
     inherit JsonConverter<LogEntry>()
 
@@ -239,7 +242,7 @@ type LogEntryConverter() =
             // exchange direction
         writer.WriteString(
             "PassDirection",
-            string entry.InitialDeal.ClosedDeal.ExchangeDirection)
+            string entry.InitialDeal.ClosedDeal.ExchangeDirection)   // can't use JsonStringEnumConverter?
 
             // exchange
         match entry.FinalDeal.ExchangeOpt with
@@ -257,27 +260,51 @@ type LogEntryConverter() =
         writer.WriteArray(tricks, options)
 
     override _.Read(reader, _typeToConvert, options) =
+
         let map =
             JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
+
+            // deal number
         let dealNum = map["DealNumber"].GetInt32()
+
+            // initial score
         let gameScore = map["Score"].Deserialize<Score>(options)
+
+            // initial hands
+        let handMap =
+            map["Hands"].Deserialize<Map<Seat, Hand>>(options)
+
+            // exchange direction
         let dir =
             map["PassDirection"].GetString()
                 |> Enum.Parse<ExchangeDirection>   // can't use JsonStringEnumConverter?
+
+            // exchange
+        let exchangeOpt =
+            if dir = ExchangeDirection.Hold then None
+            else
+                Some (map["Passes"].Deserialize<Exchange>(options))
+
+            // tricks
+        let tricks =
+            map["Tricks"].Deserialize<Trick[]>(options)
+
+            // construct entry
         let initialDeal =
-            let handMap =
-                map["Hands"].Deserialize<Map<Seat, Hand>>(options)
             let dealer = map["Dealer"].Deserialize<Seat>(options)
             OpenDeal.fromHands dealer dir handMap
         let finalDeal =
-            let passes = map["Passes"].Deserialize<Exchange>(options)
-            let tricks = map["Tricks"].Deserialize<Trick[]>(options)
-            ()
+            exchangeOpt
+                |> Option.map (fun exchange ->
+                    PassMap.apply exchange.PassMap initialDeal)
+                |> Option.defaultValue initialDeal
+                |> OpenDeal.startPlay
+                |> TrickPlay.apply (Seq.collect Trick.plays tricks)
         {
             DealNumber = dealNum
             GameScore = gameScore
             InitialDeal = initialDeal
-            FinalDeal = failwith "Not implemented"
+            FinalDeal = finalDeal
         }
 
 module Json =
