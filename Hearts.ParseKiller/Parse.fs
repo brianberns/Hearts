@@ -279,7 +279,7 @@ module Log =
             let! entries = many1 skipToAndParseEntry
             // let! entries = skipToAndParseEntry |>> List.singleton
             return (Score.zero, entries)
-                ||> Seq.mapFold (fun score entry ->
+                ||> List.mapFold (fun score entry ->
                     { entry with GameScore = score },   // game score at start of deal
                     entry.GameScore)
                 |> fst
@@ -293,6 +293,8 @@ module Log =
 
         match result with
             | Success(entries, _, _) ->
-                Json.saveEntries outputPath entries
+                let distinct = List.distinct entries
+                printfn $"{entries.Length} entries parsed ({distinct.Length} distinct)"
+                Json.saveEntries outputPath distinct
             | Failure(errorMsg, _, _) ->
                 printfn "Failure: %s" errorMsg
