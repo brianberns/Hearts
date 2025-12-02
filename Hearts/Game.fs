@@ -15,13 +15,15 @@ module Game =
     /// End of game point threshold.
     let endThreshold = 100
 
+    /// Does the given game score end the game?
+    let isOver gameScore =
+        gameScore.Points
+            |> Seq.exists (fun points ->
+                points >= endThreshold)
+
     /// Finds game winners, if any, in the given game score.
     let findGameWinners gameScore =
-        let isOver =
-            gameScore.Points
-                |> Seq.exists (fun points ->
-                    points >= endThreshold)
-        if isOver then findGameLeaders gameScore
+        if isOver gameScore then findGameLeaders gameScore
         else Set.empty
 
     /// Applies the shoot reward to the given game score for

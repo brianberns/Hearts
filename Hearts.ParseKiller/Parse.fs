@@ -280,6 +280,9 @@ module Log =
             // let! entries = skipToAndParseEntry |>> List.singleton
             return (Score.zero, entries)
                 ||> List.mapFold (fun score entry ->
+                    let score =
+                        if Game.isOver score then Score.zero
+                        else score
                     { entry with GameScore = score },   // game score at start of deal
                     entry.GameScore)
                 |> fst
