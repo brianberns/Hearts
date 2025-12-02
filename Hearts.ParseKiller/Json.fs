@@ -24,6 +24,18 @@ type LogEntry =
         FinalDeal : OpenDeal
     }
 
+type LogEntryLite =
+    {
+        /// Game score at the beginning of this deal.
+        GameScore : Score
+
+        /// Initial state of deal before exchange and playout.
+        InitialDeal : OpenDeal
+
+        ExchangeOpt : Option<Exchange>
+        Tricks : Trick[]
+    }
+
 /// JSON serializer extensions.
 [<AutoOpen>]
 module JsonExt =
@@ -260,12 +272,19 @@ type LogEntryConverter() =
         writer.WriteArray(tricks, options)
 
     override _.Read(reader, _typeToConvert, options) =
+        raise (NotSupportedException())
+
+/// Log entry lite.
+type LogEntryLiteConverter() =
+    inherit JsonConverter<LogEntryLite>()
+
+    override _.Write(writer, entry, options) =
+        raise (NotSupportedException())
+
+    override _.Read(reader, _typeToConvert, options) =
 
         let map =
             JsonSerializer.Deserialize<Map<string, JsonElement>>(&reader)
-
-            // deal number
-        let dealNum = map["DealNumber"].GetInt32()
 
             // initial score
         let gameScore = map["Score"].Deserialize<Score>(options)
@@ -293,18 +312,11 @@ type LogEntryConverter() =
         let initialDeal =
             let dealer = map["Dealer"].Deserialize<Seat>(options)
             OpenDeal.fromHands dealer dir handMap
-        let finalDeal =
-            exchangeOpt
-                |> Option.map (fun exchange ->
-                    PassMap.apply exchange.PassMap initialDeal)
-                |> Option.defaultValue initialDeal
-                |> OpenDeal.startPlay
-                |> TrickPlay.apply (Seq.collect Trick.plays tricks)
         {
-            DealNumber = dealNum
             GameScore = gameScore
             InitialDeal = initialDeal
-            FinalDeal = finalDeal
+            ExchangeOpt = exchangeOpt
+            Tricks = tricks
         }
 
 module Json =
@@ -327,6 +339,7 @@ module Json =
             ExchangeConverter()
             TrickConverter()
             LogEntryConverter()
+            LogEntryLiteConverter()
         ] do options.Converters.Add(converter)
 
         options
@@ -339,4 +352,4 @@ module Json =
     let loadEntries path =
         let options = createOptions ()
         use stream = new FileStream(path, FileMode.Open)
-        JsonSerializer.Deserialize<LogEntry[]>(stream, options)
+        JsonSerializer.Deserialize<LogEntryLite[]>(stream, options)

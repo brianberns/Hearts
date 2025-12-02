@@ -8,5 +8,3 @@ module Program =
     Log.convertToJson
         @"C:\Users\brian\OneDrive\Desktop\KHearts.log"
         "KHearts.json"
-    Json.loadEntries "KHearts.json"
-        |> Json.saveEntries "KHearts.copy.json"

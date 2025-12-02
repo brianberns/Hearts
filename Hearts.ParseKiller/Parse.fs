@@ -157,6 +157,18 @@ module Exchange =
             return Map playerPasses
         }
 
+    let private apply (passMap : Map<_, _>) deal =
+        let cards =
+            let seats =
+                Seat.cycle (OpenDeal.currentPlayer deal)
+            seq {
+                for seat in seats do
+                    yield! passMap[seat]
+            }
+        (deal, cards)
+            ||> Seq.fold (fun deal card ->
+                OpenDeal.addPass card deal)
+
     let parseAndApply deal =
         let isHold =
             deal.ClosedDeal.ExchangeDirection
@@ -168,7 +180,7 @@ module Exchange =
                     // parse and apply the auto passes
                 let! passMap =
                     parseAutoPasses deal.ClosedDeal.ExchangeDirection
-                let deal = PassMap.apply passMap deal
+                let deal = apply passMap deal
                 let deal = OpenDeal.startPlay deal
 
                     // verify exchange
@@ -205,12 +217,18 @@ module Playout =
             return plays
         }
 
+    let private apply plays deal =
+        (deal, plays)
+            ||> Seq.fold (fun deal (seat, card) ->
+                assert(OpenDeal.currentPlayer deal = seat)
+                OpenDeal.addPlay card deal)
+
     let parseAndApply deal =
         parse {
             let! plays =
                 many1 (parseTrickPlays .>> newline)
                     |>> List.concat
-            return TrickPlay.apply plays deal
+            return apply plays deal
         }
 
 module GameScore =
