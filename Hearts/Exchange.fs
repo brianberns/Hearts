@@ -13,7 +13,7 @@ type Exchange =
 
 module Exchange =
 
-    /// Creates an exchange
+    /// Creates an exchange.
     let create currentPasser =
         {
             CurrentPasserOpt = Some currentPasser
