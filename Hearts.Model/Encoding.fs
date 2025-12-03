@@ -26,7 +26,7 @@ type Encoding = BitArray
 module Encoding =
 
     /// Converts encoded bits to float32.
-    let toFloat32 (bits : BitArray) =
+    let toFloat32 (bits : Encoding) =
         [|
             for i = 0 to bits.Length - 1 do
                 if bits[i] then 1f else 0f
@@ -132,7 +132,7 @@ module Encoding =
             infoSet.Deal.UnplayedCards - infoSet.Hand
         let trickOpt = infoSet.Deal.CurrentTrickOpt
         let encoded =
-            BitArray [|
+            Encoding [|
                 yield! encodeCards infoSet.Hand             // current player's hand
                 yield! encodeCards unseen                   // unplayed cards not in current player's hand
                 yield! encodeExchangeDirection              // exchange direction

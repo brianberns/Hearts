@@ -31,34 +31,32 @@ module Program =
 
         Console.OutputEncoding <- Encoding.Unicode
 
+        let stopwatch = System.Diagnostics.Stopwatch.StartNew()
         let entries =
             Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
-        printfn $"Loaded {entries.Length} deals"
+        printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
 
         for entry in entries do
             let actions =
-                Seq.append
-                    (getExchangeActions
-                        entry.ExchangeOpt entry.InitialDeal)
-                    (getPlayoutActions entry.Tricks)
+                [|
+                    yield! getExchangeActions
+                        entry.ExchangeOpt entry.InitialDeal
+                    yield! getPlayoutActions entry.Tricks
+                |]
             let deals =
-                seq {
-                    entry.InitialDeal
-                    yield! (entry.InitialDeal, actions)
-                        ||> Seq.scan (fun deal (actionType, card) ->
-                            OpenDeal.addAction actionType card deal)
-                }
-            printfn ""
-            for deal in deals do
-                if not (ClosedDeal.isComplete deal.ClosedDeal) then
-                    let encoding =
-                        OpenDeal.currentInfoSet deal
-                            |> Encoding.encode
-                    printfn "%s" (
-                        encoding
-                            |> Seq.cast<bool>
-                            |> Seq.map (function true -> '1' | false -> '0')
-                            |> Seq.toArray
-                            |> String)
+                (entry.InitialDeal, actions)
+                    ||> Array.scan (fun deal (actionType, card) ->
+                        OpenDeal.addAction actionType card deal)
+            assert(deals.Length = actions.Length + 1)
+            for deal, (actionType, card) in Seq.zip deals actions do   // ignore final deal state
+                let infoSet = OpenDeal.currentInfoSet deal
+                assert(infoSet.LegalActionType = actionType)
+                assert(infoSet.LegalActions |> Array.contains card)
+                if infoSet.LegalActions.Length > 1 then
+                    let inputEncoding = Encoding.encode infoSet
+                    let outputEncoding =
+                        Encoding.encodeCards [card]
+                            |> Encoding
+                    ()
 
     run ()
