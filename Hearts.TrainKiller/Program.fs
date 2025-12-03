@@ -30,12 +30,45 @@ module Program =
 
     module Encoding =
 
-        let toString (encoding : Encoding) =
-            encoding
-                |> Seq.cast<bool>
-                |> Seq.map (function true -> '1' | false -> '0')
-                |> Seq.toArray
-                |> String
+        let private headerLength = 2
+
+        let fromBytes (bytes : byte[]) : Encoding =
+
+                // read header
+            assert(headerLength = sizeof<Int16>)
+            let payloadLength = int (BitConverter.ToInt16(bytes, 0))
+
+                // read payload
+            let payload = bytes[headerLength ..]
+            let bits = Encoding(payload)
+            assert(payloadLength <= bits.Length)
+            assert(
+                [payloadLength .. bits.Length - 1]
+                    |> Seq.forall (fun i -> not bits[i]))   // padding must be empty
+            bits.Length <- payloadLength
+            bits
+
+        let toBytes (bits : Encoding) =
+        
+                // allocate header + payload
+            let payloadLength = (bits.Length + 7) / 8
+            let bytes =
+                Array.zeroCreate<byte> (
+                    headerLength + payloadLength)
+
+                // write header
+            assert(bits.Length <= int Int16.MaxValue)
+            let header = BitConverter.GetBytes(int16 bits.Length)
+            assert(header.Length = headerLength)
+            Array.Copy(header, 0, bytes, 0, headerLength)
+
+                // write payload
+            bits.CopyTo(bytes, headerLength)
+            assert(
+                Array.forall2 (=)
+                    (fromBytes bytes |> Seq.cast<bool> |> Seq.toArray)
+                    (bits |> Seq.cast<bool> |> Seq.toArray))
+            bytes
 
     let encode () =
 
@@ -46,7 +79,8 @@ module Program =
             Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
         printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
 
-        use wtr = new StreamWriter("KHearts.dat")
+        use stream = File.Open("KHearts.dat", FileMode.Create)
+        use wtr = new BinaryWriter(stream, Encoding.UTF8, false)
 
         for entry in entries do
             let actions =
@@ -65,13 +99,12 @@ module Program =
                 assert(infoSet.LegalActionType = actionType)
                 assert(infoSet.LegalActions |> Array.contains card)
                 if infoSet.LegalActions.Length > 1 then
-                    let inputEncoding =
-                        Encoding.encode infoSet
-                            |> Encoding.toString
-                    let outputEncoding =
-                        Encoding.encodeCards [card]
-                            |> Encoding
-                            |> Encoding.toString
-                    wtr.Write($"{inputEncoding}|{outputEncoding}")
+                    Encoding.encode infoSet
+                        |> Encoding.toBytes
+                        |> wtr.Write
+                    Encoding.encodeCards [card]
+                        |> Encoding
+                        |> Encoding.toBytes
+                        |> wtr.Write
 
     encode ()
