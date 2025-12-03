@@ -32,7 +32,10 @@ type LogEntryLite =
         /// Initial state of deal before exchange and playout.
         InitialDeal : OpenDeal
 
+        /// Exchange, if a non-hold deal.
         ExchangeOpt : Option<Exchange>
+
+        /// Tricks played, in chronological order.
         Tricks : Trick[]
     }
 

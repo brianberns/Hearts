@@ -3,13 +3,57 @@
 open System
 open System.Text
 
+open Hearts
+open Hearts.Model
 open Hearts.ParseKiller
 
 module Program =
 
-    Console.OutputEncoding <- Encoding.Unicode
-    let stopwatch = System.Diagnostics.Stopwatch.StartNew()
-    let entries =
-        Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
-    stopwatch.Stop()
-    printfn $"{entries.Length} entries in {stopwatch.Elapsed}"
+    let getExchangeActions exchangeOpt deal =
+        exchangeOpt
+            |> Option.map (fun exchange ->
+                let player = OpenDeal.currentPlayer deal
+                seq {
+                    for seat in Seat.cycle player do
+                        yield! exchange.PassMap[seat]
+                })
+            |> Option.defaultValue Seq.empty
+            |> Seq.map (fun card -> ActionType.Pass, card)
+
+    let getPlayoutActions tricks =
+        seq {
+            for trick in tricks do
+                for _, card in Trick.plays trick do
+                    ActionType.Play, card
+        }
+
+    let run () =
+
+        Console.OutputEncoding <- Encoding.Unicode
+
+        let entries =
+            Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
+        printfn $"Loaded {entries.Length} deals"
+
+        for entry in entries do
+            let actions =
+                Seq.append
+                    (getExchangeActions
+                        entry.ExchangeOpt entry.InitialDeal)
+                    (getPlayoutActions 
+                        entry.Tricks[ .. entry.Tricks.Length - 2])   // last trick is always forced
+            let deals =
+                seq {
+                    entry.InitialDeal
+                    yield! (entry.InitialDeal, actions)
+                        ||> Seq.scan (fun deal (actionType, card) ->
+                            OpenDeal.addAction actionType card deal)
+                }
+            printfn ""
+            for deal in deals do
+                let encoding =
+                    OpenDeal.currentInfoSet deal
+                        |> Encoding.encode
+                printfn "%A" encoding
+
+    run ()
