@@ -1,6 +1,7 @@
 ﻿namespace Hearts.TrainKiller
 
 open System
+open System.IO
 open System.Text
 
 open Hearts
@@ -27,7 +28,16 @@ module Program =
                     ActionType.Play, card
         }
 
-    let run () =
+    module Encoding =
+
+        let toString (encoding : Encoding) =
+            encoding
+                |> Seq.cast<bool>
+                |> Seq.map (function true -> '1' | false -> '0')
+                |> Seq.toArray
+                |> String
+
+    let encode () =
 
         Console.OutputEncoding <- Encoding.Unicode
 
@@ -35,6 +45,8 @@ module Program =
         let entries =
             Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
         printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
+
+        use wtr = new StreamWriter("KHearts.dat")
 
         for entry in entries do
             let actions =
@@ -53,10 +65,13 @@ module Program =
                 assert(infoSet.LegalActionType = actionType)
                 assert(infoSet.LegalActions |> Array.contains card)
                 if infoSet.LegalActions.Length > 1 then
-                    let inputEncoding = Encoding.encode infoSet
+                    let inputEncoding =
+                        Encoding.encode infoSet
+                            |> Encoding.toString
                     let outputEncoding =
                         Encoding.encodeCards [card]
                             |> Encoding
-                    ()
+                            |> Encoding.toString
+                    wtr.Write($"{inputEncoding}|{outputEncoding}")
 
-    run ()
+    encode ()
