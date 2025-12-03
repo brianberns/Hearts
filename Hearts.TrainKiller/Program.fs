@@ -40,8 +40,7 @@ module Program =
                 Seq.append
                     (getExchangeActions
                         entry.ExchangeOpt entry.InitialDeal)
-                    (getPlayoutActions 
-                        entry.Tricks[ .. entry.Tricks.Length - 2])   // last trick is always forced
+                    (getPlayoutActions entry.Tricks)
             let deals =
                 seq {
                     entry.InitialDeal
@@ -51,9 +50,15 @@ module Program =
                 }
             printfn ""
             for deal in deals do
-                let encoding =
-                    OpenDeal.currentInfoSet deal
-                        |> Encoding.encode
-                printfn "%A" encoding
+                if not (ClosedDeal.isComplete deal.ClosedDeal) then
+                    let encoding =
+                        OpenDeal.currentInfoSet deal
+                            |> Encoding.encode
+                    printfn "%s" (
+                        encoding
+                            |> Seq.cast<bool>
+                            |> Seq.map (function true -> '1' | false -> '0')
+                            |> Seq.toArray
+                            |> String)
 
     run ()
