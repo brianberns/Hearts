@@ -30,49 +30,25 @@ module Program =
 
     module Encoding =
 
-        let private headerLength = 2
+        let getByteLength nBits =
+            (nBits + 7) / 8
 
-        let fromBytes (bytes : byte[]) : Encoding =
-
-                // read header
-            assert(headerLength = sizeof<Int16>)
-            let payloadLength = int (BitConverter.ToInt16(bytes, 0))
-
-                // read payload
-            let payload = bytes[headerLength ..]
-            let bits = Encoding(payload)
-            assert(payloadLength <= bits.Length)
+        let fromBytes nBits (bytes : byte[]) : Encoding =
+            let bits = Encoding(bytes)
+            assert(nBits <= bits.Length)
             assert(
-                [payloadLength .. bits.Length - 1]
+                [nBits .. bits.Length - 1]
                     |> Seq.forall (fun i -> not bits[i]))   // padding must be empty
-            bits.Length <- payloadLength
+            bits.Length <- nBits
             bits
 
         let toBytes (bits : Encoding) =
-        
-                // allocate header + payload
-            let payloadLength = (bits.Length + 7) / 8
-            let bytes =
-                Array.zeroCreate<byte> (
-                    headerLength + payloadLength)
-
-                // write header
-            assert(bits.Length <= int Int16.MaxValue)
-            let header = BitConverter.GetBytes(int16 bits.Length)
-            assert(header.Length = headerLength)
-            Array.Copy(header, 0, bytes, 0, headerLength)
-
-                // write payload
-            bits.CopyTo(bytes, headerLength)
-            assert(
-                Array.forall2 (=)
-                    (fromBytes bytes |> Seq.cast<bool> |> Seq.toArray)
-                    (bits |> Seq.cast<bool> |> Seq.toArray))
+            let nBytes = getByteLength bits.Length
+            let bytes = Array.zeroCreate<byte> nBytes
+            bits.CopyTo(bytes, 0)
             bytes
 
     let encode () =
-
-        Console.OutputEncoding <- Encoding.Unicode
 
         let stopwatch = System.Diagnostics.Stopwatch.StartNew()
         let entries =
@@ -82,29 +58,61 @@ module Program =
         use stream = File.Open("KHearts.dat", FileMode.Create)
         use wtr = new BinaryWriter(stream, Encoding.UTF8, false)
 
-        for entry in entries do
-            let actions =
-                [|
-                    yield! getExchangeActions
-                        entry.ExchangeOpt entry.InitialDeal
-                    yield! getPlayoutActions entry.Tricks
-                |]
-            let deals =
-                (entry.InitialDeal, actions)
-                    ||> Array.scan (fun deal (actionType, card) ->
-                        OpenDeal.addAction actionType card deal)
-            assert(deals.Length = actions.Length + 1)
-            for deal, (actionType, card) in Seq.zip deals actions do   // ignore final deal state
-                let infoSet = OpenDeal.currentInfoSet deal
-                assert(infoSet.LegalActionType = actionType)
-                assert(infoSet.LegalActions |> Array.contains card)
-                if infoSet.LegalActions.Length > 1 then
-                    Encoding.encode infoSet
-                        |> Encoding.toBytes
-                        |> wtr.Write
-                    Encoding.encodeCards [card]
-                        |> Encoding
-                        |> Encoding.toBytes
-                        |> wtr.Write
+        let pairs =
+            [|
+                for entry in entries do
+                    let actions =
+                        [|
+                            yield! getExchangeActions
+                                entry.ExchangeOpt entry.InitialDeal
+                            yield! getPlayoutActions entry.Tricks
+                        |]
+                    let deals =
+                        (entry.InitialDeal, actions)
+                            ||> Array.scan (fun deal (actionType, card) ->
+                                OpenDeal.addAction actionType card deal)
+                    assert(deals.Length = actions.Length + 1)
+                    for deal, (actionType, card) in Seq.zip deals actions do   // ignore final deal state
+                        let infoSet = OpenDeal.currentInfoSet deal
+                        assert(infoSet.LegalActionType = actionType)
+                        assert(infoSet.LegalActions |> Array.contains card)
+                        if infoSet.LegalActions.Length > 1 then
+                            infoSet, card
+            |]
+        printfn $"Encoding {pairs.Length} pairs"
+        for infoSet, card in pairs do
+            Encoding.encode infoSet
+                |> Encoding.toBytes
+                |> wtr.Write
+            Encoding.encodeCards [card]
+                |> Encoding
+                |> Encoding.toBytes
+                |> wtr.Write
 
-    encode ()
+    let decode () =
+        use stream = File.OpenRead(@"C:\Users\brian\OneDrive\Desktop\KHearts.dat")
+        let nBytesPerPair =
+            Encoding.getByteLength Model.inputSize
+                + Encoding.getByteLength Model.outputSize
+        printfn $"Expecting {stream.Length / int64 nBytesPerPair} encoded pairs"
+        assert(stream.Length % int64 nBytesPerPair = 0)
+        use rdr = new BinaryReader(stream)
+        [|
+            while stream.Position < stream.Length do
+                let input : Encoding =
+                    Model.inputSize
+                        |> Encoding.getByteLength
+                        |> rdr.ReadBytes
+                        |> Encoding.fromBytes Model.inputSize
+                let output : Encoding =
+                    Model.outputSize
+                        |> Encoding.getByteLength
+                        |> rdr.ReadBytes
+                        |> Encoding.fromBytes Model.outputSize
+                input, output
+        |]
+
+    Console.OutputEncoding <- Encoding.Unicode
+    // encode ()
+    let pairs = decode ()
+    printfn $"Decoded {pairs.Length} pairs"
