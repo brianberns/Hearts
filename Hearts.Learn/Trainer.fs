@@ -123,7 +123,7 @@ module Trainer =
 
     /// Evaluates the given model by playing it against a
     /// standard.
-    let private evaluate iter (model : AdvantageModel) =
+    let evaluate iter (model : AdvantageModel) =
 
         let score, payoff =
             Tournament.run

@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Hearts.Learn\Hearts.Learn.fsproj" />
     <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
     <ProjectReference Include="..\Hearts.ParseKiller\Hearts.ParseKiller.fsproj" />
   </ItemGroup>

@@ -1,10 +1,12 @@
 ﻿namespace Hearts.TrainKiller
 
 open System
+open System.Diagnostics
 open System.IO
 open System.Text
 
 open Hearts
+open Hearts.Learn
 open Hearts.Model
 open Hearts.ParseKiller
 
@@ -50,7 +52,7 @@ module Program =
 
     let encode () =
 
-        let stopwatch = System.Diagnostics.Stopwatch.StartNew()
+        let stopwatch = Stopwatch.StartNew()
         let entries =
             Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
         printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
@@ -97,22 +99,51 @@ module Program =
         printfn $"Expecting {stream.Length / int64 nBytesPerPair} encoded pairs"
         assert(stream.Length % int64 nBytesPerPair = 0)
         use rdr = new BinaryReader(stream)
-        [|
-            while stream.Position < stream.Length do
-                let input : Encoding =
-                    Model.inputSize
-                        |> Encoding.getByteLength
-                        |> rdr.ReadBytes
-                        |> Encoding.fromBytes Model.inputSize
-                let output : Encoding =
-                    Model.outputSize
-                        |> Encoding.getByteLength
-                        |> rdr.ReadBytes
-                        |> Encoding.fromBytes Model.outputSize
-                input, output
-        |]
+        let pairs =
+            [|
+                while stream.Position < stream.Length do
+                    let input : Encoding =
+                        Model.inputSize
+                            |> Encoding.getByteLength
+                            |> rdr.ReadBytes
+                            |> Encoding.fromBytes Model.inputSize
+                    let output : Encoding =
+                        Model.outputSize
+                            |> Encoding.getByteLength
+                            |> rdr.ReadBytes
+                            |> Encoding.fromBytes Model.outputSize
+                    input, output
+            |]
+        printfn $"Decoded {pairs.Length} pairs"
+        pairs
+
+    let train () =
+
+        let samples =
+            decode ()
+                |> Array.map (fun (input, output) ->
+                    {
+                        Encoding = input
+                        Regrets =
+                            Encoding.toFloat32 output
+                                |> MathNet.Numerics.LinearAlgebra.DenseVector.ofArray
+                        Weight = 1.0f
+                    })
+
+        let model =
+            new AdvantageModel(
+                settings.HiddenSize,
+                settings.NumHiddenLayers,
+                settings.DropoutRate,
+                settings.Device)
+        let stopwatch = Stopwatch.StartNew()
+        AdvantageModel.train 1 samples model
+        stopwatch.Stop()
+        if settings.Verbose then
+            printfn $"Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
+
+        Trainer.evaluate 1 model
 
     Console.OutputEncoding <- Encoding.Unicode
-    // encode ()
-    let pairs = decode ()
-    printfn $"Decoded {pairs.Length} pairs"
+    train ()
