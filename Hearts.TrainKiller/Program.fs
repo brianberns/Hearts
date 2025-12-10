@@ -49,7 +49,7 @@ module Program =
         printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
 
         let infoSetPairs =
-            [|
+            Array.randomShuffle [|
                 for entry in entries do
                     let actions =
                         [|
@@ -71,7 +71,7 @@ module Program =
             |]
         printfn $"Extracted {infoSetPairs.Length} info sets"
 
-        let nTestInfoSets = 1000
+        let nTestInfoSets = 100000
         let testInfoSetPairs = Array.take nTestInfoSets infoSetPairs
         let trainInfoSetPairs = Array.skip nTestInfoSets infoSetPairs
 
