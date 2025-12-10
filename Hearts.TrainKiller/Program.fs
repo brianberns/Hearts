@@ -96,7 +96,7 @@ module Program =
         let nBytesPerPair =
             Encoding.getByteLength Model.inputSize
                 + Encoding.getByteLength Model.outputSize
-        printfn $"Expecting {stream.Length / int64 nBytesPerPair} encoded pairs"
+        printfn $"Expecting {stream.Length / int64 nBytesPerPair} encoded samples"
         assert(stream.Length % int64 nBytesPerPair = 0)
         use rdr = new BinaryReader(stream)
         let pairs =
@@ -114,21 +114,55 @@ module Program =
                             |> Encoding.fromBytes Model.outputSize
                     input, output
             |]
-        printfn $"Decoded {pairs.Length} pairs"
+        printfn $"Decoded {pairs.Length} samples"
         pairs
+
+    let evaluate iter infoSetPairs model =
+        let player = Strategy.createPlayer model
+        let correctPairs =
+            infoSetPairs
+                |> Array.where (fun (infoSet, card) ->
+                    player.Act infoSet = card)
+        let accuracy = float32 correctPairs.Length / float32 infoSetPairs.Length
+        if settings.Verbose then
+            printfn $"Accuracy: {accuracy}"
+        settings.Writer.add_scalar(
+            $"accuracy", accuracy, iter)
 
     let train () =
 
-        let samples =
-            decode ()
-                |> Array.map (fun (input, output) ->
-                    {
-                        Encoding = input
-                        Regrets =
-                            Encoding.toFloat32 output
-                                |> MathNet.Numerics.LinearAlgebra.DenseVector.ofArray
-                        Weight = 1.0f
-                    })
+        let stopwatch = Stopwatch.StartNew()
+        let entries =
+            Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
+                |> Array.take 1000
+        printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
+
+        let infoSetPairs =
+            [|
+                for entry in entries do
+                    let actions =
+                        [|
+                            yield! getExchangeActions
+                                entry.ExchangeOpt entry.InitialDeal
+                            yield! getPlayoutActions entry.Tricks
+                        |]
+                    let deals =
+                        (entry.InitialDeal, actions)
+                            ||> Array.scan (fun deal (actionType, card) ->
+                                OpenDeal.addAction actionType card deal)
+                    assert(deals.Length = actions.Length + 1)
+                    for deal, (actionType, card) in Seq.zip deals actions do   // ignore final deal state
+                        let infoSet = OpenDeal.currentInfoSet deal
+                        assert(infoSet.LegalActionType = actionType)
+                        assert(infoSet.LegalActions |> Array.contains card)
+                        if infoSet.LegalActions.Length > 1 then
+                            infoSet, card
+            |]
+        printfn $"Extracted {infoSetPairs.Length} info sets"
+
+        let nTestInfoSets = 1000
+        let testInfoSetPairs = Array.take nTestInfoSets infoSetPairs
+        let trainInfoSetPairs = Array.skip nTestInfoSets infoSetPairs
 
         let model =
             new AdvantageModel(
@@ -136,14 +170,38 @@ module Program =
                 settings.NumHiddenLayers,
                 settings.DropoutRate,
                 settings.Device)
-        let stopwatch = Stopwatch.StartNew()
-        AdvantageModel.train 1 samples model
-        stopwatch.Stop()
-        if settings.Verbose then
-            printfn $"Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
 
-        Trainer.evaluate 1 model
+        let samples =
+            [|
+                for infoSet, card in trainInfoSetPairs do
+                    let input = Encoding.encode infoSet
+                    let output = Encoding.encodeCards [card] |> Encoding
+                    {
+                        Encoding = input
+                        Regrets =
+                            Encoding.toFloat32 output
+                                |> MathNet.Numerics.LinearAlgebra.DenseVector.ofArray
+                        Weight = 1.0f
+                    }
+            |]
+
+        for iter = 1 to 1000 do
+
+            stopwatch.Restart()
+            AdvantageModel.train iter samples model
+            stopwatch.Stop()
+            if settings.Verbose then
+                printfn $"Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
+                    (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
+
+            evaluate iter testInfoSetPairs model
+            Trainer.evaluate iter model
+
+            Path.Combine(
+                settings.ModelDirPath,
+                $"KHeartsModel%03d{iter}.pt")
+                    |> model.save
+                    |> ignore
 
     Console.OutputEncoding <- Encoding.Unicode
     train ()
