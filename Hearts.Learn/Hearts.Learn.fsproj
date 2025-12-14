@@ -19,8 +19,8 @@
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
-    <PackageReference Include="TorchSharp-cuda-windows" Version="0.105.1" Condition="'$(OS)' == 'Windows_NT'" />
-    <PackageReference Include="TorchSharp-cuda-linux" Version="0.105.0" Condition="'$(OS)' != 'Windows_NT'" />
+    <PackageReference Include="TorchSharp-cuda-windows" Version="0.105.2" Condition="'$(OS)' == 'Windows_NT'" />
+    <PackageReference Include="TorchSharp-cuda-linux" Version="0.105.2" Condition="'$(OS)' != 'Windows_NT'" />
   </ItemGroup>
 
   <ItemGroup>
