@@ -43,9 +43,13 @@ module Program =
 
     let train () =
 
+        let nEntries = 1000 // Int32.MaxValue
+        let testFraction = 1.0 / 1000.0
+
         let stopwatch = Stopwatch.StartNew()
         let entries =
             Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
+                |> Array.truncate nEntries
         printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
 
         let infoSetPairs =
@@ -71,9 +75,11 @@ module Program =
             |]
         printfn $"Extracted {infoSetPairs.Length} info sets"
 
-        let nTestInfoSets = 100000
-        let testInfoSetPairs = Array.take nTestInfoSets infoSetPairs
+        let nTestInfoSets = int (testFraction * float infoSetPairs.Length)
+        let testInfoSetPairs = Array.truncate nTestInfoSets infoSetPairs
         let trainInfoSetPairs = Array.skip nTestInfoSets infoSetPairs
+        printfn $"Test pairs: {testInfoSetPairs.Length}"
+        printfn $"Train pairs: {trainInfoSetPairs.Length}"
 
         let model =
             new AdvantageModel(
