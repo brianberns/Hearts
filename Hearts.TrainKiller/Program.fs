@@ -89,8 +89,8 @@ module Program =
                 settings.Device)
 
         let samples =
-            [|
-                for infoSet, card in trainInfoSetPairs do
+            trainInfoSetPairs
+                |> Array.Parallel.map (fun (infoSet, card) ->
                     let input = Encoding.encode infoSet
                     let output = Encoding.encodeCards [card] |> Encoding
                     {
@@ -99,8 +99,7 @@ module Program =
                             Encoding.toFloat32 output
                                 |> MathNet.Numerics.LinearAlgebra.DenseVector.ofArray
                         Weight = 1.0f
-                    }
-            |]
+                    })
         printfn "Converted to samples"
 
         for iter = 1 to 1000 do
@@ -122,4 +121,7 @@ module Program =
                     |> ignore
 
     Console.OutputEncoding <- Encoding.Unicode
+    if settings.Verbose then
+        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
+        printfn $"Settings: {settings}"
     train ()
