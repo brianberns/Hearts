@@ -95,6 +95,7 @@ module Program =
                         Weight = 1.0f
                     }
             |]
+        printfn "Converted to samples"
 
         for iter = 1 to 1000 do
 
