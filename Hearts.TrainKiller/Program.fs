@@ -31,19 +31,37 @@ module Program =
         }
 
     let evaluate iter infoSetPairs model =
+
         let player = Strategy.createPlayer model
-        let correctPairs =
+
+        let passPairs, playPairs =
             infoSetPairs
-                |> Array.where (fun (infoSet, card) ->
-                    player.Act infoSet = card)
-        let accuracy = float32 correctPairs.Length / float32 infoSetPairs.Length
-        if settings.Verbose then
-            printfn $"Accuracy: {accuracy}"
-        settings.Writer.add_scalar($"accuracy", accuracy, iter)
+                |> Array.partition (fun (infoSet, _) ->
+                    infoSet.LegalActionType = ActionType.Pass)
+
+        do
+            let correctPairs =
+                passPairs
+                    |> Array.where (fun (infoSet, card) ->
+                        player.Act infoSet = card)
+            let accuracy = float32 correctPairs.Length / float32 passPairs.Length
+            if settings.Verbose then
+                printfn $"Pass accuracy: {accuracy}"
+            settings.Writer.add_scalar($"Pass accuracy", accuracy, iter)
+
+        do
+            let correctPairs =
+                playPairs
+                    |> Array.where (fun (infoSet, card) ->
+                        player.Act infoSet = card)
+            let accuracy = float32 correctPairs.Length / float32 playPairs.Length
+            if settings.Verbose then
+                printfn $"Play accuracy: {accuracy}"
+            settings.Writer.add_scalar($"Play accuracy", accuracy, iter)
 
     let train () =
 
-        let nEntries = 1000 // Int32.MaxValue
+        let nEntries = 10000 // Int32.MaxValue
         let testFraction = 1.0 / 1000.0
 
         let stopwatch = Stopwatch.StartNew()
