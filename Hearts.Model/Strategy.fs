@@ -62,6 +62,9 @@ module Strategy =
             let nCols = int advantages.shape[1]
             assert(nCols = Model.outputSize)
             let data =
+                use advantages =   // avoid memory leak (https://github.com/dotnet/TorchSharp/issues/1517)
+                    advantages.``to``(
+                        TorchSharp.torch.CPU, disposeAfter=true)
                 use accessor = advantages.data<float32>()
                 accessor.ToArray()
             [|
