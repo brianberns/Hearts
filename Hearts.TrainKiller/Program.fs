@@ -47,7 +47,7 @@ module Program =
             let accuracy = float32 correctPairs.Length / float32 passPairs.Length
             if settings.Verbose then
                 printfn $"Pass accuracy: {accuracy}"
-            settings.Writer.add_scalar($"Pass accuracy", accuracy, iter)
+            settings.Writer.add_scalar($"pass accuracy", accuracy, iter)
 
         do
             let correctPairs =
@@ -57,7 +57,7 @@ module Program =
             let accuracy = float32 correctPairs.Length / float32 playPairs.Length
             if settings.Verbose then
                 printfn $"Play accuracy: {accuracy}"
-            settings.Writer.add_scalar($"Play accuracy", accuracy, iter)
+            settings.Writer.add_scalar($"play accuracy", accuracy, iter)
 
     let train () =
 
