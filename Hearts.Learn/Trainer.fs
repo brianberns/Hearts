@@ -53,6 +53,7 @@ module Trainer =
                 let samples =
                     OpenDeal.playDeals
                         (Random())
+                        true
                         chunk.Length
                         (fun deal ->
                             let rng = Random()   // each thread has its own RNG
@@ -128,6 +129,7 @@ module Trainer =
         let score, payoff =
             Tournament.run
                 (Random(0))       // use repeatable test set, not seen during training
+                false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
                 settings.NumEvaluationDeals
                 Trickster.player
                 (Strategy.createPlayer model)

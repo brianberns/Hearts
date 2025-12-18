@@ -241,12 +241,15 @@ module OpenDeal =
                 startPlay deal
             else deal)
 
-    /// Plays the given number of deals in parallel.
-    let playDeals rng numDeals playFun =
+    /// Plays the given number of deals.
+    let playDeals rng inParallel numDeals playFun =
+        let map =
+            if inParallel then Array.Parallel.map
+            else Array.map
         generate rng
             |> Seq.take numDeals
             |> Seq.toArray
-            |> Array.Parallel.map playFun
+            |> map playFun
 
     /// Determines the inevitable additional score of the given deal,
     /// if possible.

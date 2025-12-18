@@ -47,13 +47,13 @@ module Tournament =
         loop deal Score.zero
 
     /// Plays the given number of deals.
-    let playDeals rng numDeals playerMap =
-        OpenDeal.playDeals rng numDeals (
+    let playDeals rng inParallel numDeals playerMap =
+        OpenDeal.playDeals rng inParallel numDeals (
             playDeal playerMap)
             |> Seq.reduce (+)
 
     /// Runs a tournament between two players.
-    let run rng numDeals champion challenger =
+    let run rng inParallel numDeals champion challenger =
         let challengerSeat = Seat.South
         let playerMap =
             Enum.getValues<Seat>
@@ -64,7 +64,7 @@ module Tournament =
                     seat, player)
                 |> Map
         let score =
-            playDeals rng numDeals playerMap
+            playDeals rng inParallel numDeals playerMap
         let payoff =
             (ZeroSum.getPayoff score)[int challengerSeat]
                 / float32 numDeals
