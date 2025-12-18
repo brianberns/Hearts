@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Hearts.TrainKiller": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
+    }
+  }
+}
