@@ -61,7 +61,7 @@ module Program =
 
     let train () =
 
-        let nEntries = 10000 // Int32.MaxValue
+        let nEntries = Int32.MaxValue
         let testFraction = 1.0 / 1000.0
 
         let stopwatch = Stopwatch.StartNew()

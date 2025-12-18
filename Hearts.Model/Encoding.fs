@@ -1,6 +1,8 @@
 ﻿namespace Hearts.Model
 
+open System
 open System.Collections
+
 open PlayingCards
 open Hearts
 
@@ -126,25 +128,26 @@ module Encoding =
                 flags[suitOffset + seatOffset] <- true   // use mutation for speed
         flags
 
-    /// Encodes the given score as a multi-hot vector in the
-    /// number of seats.
+    /// Encodes the given score as a "thermometer" for each player.
     let encodeScore player score =
         assert(score.Points.Length = Seat.numSeats)
         [|
             for seat in Seat.cycle player do
-                score[seat] > 0
+                yield! Array.init
+                    ClosedDeal.numPointsPerDeal
+                    (fun i -> i < score[seat])
         |]
 
     /// Total encoded length of an info set.
     let encodedLength =
-        Card.numCards                                 // current player's hand
-            + ExchangeDirection.numDirections         // exchange direction
-            + Card.numCards                           // outgoing pass
-            + Card.numCards                           // incoming pass
-            + Seat.numSeats * Card.numCards           // cards previously played by each player
-            + (Seat.numSeats - 1) * Card.numCards     // current trick
-            + (Seat.numSeats - 1) * Suit.numSuits     // voids
-            + Seat.numSeats                           // score
+        Card.numCards                                         // current player's hand
+            + ExchangeDirection.numDirections                 // exchange direction
+            + Card.numCards                                   // outgoing pass
+            + Card.numCards                                   // incoming pass
+            + Seat.numSeats * Card.numCards                   // cards previously played by each player
+            + (Seat.numSeats - 1) * Card.numCards             // current trick
+            + (Seat.numSeats - 1) * Suit.numSuits             // voids
+            + (Seat.numSeats * ClosedDeal.numPointsPerDeal)   // deal score
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
@@ -161,7 +164,7 @@ module Encoding =
                     infoSet.Deal.CurrentTrickOpt
                 yield! encodeVoids                          // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                          // score
+                yield! encodeScore                          // deal score
                     infoSet.Player infoSet.Deal.Score
             |]
         assert(encoded.Length = encodedLength)
