@@ -200,11 +200,6 @@ module Deal =
                             Deck.shuffle rng
                                 |> OpenDeal.fromDeck
                                     dealer persState.ExchangeDirection
-                        let deal =
-                            if deal.ClosedDeal.ExchangeDirection   // can start play immediately?
-                                = ExchangeDirection.Hold then
-                                OpenDeal.startPlay deal
-                            else deal
                         let persState =
                             { persState with
                                 RandomState = rng.State

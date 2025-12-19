@@ -175,13 +175,12 @@ module Exchange =
                 = ExchangeDirection.Hold
         parse {
             if isHold then
-                return OpenDeal.startPlay deal
+                return deal
             else
                     // parse and apply the auto passes
                 let! passMap =
                     parseAutoPasses deal.ClosedDeal.ExchangeDirection
                 let deal = apply passMap deal
-                let deal = OpenDeal.startPlay deal
 
                     // verify exchange
                 do! skipNewline

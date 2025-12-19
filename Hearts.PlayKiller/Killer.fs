@@ -152,10 +152,6 @@ module Killer =
         let deal =
             match state.DealOpt with
                 | Some deal ->
-                    let deal =
-                        if deal.ClosedDeal.CurrentTrickOpt.IsNone then
-                            deal |> OpenDeal.startPlay
-                        else deal
                     assert
                         (deal.ClosedDeal.CurrentTrickOpt.Value.Leader
                             = record.Leader)

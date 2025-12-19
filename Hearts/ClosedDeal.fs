@@ -53,6 +53,7 @@ module ClosedDeal =
     /// Starts play in the given deal with the given first
     /// trick leader.
     let startPlay leader deal =
+        assert(deal.CurrentTrickOpt.IsNone)
         {
             deal with
                 CurrentTrickOpt =

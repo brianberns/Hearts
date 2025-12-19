@@ -20,6 +20,35 @@ type OpenDeal =
 
 module OpenDeal =
 
+    /// Starts play in the given deal.
+    let private startPlay deal =
+        assert(
+            deal.ClosedDeal
+                |> ClosedDeal.numCardsPlayed = 0)
+        assert(
+            match deal.ClosedDeal.ExchangeDirection, deal.ExchangeOpt with
+                | ExchangeDirection.Hold, None -> true
+                | _, Some exchange -> Exchange.isComplete exchange
+                | _, None -> false)
+
+            // determine first trick leader
+        let leader =
+            assert(
+                deal.UnplayedCardMap
+                    |> Map.forall (fun _ cards ->
+                        cards.Count = ClosedDeal.numCardsPerHand))
+            deal.UnplayedCardMap
+                |> Map.toSeq
+                |> Seq.find (fun (_, cards) ->
+                    cards.Contains(ClosedDeal.lowestClub))
+                |> fst
+
+        {
+            deal with
+                ClosedDeal =
+                    ClosedDeal.startPlay leader deal.ClosedDeal
+        }
+
     /// Creates a deal from the given hands.
     let fromHands dealer dir handMap =
         assert(
@@ -30,16 +59,23 @@ module OpenDeal =
                     |> Seq.distinct
                     |> Seq.length
             nCards = Card.numCards)
-        {
-            ClosedDeal = ClosedDeal.create dealer dir
-            ExchangeOpt =
-                if dir = ExchangeDirection.Hold then None
-                else
-                    Seat.next dealer   // dealer passes last
-                        |> Exchange.create
-                        |> Some
-            UnplayedCardMap = handMap
-        }
+
+            // create deal
+        let deal =
+            {
+                ClosedDeal = ClosedDeal.create dealer dir
+                ExchangeOpt =
+                    if dir = ExchangeDirection.Hold then None
+                    else
+                        Seat.next dealer   // dealer passes last
+                            |> Exchange.create
+                            |> Some
+                UnplayedCardMap = handMap
+            }
+
+            // start play immediately?
+        if dir = ExchangeDirection.Hold then startPlay deal
+        else deal
 
     /// Deals cards from the given deck to each player.
     let fromDeck dealer dir deck =
@@ -62,104 +98,6 @@ module OpenDeal =
         match deal.ExchangeOpt with
             | Some exchange -> exchange
             | None -> failwith "No exchange"
-
-    /// Passes the given card in the given deal.
-    let addPass card deal =
-        assert(
-            ClosedDeal.numCardsPlayed deal.ClosedDeal = 0)
-        assert(
-            deal.ClosedDeal.ExchangeDirection
-                <> ExchangeDirection.Hold)
-
-            // remove outgoing card from passer's hand
-        let exchange = getExchange deal
-        let cardMap =
-            let passer = Exchange.currentPasser exchange
-            let cardMap = deal.UnplayedCardMap
-            let unplayedCards =
-                assert(cardMap[passer].Contains(card))
-                cardMap[passer] |> Set.remove card
-            cardMap |> Map.add passer unplayedCards
-
-        {
-            deal with
-                ExchangeOpt =
-                    exchange
-                        |> Exchange.addPass card
-                        |> Some
-                UnplayedCardMap = cardMap
-        }
-
-    /// Receives cards from the given passer in the given deal.
-    let private receivePass passer (cards : Pass) deal =
-        assert(deal.ExchangeOpt.IsSome)
-        assert(
-            deal.ClosedDeal.ExchangeDirection
-                <> ExchangeDirection.Hold)
-
-            // add incoming cards to receiver's hand
-        let cardMap =
-            let receiver =
-                deal.ClosedDeal.ExchangeDirection
-                    |> ExchangeDirection.apply passer
-            let cardMap = deal.UnplayedCardMap
-            let unplayedCards =
-                assert(
-                    Set.intersect cardMap[receiver] cards
-                        |> Set.isEmpty)
-                Set.union cardMap[receiver] cards
-            cardMap |> Map.add receiver unplayedCards
-
-        {
-            deal with
-                UnplayedCardMap = cardMap
-        }
-
-    /// Receives passed cards (if any) and starts play in the
-    /// given deal.
-    let startPlay deal =
-        assert(
-            deal.ClosedDeal
-                |> ClosedDeal.numCardsPlayed = 0)
-        assert(
-            match deal.ClosedDeal.ExchangeDirection, deal.ExchangeOpt with
-                | ExchangeDirection.Hold, None -> true
-                | _, Some exchange -> Exchange.isComplete exchange
-                | _, None -> false)
-
-            // receive passed cards?
-        let deal =
-            match deal.ExchangeOpt with
-                | Some exchange ->
-                    assert(Exchange.isComplete exchange)
-                    assert(
-                        deal.UnplayedCardMap
-                            |> Map.forall (fun _ cards ->
-                                cards.Count =
-                                    ClosedDeal.numCardsPerHand - Pass.numCards))
-                    (deal, exchange.PassMap)
-                        ||> Seq.fold (fun deal (KeyValue(passer, pass)) ->
-                            receivePass passer pass deal)
-                | None -> deal
-
-            // determine first trick leader (must wait until cards are passed)
-        let leader =
-            assert(
-                deal.UnplayedCardMap
-                    |> Map.forall (fun _ cards ->
-                        cards.Count = ClosedDeal.numCardsPerHand))
-            deal.UnplayedCardMap
-                |> Map.toSeq
-                |> Seq.find (fun (_, cards) ->
-                    cards.Contains(ClosedDeal.lowestClub))
-                |> fst
-
-        {
-            deal with
-                ClosedDeal =
-                    deal.ClosedDeal
-                        |> ClosedDeal.startPlay leader
-        }
 
     /// Current player in the given deal.
     let currentPlayer deal =
@@ -191,6 +129,82 @@ module OpenDeal =
         InformationSet.create
             player hand outOpt inOpt deal.ClosedDeal
 
+    /// Receives cards from the given passer in the given deal.
+    let private receivePass passer (cards : Pass) deal =
+        assert(deal.ExchangeOpt.IsSome)
+        assert(
+            deal.ClosedDeal.ExchangeDirection
+                <> ExchangeDirection.Hold)
+
+            // add incoming cards to receiver's hand
+        let cardMap =
+            let receiver =
+                deal.ClosedDeal.ExchangeDirection
+                    |> ExchangeDirection.apply passer
+            let cardMap = deal.UnplayedCardMap
+            let unplayedCards =
+                assert(
+                    Set.intersect cardMap[receiver] cards
+                        |> Set.isEmpty)
+                Set.union cardMap[receiver] cards
+            cardMap |> Map.add receiver unplayedCards
+
+        {
+            deal with
+                UnplayedCardMap = cardMap
+        }
+
+    /// Receives passed cards (if any) and starts play in the
+    /// given deal.
+    let private receivePasses deal =
+
+            // receive passed cards
+        let deal =
+            let exchange = getExchange deal
+            assert(Exchange.isComplete exchange)
+            assert(
+                deal.UnplayedCardMap
+                    |> Map.forall (fun _ cards ->
+                        cards.Count =
+                            ClosedDeal.numCardsPerHand - Pass.numCards))
+            (deal, exchange.PassMap)
+                ||> Seq.fold (fun deal (KeyValue(passer, pass)) ->
+                    receivePass passer pass deal)
+
+        startPlay deal
+
+    /// Passes the given card in the given deal.
+    let addPass card deal =
+        assert(
+            ClosedDeal.numCardsPlayed deal.ClosedDeal = 0)
+        assert(
+            deal.ClosedDeal.ExchangeDirection
+                <> ExchangeDirection.Hold)
+
+            // remove outgoing card from passer's hand
+        let exchange = getExchange deal
+        let cardMap =
+            let passer = Exchange.currentPasser exchange
+            let cardMap = deal.UnplayedCardMap
+            let unplayedCards =
+                assert(cardMap[passer].Contains(card))
+                cardMap[passer] |> Set.remove card
+            cardMap |> Map.add passer unplayedCards
+
+            // update deal
+        let exchange = Exchange.addPass card exchange
+        let deal =
+            {
+                deal with
+                    ExchangeOpt = Some exchange
+                    UnplayedCardMap = cardMap
+            }
+
+            // start play?
+        if Exchange.isComplete exchange then
+            receivePasses deal
+        else deal
+
     /// Plays the given card on the given deal.
     let addPlay card deal =
         {
@@ -209,23 +223,8 @@ module OpenDeal =
     /// Takes the given action in the given deal.
     let addAction actionType action deal =
         match actionType with
-
-            | ActionType.Pass ->
-
-                    // add pass to deal
-                let deal = addPass action deal
-
-                    // start play?
-                let canStartPlay =
-                    deal.ExchangeOpt
-                        |> Option.map Exchange.isComplete
-                        |> Option.defaultValue true   // no exchange
-                if canStartPlay then
-                    startPlay deal
-                else deal
-
-            | ActionType.Play ->
-                addPlay action deal
+            | ActionType.Pass -> addPass action deal
+            | ActionType.Play -> addPlay action deal
 
     /// Generates an infinite sequence of deals.
     let generate (rng : Random) =
@@ -233,13 +232,9 @@ module OpenDeal =
             let dir =
                 enum<ExchangeDirection>
                     (iDeal % ExchangeDirection.numDirections)
-            let deal =
-                let deck = Deck.shuffle rng
-                let dealer = enum<Seat> (iDeal % Seat.numSeats)
-                fromDeck dealer dir deck
-            if dir = ExchangeDirection.Hold then   // can start play immediately?
-                startPlay deal
-            else deal)
+            let deck = Deck.shuffle rng
+            let dealer = enum<Seat> (iDeal % Seat.numSeats)
+            fromDeck dealer dir deck)
 
     /// Plays the given number of deals.
     let playDeals rng inParallel numDeals playFun =
