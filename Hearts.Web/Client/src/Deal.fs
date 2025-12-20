@@ -252,9 +252,7 @@ module Deal =
                         { persState with
                             GameScore = gameScore
                             Dealer = Seat.next persState.Dealer
-                            ExchangeDirection =
-                                ExchangeDirection.next
-                                    persState.ExchangeDirection
+                            ExchangeDirection = ExchangeDirection.Left   // new game always starts with Left passes
                             DealOpt = None }
                     if winners.IsEmpty then
                         return persState'.Save()
