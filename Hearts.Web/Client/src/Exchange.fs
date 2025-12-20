@@ -280,9 +280,10 @@ module Exchange =
                 |> Async.AwaitPromise
 
                 // start play
-            return
-                { persState with
-                    DealOpt = Some deal }.Save()
+            let persState =
+                { persState with DealOpt = Some deal }
+            persState.Save()
+            return persState
         }
 
     /// Runs the given deal's exchange.

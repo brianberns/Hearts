@@ -150,7 +150,8 @@ module Deal =
             // update persistent state
         { persState with
             GamesWon = gamesWon
-            GameScore = Score.zero }
+            GameScore = Score.zero
+            ExchangeDirection = ExchangeDirection.Left }   // new game always starts with Left passes
 
     /// Handles the end of a game.
     let private gameOver (surface : JQueryElement) winners gamesWon =
@@ -196,6 +197,8 @@ module Deal =
                         do
                             console.log($"Deal #{rng.State}")
                             console.log($"Dealer is {Seat.toString dealer}")
+                            console.log($"Exchange direction is \
+                                {ExchangeDirection.toString persState.ExchangeDirection}")
                         let deal =
                             Deck.shuffle rng
                                 |> OpenDeal.fromDeck
@@ -203,7 +206,8 @@ module Deal =
                         let persState =
                             { persState with
                                 RandomState = rng.State
-                                DealOpt = Some deal }.Save()
+                                DealOpt = Some deal }
+                        persState.Save()
                         deal, persState
 
                 // animate dealing the cards
@@ -248,25 +252,32 @@ module Deal =
 
                         // is the game over?
                     let winners = Game.findGameWinners gameScore
-                    let persState' =
+                    let persState =
                         { persState with
                             GameScore = gameScore
                             Dealer = Seat.next persState.Dealer
-                            ExchangeDirection = ExchangeDirection.Left   // new game always starts with Left passes
                             DealOpt = None }
                     if winners.IsEmpty then
-                        return persState'.Save()
+
+                            // cycle exchange direction
+                        let persState =
+                            { persState with
+                                ExchangeDirection =
+                                    ExchangeDirection.next
+                                        persState.ExchangeDirection }
+                        persState.Save()
+
+                        return persState
                     else
                             // increment games won
-                        let persState'' =
-                            (incrGamesWon winners persState')
-                                .Save()
+                        let persState = incrGamesWon winners persState
+                        persState.Save()
 
                             // display game result
-                        do! gameOver surface winners persState''.GamesWon
+                        do! gameOver surface winners persState.GamesWon
                             |> Async.AwaitPromise
 
-                        return persState''
+                        return persState
 
                 | None ->
                     return failwith "Incomplete deal"

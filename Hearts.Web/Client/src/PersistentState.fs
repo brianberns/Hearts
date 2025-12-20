@@ -83,4 +83,3 @@ type PersistentState with
     /// Saves this state.
     member persState.Save() =
         PersistentState.save persState
-        persState
