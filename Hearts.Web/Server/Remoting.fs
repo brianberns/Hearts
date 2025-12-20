@@ -18,9 +18,9 @@ module AdvantageModel =
     let private connect dir =
         let model =
             new AdvantageModel(
-                hiddenSize = Encoding.encodedLength * 6,
-                numHiddenLayers = 1,
-                dropoutRate = 0.2,
+                hiddenSize = Encoding.encodedLength * 2,
+                numHiddenLayers = 9,
+                dropoutRate = 0.3,
                 device = TorchSharp.torch.CPU)
         let path = Path.Combine(dir, "AdvantageModel.pt")
         model.load(path) |> ignore
