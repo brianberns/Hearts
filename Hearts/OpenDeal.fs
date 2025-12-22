@@ -1,6 +1,5 @@
 ﻿namespace Hearts
 
-open System
 open PlayingCards
 
 /// An open deal contains all information about a deal,
@@ -115,20 +114,6 @@ module OpenDeal =
     let currentHand deal =
         deal.UnplayedCardMap[currentPlayer deal]
 
-    /// Answers the current player's information set.
-    let currentInfoSet deal gameScore =
-        let player = currentPlayer deal
-        let hand = deal.UnplayedCardMap[player]
-        let outOpt, inOpt =
-            deal.ExchangeOpt
-                |> Option.map (
-                    Exchange.getPassOpts
-                        player
-                        deal.ClosedDeal.ExchangeDirection)
-                |> Option.defaultValue (None, None)
-        InformationSet.create
-            player hand outOpt inOpt deal.ClosedDeal gameScore
-
     /// Receives cards from the given passer in the given deal.
     let private receivePass passer (cards : Pass) deal =
         assert(deal.ExchangeOpt.IsSome)
@@ -146,32 +131,25 @@ module OpenDeal =
                 assert(
                     Set.intersect cardMap[receiver] cards
                         |> Set.isEmpty)
-                Set.union cardMap[receiver] cards
+                cardMap[receiver] + cards
             cardMap |> Map.add receiver unplayedCards
 
-        {
-            deal with
-                UnplayedCardMap = cardMap
-        }
+        { deal with UnplayedCardMap = cardMap }
 
     /// Receives passed cards (if any) and starts play in the
     /// given deal.
     let private receivePasses deal =
-
-            // receive passed cards
-        let deal =
-            let exchange = getExchange deal
-            assert(Exchange.isComplete exchange)
-            assert(
-                deal.UnplayedCardMap
-                    |> Map.forall (fun _ cards ->
-                        cards.Count =
-                            ClosedDeal.numCardsPerHand - Pass.numCards))
-            (deal, exchange.PassMap)
-                ||> Seq.fold (fun deal (KeyValue(passer, pass)) ->
-                    receivePass passer pass deal)
-
-        startPlay deal
+        let exchange = getExchange deal
+        assert(Exchange.isComplete exchange)
+        assert(
+            deal.UnplayedCardMap.Values
+                |> Seq.forall (fun cards ->
+                    cards.Count =
+                        ClosedDeal.numCardsPerHand - Pass.numCards))
+        (deal, exchange.PassMap)
+            ||> Seq.fold (fun deal (KeyValue(passer, pass)) ->
+                receivePass passer pass deal)
+            |> startPlay
 
     /// Passes the given card in the given deal.
     let addPass card deal =
@@ -225,26 +203,6 @@ module OpenDeal =
         match actionType with
             | ActionType.Pass -> addPass action deal
             | ActionType.Play -> addPlay action deal
-
-    /// Generates an infinite sequence of deals.
-    let generate (rng : Random) =
-        Seq.initInfinite (fun iDeal ->
-            let dir =
-                enum<ExchangeDirection>
-                    (iDeal % ExchangeDirection.numDirections)
-            let deck = Deck.shuffle rng
-            let dealer = enum<Seat> (iDeal % Seat.numSeats)
-            fromDeck dealer dir deck)
-
-    /// Plays the given number of deals.
-    let playDeals rng inParallel numDeals playFun =
-        let map =
-            if inParallel then Array.Parallel.map
-            else Array.map
-        generate rng
-            |> Seq.take numDeals
-            |> Seq.toArray
-            |> map playFun
 
     /// Determines the inevitable additional score of the given deal,
     /// if possible.

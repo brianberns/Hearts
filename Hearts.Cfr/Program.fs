@@ -50,7 +50,7 @@ module Program =
         }
 
     and private createGameState deal =
-        let game = { Deal = deal; Score = Score.zero }
+        let game = Game.create deal
         match Game.tryUpdateScore game with
             | Some game ->
                 createTerminalGameState game.Score
