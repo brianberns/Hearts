@@ -202,7 +202,7 @@ module Deal =
                         let deal =
                             Deck.shuffle rng
                                 |> OpenDeal.fromDeck
-                                    dealer persState.ExchangeDirection
+                                    dealer persState.ExchangeDirection persState.GameScore
                         let persState =
                             { persState with
                                 RandomState = rng.State

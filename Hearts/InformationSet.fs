@@ -8,8 +8,8 @@ open Hearts
 [<RequireQualifiedAccess>]
 type ActionType = Pass | Play
 
-/// All information known to a player about a deal,
-/// including information known only to that player.
+/// All information known to a player about a deal, including
+/// information known only to that player.
 type InformationSet =
     {
         /// Player.
@@ -24,8 +24,11 @@ type InformationSet =
         /// Cards received by the player, if any.
         IncomingPassOpt : Option<Pass>
 
-        /// Public information.
+        /// Public information about the deal.
         Deal : ClosedDeal
+
+        /// Game score at the start of the deal.
+        GameScore : Score
 
         /// What action type can be taken in this information set?
         LegalActionType : ActionType
@@ -67,7 +70,7 @@ module InformationSet =
                     |> Seq.toArray
 
     /// Creates an information set.
-    let create player hand outgoingPassOpt incomingPassOpt deal =
+    let create player hand outgoingPassOpt incomingPassOpt deal gameScore =
         assert(Option.isNone incomingPassOpt
             || Option.isSome outgoingPassOpt)
         assert(deal.CurrentTrickOpt.IsNone
@@ -81,6 +84,7 @@ module InformationSet =
             OutgoingPassOpt = outgoingPassOpt
             IncomingPassOpt = incomingPassOpt
             Deal = deal
+            GameScore = gameScore
             LegalActionType = actionType
             LegalActions = legalActions actionType hand deal
         }

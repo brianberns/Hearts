@@ -3,48 +3,67 @@
 open PlayingCards
 open Hearts
 
-/// Model Hearts as a zero-sum game.
-module ZeroSum =
-
-    /// Gets the payoff for the given raw score from each
-    /// player's point of view.
-    let getPayoff score =
-        let points = score.Points
-        assert(points.Length = Seat.numSeats)
-        let sum = Seq.sum points
-        [|
-            for pt in points do
-                let otherAvg =
-                    float32 (sum - pt)
-                        / float32 (Seat.numSeats - 1)
-                otherAvg - float32 pt
-        |]
-
-    /// Computes the payoff for the given deal, if it is
-    /// inevitable.
-    let tryGetPayoff deal =
-        Game.tryUpdateScore deal Score.zero
-            |> Option.map getPayoff
-
 module Tournament =
 
-    /// Plays one deal.
-    let playDeal (playerMap : Map<_, _>) deal =
+    /// Gets per-player's payoffs for the given game score.
+    let getPayoffs gameScore =
 
-        let rec loop deal score =
-            let deal =
-                let infoSet = OpenDeal.currentInfoSet deal
+            // find high and low scores
+        let low = Array.min gameScore.Points
+        let high = Array.max gameScore.Points
+   
+            // game is over?
+        if high >= Game.endThreshold then
+            gameScore.Points
+                |> Array.map (fun x ->
+                    if x = low then 1.0 else 0.0)
+
+        else
+                // calculate Softmax terms relative to the low score
+            let t =
+                let volatility = 10.0   // prevent temperature from dropping to near-zero
+                float (Game.endThreshold - high) + volatility
+            let terms = 
+                gameScore.Points
+                    |> Array.map (fun pt ->
+                        exp (float (low - pt) / t))
+
+                // normalize
+            let total = Array.sum terms
+            let payoffs =
+                terms
+                    |> Array.map (fun term ->
+                        let payoff = term / total
+                        assert(payoff >= 0.0 && payoff <= 1.0)
+                        payoff)
+            payoffs
+
+    /// Computes the payoffs for the given game, if the result
+    /// of the current deal is inevitable.
+    let tryGetPayoffs game =
+        Game.tryUpdateScore game
+            |> Option.map (_.Score >> getPayoffs)
+
+    /// Plays one deal in a game.
+    let playDeal (playerMap : Map<_, _>) game =
+
+        let rec loop game =
+
+                // take action in the current deal
+            let game =
+                let infoSet = Game.currentInfoSet game
                 let action =
                     match Seq.tryExactlyOne infoSet.LegalActions with
                         | Some action -> action
                         | None -> playerMap[infoSet.Player].Act infoSet
-                OpenDeal.addAction
-                    infoSet.LegalActionType action deal
-            match Game.tryUpdateScore deal score with
-                | Some score -> score
-                | None -> loop deal score
+                Game.addAction infoSet.LegalActionType action game
 
-        loop deal Score.zero
+                // deal is over?
+            match Game.tryUpdateScore game with
+                | Some game -> game
+                | None -> loop game
+
+        loop game
 
     /// Plays the given number of deals.
     let playDeals rng inParallel numDeals playerMap =

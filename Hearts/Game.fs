@@ -2,48 +2,74 @@
 
 open PlayingCards
 
+/// A game of Hearts.
+type Game =
+    {
+        /// Current deal.
+        Deal : OpenDeal
+
+        /// Game score at the start of the current deal. Not updated
+        /// during play.
+        Score : Score
+    }
+
 module Game =
 
-    /// Finds leaders in the given game score.
-    let private findGameLeaders gameScore =
-        let minPoints = Seq.min gameScore.Points
-        Score.indexed gameScore
+    /// Answers the current player's information set.
+    let currentInfoSet game =
+        OpenDeal.currentInfoSet game.Deal game.Score
+
+    /// Takes the given action in the given game's current deal.
+    /// Score of the game is not updated, even if points are taken.
+    let addAction actionType action game =
+        let deal =
+            OpenDeal.addAction actionType action game.Deal
+        { game with Deal = deal }
+
+    /// End-of-game point threshold.
+    let endThreshold = 100
+
+    /// Is the given game over?
+    let isOver game =
+        game.Score.Points
+            |> Seq.exists (fun points ->
+                points >= endThreshold)
+
+    /// Finds leaders in the given game.
+    let private findGameLeaders game =
+        let minPoints = Seq.min game.Score.Points
+        Score.indexed game.Score
             |> Seq.where (snd >> (=) minPoints)
             |> Seq.map fst
             |> set
 
-    /// End of game point threshold.
-    let endThreshold = 100
-
-    /// Does the given game score end the game?
-    let isOver gameScore =
-        gameScore.Points
-            |> Seq.exists (fun points ->
-                points >= endThreshold)
-
-    /// Finds game winners, if any, in the given game score.
-    let findGameWinners gameScore =
-        if isOver gameScore then findGameLeaders gameScore
+    /// Finds game winners, if any, in the given game.
+    let findGameWinners game =
+        if isOver game then findGameLeaders game
         else Set.empty
 
-    /// Applies the shoot reward to the given game score for
-    /// the given shooter.
-    let private applyShootReward gameScore shooter =
+    /// Adds the given deal score to the given game.
+    let private addDealScore dealScore (game : Game) =
+        { game with
+            Score = game.Score + dealScore }
+
+    /// Applies the shoot reward to the given game for the
+    /// given shooter.
+    let private applyShootReward (game : Game) shooter =
 
             // add points to non-shooters
-        let gameScore' =
+        let game =
             let dealScore =
                 Enum.getValues<Seat>
                     |> Array.map (fun seat ->
                         if seat = shooter then 0
                         else ClosedDeal.numPointsPerDeal)
                     |> Score.ofPoints
-            gameScore + dealScore
+            addDealScore dealScore game
 
             // subtract points from shooter instead?
-        let leaders = findGameLeaders gameScore'
-        if leaders.Contains(shooter) then
-            gameScore'
+        let leaders = findGameLeaders game
+        if leaders.Contains(shooter) then game
         else
             let dealScore =
                 Enum.getValues<Seat>
@@ -52,16 +78,18 @@ module Game =
                             -ClosedDeal.numPointsPerDeal
                         else 0)
                     |> Score.ofPoints
-            gameScore + dealScore
+            addDealScore dealScore game
 
-    /// Updates the given game score, including shoot reward, if
-    /// the final score of the given deal is inevitable.
-    let tryUpdateScore deal gameScore =
+    /// Updates the given game's score, including shoot reward, if
+    /// the final score of the current deal is inevitable.
+    let tryUpdateScore game =
         option {
-            let! inevitable = OpenDeal.tryFindInevitable deal
-            let dealScore = deal.ClosedDeal.Score + inevitable
+            let! inevitable = OpenDeal.tryFindInevitable game.Deal
+            let dealScore = game.Deal.ClosedDeal.Score + inevitable
             assert(Score.sum dealScore = ClosedDeal.numPointsPerDeal)
-            return ClosedDeal.tryFindScoreShooter dealScore
-                |> Option.map (applyShootReward gameScore)
-                |> Option.defaultValue (gameScore + dealScore)
+            let game =
+                match ClosedDeal.tryFindScoreShooter dealScore with
+                    | Some shooter -> applyShootReward game shooter
+                    | None -> addDealScore dealScore game
+            return game
         }

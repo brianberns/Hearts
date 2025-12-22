@@ -128,8 +128,17 @@ module Encoding =
                 flags[suitOffset + seatOffset] <- true   // use mutation for speed
         flags
 
+    /// Encodes the given deal score as a multi-hot vector in the
+    /// number of seats.
+    let encodeDealScore player score =
+        assert(score.Points.Length = Seat.numSeats)
+        [|
+            for seat in Seat.cycle player do
+                score[seat] > 0
+        |]
+
     /// Encodes the given score as a "thermometer" for each player.
-    let encodeScore player score =
+    let encodeGameScore player score =
         assert(score.Points.Length = Seat.numSeats)
         [|
             for seat in Seat.cycle player do
@@ -147,7 +156,7 @@ module Encoding =
             + Seat.numSeats * Card.numCards                   // cards previously played by each player
             + (Seat.numSeats - 1) * Card.numCards             // current trick
             + (Seat.numSeats - 1) * Suit.numSuits             // voids
-            + (Seat.numSeats * ClosedDeal.numPointsPerDeal)   // deal score
+            + (Seat.numSeats * ClosedDeal.numPointsPerDeal)   // game score
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
@@ -164,7 +173,7 @@ module Encoding =
                     infoSet.Deal.CurrentTrickOpt
                 yield! encodeVoids                          // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                          // deal score
+                yield! encodeGameScore                      // game score
                     infoSet.Player infoSet.Deal.Score
             |]
         assert(encoded.Length = encodedLength)

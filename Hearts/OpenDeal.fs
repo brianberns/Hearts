@@ -116,7 +116,7 @@ module OpenDeal =
         deal.UnplayedCardMap[currentPlayer deal]
 
     /// Answers the current player's information set.
-    let currentInfoSet deal =
+    let currentInfoSet deal gameScore =
         let player = currentPlayer deal
         let hand = deal.UnplayedCardMap[player]
         let outOpt, inOpt =
@@ -127,7 +127,7 @@ module OpenDeal =
                         deal.ClosedDeal.ExchangeDirection)
                 |> Option.defaultValue (None, None)
         InformationSet.create
-            player hand outOpt inOpt deal.ClosedDeal
+            player hand outOpt inOpt deal.ClosedDeal gameScore
 
     /// Receives cards from the given passer in the given deal.
     let private receivePass passer (cards : Pass) deal =

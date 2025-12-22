@@ -16,7 +16,8 @@ type PersistentState =
         /// Number of games won by each player.
         GamesWon : Score
 
-        /// Number of points taken by each player in the current game.
+        /// Game score at the start of the current deal. Updated
+        /// only at the end of the deal.
         GameScore : Score
 
         /// State of random number generator.

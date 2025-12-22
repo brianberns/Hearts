@@ -15,7 +15,7 @@ module Encoding =
             + Card.numCards                           // unplayed cards not in current player's hand
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
             + ((Seat.numSeats - 1) * Suit.numSuits)   // voids
-            + Seat.numSeats                           // score
+            + Seat.numSeats                           // deal score
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
@@ -29,7 +29,7 @@ module Encoding =
                 yield! Encoding.encodeTrick trickOpt             // current trick
                 yield! Encoding.encodeVoids                      // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! Encoding.encodeScore                      // score
+                yield! Encoding.encodeDealScore                  // deal score
                     infoSet.Player infoSet.Deal.Score
             |]
         assert(encoded.Length = encodedLength)

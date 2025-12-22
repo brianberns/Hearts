@@ -5,7 +5,25 @@ open System.Diagnostics
 
 open Microsoft.Data.Sqlite
 open FastCfr
+open PlayingCards
 open Hearts
+
+/// Model Hearts as a zero-sum game.
+module ZeroSum =
+
+    /// Gets the payoff for the given raw score from each
+    /// player's point of view.
+    let getPayoff score =
+        let points = score.Points
+        assert(points.Length = Seat.numSeats)
+        let sum = Seq.sum points
+        [|
+            for pt in points do
+                let otherAvg =
+                    float32 (sum - pt)
+                        / float32 (Seat.numSeats - 1)
+                otherAvg - float32 pt
+        |]
 
 module Program =
 
@@ -15,7 +33,7 @@ module Program =
             |> Terminal
 
     let rec private createNonTerminalGameState deal =
-        let infoSet = OpenDeal.currentInfoSet deal
+        let infoSet = OpenDeal.currentInfoSet deal Score.zero
         NonTerminal {
             ActivePlayerIdx = int infoSet.Player
             InfoSetKey =
@@ -32,11 +50,22 @@ module Program =
         }
 
     and private createGameState deal =
-        match Game.tryUpdateScore deal Score.zero with
-            | Some score ->
-                createTerminalGameState score
+        let game = { Deal = deal; Score = Score.zero }
+        match Game.tryUpdateScore game with
+            | Some game ->
+                createTerminalGameState game.Score
             | None ->
                 createNonTerminalGameState deal
+
+    /// Generates an infinite sequence of deals.
+    let generate (rng : Random) =
+        Seq.initInfinite (fun iDeal ->
+            let dir =
+                enum<ExchangeDirection>
+                    (iDeal % ExchangeDirection.numDirections)
+            let deck = Deck.shuffle rng
+            let dealer = enum<Seat> (iDeal % Seat.numSeats)
+            OpenDeal.fromDeck dealer dir deck)   // ignore effect of game score
 
     let executeCmd (conn : SqliteConnection) sql =
         use cmd = conn.CreateCommand(CommandText = sql)
