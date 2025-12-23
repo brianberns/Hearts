@@ -23,15 +23,31 @@ module Card =
         index
 
 /// Encoded value for input to a model.
-type Encoding = BitArray
+type Encoding =
+    {
+        /// Encoded flags.
+        Flags : BitArray
+
+        /// Game points relative to current player.
+        GamePoints : sbyte[]
+    }
 
 module Encoding =
 
-    /// Converts encoded bits to float32.
-    let toFloat32 (bits : Encoding) =
+    /// Creates an encoding.
+    let create flags gamePoints =
+        {
+            Flags = flags
+            GamePoints = gamePoints
+        }
+
+    /// Converts encoding to float32.
+    let toFloat32 (encoding : Encoding) =
         [|
-            for i = 0 to bits.Length - 1 do
-                if bits[i] then 1f else 0f
+            for i = 0 to encoding.Flags.Length - 1 do
+                if encoding.Flags[i] then 1f else 0f
+            for pt in encoding.GamePoints do
+                float32 pt
         |]
 
     /// Encodes the given (card, value) pairs as a
@@ -137,31 +153,37 @@ module Encoding =
                 score[seat] > 0
         |]
 
-    /// Encodes the given score as a "thermometer" for each player.
-    let encodeGameScore player score =
-        assert(score.Points.Length = Seat.numSeats)
+    /// Encodes total game points relative to the given player.
+    let encodeGameScore player gameScore dealScore =
+        let score : Score = gameScore + dealScore
         [|
             for seat in Seat.cycle player do
-                yield! Array.init
-                    ClosedDeal.numPointsPerDeal
-                    (fun i -> i < score[seat])
+                let pt = score[seat]
+                assert(pt >= int SByte.MinValue
+                    && pt <= int SByte.MaxValue)
+                sbyte pt
         |]
+
+    /// Total encoded length of flags in an info set.
+    let private encodedFlagLength =
+        Card.numCards                               // current player's hand
+            + ExchangeDirection.numDirections       // exchange direction
+            + Card.numCards                         // outgoing pass
+            + Card.numCards                         // incoming pass
+            + Seat.numSeats * Card.numCards         // cards previously played by each player
+            + (Seat.numSeats - 1) * Card.numCards   // current trick
+            + (Seat.numSeats - 1) * Suit.numSuits   // voids
+            + Seat.numSeats                         // deal score
 
     /// Total encoded length of an info set.
     let encodedLength =
-        Card.numCards                                         // current player's hand
-            + ExchangeDirection.numDirections                 // exchange direction
-            + Card.numCards                                   // outgoing pass
-            + Card.numCards                                   // incoming pass
-            + Seat.numSeats * Card.numCards                   // cards previously played by each player
-            + (Seat.numSeats - 1) * Card.numCards             // current trick
-            + (Seat.numSeats - 1) * Suit.numSuits             // voids
-            + (Seat.numSeats * ClosedDeal.numPointsPerDeal)   // game score
+        encodedFlagLength + Seat.numSeats   // game points
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
-        let encoded =
-            Encoding [|
+
+        let flags =
+            BitArray [|
                 yield! encodeCards infoSet.Hand             // current player's hand
                 yield! encodeExchangeDirection              // exchange direction
                     infoSet.Deal.ExchangeDirection
@@ -173,8 +195,13 @@ module Encoding =
                     infoSet.Deal.CurrentTrickOpt
                 yield! encodeVoids                          // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! encodeGameScore                      // game score
+                yield! encodeDealScore                      // deal score
                     infoSet.Player infoSet.Deal.Score
             |]
-        assert(encoded.Length = encodedLength)
-        encoded
+        assert(flags.Length = encodedFlagLength)
+        
+        let gamePoints =
+            encodeGameScore
+                infoSet.Player infoSet.GameScore infoSet.Deal.Score
+
+        create flags gamePoints

@@ -110,12 +110,14 @@ module Program =
             trainInfoSetPairs
                 |> Array.Parallel.map (fun (infoSet, card) ->
                     let input = Encoding.encode infoSet
-                    let output = Encoding.encodeCards [card] |> Encoding
+                    let output =
+                        MathNet.Numerics.LinearAlgebra.DenseVector.ofArray [|
+                            for flag in Encoding.encodeCards [card] do
+                                if flag then 1.0f else 0.0f
+                        |]
                     {
                         Encoding = input
-                        Regrets =
-                            Encoding.toFloat32 output
-                                |> MathNet.Numerics.LinearAlgebra.DenseVector.ofArray
+                        Regrets = output
                         Weight = 1.0f
                     })
         printfn "Converted to samples"

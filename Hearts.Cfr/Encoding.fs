@@ -10,7 +10,7 @@ open Hearts.Model
 module Encoding =
 
     /// Total encoded length of an info set.
-    let encodedLength =
+    let encodedFlagLength =
         Card.numCards                                 // current player's hand
             + Card.numCards                           // unplayed cards not in current player's hand
             + ((Seat.numSeats - 1) * Card.numCards)   // current trick
@@ -19,10 +19,12 @@ module Encoding =
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
+
+            // encode flags
         let unseen =
             infoSet.Deal.UnplayedCards - infoSet.Hand
         let trickOpt = infoSet.Deal.CurrentTrickOpt
-        let encoded =
+        let flags =
             BitArray [|
                 yield! Encoding.encodeCards infoSet.Hand         // current player's hand
                 yield! Encoding.encodeCards unseen               // unplayed cards not in current player's hand
@@ -32,8 +34,12 @@ module Encoding =
                 yield! Encoding.encodeDealScore                  // deal score
                     infoSet.Player infoSet.Deal.Score
             |]
-        assert(encoded.Length = encodedLength)
-        encoded
+        assert(flags.Length = encodedFlagLength)
+
+            // ignore game score
+        let gamePoints = Array.zeroCreate Seat.numSeats
+
+        Encoding.create flags gamePoints
 
     /// "Latin Extended-A" block is printable.
     let private charOffset = 0x100
@@ -47,9 +53,10 @@ module Encoding =
 
     /// Converts the given encoding to a string.
     let toString (encoding : Encoding) =
-        assert(encoding.Length = encodedLength)
+        assert(encoding.Flags.Length = encodedFlagLength)
+        assert(encoding.GamePoints |> Array.forall ((=) 0y))
         let bytes =
-            let nBytes = (encoding.Length + 7) >>> 3
+            let nBytes = (encoding.Flags.Length + 7) >>> 3
             Array.zeroCreate<byte> nBytes
-        encoding.CopyTo(bytes, 0)
+        encoding.Flags.CopyTo(bytes, 0)
         compact bytes
