@@ -89,18 +89,18 @@ module Traverse =
         let rec loop game depth =
             match Game.tryGetPayoffs game with
                 | Some payoffs ->
-                    Node.complete payoffs None Array.empty   // deal is over
+                    Node.complete payoffs None Array.empty   // current deal is over
                 | None ->
-                    assert(not (ClosedDeal.isComplete game.Deal.ClosedDeal))
                     loopNonTerminal game depth
 
-        /// Recurses for non-terminal game state.
+        /// Recurses for non-terminal game state. Current deal
+        /// is not over.
         and loopNonTerminal game depth =
+            assert(not (ClosedDeal.isComplete game.Deal.ClosedDeal))
             let infoSet = Game.currentInfoSet game
-            let legalActions = infoSet.LegalActions
-            if legalActions.Length = 1 then
+            if infoSet.LegalActions.Length = 1 then
                 addLoop game depth
-                    infoSet.LegalActionType legalActions[0]   // forced action
+                    infoSet.LegalActionType infoSet.LegalActions[0]   // forced action
             else
                     // get utility of current player's strategy
                 let rnd = lock rng (fun () -> rng.NextDouble())
@@ -119,12 +119,12 @@ module Traverse =
             loop game depth
 
         /// Gets the full utility of the given info set.
-        and getFullUtility infoSet deal depth strategy =
+        and getFullUtility infoSet game depth strategy =
             let legalActions = infoSet.LegalActions
             let results =
                 legalActions
                     |> Array.map (
-                        addLoop deal (depth+1) infoSet.LegalActionType)
+                        addLoop game (depth+1) infoSet.LegalActionType)
 
             let cont children =
 

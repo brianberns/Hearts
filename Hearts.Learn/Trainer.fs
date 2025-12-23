@@ -130,7 +130,7 @@ module Trainer =
             Tournament.run
                 (Random(0))       // use repeatable test set, not seen during training
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
-                settings.NumEvaluationDeals
+                settings.NumEvaluationGames
                 Trickster.player
                 (Strategy.createPlayer model)
         if settings.Verbose then

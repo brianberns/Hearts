@@ -47,8 +47,8 @@ type Settings =
         /// Optimizer learning rate to use when training the model.
         LearningRate : float
 
-        /// Number of deals to evaluate model after training.
-        NumEvaluationDeals : int
+        /// Number of games to evaluate model after training.
+        NumEvaluationGames : int
 
         /// Number of iterations to perform.
         NumIterations : int
@@ -92,7 +92,7 @@ module Settings =
                 DropoutRate = 0.3
                 LearningRate = 1e-3
                 NumIterations = 50
-                NumEvaluationDeals = 20000
+                NumEvaluationGames = 2000
                 Device = torch.CUDA
                 ModelDirPath = "./Models"
                 Writer = writer
@@ -135,7 +135,7 @@ module Settings =
             $"settings/NumIterations",
             string settings.NumIterations, 0)
         writer.add_text(
-            $"settings/NumEvaluationDeals",
-            string settings.NumEvaluationDeals, 0)
+            $"settings/NumEvaluationGames",
+            string settings.NumEvaluationGames, 0)
 
         settings
