@@ -281,7 +281,7 @@ module Log =
                 DealNumber = dealNum
                 InitialDeal = initialDeal
                 FinalDeal = finalDeal
-                GameScore = finalScore
+                GameScore = finalScore   // temporary stash
             }
         }
 

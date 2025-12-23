@@ -94,12 +94,12 @@ module Killer =
             }
 
     /// Gets the player's full set of passed cards.
-    let private getPass seat deal (hand : Hand) player =
+    let private getPass seat deal gameScore (hand : Hand) player =
         ((hand, Set.empty), [1 .. Pass.numCards])
             ||> Seq.fold (fun (hand, pass) _ ->
                 let card =
                     InformationSet.create
-                        seat hand (Some pass) None deal
+                        seat hand (Some pass) None deal gameScore
                         |> player.Act
                 assert(hand.Contains(card))
                 hand.Remove(card),
@@ -108,8 +108,8 @@ module Killer =
 
     /// Cards are being passed.
     let passOutgoing state (record : SeatCardsRecord) =
-        match state.DealOpt with
-            | Some deal ->
+        match state.DealOpt, state.GameScoreOpt with
+            | Some deal, Some gameScore ->
                 let cards =
 
                         // we are passing
@@ -118,6 +118,7 @@ module Killer =
                             getPass
                                 record.Seat
                                 deal.ClosedDeal
+                                gameScore
                                 (OpenDeal.currentHand deal)
                                 state.PlayerMap[record.Seat]
                         Protocol.writePassOutgoing cards
@@ -169,8 +170,8 @@ module Killer =
 
     /// A card is being played.
     let play state (record : SeatCardsRecord) =
-        match state.DealOpt with
-            | Some deal ->
+        match state.DealOpt, state.GameScoreOpt with
+            | Some deal, Some gameScore ->
 
                 let card =
 
@@ -194,6 +195,7 @@ module Killer =
                                     outPassOpt
                                     inPassOpt
                                     deal.ClosedDeal
+                                    gameScore
                             player.Act infoSet
                         Protocol.writePlay card
                         card

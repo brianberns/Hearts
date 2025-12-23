@@ -82,26 +82,26 @@ module Node =
 
 module Traverse =
 
-    /// Evaluates the utility of the given deal.
-    let traverse iter deal (rng : Random) =
+    /// Evaluates the utility of the given game.
+    let traverse iter game (rng : Random) =
 
         /// Top-level loop.
         let rec loop deal depth =
-            match ZeroSum.tryGetPayoff deal with
-                | Some payoff ->
+            match Game.tryGetPayoffs game with
+                | Some payoffs ->
                     Node.complete   // deal is over
-                        payoff
+                        payoffs
                         None
                         Array.empty
                 | None ->
                     loopNonTerminal deal depth
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal deal depth =
-            let infoSet = OpenDeal.currentInfoSet deal
+        and loopNonTerminal game depth =
+            let infoSet = Game.currentInfoSet game
             let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
-                addLoop deal depth
+                addLoop game depth
                     infoSet.LegalActionType legalActions[0]   // forced action
             else
                     // get utility of current player's strategy
@@ -112,14 +112,13 @@ module Traverse =
                 let getUtility =
                     if rnd <= threshold then getFullUtility
                     else getOneUtility
-                let cont =
-                    getUtility infoSet deal depth
+                let cont = getUtility infoSet game depth
                 Node.getStrategy infoSet cont
 
         /// Adds the given action to the given deal and loops.
-        and addLoop deal depth actionType action =
-            let deal = OpenDeal.addAction actionType action deal
-            loop deal depth
+        and addLoop game depth actionType action =
+            let game = Game.addAction actionType action game
+            loop game depth
 
         /// Gets the full utility of the given info set.
         and getFullUtility infoSet deal depth strategy =
@@ -157,15 +156,15 @@ module Traverse =
 
         /// Gets the utility of the given info set by
         /// sampling a single action.
-        and getOneUtility infoSet deal depth strategy =
+        and getOneUtility infoSet game depth strategy =
             let result =
                 lock rng (fun () ->
                     Vector.sample rng strategy)
                     |> Array.get infoSet.LegalActions
-                    |> addLoop deal (depth+1) infoSet.LegalActionType
+                    |> addLoop game (depth+1) infoSet.LegalActionType
             Node.getUtility
                 infoSet
                 [|result|]
                 (Array.exactlyOne >> Complete)
 
-        loop deal 0
+        loop game 0

@@ -1,14 +1,10 @@
 ﻿namespace Hearts
 
-open System
 open PlayingCards
 
 /// A game of Hearts.
 type Game =
     {
-        /// Random number generator used to generate deals.
-        Random : Random
-
         /// Current deal.
         Deal : OpenDeal
 
@@ -19,20 +15,23 @@ type Game =
 
 module Game =
 
+    /// Creates a game.
+    let create deal score =
+        {
+            Deal = deal
+            Score = score
+        }
+
     /// Creates a new deal.
-    let private createDeal rng dealer dir =
+    let createDeal rng dealer dir =
         Deck.shuffle rng
             |> OpenDeal.fromDeck dealer dir
 
     /// Creates a new game.
-    let create rng dealer =
+    let createNew rng dealer =
         let deal =
             createDeal rng dealer ExchangeDirection.Left   // games always start with Left pass
-        {
-            Random = rng
-            Deal = deal
-            Score = Score.zero
-        }
+        create deal Score.zero
 
     /// Answers the current player's information set.
     let currentInfoSet game =
@@ -49,6 +48,17 @@ module Game =
         InformationSet.create
             player hand outOpt inOpt deal.ClosedDeal game.Score
 
+    /// Passes the given card in the given game.
+    let addPass card game =
+        let deal = OpenDeal.addPass card game.Deal
+        { game with Deal = deal }
+
+    /// Plays the given card in the given game. Score of the game
+    /// is not updated, even if points are taken.
+    let addPlay card game =
+        let deal = OpenDeal.addPlay card game.Deal
+        { game with Deal = deal }
+
     /// Takes the given action in the given game's current deal.
     /// Score of the game is not updated, even if points are taken.
     let addAction actionType action game =
@@ -59,9 +69,9 @@ module Game =
     /// End-of-game point threshold.
     let endThreshold = 100
 
-    /// Is the given game over?
-    let isOver game =
-        game.Score.Points
+    /// Is a game with the given score over?
+    let isOver gameScore =
+        gameScore.Points
             |> Seq.exists (fun points ->
                 points >= endThreshold)
 
@@ -75,7 +85,8 @@ module Game =
 
     /// Finds game winners, if any, in the given game.
     let findGameWinners game =
-        if isOver game then findGameLeaders game
+        if isOver game.Score then
+            findGameLeaders game
         else Set.empty
 
     /// Adds the given deal score to the given game.
@@ -145,16 +156,16 @@ module Game =
         loop game
 
     /// Plays the given game to completion.
-    let playGame playerMap game =
+    let playGame rng playerMap game =
 
         let rec loop game =
-            assert(isOver game |> not)
+            assert(isOver game.Score |> not)
 
                 // play current deal to completion
             let game = playDeal playerMap game
 
                 // stop if game is over
-            if isOver game then game
+            if isOver game.Score then game
             else
                     // create and play another deal
                 let deal =
@@ -163,7 +174,7 @@ module Game =
                     let dir =
                         ExchangeDirection.next
                             game.Deal.ClosedDeal.ExchangeDirection
-                    createDeal game.Random dealer dir
+                    createDeal rng dealer dir
                 loop { game with Deal = deal }
 
         loop game
@@ -173,7 +184,7 @@ module Game =
         Seq.initInfinite (fun iGame ->
             iGame % Seat.numSeats
                 |> enum<Seat>
-                |> create rng)
+                |> createNew rng)
 
     /// Plays the given number of games.
     let playGames rng inParallel numGames playFun =
@@ -184,3 +195,42 @@ module Game =
             |> Seq.take numGames
             |> Seq.toArray
             |> map playFun
+
+    /// Gets per-player's payoffs for the given game score.
+    let getPayoffs gameScore =
+
+            // find high and low scores
+        let low = Array.min gameScore.Points
+        let high = Array.max gameScore.Points
+   
+            // game is over?
+        if high >= endThreshold then
+            gameScore.Points
+                |> Array.map (fun x ->
+                    if x = low then 1.0f else 0.0f)
+
+        else
+                // calculate Softmax terms relative to the low score
+            let temperature =
+                let volatility = 10.0f   // prevent temperature from dropping to near-zero
+                float32 (endThreshold - high) + volatility
+            let terms = 
+                gameScore.Points
+                    |> Array.map (fun pt ->
+                        exp (float32 (low - pt) / temperature))
+
+                // normalize
+            let total = Array.sum terms
+            let payoffs =
+                terms
+                    |> Array.map (fun term ->
+                        let payoff = term / total
+                        assert(payoff >= 0.0f && payoff <= 1.0f)
+                        payoff)
+            payoffs
+
+    /// Computes the payoffs for the given game, if the result
+    /// of the current deal is inevitable.
+    let tryGetPayoffs game =
+        tryUpdateScore game
+            |> Option.map (_.Score >> getPayoffs)

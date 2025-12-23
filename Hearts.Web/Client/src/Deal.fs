@@ -200,9 +200,8 @@ module Deal =
                             console.log($"Exchange direction is \
                                 {ExchangeDirection.toString persState.ExchangeDirection}")
                         let deal =
-                            Deck.shuffle rng
-                                |> OpenDeal.fromDeck
-                                    dealer persState.ExchangeDirection persState.GameScore
+                            Game.createDeal
+                                rng dealer persState.ExchangeDirection
                         let persState =
                             { persState with
                                 RandomState = rng.State
@@ -232,8 +231,9 @@ module Deal =
             let! persState = playout surface persState seatViews
 
                 // deal is over
-            match Game.tryUpdateScore persState.Deal persState.GameScore with
-                | Some gameScore ->
+            let game = Game.create persState.Deal persState.GameScore   // to-do: store game in persState
+            match Game.tryUpdateScore game with
+                | Some game ->
 
                         // display deal results
                     for seat in Enum.getValues<Seat> do
@@ -247,14 +247,14 @@ module Deal =
                         // update game score
                     for seat in Enum.getValues<Seat> do
                         console.log(
-                            $"{Seat.toString seat} has {gameScore[seat]} point(s)")
-                    displayGameScore gameScore
+                            $"{Seat.toString seat} has {game.Score[seat]} point(s)")
+                    displayGameScore game.Score
 
                         // is the game over?
-                    let winners = Game.findGameWinners gameScore
+                    let winners = Game.findGameWinners game
                     let persState =
                         { persState with
-                            GameScore = gameScore
+                            GameScore = game.Score
                             Dealer = Seat.next persState.Dealer
                             DealOpt = None }
                     if winners.IsEmpty then

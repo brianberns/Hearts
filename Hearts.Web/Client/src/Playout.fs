@@ -21,8 +21,8 @@ module Playout =
             /// Current dealer's seat.
             Dealer : Seat
 
-            /// Current deal.
-            Deal : OpenDeal
+            /// Current game state.
+            Game : Game
 
             /// Animation of playing a card.
             AnimCardPlay : CardView -> Animation
@@ -32,10 +32,10 @@ module Playout =
         }
 
     /// Logs hint information.
-    let private logHint (infoSet : InformationSet) deal =
-        assert(infoSet.Deal = deal.ClosedDeal)
+    let private logHint game =
+        let infoSet = Game.currentInfoSet game
         let legalActions = infoSet.LegalActions
-        match deal |> OpenDeal.tryFindInevitable with
+        match game.Deal |> OpenDeal.tryFindInevitable with
 
             | Some score ->
                 console.log("Inevitable:")
@@ -60,8 +60,8 @@ module Playout =
     let private getTrickWinnerOpt context card =
         option {
                 // play card on current trick
-            assert(context.Deal.ClosedDeal.CurrentTrickOpt.IsSome)
-            let! trick = context.Deal.ClosedDeal.CurrentTrickOpt
+            assert(context.Game.Deal.ClosedDeal.CurrentTrickOpt.IsSome)
+            let! trick = context.Game.Deal.ClosedDeal.CurrentTrickOpt
             let trick' = Trick.addPlay card trick
 
                 // if this card completes the trick, determine winner
@@ -79,11 +79,11 @@ module Playout =
 
                 // write to log
             let seat =
-                context.Deal.ClosedDeal |> ClosedDeal.currentPlayer
+                OpenDeal.currentPlayer context.Game.Deal
             console.log($"{Seat.toString seat} plays {card}")
 
                 // add the card to the deal
-            let deal = OpenDeal.addPlay card context.Deal
+            let deal = OpenDeal.addPlay card context.Game.Deal
 
                 // play the card
             do! context.AnimCardPlay cardView
@@ -113,7 +113,7 @@ module Playout =
     let private playUser (handView : HandView) context =
 
             // determine all legal actions
-        let infoSet = OpenDeal.currentInfoSet context.Deal
+        let infoSet = Game.currentInfoSet context.Game
         let legalActions = infoSet.LegalActions
         assert(legalActions.Length > 0)
 
@@ -122,7 +122,7 @@ module Playout =
 
                 // prompt user to play
             PlayChooser.element.show()
-            logHint infoSet context.Deal
+            logHint context.Game
 
                 // handle card clicks
             let legalPlaySet = set legalActions
@@ -153,7 +153,7 @@ module Playout =
     let private playAuto context =
         async {
                 // determine card to play
-            let! card = WebPlayer.takeAction context.Deal
+            let! card = WebPlayer.takeAction context.Game
 
                 // create view of the selected card
             let! cardView =
@@ -194,9 +194,10 @@ module Playout =
 
                         // invoke player
                     let! deal' =
+                        let game = Game.create deal persState.GameScore   // to-do: store game in persState
                         player {
                             Dealer = dealer
-                            Deal = deal
+                            Game = game
                             AnimCardPlay = animCardPlay
                             AnimTrickFinish = animTrickFinish
                         }

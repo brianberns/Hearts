@@ -8,7 +8,7 @@ open FastCfr
 open PlayingCards
 open Hearts
 
-/// Model Hearts as a zero-sum game.
+/// Model Hearts as a zero-sum, single-deal game.
 module ZeroSum =
 
     /// Gets the payoff for the given raw score from each
@@ -32,8 +32,9 @@ module Program =
             |> TerminalGameState.create
             |> Terminal
 
-    let rec private createNonTerminalGameState deal =
-        let infoSet = OpenDeal.currentInfoSet deal Score.zero
+    let rec private createNonTerminalGameState (game : Game) =
+        assert(game.Score = Score.zero)
+        let infoSet = Game.currentInfoSet game
         NonTerminal {
             ActivePlayerIdx = int infoSet.Player
             InfoSetKey =
@@ -43,29 +44,18 @@ module Program =
             LegalActions = infoSet.LegalActions
             AddAction =
                 fun action ->
-                    let deal =
-                        OpenDeal.addAction
-                            infoSet.LegalActionType action deal
-                    createGameState deal
+                    let game =
+                        Game.addAction
+                            infoSet.LegalActionType action game
+                    createGameState game
         }
 
-    and private createGameState deal =
-        let game = Game.create deal
+    and private createGameState game =
         match Game.tryUpdateScore game with
             | Some game ->
                 createTerminalGameState game.Score
             | None ->
-                createNonTerminalGameState deal
-
-    /// Generates an infinite sequence of deals.
-    let generate (rng : Random) =
-        Seq.initInfinite (fun iDeal ->
-            let dir =
-                enum<ExchangeDirection>
-                    (iDeal % ExchangeDirection.numDirections)
-            let deck = Deck.shuffle rng
-            let dealer = enum<Seat> (iDeal % Seat.numSeats)
-            OpenDeal.fromDeck dealer dir deck)   // ignore effect of game score
+                createNonTerminalGameState game
 
     let executeCmd (conn : SqliteConnection) sql =
         use cmd = conn.CreateCommand(CommandText = sql)
@@ -121,7 +111,7 @@ module Program =
             // train on chunks of deals lazily
         let tuples =
             let rng = Random(0)
-            OpenDeal.generate rng
+            Game.generate rng
                 |> Seq.map createGameState
                 |> Seq.chunkBySize chunkSize
                 |> Trainer.trainScan Seat.numSeats
