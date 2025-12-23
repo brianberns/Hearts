@@ -44,14 +44,14 @@ module Trainer =
             $"advantage samples/iter%03d{iter}",
             0f, 0)
 
-        let chunkSize = settings.DealBatchSize
-        Array.zeroCreate<int> settings.NumDealsPerIteration
+        let chunkSize = settings.GameBatchSize
+        Array.zeroCreate<int> settings.NumGamesPerIteration
             |> Array.chunkBySize chunkSize
             |> Array.indexed
             |> Array.collect (fun (i, chunk) ->
 
                 let samples =
-                    OpenDeal.playDeals
+                    Game.playGames
                         (Random())
                         true
                         chunk.Length

@@ -7,14 +7,14 @@ open Hearts.Model
 /// Hyperparameters.
 type Settings =
     {
-        /// Total number of deals to create when generating sample
+        /// Total number of games to create when generating sample
         /// data at the start of each iteration.
-        NumDealsPerIteration : int
+        NumGamesPerIteration : int
 
-        /// Number of deals to create per batch when generating
+        /// Number of games to create per batch when generating
         /// sample data at the start of each iteration. E.g. 8000
-        /// deals at 200 deals/batch is 40 batches.
-        DealBatchSize : int
+        /// games at 200 games/batch is 40 batches.
+        GameBatchSize : int
 
         /// Branch rate of the move tree when generating sample data
         /// at the start of each iteration. Larger values generate
@@ -80,8 +80,8 @@ module Settings =
 
         let settings =
             {
-                NumDealsPerIteration = 5000
-                DealBatchSize = 100
+                NumGamesPerIteration = 250
+                GameBatchSize = 25
                 SampleBranchRate = 0.17
                 SampleReservoirCapacity = 100_000_000
                 HiddenSize = Encoding.encodedLength * 2
@@ -102,11 +102,11 @@ module Settings =
             |> ignore
 
         writer.add_text(
-            $"settings/NumDealsPerIteration",
-            string settings.NumDealsPerIteration, 0)
+            $"settings/NumGamesPerIteration",
+            string settings.NumGamesPerIteration, 0)
         writer.add_text(
-            $"settings/DealBatchSize",
-            string settings.DealBatchSize, 0)
+            $"settings/GameBatchSize",
+            string settings.GameBatchSize, 0)
         writer.add_text(
             $"settings/SampleBranchRate",
             string settings.SampleBranchRate, 0)
