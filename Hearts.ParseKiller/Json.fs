@@ -39,6 +39,10 @@ type LogEntryLite =
         Tricks : Trick[]
     }
 
+    /// Initial state of game before exchange and playout.
+    member this.InitialGame =
+        Game.create this.InitialDeal this.GameScore   // to-do: move this into the entry itself
+
 /// JSON serializer extensions.
 [<AutoOpen>]
 module JsonExt =

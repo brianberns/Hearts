@@ -66,7 +66,7 @@ module Program =
 
         let stopwatch = Stopwatch.StartNew()
         let entries =
-            Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.zero.json"
+            Json.loadEntries @"C:\Users\brian\OneDrive\Desktop\KHearts.json"
                 |> Array.truncate nEntries
         printfn $"Loaded {entries.Length} deals in {stopwatch.Elapsed}"
 
@@ -79,13 +79,13 @@ module Program =
                                 entry.ExchangeOpt entry.InitialDeal
                             yield! getPlayoutActions entry.Tricks
                         |]
-                    let deals =
-                        (entry.InitialDeal, actions)
-                            ||> Array.scan (fun deal (actionType, card) ->
-                                OpenDeal.addAction actionType card deal)
-                    assert(deals.Length = actions.Length + 1)
-                    for deal, (actionType, card) in Seq.zip deals actions do   // ignore final deal state
-                        let infoSet = OpenDeal.currentInfoSet deal
+                    let games =
+                        (entry.InitialGame, actions)
+                            ||> Array.scan (fun game (actionType, card) ->
+                                Game.addAction actionType card game)
+                    assert(games.Length = actions.Length + 1)
+                    for game, (actionType, card) in Seq.zip games actions do   // ignore final deal state
+                        let infoSet = Game.currentInfoSet game
                         assert(infoSet.LegalActionType = actionType)
                         assert(infoSet.LegalActions |> Array.contains card)
                         if infoSet.LegalActions.Length > 1 then
