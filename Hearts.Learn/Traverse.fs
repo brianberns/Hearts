@@ -86,15 +86,13 @@ module Traverse =
     let traverse iter game (rng : Random) =
 
         /// Top-level loop.
-        let rec loop deal depth =
+        let rec loop game depth =
             match Game.tryGetPayoffs game with
                 | Some payoffs ->
-                    Node.complete   // deal is over
-                        payoffs
-                        None
-                        Array.empty
+                    Node.complete payoffs None Array.empty   // deal is over
                 | None ->
-                    loopNonTerminal deal depth
+                    assert(not (ClosedDeal.isComplete game.Deal.ClosedDeal))
+                    loopNonTerminal game depth
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal game depth =
