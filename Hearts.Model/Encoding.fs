@@ -75,79 +75,43 @@ module Encoding =
         assert(cards.Count <= Pass.numCards)
         encodeCards cards
 
-    /// Encodes cards played by in the given tricks as a
-    /// multi-hot vector for each player.
+    let private maxPriorPlays =
+        Card.numCards - Seat.numSeats - 1   // 52 - 4 - 1 = 47 plays prior to last card on second-to-last trick
+
+    /// Encodes the given prior plays as pairs of vectors:
+    /// * Player: one-hot vector in the number of seats
+    /// * Card played: one-hot vector in the deck size
     let encodePlays player tricks =
-        let seatPlayMap =
+        let seatPlays =
             tricks
                 |> Seq.collect Trick.plays
                 |> Seq.toArray
-                |> Array.groupBy fst
-                |> Array.map (fun (seat, group) ->
-                    let cards = Array.map snd group
-                    seat, cards)
-                |> Map
         [|
-            for seat in Seat.cycle player do
-                yield!
-                    Map.tryFind seat seatPlayMap
-                        |> Option.defaultValue Array.empty
-                        |> encodeCards
-        |]
+            for iCard = 0 to maxPriorPlays - 1 do
 
-    /// Encodes each card in the given current trick as
-    /// a one-hot vector in the deck size and concatenates
-    /// those vectors.
-    let encodeTrick trickOpt =
-        let cards =
-            trickOpt
-                |> Option.map (_.Cards >> Seq.toArray)
-                |> Option.defaultValue Array.empty
-        assert(cards.Length < Seat.numSeats)
-        [|
-            for iCard = 0 to Seat.numSeats - 2 do
-                yield!
-                    if iCard < cards.Length then
-                        Some cards[cards.Length - 1 - iCard]   // unreverse into chronological order
-                    else None
-                    |> Option.toArray
-                    |> encodeCards
-        |]
+                    // play has occurred?
+                if iCard < seatPlays.Length then
+                    let seat, card = seatPlays[iCard]
 
-    /// Encodes the given voids as a multi-hot vector in the
-    /// number of suits times the number of other seats.
-    let encodeVoids player voids =
-        let flags =
-            Array.zeroCreate ((Seat.numSeats - 1) * Suit.numSuits)
-        for seat, suit in voids do
-            if seat <> player then
-                let suitOffset = (Seat.numSeats - 1) * int suit
-                let seatOffset =
-                    ((int seat - int player - 1) + Seat.numSeats)
-                        % Seat.numSeats
-                flags[suitOffset + seatOffset] <- true   // use mutation for speed
-        flags
+                        // seat encoding
+                    let iSeat = Seat.getIndex seat player
+                    yield! Array.init Seat.numSeats (fun i -> i = iSeat)
 
-    /// Encodes the given score as a "thermometer" for each player.
-    let encodeScore player score =
-        assert(score.Points.Length = Seat.numSeats)
-        [|
-            for seat in Seat.cycle player do
-                yield! Array.init
-                    ClosedDeal.numPointsPerDeal
-                    (fun i -> i < score[seat])
+                        // card encoding
+                    yield! encodeCards [| card |]
+
+                else
+                    yield! Array.zeroCreate Seat.numSeats
+                    yield! Array.zeroCreate Card.numCards
         |]
 
     /// Total encoded length of an info set.
     let encodedLength =
-        Card.numCards                                         // current player's hand
-            + ExchangeDirection.numDirections                 // exchange direction
-            + Card.numCards                                   // outgoing pass
-            + Card.numCards                                   // incoming pass
-            + Seat.numSeats * Card.numCards                   // cards previously played by each player
-            + (Seat.numSeats - 1) * Card.numCards             // current trick
-            + (Seat.numSeats - 1) * Suit.numSuits             // voids
-            + (Seat.numSeats * ClosedDeal.numPointsPerDeal)   // deal score
+        Card.numCards                                           // current player's hand
+            + ExchangeDirection.numDirections                   // exchange direction
+            + Card.numCards                                     // outgoing pass
+            + Card.numCards                                     // incoming pass
+            + maxPriorPlays * (Seat.numSeats + Card.numCards)   // each prior player and card
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
@@ -158,14 +122,9 @@ module Encoding =
                     infoSet.Deal.ExchangeDirection
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
                 yield! encodePass infoSet.IncomingPassOpt   // incoming pass
-                yield! encodePlays                          // cards previously played by each player
-                    infoSet.Player infoSet.Deal.CompletedTricks
-                yield! encodeTrick                          // current trick
-                    infoSet.Deal.CurrentTrickOpt
-                yield! encodeVoids                          // voids
-                    infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                          // deal score
-                    infoSet.Player infoSet.Deal.Score
+                yield! encodePlays                          // each prior player and card
+                    infoSet.Player
+                    (ClosedDeal.tricks infoSet.Deal)
             |]
         assert(encoded.Length = encodedLength)
         encoded
