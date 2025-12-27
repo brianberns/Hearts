@@ -26,11 +26,6 @@ type Encoding = Vector<float32>
 
 module Encoding =
 
-    /// Converts the given encoding to float32.
-    let toFloat32 (encoding : Encoding) =
-        encoding.ToArray()
-            |> Array.map float32
-
     /// Encodes the given (card, value) pairs as a
     /// vector in the deck size.
     let inline encodeCardValues pairs =

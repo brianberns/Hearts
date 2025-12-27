@@ -92,7 +92,7 @@ module AdvantageModel =
                     let inputs, targets, weights =
                         samples
                             |> Array.map (fun sample ->
-                                Encoding.toFloat32 sample.Encoding,
+                                sample.Encoding,
                                 sample.Regrets,
                                 Seq.singleton sample.Weight)
                             |> Array.unzip3
