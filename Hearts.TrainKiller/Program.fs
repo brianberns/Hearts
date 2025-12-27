@@ -5,6 +5,8 @@ open System.Diagnostics
 open System.IO
 open System.Text
 
+open MathNet.Numerics.LinearAlgebra
+
 open Hearts
 open Hearts.Learn
 open Hearts.Model
@@ -110,12 +112,13 @@ module Program =
             trainInfoSetPairs
                 |> Array.Parallel.map (fun (infoSet, card) ->
                     let input = Encoding.encode infoSet
-                    let output = Encoding.encodeCards [card] |> Encoding
+                    let output =
+                        Encoding.encodeCards [card]
+                            |> Array.map (fun flag -> if flag then 1f else 0f)
+                            |> SparseVector.ofArray
                     {
                         Encoding = input
-                        Regrets =
-                            Encoding.toFloat32 output
-                                |> MathNet.Numerics.LinearAlgebra.DenseVector.ofArray
+                        Regrets = output
                         Weight = 1.0f
                     })
         printfn "Converted to samples"

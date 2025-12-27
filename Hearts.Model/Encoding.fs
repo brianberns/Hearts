@@ -1,7 +1,6 @@
 ﻿namespace Hearts.Model
 
-open System
-open System.Collections
+open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
 open Hearts
@@ -23,16 +22,14 @@ module Card =
         index
 
 /// Encoded value for input to a model.
-type Encoding = BitArray
+type Encoding = Vector<float32>
 
 module Encoding =
 
-    /// Converts encoded bits to float32.
-    let toFloat32 (bits : Encoding) =
-        [|
-            for i = 0 to bits.Length - 1 do
-                if bits[i] then 1f else 0f
-        |]
+    /// Converts the given encoding to float32.
+    let toFloat32 (encoding : Encoding) =
+        encoding.ToArray()
+            |> Array.map float32
 
     /// Encodes the given (card, value) pairs as a
     /// vector in the deck size.
@@ -115,8 +112,8 @@ module Encoding =
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
-        let encoded =
-            Encoding [|
+        let flags =
+            [|
                 yield! encodeCards infoSet.Hand             // current player's hand
                 yield! encodeExchangeDirection              // exchange direction
                     infoSet.Deal.ExchangeDirection
@@ -126,5 +123,7 @@ module Encoding =
                     infoSet.Player
                     (ClosedDeal.tricks infoSet.Deal)
             |]
-        assert(encoded.Length = encodedLength)
-        encoded
+        assert(flags.Length = encodedLength)
+        flags
+            |> Array.map (fun flag -> if flag then 1f else 0f)
+            |> SparseVector.ofArray

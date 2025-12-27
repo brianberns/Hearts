@@ -1,7 +1,8 @@
 ﻿namespace Hearts.Cfr
 
 open System
-open System.Collections
+
+open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
 open Hearts
@@ -85,8 +86,8 @@ module Encoding =
         let unseen =
             infoSet.Deal.UnplayedCards - infoSet.Hand
         let trickOpt = infoSet.Deal.CurrentTrickOpt
-        let encoded =
-            BitArray [|
+        let flags =
+            [|
                 yield! Encoding.encodeCards infoSet.Hand   // current player's hand
                 yield! Encoding.encodeCards unseen         // unplayed cards not in current player's hand
                 yield! encodeTrick trickOpt                // current trick
@@ -95,8 +96,10 @@ module Encoding =
                 yield! encodeScore                         // score
                     infoSet.Player infoSet.Deal.Score
             |]
-        assert(encoded.Length = encodedLength)
-        encoded
+        assert(flags.Length = encodedLength)
+        flags
+            |> Array.map (fun flag -> if flag then 1f else 0f)
+            |> DenseVector.ofArray
 
     /// "Latin Extended-A" block is printable.
     let private charOffset = 0x100
@@ -110,9 +113,11 @@ module Encoding =
 
     /// Converts the given encoding to a string.
     let toString (encoding : Encoding) =
-        assert(encoding.Length = encodedLength)
+        assert(encoding.Count = encodedLength)
         let bytes =
-            let nBytes = (encoding.Length + 7) >>> 3
-            Array.zeroCreate<byte> nBytes
-        encoding.CopyTo(bytes, 0)
+            encoding.ToArray()
+                |> Array.map (function
+                    | 0f -> 0uy
+                    | 1f -> 1uy
+                    | _ -> failwith "Unexpected")
         compact bytes
