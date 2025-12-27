@@ -40,38 +40,34 @@ module AdvantageSample =
 module AdvantageModel =
 
     /// A chunk of training data that fits on the GPU.
-    type private SubBatch =
-        {
-            /// Encoded input rows.
-            Inputs : float32 array2d
-
-            /// Target result rows.
-            Targets : float32 array2d
-
-            /// Weight of each row.
-            Weights : float32 array2d
-        }
+    type private SubBatch = AdvantageSample[]
 
     module private SubBatch =
 
-        /// Creates a sub-batch.
-        let create inputs targets weights =
-            let subbatch =
-                {
-                    Inputs = array2D inputs
-                    Targets = array2D targets
-                    Weights = array2D weights
-                }
+        /// Converts a sub-batch into 2D arrays.
+        let to2dArrays (subbatch : SubBatch) =
+            let inputs =
+                subbatch
+                    |> Array.map _.Encoding
+                    |> array2D
+            let targets =
+                subbatch
+                    |> Array.map _.Regrets
+                    |> array2D
+            let weights =
+                subbatch
+                    |> Array.map (_.Weight >> Array.singleton)
+                    |> array2D
             assert(
                 [
-                    subbatch.Inputs.GetLength(0)
-                    subbatch.Targets.GetLength(0)
-                    subbatch.Weights.GetLength(0)
+                    inputs.GetLength(0)
+                    targets.GetLength(0)
+                    weights.GetLength(0)
                 ]
                     |> Seq.distinct
                     |> Seq.length = 1)
-            assert(subbatch.Weights.GetLength(1) = 1)
-            subbatch
+            assert(weights.GetLength(1) = 1)
+            inputs, targets, weights
 
     /// A logical batch of training data, although it
     /// might be too large to fit on the GPU.
@@ -87,16 +83,6 @@ module AdvantageModel =
             |> Array.chunkBySize (   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
                 settings.TrainingBatchSize
                     / settings.TrainingSubBatchSize)
-            |> Array.map (
-                Array.map (fun samples ->
-                    let inputs, targets, weights =
-                        samples
-                            |> Array.map (fun sample ->
-                                sample.Encoding,
-                                sample.Regrets,
-                                Seq.singleton sample.Weight)
-                            |> Array.unzip3
-                    SubBatch.create inputs targets weights))
 
     /// Trains the given model on the given sub-batch of
     /// data.
@@ -104,17 +90,19 @@ module AdvantageModel =
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
             // move to GPU
+        let _inputs, _targets, _weights =
+            SubBatch.to2dArrays subbatch
         use inputs =
             tensor(
-                subbatch.Inputs,
+                _inputs,
                 device = settings.Device)
         use targets =
             tensor(
-                subbatch.Targets,
+                _targets,
                 device = settings.Device)
         use weights =
             tensor(
-                subbatch.Weights,
+                _weights,
                 device = settings.Device)
 
             // forward pass
@@ -129,7 +117,7 @@ module AdvantageModel =
 
                 // scale loss to batch size
             let scale =
-                float32 (subbatch.Inputs.GetLength(0))
+                float32 (_inputs.GetLength(0))
                     / float32 settings.TrainingBatchSize
             rawLoss * scale
 
