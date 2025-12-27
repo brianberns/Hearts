@@ -72,31 +72,26 @@ module Encoding =
     let private maxPriorPlays =
         Card.numCards - Seat.numSeats - 1   // 52 - 4 - 1 = 47 plays prior to last card on second-to-last trick
 
+    /// Encodes the given seat as a one-hot vector relative
+    /// to the given player's seat.
+    let encodeSeat player seat =
+        let iSeat = Seat.getIndex seat player
+        Array.init Seat.numSeats (fun i -> i = iSeat)
+
     /// Encodes the given prior plays as pairs of vectors:
     /// * Player: one-hot vector in the number of seats
     /// * Card played: one-hot vector in the deck size
-    let encodePlays player tricks =
+    let private encodePlays player tricks =
         let seatPlays =
             tricks
                 |> Seq.collect Trick.plays
                 |> Seq.toArray
         [|
-            for iCard = 0 to maxPriorPlays - 1 do
-
-                    // play has occurred?
-                if iCard < seatPlays.Length then
-                    let seat, card = seatPlays[iCard]
-
-                        // seat encoding
-                    let iSeat = Seat.getIndex seat player
-                    yield! Array.init Seat.numSeats (fun i -> i = iSeat)
-
-                        // card encoding
-                    yield! encodeCards [| card |]
-
-                else
-                    yield! Array.zeroCreate Seat.numSeats
-                    yield! Array.zeroCreate Card.numCards
+            for seat, card in seatPlays do
+                yield! encodeSeat player seat
+                yield! encodeCards [| card |]
+            for _ = seatPlays.Length to maxPriorPlays - 1 do
+                yield! Array.zeroCreate (Seat.numSeats + Card.numCards)
         |]
 
     /// Total encoded length of an info set.
@@ -122,5 +117,5 @@ module Encoding =
             |]
         assert(flags.Length = encodedLength)
         flags
-            |> Array.map (fun flag -> if flag then 1f else 0f)
+            |> Array.map (function true -> 1f | false -> 0f)
             |> SparseVector.ofArray
