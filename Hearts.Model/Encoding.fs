@@ -67,6 +67,8 @@ module Encoding =
         assert(cards.Count <= Pass.numCards)
         encodeCards cards
 
+    /// Maximum number of prior plays to encode. Subsequent
+    /// plays are all forced.
     let private maxPriorPlays =
         Card.numCards - Seat.numSeats - 1   // 52 - 4 - 1 = 47 plays prior to last card on second-to-last trick
 
