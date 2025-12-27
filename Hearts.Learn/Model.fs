@@ -44,20 +44,29 @@ module AdvantageModel =
 
     module private SubBatch =
 
+        let private toInputs subbatch =
+            subbatch
+                |> Array.map _.Encoding
+                |> array2D
+
+        let private toTargets subbatch =
+            subbatch
+                |> Array.map _.Regrets
+                |> array2D
+
+        let private toWeights subbatch =
+            subbatch
+                |> Array.map (_.Weight >> Array.singleton)
+                |> array2D
+
         /// Converts a sub-batch into 2D arrays.
         let to2dArrays (subbatch : SubBatch) =
-            let inputs =
-                subbatch
-                    |> Array.map _.Encoding
-                    |> array2D
-            let targets =
-                subbatch
-                    |> Array.map _.Regrets
-                    |> array2D
-            let weights =
-                subbatch
-                    |> Array.map (_.Weight >> Array.singleton)
-                    |> array2D
+            let arrays =
+                Array.Parallel.map (fun f -> f subbatch)
+                    [| toInputs; toTargets; toWeights |]
+            let inputs = arrays[0]
+            let targets = arrays[1]
+            let weights = arrays[2]
             assert(
                 [
                     inputs.GetLength(0)
