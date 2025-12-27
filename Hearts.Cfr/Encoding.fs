@@ -98,7 +98,7 @@ module Encoding =
             |]
         assert(flags.Length = encodedLength)
         flags
-            |> Array.map (fun flag -> if flag then 1f else 0f)
+            |> Array.map (function true -> 1f | false -> 0f)
             |> DenseVector.ofArray
 
     /// "Latin Extended-A" block is printable.

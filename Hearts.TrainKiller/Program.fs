@@ -114,7 +114,7 @@ module Program =
                     let input = Encoding.encode infoSet
                     let output =
                         Encoding.encodeCards [card]
-                            |> Array.map (fun flag -> if flag then 1f else 0f)
+                            |> Array.map (function true -> 1f | false -> 0f)
                             |> SparseVector.ofArray
                     {
                         Encoding = input
