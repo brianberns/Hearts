@@ -86,6 +86,7 @@ module Encoding =
             tricks
                 |> Seq.collect Trick.plays
                 |> Seq.toArray
+        assert(seatPlays.Length <= maxPriorPlays)
         [|
             for seat, card in seatPlays do
                 yield! encodeSeat player seat
@@ -108,12 +109,12 @@ module Encoding =
             [|
                 yield! encodeCards infoSet.Hand             // current player's hand
                 yield! encodeExchangeDirection              // exchange direction
-                    infoSet.Deal.ExchangeDirection
+                        infoSet.Deal.ExchangeDirection
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
                 yield! encodePass infoSet.IncomingPassOpt   // incoming pass
                 yield! encodePlays                          // each prior player and card
-                    infoSet.Player
-                    (ClosedDeal.tricks infoSet.Deal)
+                        infoSet.Player
+                        (ClosedDeal.tricks infoSet.Deal)
             |]
         assert(flags.Length = encodedLength)
         flags

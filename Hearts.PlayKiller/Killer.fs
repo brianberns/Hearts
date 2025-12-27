@@ -194,7 +194,9 @@ module Killer =
                                     outPassOpt
                                     inPassOpt
                                     deal.ClosedDeal
-                            player.Act infoSet
+                            if infoSet.LegalActions.Length = 1 then
+                                Array.exactlyOne infoSet.LegalActions
+                            else player.Act infoSet
                         Protocol.writePlay card
                         card
 
