@@ -1,7 +1,6 @@
 ﻿namespace Hearts.Model
 
-open System
-open System.Collections
+open MathNet.Numerics.LinearAlgebra
 
 open PlayingCards
 open Hearts
@@ -23,16 +22,9 @@ module Card =
         index
 
 /// Encoded value for input to a model.
-type Encoding = BitArray
+type Encoding = Vector<float32>
 
 module Encoding =
-
-    /// Converts encoded bits to float32.
-    let toFloat32 (bits : Encoding) =
-        [|
-            for i = 0 to bits.Length - 1 do
-                if bits[i] then 1f else 0f
-        |]
 
     /// Encodes the given (card, value) pairs as a
     /// vector in the deck size.
@@ -128,14 +120,13 @@ module Encoding =
                 flags[suitOffset + seatOffset] <- true   // use mutation for speed
         flags
 
-    /// Encodes the given score as a "thermometer" for each player.
+    /// Encodes the given score as a multi-hot vector in the
+    /// number of seats.
     let encodeScore player score =
         assert(score.Points.Length = Seat.numSeats)
         [|
             for seat in Seat.cycle player do
-                yield! Array.init
-                    ClosedDeal.numPointsPerDeal
-                    (fun i -> i < score[seat])
+                score[seat] > 0
         |]
 
     /// Total encoded length of an info set.
@@ -147,15 +138,15 @@ module Encoding =
             + Seat.numSeats * Card.numCards                   // cards previously played by each player
             + (Seat.numSeats - 1) * Card.numCards             // current trick
             + (Seat.numSeats - 1) * Suit.numSuits             // voids
-            + (Seat.numSeats * ClosedDeal.numPointsPerDeal)   // deal score
+            + Seat.numSeats                                   // deal score
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
-        let encoded =
-            Encoding [|
+        let flags =
+            [|
                 yield! encodeCards infoSet.Hand             // current player's hand
                 yield! encodeExchangeDirection              // exchange direction
-                    infoSet.Deal.ExchangeDirection
+                        infoSet.Deal.ExchangeDirection
                 yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
                 yield! encodePass infoSet.IncomingPassOpt   // incoming pass
                 yield! encodePlays                          // cards previously played by each player
@@ -167,5 +158,7 @@ module Encoding =
                 yield! encodeScore                          // deal score
                     infoSet.Player infoSet.Deal.Score
             |]
-        assert(encoded.Length = encodedLength)
-        encoded
+        assert(flags.Length = encodedLength)
+        flags
+            |> Array.map (function true -> 1f | false -> 0f)
+            |> SparseVector.ofArray

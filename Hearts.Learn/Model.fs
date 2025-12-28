@@ -40,38 +40,46 @@ module AdvantageSample =
 module AdvantageModel =
 
     /// A chunk of training data that fits on the GPU.
-    type private SubBatch =
-        {
-            /// Encoded input rows.
-            Inputs : float32 array2d
-
-            /// Target result rows.
-            Targets : float32 array2d
-
-            /// Weight of each row.
-            Weights : float32 array2d
-        }
+    type private SubBatch = AdvantageSample[]
 
     module private SubBatch =
 
-        /// Creates a sub-batch.
-        let create inputs targets weights =
-            let subbatch =
-                {
-                    Inputs = array2D inputs
-                    Targets = array2D targets
-                    Weights = array2D weights
-                }
+        /// Extracts inputs from a sub-batch.
+        let private toInputs subbatch =
+            subbatch
+                |> Array.map _.Encoding
+                |> array2D
+
+        /// Extracts targets from a sub-batch.
+        let private toTargets subbatch =
+            subbatch
+                |> Array.map _.Regrets
+                |> array2D
+
+        /// Extracts weights from a sub-batch.
+        let private toWeights subbatch =
+            subbatch
+                |> Array.map (_.Weight >> Array.singleton)
+                |> array2D
+
+        /// Extracts 2D arrays from a sub-batch.
+        let to2dArrays (subbatch : SubBatch) =
+            let arrays =
+                Array.Parallel.map (fun f -> f subbatch)
+                    [| toInputs; toTargets; toWeights |]
+            let inputs = arrays[0]
+            let targets = arrays[1]
+            let weights = arrays[2]
             assert(
                 [
-                    subbatch.Inputs.GetLength(0)
-                    subbatch.Targets.GetLength(0)
-                    subbatch.Weights.GetLength(0)
+                    inputs.GetLength(0)
+                    targets.GetLength(0)
+                    weights.GetLength(0)
                 ]
                     |> Seq.distinct
                     |> Seq.length = 1)
-            assert(subbatch.Weights.GetLength(1) = 1)
-            subbatch
+            assert(weights.GetLength(1) = 1)
+            inputs, targets, weights
 
     /// A logical batch of training data, although it
     /// might be too large to fit on the GPU.
@@ -87,16 +95,6 @@ module AdvantageModel =
             |> Array.chunkBySize (   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
                 settings.TrainingBatchSize
                     / settings.TrainingSubBatchSize)
-            |> Array.map (
-                Array.map (fun samples ->
-                    let inputs, targets, weights =
-                        samples
-                            |> Array.map (fun sample ->
-                                Encoding.toFloat32 sample.Encoding,
-                                sample.Regrets,
-                                Seq.singleton sample.Weight)
-                            |> Array.unzip3
-                    SubBatch.create inputs targets weights))
 
     /// Trains the given model on the given sub-batch of
     /// data.
@@ -104,18 +102,11 @@ module AdvantageModel =
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
             // move to GPU
-        use inputs =
-            tensor(
-                subbatch.Inputs,
-                device = settings.Device)
-        use targets =
-            tensor(
-                subbatch.Targets,
-                device = settings.Device)
-        use weights =
-            tensor(
-                subbatch.Weights,
-                device = settings.Device)
+        let inputs2d, targets2d, weights2d =
+            SubBatch.to2dArrays subbatch
+        use inputs = tensor(inputs2d, device = settings.Device)
+        use targets = tensor(targets2d, device = settings.Device)
+        use weights = tensor(weights2d, device = settings.Device)
 
             // forward pass
         use loss =
@@ -129,7 +120,7 @@ module AdvantageModel =
 
                 // scale loss to batch size
             let scale =
-                float32 (subbatch.Inputs.GetLength(0))
+                float32 (inputs2d.GetLength(0))
                     / float32 settings.TrainingBatchSize
             rawLoss * scale
 
