@@ -119,7 +119,6 @@ module Program =
                     {
                         Encoding = input
                         Regrets = output
-                        Weight = 1.0f
                     })
         printfn "Converted to samples"
 

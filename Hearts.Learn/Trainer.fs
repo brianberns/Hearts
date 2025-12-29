@@ -12,9 +12,6 @@ type AdvantageState =
     {
         /// Current model.
         ModelOpt : Option<AdvantageModel>
-
-        /// Reservoir of training data.
-        Reservoir : Reservoir<AdvantageSample>
     }
 
     interface IDisposable with
@@ -28,12 +25,7 @@ module AdvantageState =
 
     /// Creates an initial advantage state.
     let create rng =
-        {
-            ModelOpt = None
-            Reservoir =
-                Reservoir.create rng
-                    settings.SampleReservoirCapacity
-        }
+        { ModelOpt = None }
 
 module Trainer =
 
@@ -70,13 +62,8 @@ module Trainer =
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
-    let private trainAdvantageModel iter samples state =
+    let private trainAdvantageModel iter (samples : _[]) state =
 
-            // cache new training data
-        let resv =
-            Reservoir.addMany samples state.Reservoir
-
-            // train new model
         let stopwatch = Stopwatch.StartNew()
         let model =
             new AdvantageModel(
@@ -84,16 +71,18 @@ module Trainer =
                 settings.NumHiddenLayers,
                 settings.DropoutRate,
                 settings.Device)
-        AdvantageModel.train iter resv.Items model
+        AdvantageModel.train iter samples model
         stopwatch.Stop()
-        if settings.Verbose then
-            printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
 
-        {
-            Reservoir = resv
-            ModelOpt = Some model
-        }
+        if settings.Verbose then
+            printfn $"Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
+        settings.Writer.add_scalar(
+            $"advantage samples",
+            float32 samples.Length,
+            iter)
+
+        { ModelOpt = Some model }
 
     /// Trains a new model using the given model.
     let private updateModel iter state =
@@ -115,11 +104,6 @@ module Trainer =
                     $"AdvantageModel%03d{iter}.pt")
                         |> model.save
                         |> ignore)
-        settings.Writer.add_scalar(
-            $"advantage reservoir",
-            float32 state.Reservoir.Items.Count,
-            iter)
-
         state
 
     /// Evaluates the given model by playing it against a

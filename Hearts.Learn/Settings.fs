@@ -22,9 +22,6 @@ type Settings =
         /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
         SampleBranchRate : float
 
-        /// Maximum number of samples to keep in the reservoir.
-        SampleReservoirCapacity : int
-
         /// Input and output size of a hidden layer within the neural
         /// network.
         HiddenSize : int
@@ -83,7 +80,6 @@ module Settings =
                 NumDealsPerIteration = 5000
                 DealBatchSize = 100
                 SampleBranchRate = 0.2
-                SampleReservoirCapacity = 100_000_000
                 HiddenSize = Encoding.encodedLength * 2
                 NumHiddenLayers = 9
                 NumTrainingEpochs = 1500
@@ -110,9 +106,6 @@ module Settings =
         writer.add_text(
             $"settings/SampleBranchRate",
             string settings.SampleBranchRate, 0)
-        writer.add_text(
-            $"settings/SampleReservoirCapacity",
-            string settings.SampleReservoirCapacity, 0)
         writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)

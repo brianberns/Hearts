@@ -147,7 +147,7 @@ module Traverse =
                         let idx = int infoSet.Player
                         (actionUtilities.Row(idx) - utility[idx])
                             |> Strategy.toWide legalActions
-                    AdvantageSample.create infoSet wideRegrets iter
+                    AdvantageSample.create infoSet wideRegrets
                 Node.complete
                     (utility.ToArray())
                     (Some sample)

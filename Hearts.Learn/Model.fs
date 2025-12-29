@@ -18,23 +18,16 @@ type AdvantageSample =
 
         /// Observed regrets.
         Regrets : Vector<float32>
-
-        /// Weight of this sample, as determined by 1-based
-        /// iteration number. Later iterations have more weight.
-        Weight : float32
     }
 
 module AdvantageSample =
 
     /// Creates an advantage sample.
-    let create infoSet regrets iteration =
+    let create infoSet regrets =
         assert(Vector.length regrets = Model.outputSize)
-        assert(iteration >= 1)
-        assert(iteration <= settings.NumIterations)
         {
             Encoding = Encoding.encode infoSet
             Regrets = regrets
-            Weight = float32 iteration |> sqrt
         }
 
 module AdvantageModel =
@@ -56,30 +49,21 @@ module AdvantageModel =
                 |> Array.map _.Regrets
                 |> array2D
 
-        /// Extracts weights from a sub-batch.
-        let private toWeights subbatch =
-            subbatch
-                |> Array.map (_.Weight >> Array.singleton)
-                |> array2D
-
         /// Extracts 2D arrays from a sub-batch.
         let to2dArrays (subbatch : SubBatch) =
             let arrays =
                 Array.Parallel.map (fun f -> f subbatch)
-                    [| toInputs; toTargets; toWeights |]
+                    [| toInputs; toTargets |]
             let inputs = arrays[0]
             let targets = arrays[1]
-            let weights = arrays[2]
             assert(
                 [
                     inputs.GetLength(0)
                     targets.GetLength(0)
-                    weights.GetLength(0)
                 ]
                     |> Seq.distinct
                     |> Seq.length = 1)
-            assert(weights.GetLength(1) = 1)
-            inputs, targets, weights
+            inputs, targets
 
     /// A logical batch of training data, although it
     /// might be too large to fit on the GPU.
@@ -102,11 +86,9 @@ module AdvantageModel =
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
             // move to GPU
-        let inputs2d, targets2d, weights2d =
-            SubBatch.to2dArrays subbatch
+        let inputs2d, targets2d = SubBatch.to2dArrays subbatch
         use inputs = tensor(inputs2d, device = settings.Device)
         use targets = tensor(targets2d, device = settings.Device)
-        use weights = tensor(weights2d, device = settings.Device)
 
             // forward pass
         use loss =
@@ -114,9 +96,7 @@ module AdvantageModel =
                 // compute loss for this sub-batch
             use rawLoss =
                 use outputs = inputs --> model
-                use outputs' = weights * outputs
-                use targets' = weights * targets
-                criterion.forward(outputs', targets')
+                criterion.forward(outputs, targets)
 
                 // scale loss to batch size
             let scale =
