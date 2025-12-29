@@ -60,8 +60,7 @@ module Trainer =
 
                 samples)
 
-    /// Adds the given samples to the given reservoir and then
-    /// uses the reservoir to train a new model.
+    /// Uses the given samples to train a new model.
     let private trainAdvantageModel iter (samples : _[]) state =
 
         let stopwatch = Stopwatch.StartNew()
