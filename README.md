@@ -28,3 +28,5 @@ Because Hearts ends when one of the players reaches 100 points, it can sometimes
 
 * Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players share the same model.
 * Because misdirection/bluffing is not a major part of Hearts, there is no need to train a separate "strategy" model from the advantage models at the end of the run. Instead, the advantage model converges on a strategy after a few iterations.
+* For the same reason, there is no need to retain a reservoir of samples from previous iterations.
+
