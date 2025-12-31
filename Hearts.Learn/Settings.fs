@@ -77,12 +77,12 @@ module Settings =
 
         let settings =
             {
-                NumDealsPerIteration = 5000
+                NumDealsPerIteration = 20_000
                 DealBatchSize = 100
                 SampleBranchRate = 0.2
                 HiddenSize = Encoding.encodedLength * 2
                 NumHiddenLayers = 9
-                NumTrainingEpochs = 1500
+                NumTrainingEpochs = 500
                 TrainingBatchSize = 100_000
                 TrainingSubBatchSize = 25_000
                 DropoutRate = 0.3
