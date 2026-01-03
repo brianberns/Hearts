@@ -80,13 +80,13 @@ module Settings =
 
         let settings =
             {
-                NumDealsPerIteration = 5000
-                DealBatchSize = 100
+                NumDealsPerIteration = 30_000
+                DealBatchSize = 200
                 SampleBranchRate = 0.2
-                SampleReservoirCapacity = 100_000_000
+                SampleReservoirCapacity = 40_000_000
                 HiddenSize = Encoding.encodedLength * 2
                 NumHiddenLayers = 9
-                NumTrainingEpochs = 1500
+                NumTrainingEpochs = 400
                 TrainingBatchSize = 100_000
                 TrainingSubBatchSize = 25_000
                 DropoutRate = 0.3
