@@ -3,12 +3,11 @@
 Install .NET:
 
     > sudo add-apt-repository ppa:dotnet/backports
-    > sudo apt-get update && sudo apt-get install -y dotnet-sdk-9.0
+    > sudo apt-get update && sudo apt-get install -y dotnet-sdk-10.0
 
 Clone repositories:
 
-    > git clone https://github.com/brianberns/TricksterHeartsBot.git
-    > git clone https://github.com/brianberns/Hearts.git
+    > git clone --recurse-submodules https://github.com/brianberns/Hearts.git
 
 Build and run:
 
