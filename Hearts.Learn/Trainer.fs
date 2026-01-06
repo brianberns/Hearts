@@ -131,7 +131,6 @@ module Trainer =
     /// Evaluates the given model by playing it against a
     /// standard.
     let evaluate settings iter (model : AdvantageModel) =
-
         let score, payoff =
             Tournament.run
                 (Random(0))       // use repeatable test set, not seen during training

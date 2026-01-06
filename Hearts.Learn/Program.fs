@@ -16,7 +16,7 @@ module Program =
         Trainer.train settings |> ignore
 
     let search () =
-        for learningRate in [ 0.0001; 0.0003; 0.001 ] do
+        for learningRate in [ 0.001; 0.003; 0.01 ] do
             for dropoutRate in [ 0.1; 0.25; 0.4 ] do
                 for numHiddenLayers in [ 2; 5; 8 ] do
                     for hiddenSize in [ 1000; 1500; 2000 ] do
@@ -27,11 +27,12 @@ module Program =
                                 SampleBranchRate = 0.15
                                 SampleReservoirCapacity = 400_000
                                 NumIterations = 4
-                                NumTrainingEpochs = 750
+                                NumTrainingEpochs = 500
                                 NumHiddenLayers = numHiddenLayers
                                 HiddenSize = hiddenSize
                                 DropoutRate = dropoutRate
                                 LearningRate = learningRate }
+                        Settings.write settings
                         if settings.Verbose then
                             printfn ""
                             printfn $"Server garbage collection: {GCSettings.IsServerGC}"
