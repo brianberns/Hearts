@@ -30,7 +30,6 @@ module AdvantageSample =
     let create infoSet regrets iteration =
         assert(Vector.length regrets = Model.outputSize)
         assert(iteration >= 1)
-        assert(iteration <= settings.NumIterations)
         {
             Encoding = Encoding.encode infoSet
             Regrets = regrets
@@ -86,15 +85,12 @@ module AdvantageModel =
     type private Batch = SubBatch[]
 
     /// Breaks the given samples into batches.
-    let private createBatches samples : Batch[] =
+    let private createBatches batchSize subBatchSize samples : Batch[] =
         samples
             |> Seq.toArray
             |> Array.randomShuffle
-            |> Array.chunkBySize     // e.g. sub-batches of 10,000 rows each
-                settings.TrainingSubBatchSize
-            |> Array.chunkBySize (   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
-                settings.TrainingBatchSize
-                    / settings.TrainingSubBatchSize)
+            |> Array.chunkBySize subBatchSize                 // e.g. sub-batches of 10,000 rows each
+            |> Array.chunkBySize (batchSize / subBatchSize)   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
 
     /// Trains the given model on the given sub-batch of
     /// data.
@@ -154,7 +150,11 @@ module AdvantageModel =
     let train iter samples (model : AdvantageModel) =
 
             // prepare training data
-        let batches = createBatches samples
+        let batches =
+            createBatches
+                settings.TrainingBatchSize
+                settings.TrainingSubBatchSize
+                samples
 
             // train model
         use optimizer =
