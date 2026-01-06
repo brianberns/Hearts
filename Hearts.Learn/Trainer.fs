@@ -58,7 +58,9 @@ module Trainer =
                         (fun deal ->
                             let rng = Random()   // each thread has its own RNG
                             Traverse.traverse iter deal rng)
-                        |> Inference.complete modelOpt
+                        |> Inference.complete
+                            settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
+                            modelOpt
                 GC.Collect()   // clean up continuations
 
                 settings.Writer.add_scalar(

@@ -15,13 +15,13 @@ module Array =
 module Inference =
 
     /// Gets strategies for the given batch of info sets.
-    let private getStrategies infoSets modelOpt =
+    let private getStrategies chunkSize infoSets modelOpt =
         match modelOpt with
 
                 // batch inference
             | Some (model : AdvantageModel) ->
                 infoSets
-                    |> Array.chunkBySize settings.TrainingSubBatchSize
+                    |> Array.chunkBySize chunkSize
                     |> Array.collect (
                         Strategy.getFromAdvantage model)
 
@@ -45,7 +45,7 @@ module Inference =
         result
 
     /// Replaces all GetStragey nodes in a level.
-    let private replaceGetStrategy modelOpt nodeArrays =
+    let private replaceGetStrategy chunkSize modelOpt nodeArrays =
 
             // create non-GS nodes from GS nodes in one batch
         let batch =
@@ -58,7 +58,7 @@ module Inference =
                         | _ -> None)
                     |> Seq.toArray
                     |> Array.unzip
-            (getStrategies infoSets modelOpt, conts)
+            (getStrategies chunkSize infoSets modelOpt, conts)
                 ||> Array.Parallel.map2 (|>)
         assert(batch |> Seq.forall (_.IsGetStrategy >> not))
 
@@ -84,7 +84,7 @@ module Inference =
         |]
 
     /// Recursively drives the given nodes to completion.
-    let complete modelOpt (nodes : Node[]) =
+    let complete chunkSize modelOpt (nodes : Node[]) =
 
         let rec loop depth nodeArrays =
             if Array.isEmpty nodeArrays then
@@ -92,7 +92,7 @@ module Inference =
             else
                     // replace initial nodes
                 let nonInitialArrays =
-                    replaceGetStrategy modelOpt nodeArrays
+                    replaceGetStrategy chunkSize modelOpt nodeArrays
 
                     // drive children of in-progress nodes to completion
                 let comps =
