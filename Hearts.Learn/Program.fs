@@ -23,11 +23,11 @@ module Program =
                         let settings =
                             let writer = TensorBoard.createWriter ()
                             { Settings.create writer with
-                                NumDealsPerIteration = 2000
-                                SampleBranchRate = 0.15
-                                SampleReservoirCapacity = 500_000
+                                NumDealsPerIteration = 4000
+                                SampleBranchRate = 0.17
+                                SampleReservoirCapacity = 1_000_000
                                 NumIterations = 4
-                                NumTrainingEpochs = 750
+                                NumTrainingEpochs = 500
                                 NumHiddenLayers = numHiddenLayers
                                 HiddenSize = hiddenSize
                                 DropoutRate = dropoutRate
