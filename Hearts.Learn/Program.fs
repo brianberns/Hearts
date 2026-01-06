@@ -16,18 +16,18 @@ module Program =
         Trainer.train settings |> ignore
 
     let search () =
-        for learningRate in [ 0.0001; 0.0003; 0.001; 0.003 ] do
-            for dropoutRate in [ 0.1; 0.2; 0.3; 0.4 ] do
-                for numHiddenLayers in [ 2; 4; 6; 8 ] do
-                    for hiddenSize in [ 500; 1000; 1500; 2000 ] do
+        for learningRate in [ 0.0001; 0.0003; 0.001 ] do
+            for dropoutRate in [ 0.1; 0.25; 0.4 ] do
+                for numHiddenLayers in [ 2; 5; 8 ] do
+                    for hiddenSize in [ 1000; 1500; 2000 ] do
                         let settings =
                             let writer = TensorBoard.createWriter ()
                             { Settings.create writer with
                                 NumDealsPerIteration = 1000
-                                SampleBranchRate = 0.17
-                                SampleReservoirCapacity = 1_000_000
-                                NumIterations = 5
-                                NumTrainingEpochs = 500
+                                SampleBranchRate = 0.15
+                                SampleReservoirCapacity = 400_000
+                                NumIterations = 4
+                                NumTrainingEpochs = 750
                                 NumHiddenLayers = numHiddenLayers
                                 HiddenSize = hiddenSize
                                 DropoutRate = dropoutRate
