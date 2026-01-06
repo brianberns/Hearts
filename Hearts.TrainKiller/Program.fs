@@ -3,6 +3,7 @@
 open System
 open System.Diagnostics
 open System.IO
+open System.Runtime
 open System.Text
 
 open TorchSharp
@@ -168,7 +169,7 @@ module Program =
             }
 
         if settings.Verbose then
-            printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
+            printfn $"Server garbage collection: {GCSettings.IsServerGC}"
             printfn $"Settings: {settings}"
 
         train settings
