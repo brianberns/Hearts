@@ -27,18 +27,16 @@ type AdvantageState =
 module AdvantageState =
 
     /// Creates an initial advantage state.
-    let create rng =
+    let create capacity rng =
         {
             ModelOpt = None
-            Reservoir =
-                Reservoir.create rng
-                    settings.SampleReservoirCapacity
+            Reservoir = Reservoir.create rng capacity
         }
 
 module Trainer =
 
     /// Generates training data using the given model.
-    let private generateSamples iter modelOpt =
+    let private generateSamples settings iter modelOpt =
 
         settings.Writer.add_scalar(
             $"advantage samples/iter%03d{iter}",
@@ -72,7 +70,7 @@ module Trainer =
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
-    let private trainAdvantageModel iter samples state =
+    let private trainAdvantageModel settings iter samples state =
 
             // cache new training data
         let resv =
@@ -98,18 +96,20 @@ module Trainer =
         }
 
     /// Trains a new model using the given model.
-    let private updateModel iter state =
+    let private updateModel settings iter state =
 
             // generate training data from existing model
         let stopwatch = Stopwatch.StartNew()
         let samples =
-            generateSamples iter state.ModelOpt
+            generateSamples settings iter state.ModelOpt
         if settings.Verbose then
             printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
 
             // train a new model on GPU
         let state =
-            trainAdvantageModel iter samples state
+            trainAdvantageModel settings iter samples state
+
+           // save the model
         state.ModelOpt
             |> Option.iter (fun model ->
                 Path.Combine(
@@ -117,6 +117,7 @@ module Trainer =
                     $"AdvantageModel%03d{iter}.pt")
                         |> model.save
                         |> ignore)
+
         settings.Writer.add_scalar(
             $"advantage reservoir",
             float32 state.Reservoir.Items.Count,
@@ -126,7 +127,7 @@ module Trainer =
 
     /// Evaluates the given model by playing it against a
     /// standard.
-    let evaluate iter (model : AdvantageModel) =
+    let evaluate settings iter (model : AdvantageModel) =
 
         let score, payoff =
             Tournament.run
@@ -143,15 +144,6 @@ module Trainer =
         settings.Writer.add_scalar(
             $"advantage tournament", payoff, iter)
 
-    /// Trains a single iteration.
-    let private trainIteration iter state =
-        if settings.Verbose then
-            printfn $"\n*** Iteration {iter} ***"
-        let state = updateModel iter state
-        state.ModelOpt
-            |> Option.iter (evaluate iter)
-        state
-
     /// Trains for the given number of iterations.
     let train () =
 
@@ -160,8 +152,16 @@ module Trainer =
             printfn $"Model output size: {Model.outputSize}"
 
             // run the iterations
-        let state = AdvantageState.create (Random())
+        let state =
+            AdvantageState.create
+                settings.SampleReservoirCapacity
+                (Random())
         let iterNums = seq { 1 .. settings.NumIterations }
         (state, iterNums)
             ||> Seq.fold (fun state iter ->
-                trainIteration iter state)
+                if settings.Verbose then
+                    printfn $"\n*** Iteration {iter} ***"
+                let state = updateModel settings iter state   // create new model
+                Option.iter (
+                    evaluate settings iter) state.ModelOpt    // evaluate model
+                state)

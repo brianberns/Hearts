@@ -133,7 +133,7 @@ module Program =
                     (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
 
             evaluate iter testInfoSetPairs model
-            Trainer.evaluate iter model
+            Trainer.evaluate settings iter model
 
             Path.Combine(
                 settings.ModelDirPath,

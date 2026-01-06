@@ -94,15 +94,15 @@ module AdvantageModel =
 
     /// Trains the given model on the given sub-batch of
     /// data.
-    let private trainSubBatch device model subbatch
+    let private trainSubBatch settings model subbatch
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
             // move to GPU
         let inputs2d, targets2d, weights2d =
             SubBatch.to2dArrays subbatch
-        use inputs = tensor(inputs2d, device = device)
-        use targets = tensor(targets2d, device = device)
-        use weights = tensor(weights2d, device = device)
+        use inputs = tensor(inputs2d, device = settings.Device)
+        use targets = tensor(targets2d, device = settings.Device)
+        use weights = tensor(weights2d, device = settings.Device)
 
             // forward pass
         use loss =
@@ -128,7 +128,7 @@ module AdvantageModel =
     /// Trains the given model on the given batch of data
     /// using gradient accumulation.
     /// https://chat.deepseek.com/a/chat/s/2f688262-70d6-4fb9-a05e-c230fa871f83
-    let private trainBatch device model (batch : Batch) criterion
+    let private trainBatch settings model (batch : Batch) criterion
         (optimizer : Optimizer) =
 
             // clear gradients
@@ -138,7 +138,7 @@ module AdvantageModel =
         let loss =
             Array.last [|
                 for subbatch in batch do
-                    trainSubBatch device model subbatch criterion
+                    trainSubBatch settings model subbatch criterion
             |]
 
             // optimize
@@ -168,8 +168,7 @@ module AdvantageModel =
                 Array.last [|
                     for batch in batches do
                         trainBatch
-                            settings.Device
-                            model batch criterion optimizer
+                            settings model batch criterion optimizer
                 |]
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{iter}",
