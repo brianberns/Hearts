@@ -76,6 +76,28 @@ module TensorBoard =
 
 module Settings =
 
+    /// Default settings.
+    let default_ =
+        {
+            NumDealsPerIteration = 30_000
+            DealBatchSize = 200
+            SampleBranchRate = 0.2
+            SampleReservoirCapacity = 40_000_000
+            HiddenSize = Encoding.encodedLength * 2
+            NumHiddenLayers = 9
+            NumTrainingEpochs = 400
+            TrainingBatchSize = 100_000
+            TrainingSubBatchSize = 25_000
+            DropoutRate = 0.3
+            LearningRate = 1e-3
+            NumIterations = 50
+            NumEvaluationDeals = 20000
+            Device = torch.CUDA
+            ModelDirPath = "./Models"
+            Writer = TensorBoard.writer
+            Verbose = true
+        }
+
     /// Writes settings to Tensorboard.
     let write settings =
         let writer = settings.Writer
