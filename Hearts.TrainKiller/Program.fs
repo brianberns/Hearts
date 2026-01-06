@@ -5,6 +5,7 @@ open System.Diagnostics
 open System.IO
 open System.Text
 
+open TorchSharp
 open MathNet.Numerics.LinearAlgebra
 
 open Hearts
@@ -32,7 +33,7 @@ module Program =
                     ActionType.Play, card
         }
 
-    let evaluate iter infoSetPairs model =
+    let evaluate settings iter infoSetPairs model =
 
         let player = Strategy.createPlayer model
 
@@ -61,7 +62,7 @@ module Program =
                 printfn $"Play accuracy: {accuracy}"
             settings.Writer.add_scalar($"play accuracy", accuracy, iter)
 
-    let train () =
+    let train settings =
 
         let nEntries = Int32.MaxValue
         let testFraction = 1.0 / 1000.0
@@ -132,7 +133,7 @@ module Program =
                 printfn $"Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
                     (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
 
-            evaluate iter testInfoSetPairs model
+            evaluate settings iter testInfoSetPairs model
             Trainer.evaluate settings iter model
 
             Path.Combine(
@@ -141,8 +142,35 @@ module Program =
                     |> model.save
                     |> ignore
 
-    Console.OutputEncoding <- Encoding.Unicode
-    if settings.Verbose then
-        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
-        printfn $"Settings: {settings}"
-    train ()
+    let main () =
+
+        Console.OutputEncoding <- Encoding.Unicode
+
+        let settings =
+            {
+                NumDealsPerIteration = 30_000
+                DealBatchSize = 200
+                SampleBranchRate = 0.2
+                SampleReservoirCapacity = 40_000_000
+                HiddenSize = Encoding.encodedLength * 2
+                NumHiddenLayers = 9
+                NumTrainingEpochs = 400
+                TrainingBatchSize = 100_000
+                TrainingSubBatchSize = 25_000
+                DropoutRate = 0.3
+                LearningRate = 1e-3
+                NumIterations = 50
+                NumEvaluationDeals = 20000
+                Device = torch.CUDA
+                ModelDirPath = "./Models"
+                Writer = TensorBoard.writer
+                Verbose = true
+            }
+
+        if settings.Verbose then
+            printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}"
+            printfn $"Settings: {settings}"
+
+        train settings
+
+    main ()

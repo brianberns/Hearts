@@ -66,41 +66,19 @@ type Settings =
         Verbose : bool
     }
 
-[<AutoOpen>]
-module Settings =
+module TensorBoard =
 
-    /// Tensorboard log writer.
-    let private writer =
+    /// TensorBoard log writer.
+    let writer =
         let timespan = DateTime.Now - DateTime.Today
         torch.utils.tensorboard.SummaryWriter(
             $"runs/run%05d{int timespan.TotalSeconds}")
 
-    /// Hyperparameters.
-    let settings =
+module Settings =
 
-        let settings =
-            {
-                NumDealsPerIteration = 30_000
-                DealBatchSize = 200
-                SampleBranchRate = 0.2
-                SampleReservoirCapacity = 40_000_000
-                HiddenSize = Encoding.encodedLength * 2
-                NumHiddenLayers = 9
-                NumTrainingEpochs = 400
-                TrainingBatchSize = 100_000
-                TrainingSubBatchSize = 25_000
-                DropoutRate = 0.3
-                LearningRate = 1e-3
-                NumIterations = 50
-                NumEvaluationDeals = 20000
-                Device = torch.CUDA
-                ModelDirPath = "./Models"
-                Writer = writer
-                Verbose = true
-            }
-        System.IO.Directory.CreateDirectory(settings.ModelDirPath)
-            |> ignore
-
+    /// Writes settings to Tensorboard.
+    let write settings =
+        let writer = settings.Writer
         writer.add_text(
             $"settings/NumDealsPerIteration",
             string settings.NumDealsPerIteration, 0)
@@ -137,5 +115,3 @@ module Settings =
         writer.add_text(
             $"settings/NumEvaluationDeals",
             string settings.NumEvaluationDeals, 0)
-
-        settings
