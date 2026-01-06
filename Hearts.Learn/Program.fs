@@ -22,7 +22,8 @@ module Program =
                     let settings =
                         let writer = TensorBoard.createWriter ()
                         { Settings.create writer with
-                            NumDealsPerIteration = 5000
+                            NumDealsPerIteration = 1000
+                            SampleBranchRate = 0.17
                             SampleReservoirCapacity = 1_000_000
                             NumIterations = 5
                             NumTrainingEpochs = 500
