@@ -6,7 +6,9 @@ open System.Text
 
 module Program =
     Console.OutputEncoding <- Encoding.UTF8
-    let settings = Settings.default_
+    let settings =
+        let writer = TensorBoard.createWriter ()
+        Settings.create writer
     if settings.Verbose then
         printfn $"Server garbage collection: {GCSettings.IsServerGC}"
         printfn $"Settings: {settings}"

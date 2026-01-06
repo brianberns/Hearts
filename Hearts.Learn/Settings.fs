@@ -69,15 +69,15 @@ type Settings =
 module TensorBoard =
 
     /// TensorBoard log writer.
-    let writer =
+    let createWriter () =
         let timespan = DateTime.Now - DateTime.Today
         torch.utils.tensorboard.SummaryWriter(
             $"runs/run%05d{int timespan.TotalSeconds}")
 
 module Settings =
 
-    /// Default settings.
-    let default_ =
+    /// Creates default settings.
+    let create writer =
         {
             NumDealsPerIteration = 30_000
             DealBatchSize = 200
@@ -94,7 +94,7 @@ module Settings =
             NumEvaluationDeals = 20000
             Device = torch.CUDA
             ModelDirPath = "./Models"
-            Writer = TensorBoard.writer
+            Writer = writer
             Verbose = true
         }
 
