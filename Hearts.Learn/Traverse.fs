@@ -83,7 +83,7 @@ module Node =
 module Traverse =
 
     /// Evaluates the utility of the given deal.
-    let traverse iter deal (rng : Random) =
+    let traverse settings iter deal (rng : Random) =
 
         /// Top-level loop.
         let rec loop deal depth =

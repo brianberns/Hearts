@@ -147,7 +147,7 @@ module AdvantageModel =
         loss
 
     /// Trains the given model using the given samples.
-    let train iter samples (model : AdvantageModel) =
+    let train settings iter samples (model : AdvantageModel) =
 
             // prepare training data
         let batches =

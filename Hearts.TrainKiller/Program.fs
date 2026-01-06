@@ -126,7 +126,7 @@ module Program =
         for iter = 1 to 1000 do
 
             stopwatch.Restart()
-            AdvantageModel.train iter samples model
+            AdvantageModel.train settings iter samples model
             stopwatch.Stop()
             if settings.Verbose then
                 printfn $"Trained model on {samples.Length} samples in {stopwatch.Elapsed} \

@@ -55,7 +55,7 @@ module Trainer =
                         chunk.Length
                         (fun deal ->
                             let rng = Random()   // each thread has its own RNG
-                            Traverse.traverse iter deal rng)
+                            Traverse.traverse settings iter deal rng)
                         |> Inference.complete
                             settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
                             modelOpt
@@ -84,7 +84,7 @@ module Trainer =
                 settings.NumHiddenLayers,
                 settings.DropoutRate,
                 settings.Device)
-        AdvantageModel.train iter resv.Items model
+        AdvantageModel.train settings iter resv.Items model
         stopwatch.Stop()
         if settings.Verbose then
             printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
@@ -145,7 +145,7 @@ module Trainer =
             $"advantage tournament", payoff, iter)
 
     /// Trains for the given number of iterations.
-    let train () =
+    let train settings =
 
         if settings.Verbose then
             printfn $"Model input size: {Model.inputSize}"
