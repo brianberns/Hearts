@@ -40,4 +40,4 @@ module Program =
                         Trainer.train settings |> ignore
 
     Console.OutputEncoding <- Encoding.UTF8
-    search ()
+    run ()
