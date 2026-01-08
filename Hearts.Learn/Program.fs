@@ -10,6 +10,7 @@ module Program =
         let settings =
             let writer = TensorBoard.createWriter ()
             Settings.create writer
+        Settings.write settings
         if settings.Verbose then
             printfn $"Server garbage collection: {GCSettings.IsServerGC}"
             printfn $"Settings: {settings}"
