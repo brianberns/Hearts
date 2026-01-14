@@ -79,9 +79,10 @@ module Strategy =
         else Array.empty
 
     /// Creates a Hearts player using the given model.
-    let createPlayer model =
+    let createPlayer (model : AdvantageModel) =
 
         let rng = Random()   // each player has its own RNG
+        model.eval()
 
         let act infoSet =
             let strategy =

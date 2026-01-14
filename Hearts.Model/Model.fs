@@ -78,6 +78,7 @@ module AdvantageModel =
 
     /// Gets advantages for the given info sets.
     let getAdvantages infoSets (model : AdvantageModel) =
+        assert(not model.training)
         use _ = torch.no_grad()
         use input =
             let encoded =
