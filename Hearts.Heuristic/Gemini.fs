@@ -29,9 +29,11 @@ module Gemini =
         let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Jack) |> List.sortByDescending (fun c -> c.Rank)
 
         // Identify short suits to void (clubs/diamonds with 1-3 cards)
+        // Prioritize voiding singletons first!
         let voidCandidates =
             [clubs; diamonds]
             |> List.filter (fun suitCards -> suitCards.Length > 0 && suitCards.Length <= 3)
+            |> List.sortBy (fun suitCards -> suitCards.Length) // Sort by length ascending (prioritize shorter suits)
             |> List.collect id
             |> List.sortByDescending (fun c -> c.Rank)
 
@@ -42,14 +44,13 @@ module Gemini =
                 if hasQS && lowSpades < 3 then [queenOfSpades] else []
 
                 // Priority 2: High spades (A, K) - Aggressively pass them to avoid leading/winning spades
-                // Modified from Claude: Pass them even if we have low spades
                 if highSpades.Length > 0 then highSpades |> List.sortByDescending (fun c -> c.Rank) else []
 
-                // Priority 3: Cards from short suits to create voids
-                voidCandidates
-
-                // Priority 4: High hearts
+                // Priority 3: High hearts (Danger cards)
                 highHearts
+
+                // Priority 4: Cards from short suits to create voids
+                voidCandidates
 
                 // Priority 5: Any high cards (Jack or above)
                 legalCards |> Array.filter (fun c -> c.Rank >= Rank.Jack) |> Array.sortByDescending (fun c -> c.Rank) |> Array.toList
@@ -72,14 +73,26 @@ module Gemini =
         let spadesInHand = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades)
         let lowSpades = spadesInHand |> Array.filter (fun c -> c.Rank < Rank.Queen)
 
-        // Helper to pick lowest card from shortest suit
+        // Helper to pick lowest card from shortest suit, avoiding leading high singletons if possible
         let leadFromShortest (cards: Card[]) =
-            cards
-            |> Array.groupBy (fun c -> c.Suit)
-            |> Array.sortBy (fun (_, suitCards) -> suitCards.Length) // Sort by length ascending
-            |> Array.map (fun (_, suitCards) -> suitCards |> Array.minBy (fun c -> c.Rank)) // Get lowest card of each suit
-            |> Array.head // Pick lowest card of the shortest suit
+            let grouped = 
+                cards
+                |> Array.groupBy (fun c -> c.Suit)
+                |> Array.sortBy (fun (_, suitCards) -> suitCards.Length)
             
+            // Try to find a suit that isn't just a singleton Ace or King
+            let safeLead = 
+                grouped 
+                |> Array.tryFind (fun (_, suitCards) -> 
+                    let lowest = suitCards |> Array.minBy (fun c -> c.Rank)
+                    not (suitCards.Length = 1 && lowest.Rank >= Rank.King))
+            
+            match safeLead with
+            | Some (_, suitCards) -> suitCards |> Array.minBy (fun c -> c.Rank)
+            | None -> 
+                // Fallback: just lead lowest from shortest
+                grouped |> Array.head |> snd |> Array.minBy (fun c -> c.Rank)
+
         if not qsPlayed then
             if holdingQS then
                 // We have QS - avoid leading spades, lead safe low cards in other suits
@@ -131,7 +144,8 @@ module Gemini =
         let dealScore = deal.Score
         let scores = Score.indexed dealScore 
         let (potentialShooter, shooterPoints) = scores |> Seq.maxBy snd
-        let isShootingRisk = shooterPoints >= 18 // Threat threshold
+        // Increased threshold to 20 to be more sure
+        let isShootingRisk = shooterPoints >= 20 
 
         let shooterIsWinning = 
              match trick.HighPlayOpt with
@@ -163,6 +177,7 @@ module Gemini =
                              | Some hr ->
                                  let winningCards = cardsInLedSuit |> Array.filter (fun c -> c.Rank > hr)
                                  if winningCards.Length > 0 then
+                                     // Win as cheaply as possible
                                      winningCards |> Array.minBy (fun c -> c.Rank)
                                  else
                                      // Cant win, fallback
@@ -199,19 +214,13 @@ module Gemini =
             else
                 // Not last - try to duck
                 
-                // Intercept Logic (Riskier here because others might play higher, but if we have Boss card...)
-                // If we play a winning card here, next players might duck.
-                // If we really need to stop shooter, and we have a guaranteed winner...
-                // For now, let's limit Intercept to Last Player or if we have a clear win?
-                // Actually, if we play high, we might force shooter to play higher? No, shooter is already winning.
-                // If shooter played K, and we play A. We stop them.
-                // So yes, applies here too.
-                
                 let attemptIntercept = 
                     if shouldIntercept then
                         match highRank with
                         | Some hr ->
                              let winningCards = cardsInLedSuit |> Array.filter (fun c -> c.Rank > hr)
+                             // Only intercept if we have a guaranteed winner?
+                             // Or just try to beat current high?
                              if winningCards.Length > 0 then
                                  Some (winningCards |> Array.minBy (fun c -> c.Rank))
                              else None
