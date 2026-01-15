@@ -358,3 +358,6 @@ fable_modules
 # Python virtual environment
 /venv
 /env
+
+# Claude Code
+/.claude
