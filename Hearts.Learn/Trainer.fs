@@ -5,6 +5,7 @@ open System.Diagnostics
 open System.IO
 
 open Hearts
+open Hearts.Heuristic
 open Hearts.Model
 
 /// Advantage state.
@@ -136,7 +137,7 @@ module Trainer =
                 (Random(0))       // use repeatable test set, not seen during training
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
                 settings.NumEvaluationDeals
-                Trickster.player
+                Claude.player
                 (Strategy.createPlayer model)
         if settings.Verbose then
             printfn "\nTournament:"

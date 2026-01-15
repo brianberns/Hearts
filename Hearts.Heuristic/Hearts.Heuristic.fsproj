@@ -11,11 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Hearts.Learn\Hearts.Learn.fsproj" />
-    <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
     <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
-    <ProjectReference Include="..\TricksterHeartsBot\TricksterHeartsBot\TricksterHeartsBot.csproj" />
   </ItemGroup>
 
 </Project>
