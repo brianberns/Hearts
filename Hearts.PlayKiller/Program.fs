@@ -12,6 +12,7 @@ module Program =
                 dropoutRate = 0.3,
                 device = TorchSharp.torch.CPU)
         model.load("AdvantageModel.pt") |> ignore
+        model.eval()
         model
 
     let player = Strategy.createPlayer model
