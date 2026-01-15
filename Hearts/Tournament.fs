@@ -29,7 +29,7 @@ module ZeroSum =
 module Tournament =
 
     /// Plays one deal.
-    let playDeal (playerMap : Map<_, _>) deal =
+    let private playDeal (playerMap : Map<_, _>) deal =
 
         let rec loop deal score =
             let deal =
@@ -47,7 +47,7 @@ module Tournament =
         loop deal Score.zero
 
     /// Plays the given number of deals.
-    let playDeals rng inParallel numDeals playerMap =
+    let private playDeals rng inParallel numDeals playerMap =
         OpenDeal.playDeals rng inParallel numDeals (
             playDeal playerMap)
             |> Seq.reduce (+)

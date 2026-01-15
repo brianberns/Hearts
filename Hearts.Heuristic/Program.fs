@@ -5,10 +5,17 @@ open Hearts
 
 module Program =
 
-    let rng = Random(0)
+    let numDeals = 200_000
 
-    let eval player =
-        Tournament.run rng true 200000 Claude.player player
+    let geminiPayoff =
+        let rng = Random(0)
+        Tournament.run rng true numDeals Claude.player Gemini.player
             |> snd
 
-    printfn $"{eval Gemini.player}"
+    let claudePayoff =
+        let rng = Random(0)
+        Tournament.run rng true numDeals Gemini.player Claude.player
+            |> snd
+
+    printfn $"Gemini payoff: {geminiPayoff - claudePayoff}"
+    printfn $"Claude payoff: {claudePayoff - geminiPayoff}"
