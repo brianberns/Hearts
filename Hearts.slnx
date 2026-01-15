@@ -23,5 +23,4 @@
   <Project Path="PlayingCards/PlayingCards.fsproj">
     <Platform Solution="*|x64" Project="x64" />
   </Project>
-  <Project Path="TricksterHeartsBot/TricksterHeartsBot/TricksterHeartsBot.csproj" />
 </Solution>
