@@ -11,53 +11,93 @@ module Claude =
     /// Check if a card is the Queen of Spades
     let private isQS (card : Card) = card.Suit = Suit.Spades && card.Rank = Rank.Queen
 
-    /// Passing strategy based on Trickster
+    /// Passing strategy - improved version
     let private choosePass (hand : Hand) (legalCards : Card[]) =
-        // Count spades
-        let highSpades = hand |> Seq.filter (fun c -> c.Suit = Suit.Spades && c.Rank >= Rank.Queen) |> Seq.toList
-        let lowSpades = hand |> Seq.filter (fun c -> c.Suit = Suit.Spades && c.Rank < Rank.Queen) |> Seq.length
+        // Analyze hand by suit
+        let spades = hand |> Seq.filter (fun c -> c.Suit = Suit.Spades) |> Seq.toList
+        let hearts = hand |> Seq.filter (fun c -> c.Suit = Suit.Hearts) |> Seq.toList
+        let clubs = hand |> Seq.filter (fun c -> c.Suit = Suit.Clubs) |> Seq.toList
+        let diamonds = hand |> Seq.filter (fun c -> c.Suit = Suit.Diamonds) |> Seq.toList
 
-        // Priority 1: Pass Q♠, K♠, A♠ if we don't have 3+ low spades for protection
-        if highSpades.Length > 0 && lowSpades < 3 then
-            highSpades
-                |> List.sortByDescending (fun c -> c.Rank)
-                |> List.filter (fun c -> legalCards |> Array.contains c)
-                |> List.tryHead
-        else None
-        |> Option.orElseWith (fun () ->
-            // Priority 2: Pass high hearts
-            let hearts = legalCards |> Array.filter (fun c -> c.Suit = Suit.Hearts)
-            if hearts.Length > 0 then
-                hearts |> Array.maxBy (fun c -> c.Rank) |> Some
-            else None)
-        |> Option.orElseWith (fun () ->
-            // Priority 3: Pass high clubs/diamonds
-            let clubsDiamonds = legalCards |> Array.filter (fun c -> c.Suit = Suit.Clubs || c.Suit = Suit.Diamonds)
-            if clubsDiamonds.Length > 0 then
-                clubsDiamonds |> Array.maxBy (fun c -> c.Rank) |> Some
-            else None)
-        |> Option.defaultWith (fun () ->
-            // Fallback: pass highest card
-            legalCards |> Array.maxBy (fun c -> c.Rank))
+        let hasQS = spades |> List.exists isQS
+        let lowSpades = spades |> List.filter (fun c -> c.Rank < Rank.Queen) |> List.length
+        let highSpades = spades |> List.filter (fun c -> c.Rank > Rank.Queen)
+        let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Jack) |> List.sortByDescending (fun c -> c.Rank)
 
-    /// Leading strategy based on Trickster
+        // Identify short suits to void (clubs/diamonds with 1-3 cards)
+        let voidCandidates =
+            [clubs; diamonds]
+            |> List.filter (fun suitCards -> suitCards.Length > 0 && suitCards.Length <= 3)
+            |> List.collect id
+            |> List.sortByDescending (fun c -> c.Rank)
+
+        // Build priority list of cards to pass
+        let candidates =
+            [
+                // Priority 1: QS if we don't have enough low spades for protection
+                if hasQS && lowSpades < 3 then [queenOfSpades] else []
+
+                // Priority 2: High spades (A♠, K♠) if short on low spades
+                if highSpades.Length > 0 && lowSpades < 3 then highSpades |> List.sortByDescending (fun c -> c.Rank) else []
+
+                // Priority 3: Cards from short suits to create voids
+                voidCandidates
+
+                // Priority 4: High hearts
+                highHearts
+
+                // Priority 5: Any high cards (Jack or above)
+                legalCards |> Array.filter (fun c -> c.Rank >= Rank.Jack) |> Array.sortByDescending (fun c -> c.Rank) |> Array.toList
+            ]
+            |> List.concat
+            |> List.distinct
+
+        // Pick top candidate that is legal to pass
+        candidates
+        |> List.tryFind (fun c -> legalCards |> Array.contains c)
+        |> Option.defaultValue (legalCards |> Array.maxBy (fun c -> c.Rank))
+
+    /// Leading strategy - improved version
     let private chooseLead (hand : Hand) (deal : ClosedDeal) (legalCards : Card[]) =
         let qsPlayed = not (deal.UnplayedCards.Contains(queenOfSpades))
-        let hasHighSpades = hand |> Seq.exists (fun c -> c.Suit = Suit.Spades && c.Rank >= Rank.Queen)
+        let holdingQS = hand.Contains(queenOfSpades)
+        let hasHighSpades = hand |> Seq.exists (fun c -> c.Suit = Suit.Spades && c.Rank > Rank.Queen)
 
-        // Lead low spade if QS still out and we don't hold Q/K/A of spades
-        let lowSpades = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades && c.Rank < Rank.Queen)
-        if lowSpades.Length > 0 && not qsPlayed && not hasHighSpades then
-            lowSpades |> Array.minBy (fun c -> c.Rank)
+        // Analyze suits in hand
+        let spadesInHand = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades)
+        let lowSpades = spadesInHand |> Array.filter (fun c -> c.Rank < Rank.Queen)
+
+        if not qsPlayed then
+            if holdingQS then
+                // We have QS - avoid leading spades, lead safe low cards in other suits
+                let nonSpades = legalCards |> Array.filter (fun c -> c.Suit <> Suit.Spades)
+                if nonSpades.Length > 0 then
+                    nonSpades |> Array.minBy (fun c -> c.Rank)
+                else
+                    // Forced to lead spades - lead lowest
+                    legalCards |> Array.minBy (fun c -> c.Rank)
+            elif hasHighSpades then
+                // We have A/K of spades but not QS - be careful, lead non-spades
+                let nonSpades = legalCards |> Array.filter (fun c -> c.Suit <> Suit.Spades)
+                if nonSpades.Length > 0 then
+                    nonSpades |> Array.minBy (fun c -> c.Rank)
+                else
+                    legalCards |> Array.minBy (fun c -> c.Rank)
+            else
+                // No dangerous spades - lead low spade to flush out QS
+                if lowSpades.Length > 0 then
+                    lowSpades |> Array.minBy (fun c -> c.Rank)
+                else
+                    legalCards |> Array.minBy (fun c -> c.Rank)
         else
-            // Otherwise lead lowest non-QS card
+            // QS is played - safe to lead anything, prefer low cards
             let nonQS = legalCards |> Array.filter (fun c -> not (isQS c))
             if nonQS.Length > 0 then
                 nonQS |> Array.minBy (fun c -> c.Rank)
             else
                 legalCards |> Array.minBy (fun c -> c.Rank)
 
-    /// Following suit strategy based on Trickster
+    /// Following suit strategy
     let private chooseFollow (hand : Hand) (deal : ClosedDeal) (trick : Trick) (legalCards : Card[]) =
         let suitLed = trick.SuitLedOpt |> Option.get
         let nPlayers = 4
