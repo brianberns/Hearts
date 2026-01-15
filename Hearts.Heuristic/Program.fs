@@ -8,7 +8,7 @@ open Hearts.Learn
 
 module Program =
 
-    let rng = Random()
+    let rng = Random(42)  // Fixed seed for deterministic evaluation
 
     let eval player =
         Tournament.run rng true 20000 Trickster.player player
@@ -42,7 +42,7 @@ module Program =
                 |> List.tryHead
         else None
         |> Option.orElseWith (fun () ->
-            // Priority 2: Pass high hearts (but this is simplified - Trickster passes low hearts first)
+            // Priority 2: Pass high hearts
             let hearts = legalCards |> Array.filter (fun c -> c.Suit = Suit.Hearts)
             if hearts.Length > 0 then
                 hearts |> Array.maxBy (fun c -> c.Rank) |> Some
@@ -60,7 +60,6 @@ module Program =
     /// Leading strategy based on Trickster
     let chooseLead (hand : Hand) (deal : ClosedDeal) (legalCards : Card[]) =
         let qsPlayed = not (deal.UnplayedCards.Contains(queenOfSpades))
-        let holdingQS = hand.Contains(queenOfSpades)
         let hasHighSpades = hand |> Seq.exists (fun c -> c.Suit = Suit.Spades && c.Rank >= Rank.Queen)
 
         // Lead low spade if QS still out and we don't hold Q/K/A of spades
@@ -68,15 +67,10 @@ module Program =
         if lowSpades.Length > 0 && not qsPlayed && not hasHighSpades then
             lowSpades |> Array.minBy (fun c -> c.Rank)
         else
-            // Otherwise lead lowest non-QS card
+            // Otherwise lead lowest non-QS card (Trickster's approach)
             let nonQS = legalCards |> Array.filter (fun c -> not (isQS c))
             if nonQS.Length > 0 then
-                // Prefer non-hearts, non-spades
-                let safe = nonQS |> Array.filter (fun c -> c.Suit <> Suit.Hearts)
-                if safe.Length > 0 then
-                    safe |> Array.minBy (fun c -> c.Rank)
-                else
-                    nonQS |> Array.minBy (fun c -> c.Rank)
+                nonQS |> Array.minBy (fun c -> c.Rank)
             else
                 legalCards |> Array.minBy (fun c -> c.Rank)
 
@@ -95,6 +89,11 @@ module Program =
         let trickPoints = Trick.pointValue trick
         let cardTakingTrick = trick.HighPlayOpt |> Option.map snd
         let highRank = cardTakingTrick |> Option.map (fun c -> c.Rank)
+
+        // Moon prevention: check if multiple players have points
+        let scores = deal.Score.Points
+        let playersWithPoints = scores |> Array.filter (fun p -> p > 0) |> Array.length
+        let multiplePlayersHavePoints = playersWithPoints >= 2
 
         // Check if we can follow suit
         let cardsInLedSuit = legalCards |> Array.filter (fun c -> c.Suit = suitLed)
@@ -137,34 +136,41 @@ module Program =
                                     cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
             else
                 // Not last - try to duck
-                match highRank with
-                    | Some hr ->
-                        let belowWinner = cardsInLedSuit |> Array.filter (fun c -> c.Rank < hr)
+                // First check if we can safely dump QS
+                let queenSpades = cardsInLedSuit |> Array.tryFind isQS
+                match queenSpades, highRank with
+                    | Some qs, Some hr when suitLed = Suit.Spades && hr > Rank.Queen ->
+                        // Safe to dump QS - current winner is higher
+                        qs
+                    | _ ->
+                        match highRank with
+                            | Some hr ->
+                                let belowWinner = cardsInLedSuit |> Array.filter (fun c -> c.Rank < hr)
 
-                        // Special case: second to last, spades led, QS not played - stay below Queen
-                        if isSecondToLast && suitLed = Suit.Spades && not qsPlayed then
-                            let belowQueen = cardsInLedSuit |> Array.filter (fun c -> c.Rank < Rank.Queen)
-                            if belowQueen.Length > 0 then
-                                belowQueen |> Array.maxBy (fun c -> c.Rank)
-                            elif belowWinner.Length > 0 then
-                                belowWinner |> Array.maxBy (fun c -> c.Rank)
-                            else
-                                let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
-                                if nonQS.Length > 0 then
-                                    nonQS |> Array.minBy (fun c -> c.Rank)
+                                // Special case: second to last, spades led, QS not played - stay below Queen
+                                if isSecondToLast && suitLed = Suit.Spades && not qsPlayed then
+                                    let belowQueen = cardsInLedSuit |> Array.filter (fun c -> c.Rank < Rank.Queen)
+                                    if belowQueen.Length > 0 then
+                                        belowQueen |> Array.maxBy (fun c -> c.Rank)
+                                    elif belowWinner.Length > 0 then
+                                        belowWinner |> Array.maxBy (fun c -> c.Rank)
+                                    else
+                                        let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
+                                        if nonQS.Length > 0 then
+                                            nonQS |> Array.minBy (fun c -> c.Rank)
+                                        else
+                                            cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
+                                elif belowWinner.Length > 0 then
+                                    belowWinner |> Array.maxBy (fun c -> c.Rank)
                                 else
-                                    cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
-                        elif belowWinner.Length > 0 then
-                            belowWinner |> Array.maxBy (fun c -> c.Rank)
-                        else
-                            // Can't duck - play lowest avoiding QS
-                            let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
-                            if nonQS.Length > 0 then
-                                nonQS |> Array.minBy (fun c -> c.Rank)
-                            else
+                                    // Can't duck - play lowest avoiding QS
+                                    let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
+                                    if nonQS.Length > 0 then
+                                        nonQS |> Array.minBy (fun c -> c.Rank)
+                                    else
+                                        cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
+                            | None ->
                                 cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
-                    | None ->
-                        cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
         else
             // Can't follow suit - discard
             // Priority 1: Dump QS
