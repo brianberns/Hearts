@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="Claude.fs" />
+    <Compile Include="Gemini.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
