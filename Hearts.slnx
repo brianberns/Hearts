@@ -8,6 +8,7 @@
   </Folder>
   <Project Path="FastCfr/FastCfr/FastCfr.fsproj" />
   <Project Path="Hearts.Cfr/Hearts.Cfr.fsproj" />
+  <Project Path="Hearts.Heuristic/Hearts.Heuristic.fsproj" Id="ff2df4d6-c95f-4c8c-97e9-245c4fdcae7a" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />
   <Project Path="Hearts.ParseKiller/Hearts.ParseKiller.fsproj" Id="80fa113e-2770-480b-ba90-7b62a571d748" />
