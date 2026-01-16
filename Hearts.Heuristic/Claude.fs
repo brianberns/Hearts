@@ -18,8 +18,58 @@ module Claude =
         // We have ALL points so far AND have >= 14 points to justify committing
         myPoints > 0 && myPoints = totalPointsTaken && myPoints >= 14
 
+    /// Detect if hand is strong enough to attempt shooting the moon
+    let private isShootingHand (hand : Hand) =
+        let cards = hand |> Seq.toList
+        let hearts = cards |> List.filter (fun c -> c.Suit = Suit.Hearts)
+        let spades = cards |> List.filter (fun c -> c.Suit = Suit.Spades)
+        let clubs = cards |> List.filter (fun c -> c.Suit = Suit.Clubs)
+        let diamonds = cards |> List.filter (fun c -> c.Suit = Suit.Diamonds)
+
+        // Count high cards
+        let aces = cards |> List.filter (fun c -> c.Rank = Rank.Ace) |> List.length
+        let kings = cards |> List.filter (fun c -> c.Rank = Rank.King) |> List.length
+        let queens = cards |> List.filter (fun c -> c.Rank = Rank.Queen) |> List.length
+
+        // QS with protection (A or K of spades)
+        let hasQS = spades |> List.exists isQS
+        let hasAceSpades = spades |> List.exists (fun c -> c.Rank = Rank.Ace)
+        let hasKingSpades = spades |> List.exists (fun c -> c.Rank = Rank.King)
+        let qsProtected = hasQS && (hasAceSpades || hasKingSpades)
+
+        // High hearts for winning heart tricks
+        let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Ten) |> List.length
+
+        // Long suits (5+ cards) give control
+        let hasLongSuit =
+            [hearts; spades; clubs; diamonds]
+            |> List.exists (fun suit -> suit.Length >= 5)
+
+        // Criteria: need multiple high cards + QS protection OR many aces/kings
+        (qsProtected && aces >= 2 && highHearts >= 3) ||
+        (aces >= 3 && kings >= 2 && highHearts >= 2) ||
+        (hasQS && aces >= 3 && (aces + kings) >= 5)
+
     /// Passing strategy - improved version
     let private choosePass (hand : Hand) (legalCards : Card[]) =
+        // Check if we should try to shoot the moon
+        if isShootingHand hand then
+            // Pass LOW cards to keep our winners
+            // Prefer passing low cards from short suits (to create voids for discarding)
+            let cards = legalCards |> Array.toList
+            let byRank = cards |> List.sortBy (fun c -> c.Rank)
+            // Pass lowest non-heart, non-spade first (keep hearts to win, keep spades for QS)
+            let lowMinorCards =
+                byRank
+                |> List.filter (fun c -> c.Suit <> Suit.Hearts && c.Suit <> Suit.Spades)
+            if lowMinorCards.Length > 0 then
+                lowMinorCards |> List.head
+            else
+                // Pass lowest card overall
+                byRank |> List.head
+        else
+
+        // Normal defensive passing
         // Analyze hand by suit
         let spades = hand |> Seq.filter (fun c -> c.Suit = Suit.Spades) |> Seq.toList
         let hearts = hand |> Seq.filter (fun c -> c.Suit = Suit.Hearts) |> Seq.toList
