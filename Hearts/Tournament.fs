@@ -52,20 +52,24 @@ module Tournament =
             playDeal playerMap)
             |> Seq.reduce (+)
 
-    /// Runs a tournament between two players.
+    /// Runs a 2v2 tournament between two players.
     let run rng inParallel numDeals champion challenger =
-        let challengerSeat = Seat.South
+        let challengerSeats = set [ Seat.East; Seat.West ]
         let playerMap =
             Enum.getValues<Seat>
                 |> Seq.map (fun seat ->
                     let player =
-                        if seat = challengerSeat then challenger
+                        if challengerSeats.Contains(seat) then
+                            challenger
                         else champion
                     seat, player)
                 |> Map
         let score =
             playDeals rng inParallel numDeals playerMap
         let payoff =
-            (ZeroSum.getPayoff score)[int challengerSeat]
-                / float32 numDeals
+            let payoffs = ZeroSum.getPayoff score
+            let sum =
+                challengerSeats
+                    |> Seq.sumBy (fun seat -> payoffs[int seat])
+            sum / float32 (challengerSeats.Count * numDeals)
         score, payoff
