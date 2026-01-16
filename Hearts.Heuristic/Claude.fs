@@ -140,8 +140,17 @@ module Claude =
     let private chooseLead (hand : Hand) (deal : ClosedDeal) (legalCards : Card[]) (mySeat : Seat) =
         // Check if we're shooting
         if isAttemptingToShoot deal mySeat then
-            // Lead highest to maintain control
-            legalCards |> Array.maxBy (fun c -> c.Rank)
+            // Lead from suit where we have ace (guaranteed winner)
+            let aces = legalCards |> Array.filter (fun c -> c.Rank = Rank.Ace)
+            if aces.Length > 0 then
+                // Prefer hearts ace to collect points
+                let heartAce = aces |> Array.tryFind (fun c -> c.Suit = Suit.Hearts)
+                match heartAce with
+                | Some ace -> ace
+                | None -> aces.[0]
+            else
+                // No aces, lead highest
+                legalCards |> Array.maxBy (fun c -> c.Rank)
         else
         let qsPlayed = not (deal.UnplayedCards.Contains(queenOfSpades))
         let holdingQS = hand.Contains(queenOfSpades)
