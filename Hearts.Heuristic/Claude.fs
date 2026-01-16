@@ -22,13 +22,13 @@ module Claude =
         let hasQS = spades |> List.exists isQS
         let lowSpades = spades |> List.filter (fun c -> c.Rank < Rank.Queen) |> List.length
         let highSpades = spades |> List.filter (fun c -> c.Rank > Rank.Queen)
-        let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Jack) |> List.sortByDescending (fun c -> c.Rank)
+        let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Queen) |> List.sortByDescending (fun c -> c.Rank)
 
-        // Identify short suits to void (clubs/diamonds with 1-3 cards)
+        // Identify short suits to void (clubs/diamonds with 1-4 cards)
         // Prioritize shorter suits first (singletons before doubletons)
         let voidCandidates =
             [clubs; diamonds]
-            |> List.filter (fun suitCards -> suitCards.Length > 0 && suitCards.Length <= 3)
+            |> List.filter (fun suitCards -> suitCards.Length > 0 && suitCards.Length <= 4)
             |> List.sortBy (fun suitCards -> suitCards.Length)
             |> List.collect id
             |> List.sortByDescending (fun c -> c.Rank)
