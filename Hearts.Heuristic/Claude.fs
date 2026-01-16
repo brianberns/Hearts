@@ -5,97 +5,71 @@ open Hearts
 
 module Claude =
 
-    /// Queen of Spades - worth 13 points
+    // ============================================================
+    // Constants
+    // ============================================================
+
     let private queenOfSpades = Card.create Rank.Queen Suit.Spades
 
-    /// Check if a card is the Queen of Spades
-    let private isQS (card : Card) = card.Suit = Suit.Spades && card.Rank = Rank.Queen
+    // ============================================================
+    // Card Analysis Helpers
+    // ============================================================
 
-    /// Count how many cards higher than the given card are still unplayed
-    let private countHigherUnplayed (card : Card) (unplayedCards : Set<Card>) =
-        unplayedCards
-        |> Set.filter (fun c -> c.Suit = card.Suit && c.Rank > card.Rank)
-        |> Set.count
+    let private isQS (card : Card) =
+        card.Suit = Suit.Spades && card.Rank = Rank.Queen
 
-    /// Check if a card is the highest remaining in its suit
     let private isHighestRemaining (card : Card) (unplayedCards : Set<Card>) =
-        countHigherUnplayed card unplayedCards = 0
+        unplayedCards
+        |> Set.exists (fun c -> c.Suit = card.Suit && c.Rank > card.Rank)
+        |> not
 
-    /// Check if any opponent is void in the given suit
     let private anyOpponentVoid (suit : Suit) (mySeat : Seat) (voids : Set<Seat * Suit>) =
         voids |> Set.exists (fun (seat, s) -> seat <> mySeat && s = suit)
 
-    /// Count how many opponents are void in the given suit
-    let private countOpponentsVoid (suit : Suit) (mySeat : Seat) (voids : Set<Seat * Suit>) =
-        voids |> Set.filter (fun (seat, s) -> seat <> mySeat && s = suit) |> Set.count
+    // ============================================================
+    // Shooting Detection
+    // ============================================================
 
-    /// Get suits where we have cards and no opponent is void (safe to lead)
-    let private safeSuitsToLead (cards : Card[]) (mySeat : Seat) (voids : Set<Seat * Suit>) =
-        cards
-        |> Array.map (fun c -> c.Suit)
-        |> Array.distinct
-        |> Array.filter (fun suit -> not (anyOpponentVoid suit mySeat voids))
-
-    /// Check if we should commit to shooting the moon
+    /// Detect if we should commit to shooting (during play)
     let private isAttemptingToShoot (deal : ClosedDeal) (mySeat : Seat) =
         let myPoints = deal.Score[mySeat]
         let totalPointsTaken = deal.Score |> Score.sum
-        // We have ALL points so far AND have >= 14 points to justify committing
         myPoints > 0 && myPoints = totalPointsTaken && myPoints >= 14
 
-    /// Detect if hand is strong enough to attempt shooting the moon
+    /// Detect if initial hand is strong enough to attempt shooting (during passing)
     let private isShootingHand (hand : Hand) =
         let cards = hand |> Seq.toList
         let hearts = cards |> List.filter (fun c -> c.Suit = Suit.Hearts)
         let spades = cards |> List.filter (fun c -> c.Suit = Suit.Spades)
-        let clubs = cards |> List.filter (fun c -> c.Suit = Suit.Clubs)
-        let diamonds = cards |> List.filter (fun c -> c.Suit = Suit.Diamonds)
 
-        // Count high cards
         let aces = cards |> List.filter (fun c -> c.Rank = Rank.Ace) |> List.length
         let kings = cards |> List.filter (fun c -> c.Rank = Rank.King) |> List.length
-        let queens = cards |> List.filter (fun c -> c.Rank = Rank.Queen) |> List.length
 
-        // QS with protection (A or K of spades)
         let hasQS = spades |> List.exists isQS
         let hasAceSpades = spades |> List.exists (fun c -> c.Rank = Rank.Ace)
         let hasKingSpades = spades |> List.exists (fun c -> c.Rank = Rank.King)
         let qsProtected = hasQS && (hasAceSpades || hasKingSpades)
 
-        // High hearts for winning heart tricks
         let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Ten) |> List.length
 
-        // Long suits (5+ cards) give control
-        let hasLongSuit =
-            [hearts; spades; clubs; diamonds]
-            |> List.exists (fun suit -> suit.Length >= 5)
-
-        // Criteria: need multiple high cards + QS protection OR many aces/kings
         (qsProtected && aces >= 2 && highHearts >= 3) ||
         (aces >= 3 && kings >= 2 && highHearts >= 2) ||
         (hasQS && aces >= 3 && (aces + kings) >= 5)
 
-    /// Passing strategy - improved version
-    let private choosePass (hand : Hand) (legalCards : Card[]) =
-        // Check if we should try to shoot the moon
-        if isShootingHand hand then
-            // Pass LOW cards to keep our winners
-            // Prefer passing low cards from short suits (to create voids for discarding)
-            let cards = legalCards |> Array.toList
-            let byRank = cards |> List.sortBy (fun c -> c.Rank)
-            // Pass lowest non-heart, non-spade first (keep hearts to win, keep spades for QS)
-            let lowMinorCards =
-                byRank
-                |> List.filter (fun c -> c.Suit <> Suit.Hearts && c.Suit <> Suit.Spades)
-            if lowMinorCards.Length > 0 then
-                lowMinorCards |> List.head
-            else
-                // Pass lowest card overall
-                byRank |> List.head
-        else
+    // ============================================================
+    // Passing Strategy
+    // ============================================================
 
-        // Normal defensive passing
-        // Analyze hand by suit
+    let private choosePassOffensive (legalCards : Card[]) =
+        let byRank = legalCards |> Array.sortBy (fun c -> c.Rank)
+        let lowMinorCards =
+            byRank |> Array.filter (fun c -> c.Suit <> Suit.Hearts && c.Suit <> Suit.Spades)
+        if lowMinorCards.Length > 0 then
+            lowMinorCards.[0]
+        else
+            byRank.[0]
+
+    let private choosePassDefensive (hand : Hand) (legalCards : Card[]) =
         let spades = hand |> Seq.filter (fun c -> c.Suit = Suit.Spades) |> Seq.toList
         let hearts = hand |> Seq.filter (fun c -> c.Suit = Suit.Hearts) |> Seq.toList
         let clubs = hand |> Seq.filter (fun c -> c.Suit = Suit.Clubs) |> Seq.toList
@@ -104,10 +78,9 @@ module Claude =
         let hasQS = spades |> List.exists isQS
         let lowSpades = spades |> List.filter (fun c -> c.Rank < Rank.Queen) |> List.length
         let highSpades = spades |> List.filter (fun c -> c.Rank > Rank.Queen)
-        let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Queen) |> List.sortByDescending (fun c -> c.Rank)
+        let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Queen)
+                                |> List.sortByDescending (fun c -> c.Rank)
 
-        // Identify short suits to void (clubs/diamonds with 1-4 cards)
-        // Prioritize shorter suits first (singletons before doubletons)
         let voidCandidates =
             [clubs; diamonds]
             |> List.filter (fun suitCards -> suitCards.Length > 0 && suitCards.Length <= 4)
@@ -115,53 +88,49 @@ module Claude =
             |> List.collect id
             |> List.sortByDescending (fun c -> c.Rank)
 
-        // Build priority list of cards to pass
         let candidates =
             [
-                // Priority 1: QS if we don't have enough low spades for protection
                 if hasQS && lowSpades < 3 then [queenOfSpades] else []
-
-                // Priority 2: High spades (A♠, K♠) - always pass them to avoid winning spade tricks
                 if highSpades.Length > 0 then highSpades |> List.sortByDescending (fun c -> c.Rank) else []
-
-                // Priority 3: High hearts (danger cards)
                 highHearts
-
-                // Priority 4: Cards from short suits to create voids
                 voidCandidates
-
-                // Priority 5: Any high cards (Jack or above)
-                legalCards |> Array.filter (fun c -> c.Rank >= Rank.Jack) |> Array.sortByDescending (fun c -> c.Rank) |> Array.toList
+                legalCards |> Array.filter (fun c -> c.Rank >= Rank.Jack)
+                           |> Array.sortByDescending (fun c -> c.Rank)
+                           |> Array.toList
             ]
             |> List.concat
             |> List.distinct
 
-        // Pick top candidate that is legal to pass
         candidates
         |> List.tryFind (fun c -> legalCards |> Array.contains c)
         |> Option.defaultValue (legalCards |> Array.maxBy (fun c -> c.Rank))
 
-    /// Lead lowest card from shortest suit, preferring suits where opponents aren't void
-    let private leadFromShortestSafe (cards: Card[]) (mySeat : Seat) (voids : Set<Seat * Suit>) =
-        if cards.Length = 0 then failwith "No cards to lead"
+    let private choosePass (hand : Hand) (legalCards : Card[]) =
+        if isShootingHand hand then
+            choosePassOffensive legalCards
+        else
+            choosePassDefensive hand legalCards
 
+    // ============================================================
+    // Leading Strategy
+    // ============================================================
+
+    let private leadFromShortestSafe (cards: Card[]) (mySeat : Seat) (voids : Set<Seat * Suit>) =
         let grouped =
             cards
             |> Array.groupBy (fun c -> c.Suit)
             |> Array.sortBy (fun (_, suitCards) -> suitCards.Length)
 
-        // First try: find a short suit where no opponent is void
-        let safeLead =
-            grouped
-            |> Array.tryFind (fun (suit, suitCards) ->
-                let lowest = suitCards |> Array.minBy (fun c -> c.Rank)
-                not (suitCards.Length = 1 && lowest.Rank >= Rank.King) &&
-                not (anyOpponentVoid suit mySeat voids))
+        let isSafeLead (suit : Suit, suitCards : Card[]) =
+            let lowest = suitCards |> Array.minBy (fun c -> c.Rank)
+            not (suitCards.Length = 1 && lowest.Rank >= Rank.King) &&
+            not (anyOpponentVoid suit mySeat voids)
+
+        let safeLead = grouped |> Array.tryFind isSafeLead
 
         match safeLead with
         | Some (_, suitCards) -> suitCards |> Array.minBy (fun c -> c.Rank)
         | None ->
-            // Fallback: try without void check
             let fallbackLead =
                 grouped
                 |> Array.tryFind (fun (_, suitCards) ->
@@ -169,289 +138,235 @@ module Claude =
                     not (suitCards.Length = 1 && lowest.Rank >= Rank.King))
             match fallbackLead with
             | Some (_, suitCards) -> suitCards |> Array.minBy (fun c -> c.Rank)
-            | None -> grouped |> Array.head |> snd |> Array.minBy (fun c -> c.Rank)
+            | None -> grouped.[0] |> snd |> Array.minBy (fun c -> c.Rank)
 
-    /// Legacy version without void checking
-    let private leadFromShortest (cards: Card[]) =
-        if cards.Length = 0 then failwith "No cards to lead"
-        let grouped =
-            cards
-            |> Array.groupBy (fun c -> c.Suit)
-            |> Array.sortBy (fun (_, suitCards) -> suitCards.Length)
+    let private chooseLeadShooting (legalCards : Card[]) =
+        let aces = legalCards |> Array.filter (fun c -> c.Rank = Rank.Ace)
+        if aces.Length > 0 then
+            match aces |> Array.tryFind (fun c -> c.Suit = Suit.Hearts) with
+            | Some ace -> ace
+            | None -> aces.[0]
+        else
+            legalCards |> Array.maxBy (fun c -> c.Rank)
 
-        let safeLead =
-            grouped
-            |> Array.tryFind (fun (_, suitCards) ->
-                let lowest = suitCards |> Array.minBy (fun c -> c.Rank)
-                not (suitCards.Length = 1 && lowest.Rank >= Rank.King))
-
-        match safeLead with
-        | Some (_, suitCards) -> suitCards |> Array.minBy (fun c -> c.Rank)
-        | None -> grouped |> Array.head |> snd |> Array.minBy (fun c -> c.Rank)
-
-    /// Leading strategy - improved version with void awareness
     let private chooseLead (hand : Hand) (deal : ClosedDeal) (legalCards : Card[]) (mySeat : Seat) =
-        let voids = deal.Voids
-
-        // Check if we're shooting
         if isAttemptingToShoot deal mySeat then
-            // Lead from suit where we have ace (guaranteed winner)
-            let aces = legalCards |> Array.filter (fun c -> c.Rank = Rank.Ace)
-            if aces.Length > 0 then
-                // Prefer hearts ace to collect points
-                let heartAce = aces |> Array.tryFind (fun c -> c.Suit = Suit.Hearts)
-                match heartAce with
-                | Some ace -> ace
-                | None -> aces.[0]
-            else
-                // No aces, lead highest
-                legalCards |> Array.maxBy (fun c -> c.Rank)
+            chooseLeadShooting legalCards
         else
 
+        let voids = deal.Voids
         let qsPlayed = not (deal.UnplayedCards.Contains(queenOfSpades))
         let holdingQS = hand.Contains(queenOfSpades)
         let hasHighSpades = hand |> Seq.exists (fun c -> c.Suit = Suit.Spades && c.Rank > Rank.Queen)
-
-        // Analyze suits in hand
         let lowSpades = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades && c.Rank < Rank.Queen)
 
         if not qsPlayed then
-            if holdingQS then
-                // We have QS - avoid leading spades, lead from shortest non-spade suit
-                // Prefer suits where no opponent is void
-                let nonSpades = legalCards |> Array.filter (fun c -> c.Suit <> Suit.Spades)
-                if nonSpades.Length > 0 then
-                    leadFromShortestSafe nonSpades mySeat voids
-                else
-                    // Forced to lead spades - lead lowest
-                    legalCards |> Array.minBy (fun c -> c.Rank)
-            elif hasHighSpades then
-                // We have A/K of spades but not QS - be careful, lead non-spades
+            if holdingQS || hasHighSpades then
                 let nonSpades = legalCards |> Array.filter (fun c -> c.Suit <> Suit.Spades)
                 if nonSpades.Length > 0 then
                     leadFromShortestSafe nonSpades mySeat voids
                 else
                     legalCards |> Array.minBy (fun c -> c.Rank)
             else
-                // No dangerous spades - lead low spade to flush out QS
                 if lowSpades.Length > 0 then
                     lowSpades |> Array.minBy (fun c -> c.Rank)
                 else
                     leadFromShortestSafe legalCards mySeat voids
         else
-            // QS is played - safe to lead anything
-            // Prefer suits where no opponent is void (to avoid heart dumps)
             let nonQS = legalCards |> Array.filter (fun c -> not (isQS c))
             if nonQS.Length > 0 then
                 leadFromShortestSafe nonQS mySeat voids
             else
                 leadFromShortestSafe legalCards mySeat voids
 
-    /// Following suit strategy
+    // ============================================================
+    // Following Strategy
+    // ============================================================
+
+    let private chooseFollowShooting (cardsInSuit : Card[]) (legalCards : Card[]) (highRank : Rank option) =
+        if cardsInSuit.Length > 0 then
+            match highRank with
+            | Some hr ->
+                let winningCards = cardsInSuit |> Array.filter (fun c -> c.Rank > hr)
+                if winningCards.Length > 0 then
+                    winningCards |> Array.minBy (fun c -> c.Rank)
+                else
+                    cardsInSuit |> Array.minBy (fun c -> c.Rank)
+            | None ->
+                cardsInSuit |> Array.maxBy (fun c -> c.Rank)
+        else
+            legalCards |> Array.minBy (fun c -> c.Rank)
+
+    let private tryIntercept (cardsInSuit : Card[]) (highRank : Rank option) =
+        match highRank with
+        | Some hr ->
+            let winningCards = cardsInSuit |> Array.filter (fun c -> c.Rank > hr)
+            if winningCards.Length > 0 then
+                Some (winningCards |> Array.minBy (fun c -> c.Rank))
+            else None
+        | None -> None
+
+    let private chooseFollowLastToPlay
+        (cardsInSuit : Card[])
+        (highRank : Rank option)
+        (suitLed : Suit)
+        (trickPoints : int)
+        (shouldIntercept : bool)
+        (unplayedCards : Set<Card>) =
+
+        let queenSpades = cardsInSuit |> Array.tryFind isQS
+        match queenSpades, highRank with
+        | Some qs, Some hr when suitLed = Suit.Spades && hr > Rank.Queen -> qs
+        | _ ->
+            if shouldIntercept then
+                match tryIntercept cardsInSuit highRank with
+                | Some card -> card
+                | None ->
+                    let nonQS = cardsInSuit |> Array.filter (fun c -> not (isQS c))
+                    if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
+                    else cardsInSuit |> Array.maxBy (fun c -> c.Rank)
+            elif trickPoints <= 0 then
+                let nonQS = cardsInSuit |> Array.filter (fun c -> not (isQS c))
+                let highestCard =
+                    if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
+                    else cardsInSuit |> Array.maxBy (fun c -> c.Rank)
+                if isHighestRemaining highestCard unplayedCards then highestCard
+                elif nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
+                else cardsInSuit |> Array.maxBy (fun c -> c.Rank)
+            else
+                match highRank with
+                | Some hr ->
+                    let belowWinner = cardsInSuit |> Array.filter (fun c -> c.Rank < hr)
+                    if belowWinner.Length > 0 then
+                        belowWinner |> Array.maxBy (fun c -> c.Rank)
+                    else
+                        let nonQS = cardsInSuit |> Array.filter (fun c -> not (isQS c))
+                        if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
+                        else cardsInSuit |> Array.maxBy (fun c -> c.Rank)
+                | None ->
+                    cardsInSuit |> Array.minBy (fun c -> c.Rank)
+
+    let private chooseFollowNotLast
+        (cardsInSuit : Card[])
+        (highRank : Rank option)
+        (suitLed : Suit)
+        (qsPlayed : bool)
+        (isSecondToLast : bool)
+        (shouldIntercept : bool) =
+
+        // Try to intercept if someone is shooting
+        let interceptCard =
+            if shouldIntercept then tryIntercept cardsInSuit highRank
+            else None
+
+        match interceptCard with
+        | Some card -> card
+        | None ->
+            // Check if we can safely dump QS
+            let queenSpades = cardsInSuit |> Array.tryFind isQS
+            match queenSpades, highRank with
+            | Some qs, Some hr when suitLed = Suit.Spades && hr > Rank.Queen -> qs
+            | _ ->
+                match highRank with
+                | Some hr ->
+                    let belowWinner = cardsInSuit |> Array.filter (fun c -> c.Rank < hr)
+                    if isSecondToLast && suitLed = Suit.Spades && not qsPlayed then
+                        let belowQueen = cardsInSuit |> Array.filter (fun c -> c.Rank < Rank.Queen)
+                        if belowQueen.Length > 0 then
+                            belowQueen |> Array.maxBy (fun c -> c.Rank)
+                        elif belowWinner.Length > 0 then
+                            belowWinner |> Array.maxBy (fun c -> c.Rank)
+                        else
+                            let nonQS = cardsInSuit |> Array.filter (fun c -> not (isQS c))
+                            if nonQS.Length > 0 then nonQS |> Array.minBy (fun c -> c.Rank)
+                            else cardsInSuit |> Array.minBy (fun c -> c.Rank)
+                    elif belowWinner.Length > 0 then
+                        belowWinner |> Array.maxBy (fun c -> c.Rank)
+                    else
+                        let nonQS = cardsInSuit |> Array.filter (fun c -> not (isQS c))
+                        if nonQS.Length > 0 then nonQS |> Array.minBy (fun c -> c.Rank)
+                        else cardsInSuit |> Array.minBy (fun c -> c.Rank)
+                | None ->
+                    cardsInSuit |> Array.minBy (fun c -> c.Rank)
+
+    let private chooseDiscard (legalCards : Card[]) (qsPlayed : bool) (holdingQS : bool) =
+        match legalCards |> Array.tryFind isQS with
+        | Some qs -> qs
+        | None ->
+            let dumpHighestHeart () =
+                let hearts = legalCards |> Array.filter (fun c -> c.Suit = Suit.Hearts)
+                if hearts.Length > 0 then
+                    Some (hearts |> Array.maxBy (fun c -> c.Rank))
+                else None
+
+            let dumpHighestNonHeart () =
+                let nonHearts =
+                    if holdingQS then
+                        legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts && c.Suit <> Suit.Spades)
+                    else
+                        legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts)
+                if nonHearts.Length > 0 then
+                    nonHearts |> Array.maxBy (fun c -> c.Rank)
+                else
+                    legalCards |> Array.maxBy (fun c -> c.Rank)
+
+            if not qsPlayed && not holdingQS then
+                let highSpades = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades && c.Rank > Rank.Queen)
+                if highSpades.Length > 0 then
+                    highSpades |> Array.maxBy (fun c -> c.Rank)
+                else
+                    match dumpHighestHeart () with
+                    | Some card -> card
+                    | None -> dumpHighestNonHeart ()
+            else
+                match dumpHighestHeart () with
+                | Some card -> card
+                | None -> dumpHighestNonHeart ()
+
     let private chooseFollow (hand : Hand) (deal : ClosedDeal) (trick : Trick) (legalCards : Card[]) (mySeat : Seat) =
         let suitLed = trick.SuitLedOpt |> Option.get
-        let nPlayers = 4
         let trickCount = trick.Cards.Length
-        let isLastToPlay = trickCount = nPlayers - 1
-        let isSecondToLast = trickCount = nPlayers - 2
+        let isLastToPlay = trickCount = 3
+        let isSecondToLast = trickCount = 2
         let isFirstTrick = deal.CompletedTricks.IsEmpty
 
         let qsPlayed = not (deal.UnplayedCards.Contains(queenOfSpades))
         let holdingQS = hand.Contains(queenOfSpades)
 
         let trickPoints = Trick.pointValue trick
-        let cardTakingTrick = trick.HighPlayOpt |> Option.map snd
-        let highRank = cardTakingTrick |> Option.map (fun c -> c.Rank)
+        let highRank = trick.HighPlayOpt |> Option.map (fun (_, c) -> c.Rank)
 
-        // Check if we can follow suit
-        let cardsInLedSuit = legalCards |> Array.filter (fun c -> c.Suit = suitLed)
+        let cardsInSuit = legalCards |> Array.filter (fun c -> c.Suit = suitLed)
 
-        // Check if WE are shooting the moon
+        // Shooting logic
         if isAttemptingToShoot deal mySeat then
-            if cardsInLedSuit.Length > 0 then
-                // Try to win the trick
-                match highRank with
-                | Some hr ->
-                    let winningCards = cardsInLedSuit |> Array.filter (fun c -> c.Rank > hr)
-                    if winningCards.Length > 0 then
-                        winningCards |> Array.minBy (fun c -> c.Rank)
-                    else
-                        cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
-                | None ->
-                    cardsInLedSuit |> Array.maxBy (fun c -> c.Rank)
-            else
-                // Discard lowest
-                legalCards |> Array.minBy (fun c -> c.Rank)
+            chooseFollowShooting cardsInSuit legalCards highRank
+
+        // Anti-shooting logic
         else
+            let scores = Score.indexed deal.Score
+            let (potentialShooter, shooterPoints) = scores |> Seq.maxBy snd
+            let isShootingRisk = shooterPoints >= 21 && potentialShooter <> mySeat
+            let shooterIsWinning =
+                match trick.HighPlayOpt with
+                | Some (seat, _) -> seat = potentialShooter
+                | None -> false
+            let shouldIntercept = isShootingRisk && shooterIsWinning
 
-        // Anti-shooting logic: detect if someone ELSE might be shooting the moon
-        let scores = Score.indexed deal.Score
-        let (potentialShooter, shooterPoints) = scores |> Seq.maxBy snd
-        let isShootingRisk = shooterPoints >= 21 && potentialShooter <> mySeat
-
-        let shooterIsWinning =
-            match trick.HighPlayOpt with
-            | Some (seat, _) -> seat = potentialShooter
-            | None -> false
-
-        let shouldIntercept = isShootingRisk && shooterIsWinning
-
-        // Check if we can follow suit
-        let cardsInLedSuit = legalCards |> Array.filter (fun c -> c.Suit = suitLed)
-        let canFollowSuit = cardsInLedSuit.Length > 0
-
-        if canFollowSuit then
-            // First trick of game - play highest (no points allowed)
-            if isFirstTrick then
-                cardsInLedSuit |> Array.maxBy (fun c -> c.Rank)
-            // Last to play
-            elif isLastToPlay then
-                // Play QS if it won't win and spades led with higher card taking
-                let queenSpades = cardsInLedSuit |> Array.tryFind isQS
-                match queenSpades, highRank with
-                    | Some qs, Some hr when suitLed = Suit.Spades && hr > Rank.Queen ->
-                        qs
-                    | _ ->
-                        // Anti-shooting: try to win the trick to stop the shooter
-                        if shouldIntercept then
-                            match highRank with
-                            | Some hr ->
-                                let winningCards = cardsInLedSuit |> Array.filter (fun c -> c.Rank > hr)
-                                if winningCards.Length > 0 then
-                                    winningCards |> Array.minBy (fun c -> c.Rank)
-                                else
-                                    let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
-                                    if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
-                                    else cardsInLedSuit |> Array.maxBy (fun c -> c.Rank)
-                            | None ->
-                                cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
-                        // If taking won't hurt (0 points), consider winning for lead control
-                        elif trickPoints <= 0 then
-                            // If we can win with highest remaining card, do it to control next lead
-                            let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
-                            let highestCard = if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank) else cardsInLedSuit |> Array.maxBy (fun c -> c.Rank)
-                            // Check if our highest is actually highest remaining - if so, win to control lead
-                            if isHighestRemaining highestCard deal.UnplayedCards then
-                                highestCard
-                            elif nonQS.Length > 0 then
-                                nonQS |> Array.maxBy (fun c -> c.Rank)
-                            else
-                                cardsInLedSuit |> Array.maxBy (fun c -> c.Rank)
-                        else
-                            // Try to duck - play highest below winner
-                            match highRank with
-                                | Some hr ->
-                                    let belowWinner = cardsInLedSuit |> Array.filter (fun c -> c.Rank < hr)
-                                    if belowWinner.Length > 0 then
-                                        belowWinner |> Array.maxBy (fun c -> c.Rank)
-                                    else
-                                        // Can't duck - play highest avoiding QS
-                                        let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
-                                        if nonQS.Length > 0 then
-                                            nonQS |> Array.maxBy (fun c -> c.Rank)
-                                        else
-                                            cardsInLedSuit |> Array.maxBy (fun c -> c.Rank)
-                                | None ->
-                                    cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
+            if cardsInSuit.Length > 0 then
+                if isFirstTrick then
+                    cardsInSuit |> Array.maxBy (fun c -> c.Rank)
+                elif isLastToPlay then
+                    chooseFollowLastToPlay cardsInSuit highRank suitLed trickPoints shouldIntercept deal.UnplayedCards
+                else
+                    chooseFollowNotLast cardsInSuit highRank suitLed qsPlayed isSecondToLast shouldIntercept
             else
-                // Not last - try to duck
-                // Anti-shooting: try to intercept if we can win
-                let attemptIntercept =
-                    if shouldIntercept then
-                        match highRank with
-                        | Some hr ->
-                            let winningCards = cardsInLedSuit |> Array.filter (fun c -> c.Rank > hr)
-                            if winningCards.Length > 0 then
-                                Some (winningCards |> Array.minBy (fun c -> c.Rank))
-                            else None
-                        | None -> None
-                    else None
+                chooseDiscard legalCards qsPlayed holdingQS
 
-                match attemptIntercept with
-                | Some c -> c
-                | None ->
-                    // First check if we can safely dump QS
-                    let queenSpades = cardsInLedSuit |> Array.tryFind isQS
-                    match queenSpades, highRank with
-                        | Some qs, Some hr when suitLed = Suit.Spades && hr > Rank.Queen ->
-                            // Safe to dump QS - current winner is higher
-                            qs
-                        | _ ->
-                            match highRank with
-                                | Some hr ->
-                                    let belowWinner = cardsInLedSuit |> Array.filter (fun c -> c.Rank < hr)
+    // ============================================================
+    // Player Entry Point
+    // ============================================================
 
-                                    // Special case: second to last, spades led, QS not played - stay below Queen
-                                    if isSecondToLast && suitLed = Suit.Spades && not qsPlayed then
-                                        let belowQueen = cardsInLedSuit |> Array.filter (fun c -> c.Rank < Rank.Queen)
-                                        if belowQueen.Length > 0 then
-                                            belowQueen |> Array.maxBy (fun c -> c.Rank)
-                                        elif belowWinner.Length > 0 then
-                                            belowWinner |> Array.maxBy (fun c -> c.Rank)
-                                        else
-                                            let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
-                                            if nonQS.Length > 0 then
-                                                nonQS |> Array.minBy (fun c -> c.Rank)
-                                            else
-                                                cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
-                                    elif belowWinner.Length > 0 then
-                                        belowWinner |> Array.maxBy (fun c -> c.Rank)
-                                    else
-                                        // Can't duck - play lowest avoiding QS
-                                        let nonQS = cardsInLedSuit |> Array.filter (fun c -> not (isQS c))
-                                        if nonQS.Length > 0 then
-                                            nonQS |> Array.minBy (fun c -> c.Rank)
-                                        else
-                                            cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
-                                | None ->
-                                    cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
-        else
-            // Can't follow suit - discard
-            // Priority 1: Dump QS
-            let queenSpades = legalCards |> Array.tryFind isQS
-            match queenSpades with
-                | Some qs -> qs
-                | None ->
-                    // Priority 2: Dump A♠/K♠ if QS still out and we don't have it
-                    if not qsPlayed && not holdingQS then
-                        let highSpades = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades && c.Rank > Rank.Queen)
-                        if highSpades.Length > 0 then
-                            highSpades |> Array.maxBy (fun c -> c.Rank)
-                        else
-                            // Priority 3: Dump highest heart
-                            let hearts = legalCards |> Array.filter (fun c -> c.Suit = Suit.Hearts)
-                            if hearts.Length > 0 then
-                                hearts |> Array.maxBy (fun c -> c.Rank)
-                            else
-                                // Priority 4: Dump highest non-heart (avoid spades if holding QS)
-                                let nonHearts =
-                                    if holdingQS then
-                                        legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts && c.Suit <> Suit.Spades)
-                                    else
-                                        legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts)
-                                if nonHearts.Length > 0 then
-                                    nonHearts |> Array.maxBy (fun c -> c.Rank)
-                                else
-                                    legalCards |> Array.maxBy (fun c -> c.Rank)
-                    else
-                        // QS played or we have it
-                        // Dump highest heart
-                        let hearts = legalCards |> Array.filter (fun c -> c.Suit = Suit.Hearts)
-                        if hearts.Length > 0 then
-                            hearts |> Array.maxBy (fun c -> c.Rank)
-                        else
-                            // Dump highest non-heart (avoid spades if holding QS)
-                            let nonHearts =
-                                if holdingQS then
-                                    legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts && c.Suit <> Suit.Spades)
-                                else
-                                    legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts)
-                            if nonHearts.Length > 0 then
-                                nonHearts |> Array.maxBy (fun c -> c.Rank)
-                            else
-                                legalCards |> Array.maxBy (fun c -> c.Rank)
-
-    /// Heuristic Hearts player
     let player =
         let act (infoSet : InformationSet) =
             let legalActions = infoSet.LegalActions
@@ -460,18 +375,18 @@ module Claude =
                 legalActions.[0]
             else
                 match infoSet.LegalActionType with
-                    | ActionType.Pass ->
-                        choosePass infoSet.Hand legalActions
-                    | ActionType.Play ->
-                        let deal = infoSet.Deal
-                        let hand = infoSet.Hand
-                        let seat = infoSet.Player
-                        match deal.CurrentTrickOpt with
-                            | None -> failwith "No current trick"
-                            | Some trick ->
-                                if trick.Cards.IsEmpty then
-                                    chooseLead hand deal legalActions seat
-                                else
-                                    chooseFollow hand deal trick legalActions seat
+                | ActionType.Pass ->
+                    choosePass infoSet.Hand legalActions
+                | ActionType.Play ->
+                    let deal = infoSet.Deal
+                    let hand = infoSet.Hand
+                    let seat = infoSet.Player
+                    match deal.CurrentTrickOpt with
+                    | None -> failwith "No current trick"
+                    | Some trick ->
+                        if trick.Cards.IsEmpty then
+                            chooseLead hand deal legalActions seat
+                        else
+                            chooseFollow hand deal trick legalActions seat
 
         { Act = act }
