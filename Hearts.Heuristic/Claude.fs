@@ -11,6 +11,13 @@ module Claude =
     /// Check if a card is the Queen of Spades
     let private isQS (card : Card) = card.Suit = Suit.Spades && card.Rank = Rank.Queen
 
+    /// Check if we should commit to shooting the moon
+    let private isAttemptingToShoot (deal : ClosedDeal) (mySeat : Seat) =
+        let myPoints = deal.Score[mySeat]
+        let totalPointsTaken = deal.Score |> Score.sum
+        // We have ALL points so far AND have >= 14 points to justify committing
+        myPoints > 0 && myPoints = totalPointsTaken && myPoints >= 14
+
     /// Passing strategy - improved version
     let private choosePass (hand : Hand) (legalCards : Card[]) =
         // Analyze hand by suit
@@ -80,7 +87,12 @@ module Claude =
         | None -> grouped |> Array.head |> snd |> Array.minBy (fun c -> c.Rank)
 
     /// Leading strategy - improved version
-    let private chooseLead (hand : Hand) (deal : ClosedDeal) (legalCards : Card[]) =
+    let private chooseLead (hand : Hand) (deal : ClosedDeal) (legalCards : Card[]) (mySeat : Seat) =
+        // Check if we're shooting
+        if isAttemptingToShoot deal mySeat then
+            // Lead highest to maintain control
+            legalCards |> Array.maxBy (fun c -> c.Rank)
+        else
         let qsPlayed = not (deal.UnplayedCards.Contains(queenOfSpades))
         let holdingQS = hand.Contains(queenOfSpades)
         let hasHighSpades = hand |> Seq.exists (fun c -> c.Suit = Suit.Spades && c.Rank > Rank.Queen)
@@ -119,7 +131,7 @@ module Claude =
                 leadFromShortest legalCards
 
     /// Following suit strategy
-    let private chooseFollow (hand : Hand) (deal : ClosedDeal) (trick : Trick) (legalCards : Card[]) =
+    let private chooseFollow (hand : Hand) (deal : ClosedDeal) (trick : Trick) (legalCards : Card[]) (mySeat : Seat) =
         let suitLed = trick.SuitLedOpt |> Option.get
         let nPlayers = 4
         let trickCount = trick.Cards.Length
@@ -134,10 +146,31 @@ module Claude =
         let cardTakingTrick = trick.HighPlayOpt |> Option.map snd
         let highRank = cardTakingTrick |> Option.map (fun c -> c.Rank)
 
-        // Anti-shooting logic: detect if someone might be shooting the moon
+        // Check if we can follow suit
+        let cardsInLedSuit = legalCards |> Array.filter (fun c -> c.Suit = suitLed)
+
+        // Check if WE are shooting the moon
+        if isAttemptingToShoot deal mySeat then
+            if cardsInLedSuit.Length > 0 then
+                // Try to win the trick
+                match highRank with
+                | Some hr ->
+                    let winningCards = cardsInLedSuit |> Array.filter (fun c -> c.Rank > hr)
+                    if winningCards.Length > 0 then
+                        winningCards |> Array.minBy (fun c -> c.Rank)
+                    else
+                        cardsInLedSuit |> Array.minBy (fun c -> c.Rank)
+                | None ->
+                    cardsInLedSuit |> Array.maxBy (fun c -> c.Rank)
+            else
+                // Discard lowest
+                legalCards |> Array.minBy (fun c -> c.Rank)
+        else
+
+        // Anti-shooting logic: detect if someone ELSE might be shooting the moon
         let scores = Score.indexed deal.Score
         let (potentialShooter, shooterPoints) = scores |> Seq.maxBy snd
-        let isShootingRisk = shooterPoints >= 22
+        let isShootingRisk = shooterPoints >= 21 && potentialShooter <> mySeat
 
         let shooterIsWinning =
             match trick.HighPlayOpt with
@@ -310,12 +343,13 @@ module Claude =
                     | ActionType.Play ->
                         let deal = infoSet.Deal
                         let hand = infoSet.Hand
+                        let seat = infoSet.Player
                         match deal.CurrentTrickOpt with
                             | None -> failwith "No current trick"
                             | Some trick ->
                                 if trick.Cards.IsEmpty then
-                                    chooseLead hand deal legalActions
+                                    chooseLead hand deal legalActions seat
                                 else
-                                    chooseFollow hand deal trick legalActions
+                                    chooseFollow hand deal trick legalActions seat
 
         { Act = act }
