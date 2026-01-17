@@ -13,10 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fable.Remoting.Suave" Version="4.43.0" />
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="Suave" Version="2.6.2">
+    <PackageReference Include="Suave" Version="3.2.3">
       <ExcludeAssets>runtime</ExcludeAssets>
 	</PackageReference>
     <PackageReference Include="TorchSharp-cpu" Version="0.105.2" />
@@ -26,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Fable.Remoting.Suave\Fable.Remoting.Suave\Fable.Remoting.Suave.fsproj" />
     <ProjectReference Include="..\..\Hearts.Cfr\Hearts.Cfr.fsproj" />
     <ProjectReference Include="..\..\Hearts.Model\Hearts.Model.fsproj" />
   </ItemGroup>
