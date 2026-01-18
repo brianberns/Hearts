@@ -44,30 +44,37 @@ module Trainer =
             0f, 0)
 
         let chunkSize = settings.DealBatchSize
-        Array.zeroCreate<int> settings.NumDealsPerIteration
-            |> Array.chunkBySize chunkSize
-            |> Array.indexed
-            |> Array.collect (fun (i, chunk) ->
+        let samples =
+            Array.zeroCreate<int> settings.NumDealsPerIteration
+                |> Array.chunkBySize chunkSize
+                |> Array.indexed
+                |> Array.collect (fun (i, chunk) ->
 
-                let samples =
-                    OpenDeal.playDeals
-                        (Random())
-                        true
-                        chunk.Length
-                        (fun deal ->
-                            let rng = Random()   // each thread has its own RNG
-                            Traverse.traverse settings iter deal rng)
-                        |> Inference.complete
-                            settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
-                            modelOpt
-                GC.Collect()   // clean up continuations
+                    let samples =
+                        OpenDeal.playDeals
+                            (Random())
+                            true
+                            chunk.Length
+                            (fun deal ->
+                                let rng = Random()   // each thread has its own RNG
+                                Traverse.traverse settings iter deal rng)
+                            |> Inference.complete
+                                settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
+                                modelOpt
+                    GC.Collect()   // clean up continuations
 
-                settings.Writer.add_scalar(
-                    $"advantage samples/iter%03d{iter}",
-                    float32 samples.Length / float32 chunkSize,
-                    (i + 1) * chunkSize)
+                    settings.Writer.add_scalar(
+                        $"advantage samples/iter%03d{iter}",
+                        float32 samples.Length / float32 chunkSize,
+                        (i + 1) * chunkSize)
 
-                samples)
+                    samples)
+
+        settings.Writer.add_scalar(
+            "advantage samples",
+            float32 samples.Length, iter)
+
+        samples
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
