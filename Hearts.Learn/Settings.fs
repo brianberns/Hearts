@@ -129,6 +129,9 @@ module Settings =
             $"settings/TrainingSubBatchSize",
             string settings.TrainingSubBatchSize, 0)
         writer.add_text(
+            $"settings/DropoutRate",
+            string settings.DropoutRate, 0)
+        writer.add_text(
             $"settings/LearningRate",
             string settings.LearningRate, 0)
         writer.add_text(
