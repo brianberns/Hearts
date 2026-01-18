@@ -147,7 +147,7 @@ module AdvantageModel =
         loss
 
     /// Trains the given model using the given samples.
-    let train settings iter samples (model : AdvantageModel) =
+    let train settings iter evalOpt samples (model : AdvantageModel) =
 
             // prepare training data
         let batches =
@@ -164,6 +164,8 @@ module AdvantageModel =
         use criterion = MSELoss()
         model.train()
         for epoch = 1 to settings.NumTrainingEpochs do
+
+                // train epoch
             let loss =
                 Array.last [|
                     for batch in batches do
@@ -173,4 +175,12 @@ module AdvantageModel =
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{iter}",
                 loss, epoch)
+
+                // evaluate?
+            if epoch % settings.NumEpochsPerEvaluation = 0 then
+                Option.iter (fun eval ->
+                    model.eval()
+                    eval epoch model
+                    model.train()) evalOpt
+
         model.eval()
