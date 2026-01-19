@@ -78,22 +78,37 @@ module Claude =
         let hasQS = spades |> List.exists isQS
         let lowSpades = spades |> List.filter (fun c -> c.Rank < Rank.Queen) |> List.length
         let highSpades = spades |> List.filter (fun c -> c.Rank > Rank.Queen)
+        let hasHighSpadeProtection = highSpades.Length >= 2 || (highSpades.Length >= 1 && lowSpades >= 2)
+        // Include Ace of hearts as very dangerous
+        let aceHeart = hearts |> List.filter (fun c -> c.Rank = Rank.Ace)
         let highHearts = hearts |> List.filter (fun c -> c.Rank >= Rank.Queen)
                                 |> List.sortByDescending (fun c -> c.Rank)
 
         let voidCandidates =
             [clubs; diamonds]
-            |> List.filter (fun suitCards -> suitCards.Length > 0 && suitCards.Length <= 4)
+            |> List.filter (fun suitCards -> suitCards.Length > 0 && suitCards.Length <= 3)
             |> List.sortBy (fun suitCards -> suitCards.Length)
             |> List.collect id
             |> List.sortByDescending (fun c -> c.Rank)
 
+        // QS is unprotected if:
+        // - We have fewer than 3 low spades for cover
+        // - AND we don't have enough high spade protection (A/K to take QS safely)
+        let qsUnprotected = lowSpades < 3 && not hasHighSpadeProtection
+
         let candidates =
             [
-                if hasQS && lowSpades < 3 then [queenOfSpades] else []
+                // Priority 1: QS if unprotected
+                if hasQS && qsUnprotected then [queenOfSpades] else []
+                // Priority 2: High spades (A, K) - always dangerous
                 if highSpades.Length > 0 then highSpades |> List.sortByDescending (fun c -> c.Rank) else []
+                // Priority 3: Ace of hearts is very dangerous
+                aceHeart
+                // Priority 4: High hearts (Q, K)
                 highHearts
+                // Priority 5: Cards from short suits to create voids
                 voidCandidates
+                // Priority 6: Any other high cards
                 legalCards |> Array.filter (fun c -> c.Rank >= Rank.Jack)
                            |> Array.sortByDescending (fun c -> c.Rank)
                            |> Array.toList
@@ -173,6 +188,7 @@ module Claude =
                 else
                     leadFromShortestSafe legalCards mySeat voids
         else
+            // QS is played - safe to lead anything
             let nonQS = legalCards |> Array.filter (fun c -> not (isQS c))
             if nonQS.Length > 0 then
                 leadFromShortestSafe nonQS mySeat voids
@@ -226,12 +242,9 @@ module Claude =
                     if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
                     else cardsInSuit |> Array.maxBy (fun c -> c.Rank)
             elif trickPoints <= 0 then
+                // No points in trick - safe to play high cards to get rid of them
                 let nonQS = cardsInSuit |> Array.filter (fun c -> not (isQS c))
-                let highestCard =
-                    if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
-                    else cardsInSuit |> Array.maxBy (fun c -> c.Rank)
-                if isHighestRemaining highestCard unplayedCards then highestCard
-                elif nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
+                if nonQS.Length > 0 then nonQS |> Array.maxBy (fun c -> c.Rank)
                 else cardsInSuit |> Array.maxBy (fun c -> c.Rank)
             else
                 match highRank with
@@ -270,7 +283,8 @@ module Claude =
                 match highRank with
                 | Some hr ->
                     let belowWinner = cardsInSuit |> Array.filter (fun c -> c.Rank < hr)
-                    if isSecondToLast && suitLed = Suit.Spades && not qsPlayed then
+                    // Be careful with spades when QS not played
+                    if suitLed = Suit.Spades && not qsPlayed then
                         let belowQueen = cardsInSuit |> Array.filter (fun c -> c.Rank < Rank.Queen)
                         if belowQueen.Length > 0 then
                             belowQueen |> Array.maxBy (fun c -> c.Rank)
@@ -289,7 +303,7 @@ module Claude =
                 | None ->
                     cardsInSuit |> Array.minBy (fun c -> c.Rank)
 
-    let private chooseDiscard (legalCards : Card[]) (qsPlayed : bool) (holdingQS : bool) =
+    let private chooseDiscard (legalCards : Card[]) (qsPlayed : bool) (holdingQS : bool) (hand : Hand) =
         match legalCards |> Array.tryFind isQS with
         | Some qs -> qs
         | None ->
@@ -299,25 +313,40 @@ module Claude =
                     Some (hearts |> Array.maxBy (fun c -> c.Rank))
                 else None
 
+            // When dumping non-hearts, prefer cards from near-void suits (1-2 cards) to create voids
             let dumpHighestNonHeart () =
-                let nonHearts =
-                    if holdingQS then
-                        legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts && c.Suit <> Suit.Spades)
-                    else
-                        legalCards |> Array.filter (fun c -> c.Suit <> Suit.Hearts)
+                let excludedSuits =
+                    if holdingQS then set [Suit.Hearts; Suit.Spades]
+                    else set [Suit.Hearts]
+                let nonHearts = legalCards |> Array.filter (fun c -> not (excludedSuits.Contains c.Suit))
                 if nonHearts.Length > 0 then
-                    nonHearts |> Array.maxBy (fun c -> c.Rank)
+                    // Prefer dumping high cards from short suits to create voids
+                    let bySuit =
+                        nonHearts
+                        |> Array.groupBy (fun c -> c.Suit)
+                        |> Array.map (fun (suit, cards) ->
+                            let handSuitCount = hand |> Seq.filter (fun c -> c.Suit = suit) |> Seq.length
+                            (suit, cards, handSuitCount))
+                        |> Array.sortBy (fun (_, _, count) -> count)
+                    let (_, shortSuitCards, _) = bySuit.[0]
+                    shortSuitCards |> Array.maxBy (fun c -> c.Rank)
                 else
                     legalCards |> Array.maxBy (fun c -> c.Rank)
 
             if not qsPlayed && not holdingQS then
+                // Dump high spades first (A, K) to avoid taking QS
                 let highSpades = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades && c.Rank > Rank.Queen)
                 if highSpades.Length > 0 then
                     highSpades |> Array.maxBy (fun c -> c.Rank)
                 else
-                    match dumpHighestHeart () with
-                    | Some card -> card
-                    | None -> dumpHighestNonHeart ()
+                    // Also dump mid-spades (J, 10) as they can still catch QS
+                    let midSpades = legalCards |> Array.filter (fun c -> c.Suit = Suit.Spades && c.Rank >= Rank.Ten && c.Rank < Rank.Queen)
+                    if midSpades.Length > 0 then
+                        midSpades |> Array.maxBy (fun c -> c.Rank)
+                    else
+                        match dumpHighestHeart () with
+                        | Some card -> card
+                        | None -> dumpHighestNonHeart ()
             else
                 match dumpHighestHeart () with
                 | Some card -> card
@@ -346,7 +375,13 @@ module Claude =
         else
             let scores = Score.indexed deal.Score
             let (potentialShooter, shooterPoints) = scores |> Seq.maxBy snd
-            let isShootingRisk = shooterPoints >= 21 && potentialShooter <> mySeat
+            let totalPointsTaken = deal.Score |> Score.sum
+            // Detect shooter: they have ALL points taken and have significant points (>= 18)
+            let isShootingRisk =
+                potentialShooter <> mySeat &&
+                shooterPoints > 0 &&
+                shooterPoints = totalPointsTaken &&
+                shooterPoints >= 18
             let shooterIsWinning =
                 match trick.HighPlayOpt with
                 | Some (seat, _) -> seat = potentialShooter
@@ -361,7 +396,7 @@ module Claude =
                 else
                     chooseFollowNotLast cardsInSuit highRank suitLed qsPlayed isSecondToLast shouldIntercept
             else
-                chooseDiscard legalCards qsPlayed holdingQS
+                chooseDiscard legalCards qsPlayed holdingQS hand
 
     // ============================================================
     // Player Entry Point
