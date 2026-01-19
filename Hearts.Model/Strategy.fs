@@ -9,9 +9,10 @@ open Hearts
 
 module Strategy =
 
-    /// Creates a random strategy of the given length.
-    let random n =
-        DenseVector.create n (1.0f / float32 n)
+    /// Creates a one-hot strategy vector.
+    let createOneHot idx n =
+        DenseVector.init n (fun i ->
+            if i = idx then 1.0f else 0.0f)
 
     /// Computes strategy from the given per-action regrets.
     /// A strategy is normalized so that its elements sum

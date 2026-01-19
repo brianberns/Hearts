@@ -35,6 +35,9 @@ type Settings =
         /// Number of epochs to use when training the model.
         NumTrainingEpochs : int
 
+        /// Number of epochs per evaluation.
+        NumEpochsPerEvaluation : int
+
         /// Batch size to use when training the model.
         TrainingBatchSize : int
 
@@ -79,19 +82,20 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
-            NumDealsPerIteration = 40_000
-            DealBatchSize = 400
+            NumDealsPerIteration = 2000
+            DealBatchSize = 100
             SampleBranchRate = 0.2
             SampleReservoirCapacity = 80_000_000
-            HiddenSize = Encoding.encodedLength * 3
+            HiddenSize = Encoding.encodedLength * 2
             NumHiddenLayers = 9
-            NumTrainingEpochs = 400
+            NumTrainingEpochs = 100
+            NumEpochsPerEvaluation = 5
             TrainingBatchSize = 200_000
             TrainingSubBatchSize = 50_000
             DropoutRate = 0.2
             LearningRate = 1e-3
             NumIterations = 50
-            NumEvaluationDeals = 20000
+            NumEvaluationDeals = 2000
             Device = torch.CUDA
             ModelDirPath = "./Models"
             Writer = writer
@@ -122,6 +126,9 @@ module Settings =
         writer.add_text(
             $"settings/NumTrainingEpochs",
             string settings.NumTrainingEpochs, 0)
+        writer.add_text(
+            $"settings/NumEpochsPerEvaluation",
+            string settings.NumEpochsPerEvaluation, 0)
         writer.add_text(
             $"settings/TrainingBatchSize",
             string settings.TrainingBatchSize, 0)

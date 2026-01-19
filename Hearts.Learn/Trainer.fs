@@ -44,30 +44,62 @@ module Trainer =
             0f, 0)
 
         let chunkSize = settings.DealBatchSize
-        Array.zeroCreate<int> settings.NumDealsPerIteration
-            |> Array.chunkBySize chunkSize
-            |> Array.indexed
-            |> Array.collect (fun (i, chunk) ->
+        let samples =
+            Array.zeroCreate<int> settings.NumDealsPerIteration
+                |> Array.chunkBySize chunkSize
+                |> Array.indexed
+                |> Array.collect (fun (i, chunk) ->
 
-                let samples =
-                    OpenDeal.playDeals
-                        (Random())
-                        true
-                        chunk.Length
-                        (fun deal ->
-                            let rng = Random()   // each thread has its own RNG
-                            Traverse.traverse settings iter deal rng)
-                        |> Inference.complete
-                            settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
-                            modelOpt
-                GC.Collect()   // clean up continuations
+                    let samples =
+                        OpenDeal.playDeals
+                            (Random())
+                            true
+                            chunk.Length
+                            (fun deal ->
+                                let rng = Random()   // each thread has its own RNG
+                                Traverse.traverse settings iter deal rng)
+                            |> Inference.complete
+                                settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
+                                modelOpt
+                    GC.Collect()   // clean up continuations
 
+                    settings.Writer.add_scalar(
+                        $"advantage samples/iter%03d{iter}",
+                        float32 samples.Length / float32 chunkSize,
+                        (i + 1) * chunkSize)
+
+                    samples)
+
+        settings.Writer.add_scalar(
+            "advantage samples",
+            float32 samples.Length, iter)
+
+        samples
+
+    /// Evaluates the given model by playing it against a
+    /// standard.
+    let evaluate settings iter epochOpt (model : AdvantageModel) =
+
+        let payoff =
+            Tournament.run
+                0
+                false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
+                settings.NumEvaluationDeals
+                Claude.player
+                (Strategy.createPlayer model)
+
+        match epochOpt with
+
+            | Some epoch ->
                 settings.Writer.add_scalar(
-                    $"advantage samples/iter%03d{iter}",
-                    float32 samples.Length / float32 chunkSize,
-                    (i + 1) * chunkSize)
+                    $"advantage tournament/iter%03d{iter}",
+                    payoff, epoch)
 
-                samples)
+            | None ->
+                if settings.Verbose then
+                    printfn $"Tournament payoff: %0.5f{payoff}"
+                settings.Writer.add_scalar(
+                    $"advantage tournament", payoff, iter)
 
     /// Adds the given samples to the given reservoir and then
     /// uses the reservoir to train a new model.
@@ -85,7 +117,10 @@ module Trainer =
                 settings.NumHiddenLayers,
                 settings.DropoutRate,
                 settings.Device)
-        AdvantageModel.train settings iter resv.Items model
+        let eval epoch model =
+            evaluate settings iter (Some epoch) model
+        AdvantageModel.train
+            settings iter (Some eval) resv.Items model
         stopwatch.Stop()
         if settings.Verbose then
             printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
@@ -129,21 +164,6 @@ module Trainer =
 
         state
 
-    /// Evaluates the given model by playing it against a
-    /// standard.
-    let evaluate settings iter (model : AdvantageModel) =
-        let payoff =
-            Tournament.run
-                0
-                false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
-                settings.NumEvaluationDeals
-                Claude.player
-                (Strategy.createPlayer model)
-        if settings.Verbose then
-            printfn $"Tournament payoff: %0.5f{payoff}"
-        settings.Writer.add_scalar(
-            $"advantage tournament", payoff, iter)
-
     /// Trains for the given number of iterations.
     let train settings =
 
@@ -161,7 +181,7 @@ module Trainer =
             ||> Seq.fold (fun state iter ->
                 if settings.Verbose then
                     printfn $"\n*** Iteration {iter} ***"
-                let state = updateModel settings iter state   // create new model
+                let state = updateModel settings iter state
                 Option.iter (
-                    evaluate settings iter) state.ModelOpt    // evaluate model
+                    evaluate settings iter None) state.ModelOpt
                 state)

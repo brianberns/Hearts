@@ -127,14 +127,14 @@ module Program =
         for iter = 1 to 1000 do
 
             stopwatch.Restart()
-            AdvantageModel.train settings iter samples model
+            AdvantageModel.train settings iter None samples model
             stopwatch.Stop()
             if settings.Verbose then
                 printfn $"Trained model on {samples.Length} samples in {stopwatch.Elapsed} \
                     (%.2f{float stopwatch.ElapsedMilliseconds / float samples.Length} ms/sample)"
 
             evaluate settings iter testInfoSetPairs model
-            Trainer.evaluate settings iter model
+            Trainer.evaluate settings iter None model
 
             Path.Combine(
                 settings.ModelDirPath,
