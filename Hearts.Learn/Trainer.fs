@@ -132,18 +132,15 @@ module Trainer =
     /// Evaluates the given model by playing it against a
     /// standard.
     let evaluate settings iter (model : AdvantageModel) =
-        let score, payoff =
+        let payoff =
             Tournament.run
-                (Random(0))       // use repeatable test set, not seen during training
+                0
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
                 settings.NumEvaluationDeals
                 Claude.player
                 (Strategy.createPlayer model)
         if settings.Verbose then
-            printfn "\nTournament:"
-            for (seat, points) in Score.indexed score do
-                printfn $"   %-6s{string seat}: {points}"
-            printfn $"   Payoff: %0.5f{payoff}"
+            printfn $"Tournament payoff: %0.5f{payoff}"
         settings.Writer.add_scalar(
             $"advantage tournament", payoff, iter)
 

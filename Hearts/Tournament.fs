@@ -1,5 +1,6 @@
 ﻿namespace Hearts
 
+open System
 open PlayingCards
 open Hearts
 
@@ -53,23 +54,33 @@ module Tournament =
             |> Seq.reduce (+)
 
     /// Runs a 2v2 tournament between two players.
-    let run rng inParallel numDeals champion challenger =
-        let challengerSeats = set [ Seat.East; Seat.West ]
-        let playerMap =
-            Enum.getValues<Seat>
-                |> Seq.map (fun seat ->
-                    let player =
-                        if challengerSeats.Contains(seat) then
-                            challenger
-                        else champion
-                    seat, player)
-                |> Map
-        let score =
-            playDeals rng inParallel numDeals playerMap
-        let payoff =
+    let run rngSeed inParallel numDeals champion challenger =
+
+        let runWith numDeals (challengerSeats : Set<_>) =
+            let playerMap =
+                Enum.getValues<Seat>
+                    |> Seq.map (fun seat ->
+                        let player =
+                            if challengerSeats.Contains(seat) then
+                                challenger
+                            else champion
+                        seat, player)
+                    |> Map
+            let score =
+                let rng = Random(rngSeed)
+                playDeals rng inParallel numDeals playerMap
             let payoffs = ZeroSum.getPayoff score
-            let sum =
-                challengerSeats
-                    |> Seq.sumBy (fun seat -> payoffs[int seat])
-            sum / float32 (challengerSeats.Count * numDeals)
-        score, payoff
+            challengerSeats
+                |> Seq.sumBy (fun seat -> payoffs[int seat])
+
+            // duplicate deals, so each deal runs twice
+        assert(numDeals % 2 = 0)
+        let halfDeals = numDeals / 2
+
+            // champion and challenger are represented equally
+        assert(Seat.numSeats % 2 = 0)
+        let nSeats = Seat.numSeats / 2
+
+        let sumA = runWith halfDeals (set [ Seat.East; Seat.West ])
+        let sumB = runWith halfDeals (set [ Seat.North; Seat.South ])
+        (sumA + sumB) / float32 (nSeats * numDeals)
