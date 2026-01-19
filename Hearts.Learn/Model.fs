@@ -177,7 +177,8 @@ module AdvantageModel =
                 loss, epoch)
 
                 // evaluate?
-            if epoch % settings.NumEpochsPerEvaluation = 0 then
+            if epoch % settings.NumEpochsPerEvaluation = 0
+                && epoch < settings.NumTrainingEpochs then
                 Option.iter (fun eval ->
                     model.eval()
                     eval epoch model
