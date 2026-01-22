@@ -10,10 +10,10 @@ module Program =
 
     printfn $"Server garbage collection: {GCSettings.IsServerGC}"
 
-    let numDeals = 20_000
+    let numDeals = 2000
 
-    let player =
-        let model =
+    do
+        use model =
             let model =
                 new AdvantageModel(
                     hiddenSize = Encoding.encodedLength * 3,
@@ -23,8 +23,10 @@ module Program =
             model.load("AdvantageModel.pt") |> ignore
             model.eval()
             model
-        Strategy.createPlayer model
+        let player = Strategy.createPlayer model
 
-    let payoff =
-        Tournament.run 0 true numDeals Claude.player player
-    printfn $"Payoff: {payoff}"
+        let payoff =
+            Tournament.run 0 true numDeals Claude.player player
+        printfn $"Payoff: {payoff}"
+
+    System.Console.ReadLine() |> ignore
