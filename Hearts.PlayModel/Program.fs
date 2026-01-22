@@ -18,14 +18,14 @@ module Program =
         use model =
             let model =
                 new AdvantageModel(
-                    hiddenSize = Encoding.encodedLength * 3,
+                    hiddenSize = Encoding.encodedLength * 2,
                     numHiddenLayers = 9,
                     dropoutRate = 0.3,
                     device = TorchSharp.torch.CUDA)
             model.load("AdvantageModel.pt") |> ignore
             model.eval()
             model
-        let player = Strategy.createPlayer true model
+        let player = Strategy.createPlayerDeterministic model
 
         let stopwatch = Stopwatch.StartNew()
         let payoff =

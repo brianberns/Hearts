@@ -86,7 +86,7 @@ module Trainer =
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
                 settings.NumEvaluationDeals
                 Claude.player
-                (Strategy.createPlayer false model)
+                (Strategy.createPlayerDeterministic model)
 
         match epochOpt with
 

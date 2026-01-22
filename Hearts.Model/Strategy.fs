@@ -79,22 +79,33 @@ module Strategy =
 
         else Array.empty
 
-    /// Creates a Hearts player using the given model.
-    let createPlayer deterministic model =
+    /// Computes strategy for the given info set using the
+    /// given advantage model.
+    let private getStrategy model infoSet =
+        getFromAdvantage model [|infoSet|]
+            |> Array.exactlyOne
 
-        let getStrategy infoSet =
-            getFromAdvantage model [|infoSet|]
-                |> Array.exactlyOne
+    /// Creates a deterministic Hearts player using the given
+    /// model.
+    let createPlayerDeterministic model =
 
-        let actMaxIndex infoSet =
-            getStrategy infoSet
+        let act infoSet =
+            getStrategy model infoSet
                 |> Vector.maxIndex
                 |> Array.get infoSet.LegalActions
 
-        let actSample rng infoSet =
-            getStrategy infoSet
+        { Act = act }
+
+
+    /// Creates a non-deterministic Hearts player using the
+    /// given model.
+    let createPlayerNondeterministic model =
+
+        let rng = Random()
+
+        let act infoSet =
+            getStrategy model infoSet
                 |> Vector.sample rng
                 |> Array.get infoSet.LegalActions
 
-        if deterministic then { Act = actMaxIndex }
-        else { Act = actSample (Random()) }
+        { Act = act }
