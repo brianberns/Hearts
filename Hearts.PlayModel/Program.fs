@@ -12,7 +12,7 @@ module Program =
 
     printfn $"Server garbage collection: {GCSettings.IsServerGC}"
 
-    let numDeals = 2000
+    let numDeals = 20_000
 
     do
         use model =
@@ -29,7 +29,7 @@ module Program =
 
         let stopwatch = Stopwatch.StartNew()
         let payoff =
-            Tournament.run 0 false numDeals Claude.player player
+            Tournament.run 0 true numDeals Claude.player player
         printfn $"Payoff: {payoff}"
         printfn $"Elapsed time: {stopwatch.Elapsed}"
 
