@@ -1,5 +1,7 @@
 ﻿namespace Hearts.PlayKiller
 
+open System
+open System.Diagnostics
 open System.Runtime
 
 open Hearts
@@ -25,8 +27,10 @@ module Program =
             model
         let player = Strategy.createPlayer model
 
+        let stopwatch = Stopwatch.StartNew()
         let payoff =
-            Tournament.run 0 true numDeals Claude.player player
+            Tournament.run 0 false numDeals Claude.player player
         printfn $"Payoff: {payoff}"
+        printfn $"Elapsed time: {stopwatch.Elapsed}"
 
-    System.Console.ReadLine() |> ignore
+    Console.ReadLine() |> ignore
