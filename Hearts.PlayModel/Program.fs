@@ -25,7 +25,7 @@ module Program =
             model.load("AdvantageModel.pt") |> ignore
             model.eval()
             model
-        let player = Strategy.createPlayer model
+        let player = Strategy.createPlayer true model
 
         let stopwatch = Stopwatch.StartNew()
         let payoff =

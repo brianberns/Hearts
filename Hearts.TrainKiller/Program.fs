@@ -35,7 +35,7 @@ module Program =
 
     let evaluate settings iter infoSetPairs model =
 
-        let player = Strategy.createPlayer model
+        let player = Strategy.createPlayer false model
 
         let passPairs, playPairs =
             infoSetPairs

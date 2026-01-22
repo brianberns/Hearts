@@ -15,7 +15,7 @@ module Program =
         model.eval()
         model
 
-    let player = Strategy.createPlayer model
+    let player = Strategy.createPlayer false model
 
     let payoffMap = Killer.run player
     for (KeyValue(seat, payoff)) in payoffMap do

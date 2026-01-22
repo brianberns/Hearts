@@ -80,15 +80,21 @@ module Strategy =
         else Array.empty
 
     /// Creates a Hearts player using the given model.
-    let createPlayer (model : AdvantageModel) =
+    let createPlayer deterministic model =
 
-        let rng = Random()   // each player has its own RNG
+        let getStrategy infoSet =
+            getFromAdvantage model [|infoSet|]
+                |> Array.exactlyOne
 
-        let act infoSet =
-            let strategy =
-                getFromAdvantage model [|infoSet|]
-                    |> Array.exactlyOne
-            Vector.sample rng strategy
+        let actMaxIndex infoSet =
+            getStrategy infoSet
+                |> Vector.maxIndex
                 |> Array.get infoSet.LegalActions
 
-        { Act = act }
+        let actSample rng infoSet =
+            getStrategy infoSet
+                |> Vector.sample rng
+                |> Array.get infoSet.LegalActions
+
+        if deterministic then { Act = actMaxIndex }
+        else { Act = actSample (Random()) }
