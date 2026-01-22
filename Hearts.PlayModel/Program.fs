@@ -1,4 +1,4 @@
-﻿namespace Hearts.PlayKiller
+﻿namespace Hearts.PlayModel
 
 open System
 open System.Diagnostics
