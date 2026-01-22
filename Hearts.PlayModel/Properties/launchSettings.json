@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Hearts.PlayModel": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
+    }
+  }
+}
