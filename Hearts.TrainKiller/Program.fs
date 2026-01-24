@@ -109,6 +109,7 @@ module Program =
                 settings.DropoutRate,
                 settings.Device)
 
+        stopwatch.Restart()
         let samples =
             trainInfoSetPairs
                 |> Array.Parallel.map (fun (infoSet, card) ->
@@ -122,7 +123,7 @@ module Program =
                         Regrets = output
                         Weight = 1.0f
                     })
-        printfn "Converted to samples"
+        printfn $"Converted to samples in {stopwatch.Elapsed}"
 
         for iter = 1 to 1000 do
 
