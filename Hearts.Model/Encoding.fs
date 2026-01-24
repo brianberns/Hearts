@@ -67,8 +67,8 @@ module Encoding =
         assert(cards.Count <= Pass.numCards)
         encodeCards cards
 
-    /// Encodes cards played by in the given tricks as a
-    /// multi-hot vector for each player.
+    /// Encodes cards played in the given tricks as multi-
+    /// hot vectors for each player.
     let encodePlays player tricks =
         let seatPlayMap =
             tricks
