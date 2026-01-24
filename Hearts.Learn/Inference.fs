@@ -13,7 +13,9 @@ module Array =
                 |> Array.Parallel.map (fun (val1, val2) ->
                     mapping val1 val2)
 
-/// Multi-threaded batch inference.
+/// Multi-threaded inference in the traversal of a batch of deals.
+/// Rather than infer each node in the tree one at a time, we batch
+/// nodes together with continuations.
 module Inference =
 
     /// Gets strategies for the given batch of info sets.
