@@ -71,20 +71,14 @@ module Encoding =
     /// hot vectors for each player.
     let encodePlays player tricks =
         let seatPlayMap =
-            tricks
-                |> Seq.collect Trick.plays
-                |> Seq.toArray
-                |> Array.groupBy fst
-                |> Array.map (fun (seat, group) ->
-                    let cards = Array.map snd group
-                    seat, cards)
-                |> Map
+            Array.init Seat.numSeats (fun _ ->
+                ResizeArray(ClosedDeal.numCardsPerHand))
+        for trick in tricks do        
+            for seat, card in Trick.plays trick do
+                seatPlayMap[int seat].Add(card)
         [|
             for seat in Seat.cycle player do
-                yield!
-                    Map.tryFind seat seatPlayMap
-                        |> Option.defaultValue Array.empty
-                        |> encodeCards
+                yield! encodeCards seatPlayMap[int seat]
         |]
 
     /// Encodes each card in the given current trick as
