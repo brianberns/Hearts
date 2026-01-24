@@ -13,6 +13,7 @@ module Array =
                 |> Array.Parallel.map (fun (val1, val2) ->
                     mapping val1 val2)
 
+/// Multi-threaded batch inference.
 module Inference =
 
     /// Gets strategies for the given batch of info sets.

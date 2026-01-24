@@ -102,18 +102,17 @@ module Traverse =
             let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
                 addLoop deal depth
-                    infoSet.LegalActionType legalActions[0]   // forced action
+                    infoSet.LegalActionType legalActions[0]           // forced action
             else
                     // get utility of current player's strategy
-                let rnd = lock rng (fun () -> rng.NextDouble())
+                let rnd = lock rng (fun () -> rng.NextDouble())       // lock RNG to allow multi-threaded batch inference
                 let threshold =
                     settings.SampleBranchRate
-                        / (settings.SampleBranchRate + float depth)   // nodes near the root have a higher chance of being expanded
+                        / (settings.SampleBranchRate + float depth)   // nodes near the root have a greater chance of being expanded
                 let getUtility =
                     if rnd <= threshold then getFullUtility
                     else getOneUtility
-                let cont =
-                    getUtility infoSet deal depth
+                let cont = getUtility infoSet deal depth
                 Node.getStrategy infoSet cont
 
         /// Adds the given action to the given deal and loops.
@@ -159,13 +158,12 @@ module Traverse =
         /// sampling a single action.
         and getOneUtility infoSet deal depth strategy =
             let result =
-                lock rng (fun () ->
-                    Vector.sample rng strategy)
+                lock rng (fun () -> Vector.sample rng strategy)   // lock RNG to allow multi-threaded batch inference
                     |> Array.get infoSet.LegalActions
                     |> addLoop deal (depth+1) infoSet.LegalActionType
             Node.getUtility
                 infoSet
-                [|result|]
+                [| result |]
                 (Array.exactlyOne >> Complete)
 
         loop deal 0
