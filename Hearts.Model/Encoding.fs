@@ -73,11 +73,9 @@ module Encoding =
         let seatPlayMap =
             Array.init Seat.numSeats (fun _ ->
                 ResizeArray(ClosedDeal.numCardsPerHand))
-        for trick in tricks do
-            Trick.mapPlays (fun seat card ->
-                seatPlayMap[int seat].Add(card))
-                trick
-                    |> ignore
+        for trick in tricks do        
+            for seat, card in Trick.plays trick do
+                seatPlayMap[int seat].Add(card)
         [|
             for seat in Seat.cycle player do
                 yield! encodeCards seatPlayMap[int seat]

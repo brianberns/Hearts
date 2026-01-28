@@ -17,8 +17,7 @@ type Trick =
         /// Player who starts this trick.
         Leader : Seat
 
-        /// Cards played by seat in this trick, in reverse
-        /// chronological order.
+        /// Cards played by seat in this trick, in reverse chronological order.
         Cards : List<Card>
 
         /// Play that takes this trick, so far, if any.
@@ -79,14 +78,8 @@ module Trick =
         assert(trick.Cards.Length <= Seat.numSeats)
         trick.Cards.Length = Seat.numSeats
 
-    /// Maps each card in the given trick and its player in
-    /// chronological order.
-    let mapPlays mapping trick =
+    /// Each card in the given trick and its player, in chronological order.
+    let plays trick =
         let seats = Seat.cycle trick.Leader
         let cards = Seq.rev trick.Cards
-        Seq.map2 mapping seats cards
-
-    /// Each card in the given trick and its player in
-    /// chronological order.
-    let plays trick =
-        mapPlays (fun seat card -> seat, card) trick
+        Seq.zip seats cards
