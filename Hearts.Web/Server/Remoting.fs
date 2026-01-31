@@ -18,7 +18,7 @@ module AdvantageModel =
     let private connect dir =
         let model =
             new AdvantageModel(
-                hiddenSize = Encoding.encodedLength * 2,
+                hiddenSize = Encoding.encodedLength * 3,
                 numHiddenLayers = 9,
                 dropoutRate = 0.3,
                 device = TorchSharp.torch.CPU)
