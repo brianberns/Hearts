@@ -96,7 +96,6 @@ module Strategy =
 
         { Act = act }
 
-
     /// Creates a non-deterministic Hearts player using the
     /// given model.
     let createPlayerNondeterministic model =
