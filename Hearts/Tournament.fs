@@ -32,7 +32,7 @@ module Tournament =
     /// Plays one deal.
     let private playDeal (playerMap : Map<_, _>) deal =
 
-        let rec loop deal score =
+        let rec loop deal =
             let deal =
                 let infoSet = OpenDeal.currentInfoSet deal
                 let action =
@@ -41,11 +41,11 @@ module Tournament =
                         | None -> playerMap[infoSet.Player].Act infoSet
                 OpenDeal.addAction
                     infoSet.LegalActionType action deal
-            match Game.tryUpdateScore deal score with
-                | Some score -> score
-                | None -> loop deal score
+            match Game.tryUpdateScore deal Score.zero with
+                | Some gameScore -> gameScore
+                | None -> loop deal
 
-        loop deal Score.zero
+        loop deal
 
     /// Plays the given number of deals.
     let private playDeals rng inParallel numDeals playerMap =
