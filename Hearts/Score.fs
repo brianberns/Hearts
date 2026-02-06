@@ -48,13 +48,6 @@ module Score =
             |> Seq.map (fun (iSeat, points) ->
                 enum<Seat> iSeat, points)
 
-    /// Creates a new score by applying the given mapping
-    /// to each player's points.
-    let map mapping score =
-        Enum.getValues<Seat>
-            |> Array.map mapping
-            |> ofPoints
-
     /// Sum of all points in the given score.
     let sum score =
         Seq.sum score.Points
