@@ -85,20 +85,9 @@ module Strategy =
         getFromAdvantage model [|infoSet|]
             |> Array.exactlyOne
 
-    /// Creates a deterministic Hearts player using the given
-    /// model.
-    let createPlayerDeterministic model =
-
-        let act infoSet =
-            getStrategy model infoSet
-                |> Vector.maxIndex
-                |> Array.get infoSet.LegalActions
-
-        { Act = act }
-
     /// Creates a non-deterministic Hearts player using the
     /// given model.
-    let createPlayerNondeterministic model =
+    let createPlayer model =
 
         let rng = Random()
 
