@@ -22,9 +22,6 @@ type Settings =
         /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
         SampleBranchRate : float
 
-        /// Maximum number of samples to keep in the reservoir.
-        SampleReservoirCapacity : int
-
         /// Input and output size of a hidden layer within the neural
         /// network.
         HiddenSize : int
@@ -65,6 +62,12 @@ type Settings =
         /// Path to directory where models will be saved.
         ModelDirPath : string
 
+        /// Path to the persistent reservoir file.
+        ReservoirPath : string
+
+        /// Path to the checkpoint database.
+        CheckpointDbPath : string
+
         /// Verbose output?
         Verbose : bool
     }
@@ -85,7 +88,6 @@ module Settings =
             NumDealsPerIteration = 40_000
             DealBatchSize = 400
             SampleBranchRate = 0.2
-            SampleReservoirCapacity = 80_000_000
             HiddenSize = Encoding.encodedLength * 3
             NumHiddenLayers = 9
             NumTrainingEpochs = 400
@@ -98,6 +100,8 @@ module Settings =
             NumEvaluationDeals = 20_000
             Device = torch.CUDA
             ModelDirPath = "./Models"
+            ReservoirPath = "./reservoir.bin"
+            CheckpointDbPath = "./training.db"
             Writer = writer
             Verbose = true
         }
@@ -114,9 +118,6 @@ module Settings =
         writer.add_text(
             $"settings/SampleBranchRate",
             string settings.SampleBranchRate, 0)
-        writer.add_text(
-            $"settings/SampleReservoirCapacity",
-            string settings.SampleReservoirCapacity, 0)
         writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)

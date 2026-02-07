@@ -26,7 +26,6 @@ module Program =
                             { Settings.create writer with
                                 NumDealsPerIteration = 4000
                                 SampleBranchRate = 0.17
-                                SampleReservoirCapacity = 2_000_000
                                 NumIterations = 4
                                 NumTrainingEpochs = 500
                                 NumHiddenLayers = numHiddenLayers
