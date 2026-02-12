@@ -22,7 +22,7 @@ module Card =
         index
 
 /// Encoded value for input to a model.
-type Encoding = Vector<float32>
+type Encoding = bool[]
 
 module Encoding =
 
@@ -154,5 +154,3 @@ module Encoding =
             |]
         assert(flags.Length = encodedLength)
         flags
-            |> Array.map (function true -> 1f | false -> 0f)
-            |> SparseVector.ofArray

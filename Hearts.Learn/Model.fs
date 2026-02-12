@@ -46,7 +46,11 @@ module AdvantageModel =
         /// Extracts inputs from a sub-batch.
         let private toInputs subbatch =
             subbatch
-                |> Array.map _.Encoding
+                |> Array.map (fun sample ->
+                    sample.Encoding
+                        |> Array.map (fun flag ->
+                            if flag then 1f else 0f)
+                        |> SparseVector.ofArray)
                 |> array2D
 
         /// Extracts targets from a sub-batch.

@@ -35,8 +35,6 @@ module Encoding =
             |]
         assert(flags.Length = encodedLength)
         flags
-            |> Array.map (function true -> 1f | false -> 0f)
-            |> DenseVector.ofArray
 
     /// "Latin Extended-A" block is printable.
     let private charOffset = 0x100
@@ -50,11 +48,9 @@ module Encoding =
 
     /// Converts the given encoding to a string.
     let toString (encoding : Encoding) =
-        assert(encoding.Count = encodedLength)
+        assert(encoding.Length = encodedLength)
         let bytes =
-            encoding.ToArray()
-                |> Array.map (function
-                    | 0f -> 0uy
-                    | 1f -> 1uy
-                    | _ -> failwith "Unexpected")
+            encoding
+                |> Array.map (fun flag ->
+                    if flag then 1uy else 0uy)
         compact bytes
