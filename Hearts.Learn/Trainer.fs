@@ -95,7 +95,7 @@ module Trainer =
 
     /// Evaluates the given model by playing it against a
     /// standard.
-    let evaluate settings iter epochOpt (model : AdvantageModel) =
+    let evaluate settings iter epochOpt model =
 
         let payoff =
             Tournament.run
@@ -119,7 +119,7 @@ module Trainer =
                     $"advantage tournament", payoff, iter)
 
     /// Uses stored samples to train a new model.
-    let private trainAdvantageModel settings iter state =
+    let private trainAdvantageModel settings iter sampleStore =
         let stopwatch = Stopwatch.StartNew()
         let model =
             new AdvantageModel(
@@ -130,12 +130,12 @@ module Trainer =
         let eval epoch model =
             evaluate settings iter (Some epoch) model
         AdvantageModel.train
-            settings iter (Some eval) state.SampleStore.Samples model
+            settings iter (Some eval) (sampleStore : AdvantageSampleStore).Samples model
         stopwatch.Stop()
         if settings.Verbose then
-            printfn $"Trained model on {state.SampleStore.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float state.SampleStore.Count} ms/sample)"
-        { state with ModelOpt = Some model }
+            printfn $"Trained model on {sampleStore.Count} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStore.Count} ms/sample)"
+        model
 
     /// Trains a new model using the given model.
     let private updateModel settings iter state =
@@ -147,23 +147,21 @@ module Trainer =
             printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
 
             // train a new model on GPU
-        let state = trainAdvantageModel settings iter state
+        let model = trainAdvantageModel settings iter state.SampleStore
 
            // save the model
-        state.ModelOpt
-            |> Option.iter (fun model ->
-                Path.Combine(
-                    settings.ModelDirPath,
-                    $"AdvantageModel%03d{iter}.pt")
-                        |> model.save
-                        |> ignore)
+        Path.Combine(
+            settings.ModelDirPath,
+            $"AdvantageModel%03d{iter}.pt")
+                |> model.save
+                |> ignore
 
         settings.Writer.add_scalar(
             $"advantage sample store",
             float32 state.SampleStore.Count,
             iter)
 
-        state
+        { state with ModelOpt = Some model }
 
     /// Trains for the given number of iterations.
     let train settings =
