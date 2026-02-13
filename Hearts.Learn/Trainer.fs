@@ -18,13 +18,17 @@ type AdvantageState =
         SampleStore : AdvantageSampleStore
     }
 
+    /// Cleanup.
+    member this.Dispose() =
+        this.ModelOpt
+            |> Option.iter _.Dispose()
+        this.SampleStore.Dispose()
+
     interface IDisposable with
 
         /// Cleanup.
         member this.Dispose() =
-            this.ModelOpt
-                |> Option.iter _.Dispose()
-            this.SampleStore.Dispose()
+            this.Dispose()
 
 module AdvantageState =
 
@@ -127,7 +131,7 @@ module Trainer =
                 (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStore.Count} ms/sample)"
         model
 
-    /// Trains a new model using the given model.
+    /// Trains a new model using the current model.
     let private updateModel settings iter state =
 
             // generate training data from existing model
@@ -137,7 +141,8 @@ module Trainer =
             printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
 
             // train a new model on GPU
-        let model = trainAdvantageModel settings iter state.SampleStore
+        let model =
+            trainAdvantageModel settings iter state.SampleStore
 
            // save the model
         Path.Combine(
@@ -146,6 +151,7 @@ module Trainer =
                 |> model.save
                 |> ignore
 
+            // log store count
         settings.Writer.add_scalar(
             "advantage sample store",
             float32 state.SampleStore.Count,
