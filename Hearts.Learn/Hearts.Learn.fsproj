@@ -7,9 +7,9 @@
 
   <ItemGroup>
     <None Include="Readme.md" />
-    <Compile Include="Reservoir.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Model.fs" />
+    <Compile Include="SampleStore.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Inference.fs" />
     <Compile Include="Trainer.fs" />

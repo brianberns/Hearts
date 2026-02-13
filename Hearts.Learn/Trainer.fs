@@ -14,8 +14,8 @@ type AdvantageState =
         /// Current model.
         ModelOpt : Option<AdvantageModel>
 
-        /// Reservoir of training data.
-        Reservoir : Reservoir<AdvantageSample>
+        /// Stored training data.
+        SampleStore : AdvantageSampleStore
     }
 
     interface IDisposable with
@@ -27,11 +27,14 @@ type AdvantageState =
 
 module AdvantageState =
 
-    /// Creates an initial advantage state.
-    let create capacity rng =
+    let private storeFileName = "AdvantageSamples.bin"
+
+    let init modelDirPath =
+        let path = Path.Combine(modelDirPath, storeFileName)
+        let store = AdvantageSampleStore.attach path
         {
             ModelOpt = None
-            Reservoir = Reservoir.create rng capacity
+            SampleStore = store
         }
 
 module Trainer =
