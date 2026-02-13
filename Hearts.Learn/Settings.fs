@@ -147,3 +147,7 @@ module Settings =
         writer.add_text(
             $"settings/NumEvaluationDeals",
             string settings.NumEvaluationDeals, 0)
+
+        settings.ModelDirPath   // to-do: move this somewhere else?
+            |> System.IO.Directory.CreateDirectory
+            |> ignore

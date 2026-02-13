@@ -147,9 +147,6 @@ module Trainer =
            // save the model
         state.ModelOpt
             |> Option.iter (fun model ->
-                settings.ModelDirPath
-                    |> Directory.CreateDirectory
-                    |> ignore
                 Path.Combine(
                     settings.ModelDirPath,
                     $"AdvantageModel%03d{iter}.pt")
