@@ -19,21 +19,21 @@ type AdvantageSample =
         /// Observed regrets.
         Regrets : Vector<float32>
 
-        /// Weight of this sample, as determined by 1-based
-        /// iteration number. Later iterations have more weight.
-        Weight : float32
+        /// 1-based iteration number.
+        Iteration : int
     }
 
 module AdvantageSample =
 
     /// Creates an advantage sample.
-    let create infoSet regrets iteration =
+    let create encoding regrets iteration =
+        assert(Array.length encoding = Model.inputSize)
         assert(Vector.length regrets = Model.outputSize)
         assert(iteration >= 1)
         {
-            Encoding = Encoding.encode infoSet
+            Encoding = encoding
             Regrets = regrets
-            Weight = float32 iteration |> sqrt
+            Iteration = iteration
         }
 
 module AdvantageModel =
@@ -62,7 +62,11 @@ module AdvantageModel =
         /// Extracts weights from a sub-batch.
         let private toWeights subbatch =
             subbatch
-                |> Array.map (_.Weight >> Array.singleton)
+                |> Array.map (
+                    _.Iteration
+                        >> float32
+                        >> sqrt
+                        >> Array.singleton)
                 |> array2D
 
         /// Extracts 2D arrays from a sub-batch.

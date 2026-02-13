@@ -121,7 +121,7 @@ module Program =
                     {
                         Encoding = input
                         Regrets = output
-                        Weight = 1.0f
+                        Iteration = 1
                     })
         printfn $"Converted to samples in {stopwatch.Elapsed}"
 

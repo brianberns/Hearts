@@ -142,11 +142,12 @@ module Traverse =
                 let utility = actionUtilities * strategy
                 assert(utility.Count = Seat.numSeats)
                 let sample =
+                    let encoding = Encoding.encode infoSet
                     let wideRegrets =
                         let idx = int infoSet.Player
                         (actionUtilities.Row(idx) - utility[idx])
                             |> Strategy.toWide legalActions
-                    AdvantageSample.create infoSet wideRegrets iter
+                    AdvantageSample.create encoding wideRegrets iter
                 Node.complete
                     (utility.ToArray())
                     (Some sample)
