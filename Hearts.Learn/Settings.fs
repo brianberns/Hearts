@@ -23,7 +23,6 @@ type Settings =
         SampleBranchRate : float
 
         /// Maximum number of samples to keep in the reservoir.
-        SampleReservoirCapacity : int
 
         /// Input and output size of a hidden layer within the neural
         /// network.
@@ -86,7 +85,6 @@ module Settings =
             DealBatchSize = 400
             SampleBranchRate = 0.2
             HiddenSize = Encoding.encodedLength * 2
-            HiddenSize = Encoding.encodedLength * 3
             NumHiddenLayers = 9
             NumTrainingEpochs = 400
             NumEpochsPerEvaluation = 400

@@ -105,8 +105,8 @@ module Trainer =
                 settings.Writer.add_scalar(
                     $"advantage tournament", payoff, iter)
 
-    /// Adds the given samples to the given reservoir and then
-    /// uses the reservoir to train a new model.
+    /// Adds the given samples to the sample store and then
+    /// uses all the stored samples to train a new model.
     let private trainAdvantageModel settings iter samples state =
 
             // save new training data
@@ -155,7 +155,7 @@ module Trainer =
                         |> ignore)
 
         settings.Writer.add_scalar(
-            $"advantage reservoir",
+            $"advantage sample store",
             float32 state.SampleStore.Count,
             iter)
 
