@@ -31,7 +31,7 @@ module AdvantageState =
 
     let init modelDirPath =
         let path = Path.Combine(modelDirPath, storeFileName)
-        let store = AdvantageSampleStore.attach path
+        let store = AdvantageSampleStore.openOrCreate path
         {
             ModelOpt = None
             SampleStore = store
@@ -108,9 +108,8 @@ module Trainer =
     /// uses the reservoir to train a new model.
     let private trainAdvantageModel settings iter samples state =
 
-            // cache new training data
-        let resv =
-            Reservoir.addMany samples state.Reservoir
+            // save new training data
+        AdvantageSampleStore.writeSamples samples state.SampleStore
 
             // train new model
         let stopwatch = Stopwatch.StartNew()
@@ -123,16 +122,13 @@ module Trainer =
         let eval epoch model =
             evaluate settings iter (Some epoch) model
         AdvantageModel.train
-            settings iter (Some eval) resv.Items model
+            settings iter (Some eval) state.SampleStore.Samples model
         stopwatch.Stop()
         if settings.Verbose then
-            printfn $"Trained model on {resv.Items.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float resv.Items.Count} ms/sample)"
+            printfn $"Trained model on {state.SampleStore.Count} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float state.SampleStore.Count} ms/sample)"
 
-        {
-            Reservoir = resv
-            ModelOpt = Some model
-        }
+        { state with ModelOpt = Some model }
 
     /// Trains a new model using the given model.
     let private updateModel settings iter state =
@@ -162,7 +158,7 @@ module Trainer =
 
         settings.Writer.add_scalar(
             $"advantage reservoir",
-            float32 state.Reservoir.Items.Count,
+            float32 state.SampleStore.Count,
             iter)
 
         state
@@ -176,9 +172,7 @@ module Trainer =
 
             // run the iterations
         let state =
-            AdvantageState.create
-                settings.SampleReservoirCapacity
-                (Random())
+            AdvantageState.init settings.ModelDirPath
         let iterNums = seq { 1 .. settings.NumIterations }
         (state, iterNums)
             ||> Seq.fold (fun state iter ->

@@ -16,29 +16,20 @@ module Program =
             printfn $"Settings: {settings}"
         Trainer.train settings |> ignore
 
-    let search () =
-        for learningRate in [ 0.001; 0.003; 0.01 ] do
-            for dropoutRate in [ 0.1; 0.25; 0.4 ] do
-                for numHiddenLayers in [ 2; 5; 8 ] do
-                    for hiddenSize in [ 1000; 1500; 2000 ] do
-                        let settings =
-                            let writer = TensorBoard.createWriter ()
-                            { Settings.create writer with
-                                NumDealsPerIteration = 4000
-                                SampleBranchRate = 0.17
-                                SampleReservoirCapacity = 2_000_000
-                                NumIterations = 4
-                                NumTrainingEpochs = 500
-                                NumHiddenLayers = numHiddenLayers
-                                HiddenSize = hiddenSize
-                                DropoutRate = dropoutRate
-                                LearningRate = learningRate }
-                        Settings.write settings
-                        if settings.Verbose then
-                            printfn ""
-                            printfn $"Server garbage collection: {GCSettings.IsServerGC}"
-                            printfn $"Settings: {settings}"
-                        Trainer.train settings |> ignore
+    let test () =
+        let sample =
+            let encoding = Array.zeroCreate Hearts.Model.Model.inputSize
+            let regrets = MathNet.Numerics.LinearAlgebra.DenseVector.create Hearts.Model.Model.outputSize 1.0f
+            AdvantageSample.create encoding regrets 1
+        do
+            use store = AdvantageSampleStore.openOrCreate("AdvantageSamples.bin")
+            assert(store.Count = 0)
+            AdvantageSampleStore.writeSamples [|sample|] store
+        do 
+            use store = AdvantageSampleStore.openOrCreate("AdvantageSamples.bin")
+            assert(store.Count = 1)
+            let sample' = store[0]
+            assert(sample' = sample)
 
     Console.OutputEncoding <- Encoding.UTF8
-    run ()
+    test ()
