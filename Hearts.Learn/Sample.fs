@@ -139,9 +139,11 @@ module AdvantageSampleStore =
 
 type AdvantageSampleStore with
 
+    /// The number of samples in this store.
     member store.Count =
         AdvantageSampleStore.getSampleCount store
 
+    /// Gets the sample at the given index in this store.
     member store.Item
         with get(idx) =
             AdvantageSampleStore.readSample idx store

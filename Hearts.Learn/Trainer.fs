@@ -56,42 +56,32 @@ module Trainer =
                 |> Seq.map _.Length
 
             // generate samples for each batch
-        let numSamples =
-            Array.sum [|
-                for iBatch, numDeals in Seq.indexed batchSizes do
-                    assert(numDeals <= settings.DealBatchSize)
+        Array.sum [|
+            for iBatch, numDeals in Seq.indexed batchSizes do
+                assert(numDeals <= settings.DealBatchSize)
 
-                        // generate samples
-                    let samples =
-                        OpenDeal.playDeals
-                            (Random())
-                            true
-                            numDeals
-                            (fun deal ->
-                                let rng = Random()   // each thread has its own RNG
-                                Traverse.traverse settings iter deal rng)
-                            |> Inference.complete
-                                settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
-                                state.ModelOpt
+                    // generate samples
+                let samples =
+                    OpenDeal.playDeals (Random()) true numDeals
+                        (fun deal ->
+                            let rng = Random()   // each thread has its own RNG
+                            Traverse.traverse settings iter deal rng)
+                        |> Inference.complete
+                            settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
+                            state.ModelOpt
 
-                        // save samples
-                    AdvantageSampleStore.writeSamples samples state.SampleStore
+                    // save samples
+                AdvantageSampleStore.writeSamples
+                    samples state.SampleStore
 
-                        // log this batch
-                    settings.Writer.add_scalar(
-                        $"advantage samples/iter%03d{iter}",
-                        float32 samples.Length / float32 numDeals,    // average number of generated samples per deal in this batch
-                        iBatch * settings.DealBatchSize + numDeals)   // total number of deals so far
+                    // log this batch
+                settings.Writer.add_scalar(
+                    $"advantage samples/iter%03d{iter}",
+                    float32 samples.Length / float32 numDeals,    // average number of generated samples per deal in this batch
+                    iBatch * settings.DealBatchSize + numDeals)   // total number of deals so far
 
-                    samples.Length
-            |]
-
-            // log total number of samples generated in this iteration
-        settings.Writer.add_scalar(
-            "advantage samples",
-            float32 numSamples, iter)
-
-        numSamples
+                samples.Length
+        |]
 
     /// Evaluates the given model by playing it against a
     /// standard.
@@ -157,7 +147,7 @@ module Trainer =
                 |> ignore
 
         settings.Writer.add_scalar(
-            $"advantage sample store",
+            "advantage sample store",
             float32 state.SampleStore.Count,
             iter)
 
@@ -170,9 +160,13 @@ module Trainer =
             printfn $"Model input size: {Model.inputSize}"
             printfn $"Model output size: {Model.outputSize}"
 
-            // run the iterations
         let state =
             AdvantageState.init settings.ModelDirPath
+        settings.Writer.add_scalar(
+            "advantage sample store",
+            float32 state.SampleStore.Count, 0)
+
+            // run the iterations
         let iterNums = seq { 1 .. settings.NumIterations }
         (state, iterNums)
             ||> Seq.fold (fun state iter ->
