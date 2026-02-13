@@ -41,44 +41,55 @@ module AdvantageState =
 module Trainer =
 
     /// Generates training data using the given model.
-    let private generateSamples settings iter modelOpt =
+    let private generateSamples settings iter state =
 
+            // start TensorBoard y-axis at 0
         settings.Writer.add_scalar(
             $"advantage samples/iter%03d{iter}",
             0f, 0)
 
-        let chunkSize = settings.DealBatchSize
-        let samples =
-            Array.zeroCreate<int> settings.NumDealsPerIteration
-                |> Array.chunkBySize chunkSize
-                |> Array.indexed
-                |> Array.collect (fun (i, chunk) ->
+            // divide deals for this iteration into batches,
+            // including possible runt batch at the end
+        let batchSizes =
+            Seq.replicate settings.NumDealsPerIteration ()
+                |> Seq.chunkBySize settings.DealBatchSize
+                |> Seq.map _.Length
 
+            // generate samples for each batch
+        let numSamples =
+            Array.sum [|
+                for iBatch, numDeals in Seq.indexed batchSizes do
+                    assert(numDeals <= settings.DealBatchSize)
+
+                        // generate samples
                     let samples =
                         OpenDeal.playDeals
                             (Random())
                             true
-                            chunk.Length
+                            numDeals
                             (fun deal ->
                                 let rng = Random()   // each thread has its own RNG
                                 Traverse.traverse settings iter deal rng)
                             |> Inference.complete
                                 settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
-                                modelOpt
-                    GC.Collect()   // clean up continuations
+                                state.ModelOpt
 
+                        // save samples
+                    AdvantageSampleStore.writeSamples samples state.SampleStore
+
+                        // log this batch
                     settings.Writer.add_scalar(
                         $"advantage samples/iter%03d{iter}",
-                        float32 samples.Length / float32 chunkSize,
-                        (i + 1) * chunkSize)
+                        float32 samples.Length / float32 numDeals,    // average number of generated samples per deal in this batch
+                        iBatch * settings.DealBatchSize + numDeals)   // total number of deals so far
 
-                    samples)
+                    samples.Length
+            |]
 
+            // log total number of samples generated in this iteration
         settings.Writer.add_scalar(
             "advantage samples",
-            float32 samples.Length, iter)
-
-        samples
+            float32 numSamples, iter)
 
     /// Evaluates the given model by playing it against a
     /// standard.
@@ -105,14 +116,8 @@ module Trainer =
                 settings.Writer.add_scalar(
                     $"advantage tournament", payoff, iter)
 
-    /// Adds the given samples to the sample store and then
-    /// uses all the stored samples to train a new model.
-    let private trainAdvantageModel settings iter samples state =
-
-            // save new training data
-        AdvantageSampleStore.writeSamples samples state.SampleStore
-
-            // train new model
+    /// Uses stored samples to train a new model.
+    let private trainAdvantageModel settings iter state =
         let stopwatch = Stopwatch.StartNew()
         let model =
             new AdvantageModel(
@@ -128,7 +133,6 @@ module Trainer =
         if settings.Verbose then
             printfn $"Trained model on {state.SampleStore.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float state.SampleStore.Count} ms/sample)"
-
         { state with ModelOpt = Some model }
 
     /// Trains a new model using the given model.
@@ -136,14 +140,12 @@ module Trainer =
 
             // generate training data from existing model
         let stopwatch = Stopwatch.StartNew()
-        let samples =
-            generateSamples settings iter state.ModelOpt
+        let numSamples = generateSamples settings iter state
         if settings.Verbose then
-            printfn $"\n{samples.Length} samples generated in {stopwatch.Elapsed}"
+            printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
 
             // train a new model on GPU
-        let state =
-            trainAdvantageModel settings iter samples state
+        let state = trainAdvantageModel settings iter state
 
            // save the model
         state.ModelOpt

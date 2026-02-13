@@ -7,6 +7,7 @@ open MathNet.Numerics.LinearAlgebra
 
 open Hearts.Model
 
+/// Persistent store for advantage samples.
 type AdvantageSampleStore =
     {
         Stream : FileStream
@@ -23,6 +24,7 @@ type AdvantageSampleStore =
 
 module AdvantageSampleStore =
 
+    /// Packs the given booleans into bytes.
     let private pack flags =
         [|
             for chunk in Array.chunkBySize 8 flags do   // 8 bits/byte
@@ -32,6 +34,7 @@ module AdvantageSampleStore =
                         else byte)
         |]
 
+    /// Unpacks the given bytes into booleans.
     let private unpack nFlags bytes =
         bytes
             |> Array.collect (fun byte ->
@@ -39,18 +42,22 @@ module AdvantageSampleStore =
                     (byte &&& (1uy <<< i)) <> 0uy))
             |> Array.take nFlags
 
+    /// Number of bytes in an encoded model input.
     let private encodingLength =
         (Model.inputSize + 7) / 8   // round up
 
+    /// Number of bytes in a serialized sample.
     let private sampleLength =
-        encodingLength * sizeof<byte>   // encoding
-            + Model.outputSize * sizeof<float32>        // regrets
-            + sizeof<byte>                              // iteration
+        encodingLength * sizeof<byte>              // encoding
+            + Model.outputSize * sizeof<float32>   // regrets
+            + sizeof<byte>                         // iteration
             |> int64
 
+    /// Is the given store in a valid state?
     let private isValid store =
         store.Stream.Length % sampleLength = 0L
 
+    /// Opens or creates a sample store at the given location.
     let openOrCreate path =
         let stream =
             new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite)
@@ -58,13 +65,17 @@ module AdvantageSampleStore =
         assert(isValid store)
         store
 
+    /// Gets the number of samples in the given store.
     let getSampleCount store =
         assert(isValid store)
         store.Stream.Length / int64 sampleLength
 
-    let readSample idx store =
+    /// Reads the sample at the given index in the given store.
+    let readSample (idx : int64) store =
         assert(isValid store)
-        store.Stream.Position <- int64 idx * sampleLength
+        assert(idx >= 0)
+        assert(idx < getSampleCount store)
+        store.Stream.Position <- idx * sampleLength
 
         use rdr =
             new BinaryReader(
@@ -78,6 +89,7 @@ module AdvantageSampleStore =
         let iteration = int (rdr.ReadByte())
         AdvantageSample.create encoding regrets iteration
 
+    /// Appends the given samples to the end of the given store.
     let writeSamples samples store =
         assert(isValid store)
         store.Stream.Position <- store.Stream.Length
