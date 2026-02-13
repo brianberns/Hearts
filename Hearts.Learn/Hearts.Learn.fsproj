@@ -8,8 +8,8 @@
   <ItemGroup>
     <None Include="Readme.md" />
     <Compile Include="Settings.fs" />
+    <Compile Include="Sample.fs" />
     <Compile Include="Model.fs" />
-    <Compile Include="SampleStore.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Inference.fs" />
     <Compile Include="Trainer.fs" />

@@ -6,35 +6,7 @@ open type torch.nn
 open type torch.optim
 open FSharp.Core.Operators   // reclaim "float32" and other F# operators
 
-open MathNet.Numerics.LinearAlgebra
-
 open Hearts.Model
-
-/// An observed advantage event.
-type AdvantageSample =
-    {
-        /// Encoded info set.
-        Encoding : Encoding
-
-        /// Observed regrets.
-        Regrets : Vector<float32>
-
-        /// 1-based iteration number.
-        Iteration : int
-    }
-
-module AdvantageSample =
-
-    /// Creates an advantage sample.
-    let create encoding regrets iteration =
-        assert(Array.length encoding = Model.inputSize)
-        assert(Vector.length regrets = Model.outputSize)
-        assert(iteration >= 1)
-        {
-            Encoding = encoding
-            Regrets = regrets
-            Iteration = iteration
-        }
 
 module AdvantageModel =
 
@@ -86,17 +58,30 @@ module AdvantageModel =
             assert(weights.GetLength(1) = 1)
             inputs, targets, weights
 
-    /// A logical batch of training data, although it
-    /// might be too large to fit on the GPU.
+    /// A logical batch of training data that fits in memory,
+    /// but might be too large to fit on the GPU.
     type private Batch = SubBatch[]
 
     /// Breaks the given samples into batches.
-    let private createBatches batchSize subBatchSize samples : Batch[] =
-        samples
-            |> Seq.toArray
-            |> Array.randomShuffle
-            |> Array.chunkBySize subBatchSize                 // e.g. sub-batches of 10,000 rows each
-            |> Array.chunkBySize (batchSize / subBatchSize)   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
+    let private createBatches
+        batchSize
+        subBatchSize
+        (sampleStore : AdvantageSampleStore) : seq<Batch> =
+        let indexBatches =
+            [| 0L .. sampleStore.Count - 1L |]
+                |> Array.randomShuffle
+                |> Seq.chunkBySize subBatchSize                 // e.g. sub-batches of 10,000 rows each
+                |> Seq.chunkBySize (batchSize / subBatchSize)   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
+        seq {
+            for indexBatch in indexBatches do
+                [|
+                    for indexSubbatch in indexBatch do
+                        [|
+                            for iSample in indexSubbatch do
+                                sampleStore[iSample]
+                        |]
+                |]
+        }
 
     /// Trains the given model on the given sub-batch of
     /// data.
@@ -153,14 +138,14 @@ module AdvantageModel =
         loss
 
     /// Trains the given model using the given samples.
-    let train settings iter evalOpt samples (model : AdvantageModel) =
+    let train settings iter evalOpt sampleStore (model : AdvantageModel) =
 
             // prepare training data
         let batches =
             createBatches
                 settings.TrainingBatchSize
                 settings.TrainingSubBatchSize
-                samples
+                sampleStore
 
             // train model
         use optimizer =

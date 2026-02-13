@@ -130,7 +130,7 @@ module Trainer =
         let eval epoch model =
             evaluate settings iter (Some epoch) model
         AdvantageModel.train
-            settings iter (Some eval) (sampleStore : AdvantageSampleStore).Samples model
+            settings iter (Some eval) sampleStore model
         stopwatch.Stop()
         if settings.Verbose then
             printfn $"Trained model on {sampleStore.Count} samples in {stopwatch.Elapsed} \
