@@ -12,11 +12,14 @@ type AdvantageSampleStore =
         Stream : FileStream
     }
 
-    interface IDisposable with
+    /// Cleanup.
+    member this.Dispose() =
+        this.Stream.Dispose()
 
-        /// Cleanup.
+    /// Cleanup.
+    interface IDisposable with
         member this.Dispose() =
-            this.Stream.Dispose()
+            this.Dispose()
 
 module AdvantageSampleStore =
 

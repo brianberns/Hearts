@@ -24,6 +24,7 @@ type AdvantageState =
         member this.Dispose() =
             this.ModelOpt
                 |> Option.iter _.Dispose()
+            this.SampleStore.Dispose()
 
 module AdvantageState =
 
