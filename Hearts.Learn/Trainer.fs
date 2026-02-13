@@ -91,6 +91,8 @@ module Trainer =
             "advantage samples",
             float32 numSamples, iter)
 
+        numSamples
+
     /// Evaluates the given model by playing it against a
     /// standard.
     let evaluate settings iter epochOpt (model : AdvantageModel) =
