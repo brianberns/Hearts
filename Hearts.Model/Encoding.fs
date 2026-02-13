@@ -154,3 +154,9 @@ module Encoding =
             |]
         assert(flags.Length = encodedLength)
         flags
+
+    /// Converts the given encoding to an array of float32.
+    let toFloat32Array (encoding : Encoding) =
+        encoding
+            |> Array.map (fun flag ->
+                if flag then 1f else 0f)
