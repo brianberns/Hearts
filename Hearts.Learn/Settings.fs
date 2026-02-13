@@ -85,7 +85,7 @@ module Settings =
             NumDealsPerIteration = 40_000
             DealBatchSize = 400
             SampleBranchRate = 0.2
-            SampleReservoirCapacity = 80_000_000
+            HiddenSize = Encoding.encodedLength * 2
             HiddenSize = Encoding.encodedLength * 3
             NumHiddenLayers = 9
             NumTrainingEpochs = 400
@@ -114,9 +114,6 @@ module Settings =
         writer.add_text(
             $"settings/SampleBranchRate",
             string settings.SampleBranchRate, 0)
-        writer.add_text(
-            $"settings/SampleReservoirCapacity",
-            string settings.SampleReservoirCapacity, 0)
         writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)
