@@ -50,23 +50,23 @@ type AdvantageSampleStore =
 
 module AdvantageSampleStore =
 
-    /// Packs the given booleans into bytes.
-    let private pack flags =
+    /// Packs the given encoding into bytes.
+    let private packEncoding (encoding : Encoding) =
         [|
-            for chunk in Array.chunkBySize 8 flags do   // 8 bits/byte
+            for chunk in Array.chunkBySize 8 encoding do   // 8 bits/byte
                 (0uy, Array.indexed chunk)
                     ||> Array.fold (fun byte (i, flag) ->
                         if flag then byte ||| (1uy <<< i)
                         else byte)
         |]
 
-    /// Unpacks the given bytes into booleans.
-    let private unpack nFlags bytes =
+    /// Unpacks the given bytes into an encoding.
+    let private unpackEncoding encodingLength bytes =
         bytes
             |> Array.collect (fun byte ->
                 Array.init 8 (fun i ->
                     (byte &&& (1uy <<< i)) <> 0uy))
-            |> Array.take nFlags
+            |> Array.take encodingLength
 
     /// Number of bytes in an encoded model input.
     let private encodingLength =
@@ -108,7 +108,7 @@ module AdvantageSampleStore =
                 store.Stream, Text.Encoding.UTF8, leaveOpen = true)
         let encoding =
             rdr.ReadBytes(encodingLength)
-                |> unpack Model.inputSize
+                |> unpackEncoding Model.inputSize
         let regrets =
             Seq.init Model.outputSize (fun _ -> rdr.ReadSingle())
                 |> DenseVector.ofSeq
@@ -126,7 +126,7 @@ module AdvantageSampleStore =
 
         for sample in samples do
 
-            wtr.Write(pack sample.Encoding)
+            wtr.Write(packEncoding sample.Encoding)
 
             for regret in sample.Regrets do
                 wtr.Write(regret)
