@@ -81,18 +81,18 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
-            NumDealsPerIteration = 40_000
-            DealBatchSize = 400
-            SampleBranchRate = 0.2
+            NumDealsPerIteration = 80_000
+            DealBatchSize = 25
+            SampleBranchRate = 0.22
             HiddenSize = Encoding.encodedLength * 2
-            NumHiddenLayers = 9
-            NumTrainingEpochs = 400
-            NumEpochsPerEvaluation = 400
+            NumHiddenLayers = 4
+            NumTrainingEpochs = 20
+            NumEpochsPerEvaluation = 20
             TrainingBatchSize = 200_000
             TrainingSubBatchSize = 50_000
-            DropoutRate = 0.2
+            DropoutRate = 0.3
             LearningRate = 1e-3
-            NumIterations = 50
+            NumIterations = 1
             NumEvaluationDeals = 20_000
             Device = torch.CUDA
             ModelDirPath = "./Models"
