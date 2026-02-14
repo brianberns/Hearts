@@ -111,7 +111,7 @@ module AdvantageSampleStore =
                 |> unpack Model.inputSize
         let regrets =
             Seq.init Model.outputSize (fun _ -> rdr.ReadSingle())
-                |> SparseVector.ofSeq
+                |> DenseVector.ofSeq
         let iteration = int (rdr.ReadByte())
         AdvantageSample.create encoding regrets iteration
 
