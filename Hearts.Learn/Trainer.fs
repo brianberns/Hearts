@@ -16,6 +16,9 @@ type AdvantageState =
 
         /// Stored training data.
         SampleStore : AdvantageSampleStore
+
+        /// Restart iteration, if any.
+        RestartIterationOpt : Option<int>
     }
 
     /// Cleanup.
@@ -32,14 +35,22 @@ type AdvantageState =
 
 module AdvantageState =
 
+    /// Advantage sample store file name.
     let private storeFileName = "AdvantageSamples.bin"
 
+    /// Initializes advantage state.
     let init modelDirPath =
-        let path = Path.Combine(modelDirPath, storeFileName)
-        let store = AdvantageSampleStore.openOrCreate path
+        let store =
+            let path = Path.Combine(modelDirPath, storeFileName)
+            AdvantageSampleStore.openOrCreate path
+        let restartIterationOpt =
+            if store.Count > 0L then
+                Some store[store.Count - 1L].Iteration
+            else None
         {
             ModelOpt = None
             SampleStore = store
+            RestartIterationOpt = restartIterationOpt
         }
 
 module Trainer =
@@ -114,6 +125,8 @@ module Trainer =
 
     /// Uses stored samples to train a new model.
     let private trainAdvantageModel settings iter sampleStore =
+
+            // train new model
         let stopwatch = Stopwatch.StartNew()
         let model =
             new AdvantageModel(
@@ -126,23 +139,15 @@ module Trainer =
         AdvantageModel.train
             settings iter (Some eval) sampleStore model
         stopwatch.Stop()
+
+            // log
         if settings.Verbose then
             printfn $"Trained model on {sampleStore.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStore.Count} ms/sample)"
-        model
-
-    /// Trains a new model using the current model.
-    let private updateModel settings iter state =
-
-            // generate training data from existing model
-        let stopwatch = Stopwatch.StartNew()
-        let numSamples = generateSamples settings iter state
-        if settings.Verbose then
-            printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
-
-            // train a new model on GPU
-        let model =
-            trainAdvantageModel settings iter state.SampleStore
+        settings.Writer.add_scalar(
+            "advantage sample store",
+            float32 sampleStore.Count,
+            iter)
 
            // save the model
         Path.Combine(
@@ -151,21 +156,12 @@ module Trainer =
                 |> model.save
                 |> ignore
 
-            // log store count
-        settings.Writer.add_scalar(
-            "advantage sample store",
-            float32 state.SampleStore.Count,
-            iter)
-
-        { state with ModelOpt = Some model }
+        model
 
     /// Trains for the given number of iterations.
     let train settings =
 
-        if settings.Verbose then
-            printfn $"Model input size: {Model.inputSize}"
-            printfn $"Model output size: {Model.outputSize}"
-
+            // find latest iteration for which samples have been generated
         let state =
             AdvantageState.init settings.ModelDirPath
         settings.Writer.add_scalar(
@@ -173,12 +169,26 @@ module Trainer =
             float32 state.SampleStore.Count, 0)
 
             // run the iterations
-        let iterNums = seq { 1 .. settings.NumIterations }
+        let iterNums =
+            let restartIteration =
+                state.RestartIterationOpt
+                    |> Option.defaultValue 1
+            seq { restartIteration .. settings.NumIterations }
         (state, iterNums)
             ||> Seq.fold (fun state iter ->
                 if settings.Verbose then
                     printfn $"\n*** Iteration {iter} ***"
-                let state = updateModel settings iter state
-                Option.iter (
-                    evaluate settings iter None) state.ModelOpt
-                state)
+
+                    // generate training data from existing model?
+                if state.RestartIterationOpt.IsNone then
+                    let stopwatch = Stopwatch.StartNew()
+                    let numSamples = generateSamples settings iter state
+                    if settings.Verbose then
+                        printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
+
+                let model =
+                    trainAdvantageModel settings iter state.SampleStore
+                evaluate settings iter None model
+                { state with
+                    ModelOpt = Some model
+                    RestartIterationOpt = None })

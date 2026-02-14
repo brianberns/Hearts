@@ -4,6 +4,8 @@ open System
 open System.Runtime
 open System.Text
 
+open Hearts.Model
+
 module Program =
 
     let run () =
@@ -14,6 +16,8 @@ module Program =
         if settings.Verbose then
             printfn $"Server garbage collection: {GCSettings.IsServerGC}"
             printfn $"Settings: {settings}"
+            printfn $"Model input size: {Model.inputSize}"
+            printfn $"Model output size: {Model.outputSize}"
         Trainer.train settings |> ignore
 
     Console.OutputEncoding <- Encoding.UTF8
