@@ -55,13 +55,18 @@ module AdvantageState =
 
 module Trainer =
 
-    /// Generates training data using the given model.
+    /// Generates training data for the given iteration
+    /// using the given model.
     let private generateSamples settings iter state =
 
+        /// TensorBoard logging.
+        let log value step =
+            settings.Writer.add_scalar(
+                $"advantage samples/iter%03d{iter}",
+                value, step)
+
             // start TensorBoard y-axis at 0
-        settings.Writer.add_scalar(
-            $"advantage samples/iter%03d{iter}",
-            0f, 0)
+        log 0f 0
 
             // divide deals for this iteration into batches,
             // including possible runt batch at the end
@@ -88,12 +93,9 @@ module Trainer =
                     // save samples
                 AdvantageSampleStore.writeSamples
                     samples state.SampleStore
-
-                    // log this batch
-                settings.Writer.add_scalar(
-                    $"advantage samples/iter%03d{iter}",
-                    float32 samples.Length / float32 numDeals,    // average number of generated samples per deal in this batch
-                    iBatch * settings.DealBatchSize + numDeals)   // total number of deals so far
+                log
+                    (float32 samples.Length / float32 numDeals)    // average number of generated samples per deal in this batch
+                    (iBatch * settings.DealBatchSize + numDeals)   // total number of deals so far
 
                 samples.Length
         |]
@@ -140,16 +142,10 @@ module Trainer =
             settings iter (Some eval) sampleStore model
         stopwatch.Stop()
 
-            // log
+           // save the model
         if settings.Verbose then
             printfn $"Trained model on {sampleStore.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStore.Count} ms/sample)"
-        settings.Writer.add_scalar(
-            "advantage sample store",
-            float32 sampleStore.Count,
-            iter)
-
-           // save the model
         Path.Combine(
             settings.ModelDirPath,
             $"AdvantageModel%03d{iter}.pt")
@@ -161,19 +157,25 @@ module Trainer =
     /// Trains for the given number of iterations.
     let train settings =
 
-            // find latest iteration for which samples have been generated
+        /// TensorBoard logging.
+        let log count iter =
+            settings.Writer.add_scalar(
+                "advantage sample store",
+                float32 count, iter)
+
+            // initialize training state
         let state =
             AdvantageState.init settings.ModelDirPath
-        settings.Writer.add_scalar(
-            "advantage sample store",
-            float32 state.SampleStore.Count, 0)
+        state.RestartIterationOpt
+            |> Option.defaultValue 0
+            |> log state.SampleStore.Count
 
             // run the iterations
         let iterNums =
-            let restartIteration =
+            let iter =
                 state.RestartIterationOpt
                     |> Option.defaultValue 1
-            seq { restartIteration .. settings.NumIterations }
+            seq { iter .. settings.NumIterations }
         (state, iterNums)
             ||> Seq.fold (fun state iter ->
                 if settings.Verbose then
@@ -183,9 +185,11 @@ module Trainer =
                 if state.RestartIterationOpt.IsNone then
                     let stopwatch = Stopwatch.StartNew()
                     let numSamples = generateSamples settings iter state
+                    log state.SampleStore.Count iter
                     if settings.Verbose then
                         printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
 
+                    // train and evaluate new model
                 let model =
                     trainAdvantageModel settings iter state.SampleStore
                 evaluate settings iter None model
