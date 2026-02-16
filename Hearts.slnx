@@ -9,6 +9,7 @@
   <Project Path="../Fable.Remoting.Suave/Fable.Remoting.Suave/Fable.Remoting.Suave.fsproj" />
   <Project Path="FastCfr/FastCfr/FastCfr.fsproj" />
   <Project Path="Hearts.Cfr/Hearts.Cfr.fsproj" />
+  <Project Path="Hearts.Generate/Hearts.Generate.fsproj" Id="7fb10766-b9c8-4020-829b-f49f4b079c62" />
   <Project Path="Hearts.Heuristic/Hearts.Heuristic.fsproj" Id="ff2df4d6-c95f-4c8c-97e9-245c4fdcae7a" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />

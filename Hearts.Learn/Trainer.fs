@@ -11,14 +11,11 @@ open Hearts.Model
 /// Advantage state.
 type AdvantageState =
     {
-        /// Current model.
+        /// Current model, if any.
         ModelOpt : Option<AdvantageModel>
 
         /// Stored training data.
         SampleStore : AdvantageSampleStore
-
-        /// Restart iteration, if any.
-        RestartIterationOpt : Option<int>
     }
 
     /// Cleanup.
@@ -32,26 +29,6 @@ type AdvantageState =
         /// Cleanup.
         member this.Dispose() =
             this.Dispose()
-
-module AdvantageState =
-
-    /// Advantage sample store file name.
-    let private storeFileName = "AdvantageSamples.bin"
-
-    /// Initializes advantage state.
-    let init modelDirPath =
-        let store =
-            let path = Path.Combine(modelDirPath, storeFileName)
-            AdvantageSampleStore.openOrCreate path
-        let restartIterationOpt =
-            if store.Count > 0L then
-                Some store[store.Count - 1L].Iteration
-            else None
-        {
-            ModelOpt = None
-            SampleStore = store
-            RestartIterationOpt = restartIterationOpt
-        }
 
 module Trainer =
 

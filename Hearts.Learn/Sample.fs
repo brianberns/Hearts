@@ -37,6 +37,7 @@ module AdvantageSample =
 type AdvantageSampleStore =
     {
         Stream : FileStream
+        Iteration : int
     }
 
     /// Cleanup.
@@ -50,127 +51,195 @@ type AdvantageSampleStore =
 
 module AdvantageSampleStore =
 
-    /// Number of bytes in a packed encoding.
-    let private packedEncodingSize =
-        (Model.inputSize + 7) / 8   // round up
+    module private Header =
 
-    /// Packs the given encoding into bytes.
-    let private packEncoding (wtr : BinaryWriter) (encoding : Encoding) =
-        assert(encoding.Length = Model.inputSize)
-        for chunk in Array.chunkBySize 8 encoding do   // 8 bits/byte
-            (0uy, Array.indexed chunk)
-                ||> Array.fold (fun byte (i, flag) ->
-                    if flag then byte ||| (1uy <<< i)
-                    else byte)
-                |> wtr.Write
+        /// File format identifier.
+        let private magic = "Hrts"B
 
-    /// Unpacks bytes into an encoding.
-    let private unpackEncoding (rdr : BinaryReader) : Encoding =
-        rdr.ReadBytes(packedEncodingSize)
-            |> Array.collect (fun byte ->
-                Array.init 8 (fun i ->      // 8 bits/byte
-                    (byte &&& (1uy <<< i)) <> 0uy))
-            |> Array.take Model.inputSize   // trim padding
+        /// Writes a header to the given stream.
+        let write (wtr : BinaryWriter) (iteration : int32) =
+            assert(wtr.BaseStream.Length = 0)
+            assert(wtr.BaseStream.Position = 0)
 
-    /// Maximum possible number of actions available in an info
-    /// set.
-    let private maxActionCount =
-        Hearts.ClosedDeal.numCardsPerHand
+            wtr.Write(magic)
 
-    /// Packs the given regrets into a sparse representation.
-    let private packRegrets (wtr : BinaryWriter) (regrets : Vector<float32>) =
+            assert(iteration >= 0)
+            wtr.Write(iteration)
 
-        let tuples =
-            [|
-                for i, regret in Seq.indexed regrets do
-                    if regret <> 0f then
-                        i, regret
-            |]
-        assert(tuples.Length <= maxActionCount)
+        /// Reads a header from the given stream.
+        let read (rdr : BinaryReader) =
+            assert(rdr.BaseStream.Position = 0)
 
-        for i, regret in tuples do
-            assert(i < int Byte.MaxValue)
-            wtr.Write(byte i)
-            wtr.Write(regret)
+            let magic' = rdr.ReadBytes(magic.Length)
+            if magic' <> magic then
+                failwith $"Invalid magic bytes: {magic'}"
 
-        for _ = tuples.Length to maxActionCount - 1 do
-            wtr.Write(Byte.MaxValue)
-            wtr.Write(0f)
+            let iter = rdr.ReadInt32()
+            assert(iter >= 0)
+            iter
 
-    /// Unpacks sparse bytes into a regrets vector.
-    let private unpackRegrets (rdr : BinaryReader) =
-        seq {
-            for _ = 0 to maxActionCount - 1 do
-                let i = rdr.ReadByte()
-                let regret = rdr.ReadSingle()
-                if regret = 0f then
-                    assert(i = Byte.MaxValue)
-                else
-                    int i, regret
-        }
-            |> SparseVector.ofSeqi Model.outputSize
-            |> CreateVector.DenseOfVector
+        /// Number of bytes in a packed header.
+        let packedSize =
+            (magic.Length * sizeof<byte>)
+                + sizeof<int32>
 
-    /// Number of bytes in packed regrets.
-    let private regretsSize =
-        maxActionCount * (sizeof<byte> + sizeof<float32>)
+    module private Encoding =
+
+        /// Number of bytes in a packed encoding.
+        let packedSize =
+            (Model.inputSize + 7) / 8   // round up
+
+        /// Writes the given encoding to the given stream.
+        let write (wtr : BinaryWriter) (encoding : Encoding) =
+            assert(encoding.Length = Model.inputSize)
+            for chunk in Array.chunkBySize 8 encoding do   // 8 bits/byte
+                (0uy, Array.indexed chunk)
+                    ||> Array.fold (fun byte (i, flag) ->
+                        if flag then byte ||| (1uy <<< i)
+                        else byte)
+                    |> wtr.Write
+
+        /// Reads an encoding from the given stream.
+        let read (rdr : BinaryReader) : Encoding =
+            rdr.ReadBytes(packedSize)
+                |> Array.collect (fun byte ->
+                    Array.init 8 (fun i ->      // 8 bits/byte
+                        (byte &&& (1uy <<< i)) <> 0uy))
+                |> Array.take Model.inputSize   // trim padding
+
+    module private Regrets =
+
+        /// Maximum possible number of actions available in an info
+        /// set.
+        let private maxActionCount =
+            Hearts.ClosedDeal.numCardsPerHand
+
+        /// Writes the given regrets to the given stream.
+        let write (wtr : BinaryWriter) (regrets : Vector<float32>) =
+
+            let tuples =
+                [|
+                    for i, regret in Seq.indexed regrets do
+                        if regret <> 0f then
+                            i, regret
+                |]
+            assert(tuples.Length <= maxActionCount)
+
+            for i, regret in tuples do
+                assert(i < int Byte.MaxValue)
+                wtr.Write(byte i)
+                wtr.Write(regret)
+
+            for _ = tuples.Length to maxActionCount - 1 do
+                wtr.Write(Byte.MaxValue)
+                wtr.Write(0f)
+
+        /// Reads regrets from the given stream.
+        let read (rdr : BinaryReader) =
+            seq {
+                for _ = 0 to maxActionCount - 1 do
+                    let i = rdr.ReadByte()
+                    let regret = rdr.ReadSingle()
+                    if regret = 0f then
+                        assert(i = Byte.MaxValue)
+                    else
+                        int i, regret
+            }
+                |> SparseVector.ofSeqi Model.outputSize
+                |> CreateVector.DenseOfVector
+
+        /// Number of bytes in packed regrets.
+        let packedSize =
+            maxActionCount * (sizeof<byte> + sizeof<float32>)
 
     /// Number of bytes in a serialized sample.
-    let private sampleSize =
-        packedEncodingSize
-            + regretsSize
-            + sizeof<byte> (*iteration*)
-            |> int64
+    let private packedSampleSize =
+        Encoding.packedSize + Regrets.packedSize
 
     /// Is the given store in a valid state?
     let private isValid store =
-        store.Stream.Length % sampleSize = 0L
+        (store.Stream.Length - int64 Header.packedSize)
+            % int64 packedSampleSize = 0L
 
-    /// Opens or creates a sample store at the given location.
-    let openOrCreate path =
+    /// Creates a writer on the given stream.
+    let private getWriter stream =
+        new BinaryWriter(
+            stream, Text.Encoding.UTF8, leaveOpen = true)
+
+    /// Creates a new sample store at the given location.
+    let create iteration path =
+
+            // open stream
         let stream =
-            new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite)
-        let store = { Stream = stream }
+            new FileStream(
+                path,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.Read)
+        use wtr = getWriter stream
+
+            // build store
+        let store =
+            {
+                Stream = stream
+                Iteration = iteration
+            }
+        Header.write wtr iteration
+        assert(isValid store)
+        store
+
+    /// Creates a reader on the given stream.
+    let private getReader stream =
+        new BinaryReader(
+            stream, Text.Encoding.UTF8, leaveOpen = true)
+
+    /// Opens an existing sample store at the given location.
+    let openRead path =
+
+            // open stream
+        let stream =
+            new FileStream(path, FileMode.Open, FileAccess.Read)
+        use rdr = getReader stream
+
+            // build store
+        let store =
+            {
+                Stream = stream
+                Iteration = Header.read rdr
+            }
         assert(isValid store)
         store
 
     /// Gets the number of samples in the given store.
     let getSampleCount store =
         assert(isValid store)
-        store.Stream.Length / int64 sampleSize
+        (store.Stream.Length - int64 Header.packedSize)
+            / int64 packedSampleSize
 
     /// Reads the sample at the given index in the given store.
     let readSample (idx : int64) store =
         assert(isValid store)
         assert(idx >= 0)
         assert(idx < getSampleCount store)
-        store.Stream.Position <- idx * sampleSize
+        store.Stream.Position <-
+            int64 Header.packedSize
+                + idx * int64 packedSampleSize
 
-        use rdr =
-            new BinaryReader(
-                store.Stream, Text.Encoding.UTF8, leaveOpen = true)
-        let encoding = unpackEncoding rdr
-        let regrets = unpackRegrets rdr
-        let iteration = int (rdr.ReadByte())
-        assert(iteration >= int Byte.MinValue)
-        assert(iteration <= int Byte.MaxValue)
-        AdvantageSample.create encoding regrets iteration
+        use rdr = getReader store.Stream
+        let encoding = Encoding.read rdr
+        let regrets = Regrets.read rdr
+        AdvantageSample.create encoding regrets store.Iteration
 
     /// Appends the given samples to the end of the given store.
     let writeSamples samples store =
         assert(isValid store)
         store.Stream.Position <- store.Stream.Length
 
-        use wtr =
-            new BinaryWriter(
-                store.Stream, Text.Encoding.UTF8, leaveOpen = true)
+        use wtr = getWriter store.Stream
 
         for sample in samples do
-            packEncoding wtr sample.Encoding
-            packRegrets wtr sample.Regrets
-            assert(sample.Iteration >= int Byte.MinValue)
-            assert(sample.Iteration <= int Byte.MaxValue)
-            wtr.Write(byte sample.Iteration)
+            Encoding.write wtr sample.Encoding
+            Regrets.write wtr sample.Regrets
 
         assert(isValid store)
 
