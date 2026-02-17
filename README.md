@@ -30,3 +30,37 @@ Because Hearts ends when one of the players reaches 100 points, it can sometimes
 
 * Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players share the same model.
 * Because misdirection/bluffing is not a major part of Hearts, there is no need to train a separate "strategy" model from the advantage models at the end of the run. Instead, the advantage model converges on a strategy after a few iterations.
+
+## Detailed instructions
+
+### Linux
+
+Install .NET:
+
+    > sudo add-apt-repository ppa:dotnet/backports
+    > sudo apt-get update && sudo apt-get install -y dotnet-sdk-10.0
+
+Clone repositories:
+
+    > git clone --recurse-submodules https://github.com/brianberns/Hearts.git
+
+Build and run:
+
+    > cd ./Hearts.Generate
+    > dotnet run --configuration Release
+
+TensorBoard:
+
+    > apt install python3.10-venv (if necessary)
+    > python3 -m venv venv
+    > source venv/bin/activate
+    > pip install tensorboard
+    > tensorboard --bind_all --logdir ./Hearts.Generate/runs/
+
+### Windows
+
+TensorBoard:
+
+    > cd .\source\repos\Hearts\
+    > .\venv\Scripts\activate
+    > tensorboard --logdir .\Hearts.Generate\bin\Release\net10.0\

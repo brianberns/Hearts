@@ -5,7 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Readme.md" />
     <Compile Include="TensorBoard.fs" />
     <Compile Include="Sample.fs" />
     <Compile Include="Store.fs" />
