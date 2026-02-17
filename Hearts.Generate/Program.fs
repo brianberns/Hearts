@@ -89,10 +89,10 @@ module Program =
                 |> Option.map (fun modelPath ->
                     let model =
                         new AdvantageModel(
-                            hiddenSize = settings.HiddenSize,
-                            numHiddenLayers = settings.NumHiddenLayers,
-                            dropoutRate = settings.DropoutRate,
-                            device = TorchSharp.torch.CUDA)
+                            settings.HiddenSize,
+                            settings.NumHiddenLayers,
+                            settings.DropoutRate,
+                            settings.Device)
                     model.load(modelPath : string) |> ignore
                     model.eval()
                     model)

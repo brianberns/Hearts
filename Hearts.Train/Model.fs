@@ -1,4 +1,4 @@
-﻿namespace Hearts.Learn
+﻿namespace Hearts.Train
 
 open TorchSharp
 open type torch
@@ -6,6 +6,7 @@ open type torch.nn
 open type torch.optim
 open FSharp.Core.Operators   // reclaim "float32" and other F# operators
 
+open Hearts.Learn
 open Hearts.Model
 
 module AdvantageModel =
@@ -138,7 +139,7 @@ module AdvantageModel =
         loss
 
     /// Trains the given model using the given samples.
-    let train settings iter evalOpt sampleStore (model : AdvantageModel) =
+    let train settings evalOpt sampleStore (model : AdvantageModel) =
 
             // prepare training data
         let batches =
@@ -164,7 +165,7 @@ module AdvantageModel =
                             settings model batch criterion optimizer
                 |]
             settings.Writer.add_scalar(
-                $"advantage loss/iter%03d{iter}",
+                $"advantage loss/iter%03d{iteration}",
                 loss, epoch)
 
                 // evaluate?

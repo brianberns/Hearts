@@ -21,7 +21,11 @@ module Program =
             printfn $"Settings: {settings}"
             printfn $"Model input size: {Model.inputSize}"
             printfn $"Model output size: {Model.outputSize}"
+
+        let iteration = -1
         Trainer.train settings |> ignore
+
+            
 
     Console.OutputEncoding <- Encoding.UTF8
     run ()
