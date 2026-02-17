@@ -11,12 +11,14 @@ This repository solves Hearts (the card game) using a simplified version of [Dee
 
 ## Building and running
 
-1. Build and run the training program, `Hearts.Learn`. This requires a high-end computer with a fast GPU and CPU, and will take several days to complete. Models will be saved in the `/Models` directory. You can track progress via the TensorBoard directory, `/runs`. E.g. `tensorboard --bind_all --logdir .\Hearts.Learn\bin\Release\net10.0\`.
-2. Build the web server, `Hearts.Web.Server`.
-3. Copy one of the trained models to the web server's runtime directory (e.g. `./bin/Debug` or `./bin/Release`) and rename it to `AdvantageModel.pt`.
-4. Start the web server by building and running `Hearts.Web.Harness`.
-5. In the `Hearts.Web/Client` directory, start the client via `npm install` followed by `npm start`.
-6. Browse to [`http://localhost:8081/`](http://localhost:8081/) to play the game.
+1. Build the training programs `Hearts.Generate` and `Hearts.Train` and copy the executables into the same directory.
+2. Generate training data by running `Hearts.Generate`. This will take several hours to complete, and the generated samples will be saved in the `./Models` directory. You can track progress via the TensorBoard directory, `./runs`. E.g. `tensorboard --bind_all --logdir ./runs`.
+3. Use the generated data to train a model by running `Hearts.Train`. This will take several more hours to complete, and the model will be saved in the `./Models` directory. You can continue to track progress via TensorBoard.
+4. Build the web server, `Hearts.Web.Server`.
+5. Copy one of the trained models to the web server's runtime directory and rename it to `AdvantageModel.pt`.
+6. Start the web server by building and running `Hearts.Web.Harness`.
+7. In the `Hearts.Web/Client` directory, start the client via `npm install` followed by `npm start`.
+8. Browse to [`http://localhost:8081/`](http://localhost:8081/) to play the game.
 
 You can also play the game online [on my website](https://www.bernsrite.com/Hearts/).
 
