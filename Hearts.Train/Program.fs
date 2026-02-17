@@ -18,10 +18,21 @@ module Program =
             Settings.create writer
         Settings.write settings
         if settings.Verbose then
-            printfn $"Server garbage collection: {GCSettings.IsServerGC}"
-            printfn $"Settings: {settings}"
-            printfn $"Model input size: {Model.inputSize}"
-            printfn $"Model output size: {Model.outputSize}"
+            printfn "Settings:"
+            printfn $"   Server garbage collection: {GCSettings.IsServerGC}"
+            printfn $"   Hidden size: {settings.HiddenSize}"
+            printfn $"   # hidden layers: {settings.NumHiddenLayers}"
+            printfn $"   # training epochs: {settings.NumTrainingEpochs}"
+            printfn $"   # epochs/evaluation: {settings.NumEpochsPerEvaluation}"
+            printfn $"   Training batch size: {settings.TrainingBatchSize}"
+            printfn $"   Training sub-batch size: {settings.TrainingSubBatchSize}"
+            printfn $"   Dropout rate: {settings.DropoutRate}"
+            printfn $"   Learning rate: {settings.LearningRate}"
+            printfn $"   # evaluation deals: {settings.NumEvaluationDeals}"
+            printfn $"   Device: {settings.Device}"
+            printfn $"   Model directory: {settings.ModelDirPath}"
+            printfn $"   Model input size: {Model.inputSize}"
+            printfn $"   Model output size: {Model.outputSize}"
 
         let sampleStore =
             let file =

@@ -86,6 +86,7 @@ module Program =
             printfn $"   Inference batch size: {settings.InferenceBatchSize}"
             printfn $"   Sample branch rate: {settings.SampleBranchRate}"
             printfn $"   Hidden size: {settings.HiddenSize}"
+            printfn $"   # hidden layers: {settings.NumHiddenLayers}"
             printfn $"   Device: {settings.Device}"
             printfn $"   Model directory: {settings.ModelDirPath}"
             printfn $"   Model input size: {Model.inputSize}"
