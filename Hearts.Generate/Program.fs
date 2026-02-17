@@ -78,10 +78,18 @@ module Program =
             Settings.create writer
         Settings.write settings
         if settings.Verbose then
-            printfn $"Server garbage collection: {GCSettings.IsServerGC}"
-            printfn $"Settings: {settings}"
-            printfn $"Model input size: {Model.inputSize}"
-            printfn $"Model output size: {Model.outputSize}"
+            printfn "Settings:"
+            printfn $"   Server garbage collection: {GCSettings.IsServerGC}"
+            printfn $"   Iteration: {iteration}"
+            printfn $"   # deals to generate: {settings.NumDealsPerIteration}"
+            printfn $"   Deal batch size: {settings.DealBatchSize}"
+            printfn $"   Inference batch size: {settings.InferenceBatchSize}"
+            printfn $"   Sample branch rate: {settings.SampleBranchRate}"
+            printfn $"   Hidden size: {settings.HiddenSize}"
+            printfn $"   Device: {settings.Device}"
+            printfn $"   Model directory: {settings.ModelDirPath}"
+            printfn $"   Model input size: {Model.inputSize}"
+            printfn $"   Model output size: {Model.outputSize}"
 
             // initialize model, if specified
         let modelOpt =
@@ -98,6 +106,8 @@ module Program =
                             modelPath
                         else
                             Path.Combine(settings.ModelDirPath, modelPath)
+                    if settings.Verbose then
+                        printfn $"Loading model from {modelPath}"
                     model.load(modelPath) |> ignore
                     model.eval()
                     model)
@@ -117,7 +127,7 @@ module Program =
         let stopwatch = Stopwatch.StartNew()
         let numSamples = generateSamples settings iteration state
         if settings.Verbose then
-            printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
+            printfn $"{numSamples} samples generated in {stopwatch.Elapsed}"
 
     /// Generates samples for the next iteration.
     [<EntryPoint>]
