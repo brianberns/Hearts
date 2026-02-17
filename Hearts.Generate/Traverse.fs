@@ -1,10 +1,11 @@
-﻿namespace Hearts.Learn
+﻿namespace Hearts.Generate
 
 open System
 
 open MathNet.Numerics.LinearAlgebra
 
 open Hearts
+open Hearts.Learn
 open Hearts.Model
 
 /// Initial node state, awaiting strategy.

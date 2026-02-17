@@ -16,6 +16,7 @@
   <Project Path="Hearts.ParseKiller/Hearts.ParseKiller.fsproj" Id="80fa113e-2770-480b-ba90-7b62a571d748" />
   <Project Path="Hearts.PlayKiller/Hearts.PlayKiller.fsproj" />
   <Project Path="Hearts.PlayModel/Hearts.PlayModel.fsproj" Id="6bf9be95-db26-4b13-bb8e-ff53b4bad84a" />
+  <Project Path="Hearts.Train/Hearts.Train.fsproj" Id="22d6a9be-2c51-44ac-b9ab-0f46a94d4819" />
   <Project Path="Hearts.Web/Client/src/Hearts.Web.Client.fsproj" />
   <Project Path="Hearts.Web/Harness/Hearts.Web.Harness.fsproj" />
   <Project Path="Hearts.Web/Server/Hearts.Web.Server.fsproj" />

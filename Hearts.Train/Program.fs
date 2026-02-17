@@ -1,14 +1,17 @@
-﻿namespace Hearts.Learn
+﻿namespace Hearts.Train
 
 open System
 open System.Runtime
 open System.Text
 
+open Hearts.Learn
 open Hearts.Model
 
 module Program =
 
     let run () =
+
+            // get settings
         let settings =
             let writer = TensorBoard.createWriter ()
             Settings.create writer

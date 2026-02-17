@@ -79,6 +79,9 @@ module Program =
         Settings.write settings
         if settings.Verbose then
             printfn $"Server garbage collection: {GCSettings.IsServerGC}"
+            printfn $"Settings: {settings}"
+            printfn $"Model input size: {Model.inputSize}"
+            printfn $"Model output size: {Model.outputSize}"
 
             // initialize model, if specified
         let modelOpt =

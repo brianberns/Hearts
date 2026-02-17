@@ -6,8 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Traverse.fs" />
-    <Compile Include="Inference.fs" />
+    <Compile Include="Trainer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
