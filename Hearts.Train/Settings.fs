@@ -48,14 +48,6 @@ type Settings =
         Verbose : bool
     }
 
-module TensorBoard =
-
-    /// TensorBoard log writer.
-    let createWriter () =
-        let timespan = DateTime.Now - DateTime.Today
-        torch.utils.tensorboard.SummaryWriter(
-            $"runs/run%05d{int timespan.TotalSeconds}")
-
 module Settings =
 
     /// Creates default settings.

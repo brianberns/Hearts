@@ -10,7 +10,10 @@ open Hearts.Model
 /// Persistent store for advantage samples.
 type AdvantageSampleStore =
     {
+        /// Underlying binary file.
         Stream : FileStream
+
+        /// Iteration for all samples in this store.
         Iteration : int
     }
 
