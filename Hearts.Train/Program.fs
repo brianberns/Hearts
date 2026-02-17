@@ -39,9 +39,12 @@ module Program =
                 DirectoryInfo(settings.ModelDirPath)
                     .GetFiles("*.bin")
                     |> Array.exactlyOne
+            if settings.Verbose then
+                printfn $"Opening sample store: {file.FullName}"
             AdvantageSampleStore.openRead file.FullName
-        Trainer.trainModel settings sampleStore
-            |> ignore
+        let modelPath = Trainer.trainModel settings sampleStore
+        if settings.Verbose then
+            printfn $"Created model: {Path.GetFullPath(modelPath)}"
 
     Console.OutputEncoding <- Encoding.UTF8
     run ()

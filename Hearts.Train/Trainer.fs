@@ -40,7 +40,7 @@ module Trainer =
 
             // train new model
         let stopwatch = Stopwatch.StartNew()
-        let model =
+        use model =
             new AdvantageModel(
                 settings.HiddenSize,
                 settings.NumHiddenLayers,
@@ -56,13 +56,13 @@ module Trainer =
         if settings.Verbose then
             printfn $"Trained model on {sampleStore.Count} samples in {stopwatch.Elapsed} \
                 (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStore.Count} ms/sample)"
-        Path.Combine(
-            settings.ModelDirPath,
-            $"AdvantageModel%03d{sampleStore.Iteration}.pt")
-                |> model.save
-                |> ignore
+        let path =
+            Path.Combine(
+                settings.ModelDirPath,
+                $"AdvantageModel%03d{sampleStore.Iteration}.pt")
+        model.save(path) |> ignore
 
             // evaluate model
         evaluate settings sampleStore.Iteration None model
 
-        model
+        path
