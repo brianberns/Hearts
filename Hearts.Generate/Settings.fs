@@ -1,5 +1,6 @@
 ﻿namespace Hearts.Generate
 
+open System.IO
 open TorchSharp
 open Hearts.Model
 
@@ -56,7 +57,7 @@ module Settings =
             HiddenSize = Encoding.encodedLength * 2
             NumHiddenLayers = 4
             Device = torch.CUDA
-            ModelDirPath = "./Models"
+            ModelDirPath = Path.Combine(".", "Models")
             Writer = writer
             Verbose = true
         }
@@ -84,5 +85,5 @@ module Settings =
             string settings.NumHiddenLayers, 0)
 
         settings.ModelDirPath   // to-do: move this somewhere else?
-            |> System.IO.Directory.CreateDirectory
+            |> Directory.CreateDirectory
             |> ignore

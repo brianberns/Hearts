@@ -1,6 +1,6 @@
 ﻿namespace Hearts.Train
 
-open System
+open System.IO
 open TorchSharp
 open Hearts.Model
 
@@ -63,7 +63,7 @@ module Settings =
             LearningRate = 1e-3
             NumEvaluationDeals = 20_000
             Device = torch.CUDA
-            ModelDirPath = "./Models"
+            ModelDirPath = Path.Combine(".", "Models")
             Writer = writer
             Verbose = true
         }
@@ -100,5 +100,5 @@ module Settings =
             string settings.NumEvaluationDeals, 0)
 
         settings.ModelDirPath   // to-do: move this somewhere else?
-            |> System.IO.Directory.CreateDirectory
+            |> Directory.CreateDirectory
             |> ignore
