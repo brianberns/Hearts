@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Fable.Remoting.Suave\Fable.Remoting.Suave\Fable.Remoting.Suave.fsproj" />
-    <ProjectReference Include="..\..\Hearts.Cfr\Hearts.Cfr.fsproj" />
     <ProjectReference Include="..\..\Hearts.Model\Hearts.Model.fsproj" />
   </ItemGroup>
 

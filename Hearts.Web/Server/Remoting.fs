@@ -24,6 +24,7 @@ module AdvantageModel =
                 device = TorchSharp.torch.CPU)
         let path = Path.Combine(dir, "AdvantageModel.pt")
         model.load(path) |> ignore
+        model.eval()
         model
 
     /// Hearts API.
@@ -52,28 +53,6 @@ module AdvantageModel =
                                 |> Array.exactlyOne
                         return strategy.ToArray()
                             |> Array.map float
-                    }
-        }
-
-module Cfr =
-
-    open Hearts.Cfr
-
-    let heartsApi dir =
-        {
-            GetActionIndex =
-                fun infoSet ->
-                    async {
-                        return Cfr.getActionIndex dir infoSet
-                    }
-            GetStrategy =
-                fun infoSet ->
-                    async {
-                        let actionIdxOpt = Cfr.tryGetActionIndex dir infoSet
-                        let nActions = infoSet.LegalActions.Length
-                        return Array.init nActions (fun i ->
-                            if Some i = actionIdxOpt then 1
-                            else 0)
                     }
         }
 

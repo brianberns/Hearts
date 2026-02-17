@@ -6,13 +6,73 @@ open System.IO
 open System.Runtime
 open System.Text
 
+open Hearts
 open Hearts.Learn
 open Hearts.Model
 
 module Program =
 
-    let run modelOpt iteration =
+    /// Generates training data for the given iteration.
+    let generateSamples settings iteration state =
 
+        /// TensorBoard logging.
+        let log value step =
+            settings.Writer.add_scalar(
+                $"advantage samples/iter%03d{iteration}",
+                value, step)
+
+            // start TensorBoard y-axis at 0
+        log 0f 0
+
+            // divide deals for this iteration into batches,
+            // including possible runt batch at the end
+        let batchSizes =
+            Seq.replicate settings.NumDealsPerIteration ()
+                |> Seq.chunkBySize settings.DealBatchSize
+                |> Seq.map _.Length
+
+            // generate samples for each batch
+        Array.sum [|
+            for iBatch, numDeals in Seq.indexed batchSizes do
+                assert(numDeals <= settings.DealBatchSize)
+
+                    // generate samples
+                let samples =
+                    OpenDeal.playDeals (Random()) true numDeals
+                        (fun deal ->
+                            let rng = Random()   // each thread has its own RNG
+                            Traverse.traverse settings iteration deal rng)
+                        |> Inference.complete
+                            settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
+                            state.ModelOpt
+
+                    // save samples
+                AdvantageSampleStore.writeSamples
+                    samples state.SampleStore
+                log
+                    (float32 samples.Length / float32 numDeals)    // average number of generated samples per deal in this batch
+                    (iBatch * settings.DealBatchSize + numDeals)   // total number of deals so far
+
+                samples.Length
+        |]
+
+    /// Parses command line arguments.
+    let parse (argv : string[]) =
+        match argv.Length with
+            | 0 -> None, 0
+            | 1 ->
+                let modelPath = argv[0]
+                let iter =
+                    let fileName = Path.GetFileNameWithoutExtension(modelPath)
+                    fileName[fileName.Length - 3 ..]   // e.g. "AdvantageModel001.pt"
+                        |> Int32.Parse
+                Some modelPath, iter
+            | _ -> failwith $"Invalid arguments: {argv}"
+
+    /// Generates samples for the given iteration using the given model.
+    let run modelPathOpt iteration =
+
+            // get settings
         let settings =
             let writer = TensorBoard.createWriter ()
             Settings.create writer
@@ -20,6 +80,21 @@ module Program =
         if settings.Verbose then
             printfn $"Server garbage collection: {GCSettings.IsServerGC}"
 
+            // initialize model, if specified
+        let modelOpt =
+            modelPathOpt
+                |> Option.map (fun modelPath ->
+                    let model =
+                        new AdvantageModel(
+                            hiddenSize = settings.HiddenSize,
+                            numHiddenLayers = settings.NumHiddenLayers,
+                            dropoutRate = settings.DropoutRate,
+                            device = TorchSharp.torch.CUDA)
+                    model.load(modelPath : string) |> ignore
+                    model.eval()
+                    model)
+
+            // initialize state
         let state =
             Path.Combine(
                 settings.ModelDirPath,
@@ -27,33 +102,15 @@ module Program =
                 |> AdvantageSampleStore.create iteration
                 |> AdvantageState.create modelOpt
 
+            // generate samples
         let stopwatch = Stopwatch.StartNew()
-        let numSamples = Trainer.generateSamples settings iteration state
+        let numSamples = generateSamples settings iteration state
         if settings.Verbose then
             printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
 
     [<EntryPoint>]
     let main argv =
         Console.OutputEncoding <- Encoding.UTF8
-
-        let modelOpt, iter =
-            if argv.Length = 0 then
-                None, 0
-            else
-                let modelPath = argv[0]
-                let iter =
-                    let fileName = Path.GetFileNameWithoutExtension(modelPath)
-                    fileName[fileName.Length - 3 ..]   // e.g. "AdvantageModel001.pt"
-                        |> Int32.Parse
-                let model =
-                    new AdvantageModel(
-                        hiddenSize = Encoding.encodedLength * 3,
-                        numHiddenLayers = 9,
-                        dropoutRate = 0.3,
-                        device = TorchSharp.torch.CUDA)
-                model.load(argv[0]) |> ignore
-                Some model, iter
-
-        run modelOpt iter
-
+        let modelPathOpt, iter = parse argv
+        run modelPathOpt iter
         0
