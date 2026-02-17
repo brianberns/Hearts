@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Hearts.Train": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
+    }
+  }
+}

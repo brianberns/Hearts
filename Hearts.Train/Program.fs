@@ -1,6 +1,7 @@
 ﻿namespace Hearts.Train
 
 open System
+open System.IO
 open System.Runtime
 open System.Text
 
@@ -22,10 +23,14 @@ module Program =
             printfn $"Model input size: {Model.inputSize}"
             printfn $"Model output size: {Model.outputSize}"
 
-        let iteration = -1
-        Trainer.train settings |> ignore
-
-            
+        let sampleStore =
+            let file =
+                DirectoryInfo(settings.ModelDirPath)
+                    .GetFiles("*.bin")
+                    |> Array.exactlyOne
+            AdvantageSampleStore.openRead file.FullName
+        Trainer.trainModel settings sampleStore
+            |> ignore
 
     Console.OutputEncoding <- Encoding.UTF8
     run ()
