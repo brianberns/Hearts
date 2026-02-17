@@ -16,22 +16,22 @@ module AdvantageModel =
     module private SubBatch =
 
         /// Extracts inputs from a sub-batch.
-        let private toInputs subbatch =
-            subbatch
+        let private toInputs (samples : SubBatch) =
+            samples
                 |> Array.map (
                     _.Encoding
                         >> Encoding.toFloat32Array)
                 |> array2D
 
         /// Extracts targets from a sub-batch.
-        let private toTargets subbatch =
-            subbatch
+        let private toTargets (samples : SubBatch) =
+            samples
                 |> Array.map _.Regrets
                 |> array2D
 
         /// Extracts weights from a sub-batch.
-        let private toWeights subbatch =
-            subbatch
+        let private toWeights (samples : SubBatch) =
+            samples
                 |> Array.map (
                     _.Iteration
                         >> float32
@@ -40,9 +40,9 @@ module AdvantageModel =
                 |> array2D
 
         /// Extracts 2D arrays from a sub-batch.
-        let to2dArrays (subbatch : SubBatch) =
+        let to2dArrays samples =
             let arrays =
-                Array.Parallel.map (fun f -> f subbatch)
+                Array.Parallel.map (fun f -> f samples)
                     [| toInputs; toTargets; toWeights |]
             let inputs = arrays[0]
             let targets = arrays[1]
@@ -85,12 +85,12 @@ module AdvantageModel =
 
     /// Trains the given model on the given sub-batch of
     /// data.
-    let private trainSubBatch settings model subbatch
+    let private trainSubBatch settings model samples
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
             // move to GPU
         let inputs2d, targets2d, weights2d =
-            SubBatch.to2dArrays subbatch
+            SubBatch.to2dArrays samples
         use inputs = tensor(inputs2d, device = settings.Device)
         use targets = tensor(targets2d, device = settings.Device)
         use weights = tensor(weights2d, device = settings.Device)
@@ -128,8 +128,8 @@ module AdvantageModel =
             // train sub-batches
         let loss =
             Array.last [|
-                for subbatch in batch do
-                    trainSubBatch settings model subbatch criterion
+                for samples in batch do
+                    trainSubBatch settings model samples criterion
             |]
 
             // optimize
