@@ -117,9 +117,14 @@ module Program =
             let unique =
                 let timespan = DateTime.Now - DateTime.Today
                 int timespan.TotalSeconds
-            Path.Combine(
-                settings.ModelDirPath,
-                $"AdvantageSamples%03d{iteration}.%05d{unique}.bin")
+            let path =
+                Path.Combine(
+                    settings.ModelDirPath,
+                    $"AdvantageSamples%03d{iteration}.%05d{unique}.bin")
+                    |> Path.GetFullPath
+            if settings.Verbose then
+                printfn $"Creating sample store: {path}"
+            path
                 |> AdvantageSampleStore.create iteration
                 |> AdvantageState.create modelOpt
 
