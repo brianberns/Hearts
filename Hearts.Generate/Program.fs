@@ -93,7 +93,12 @@ module Program =
                             settings.NumHiddenLayers,
                             0.0,   // dropout not used during inference
                             settings.Device)
-                    model.load(modelPath : string) |> ignore
+                    let modelPath =
+                        if Path.IsPathFullyQualified(modelPath : string) then
+                            modelPath
+                        else
+                            Path.Combine(settings.ModelDirPath, modelPath)
+                    model.load(modelPath) |> ignore
                     model.eval()
                     model)
 
