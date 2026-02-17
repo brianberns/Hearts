@@ -81,9 +81,9 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
-            NumDealsPerIteration = 80_000
+            NumDealsPerIteration = 100_000
             DealBatchSize = 25
-            SampleBranchRate = 0.22
+            SampleBranchRate = 0.23
             HiddenSize = Encoding.encodedLength * 2
             NumHiddenLayers = 4
             NumTrainingEpochs = 20
