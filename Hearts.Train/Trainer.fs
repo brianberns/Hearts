@@ -36,7 +36,7 @@ module Trainer =
                     $"advantage tournament", payoff, iteration)
 
     /// Uses stored samples to train a new model.
-    let trainModel settings sampleStore =
+    let trainModel settings (sampleStore : AdvantageSampleStore) =
 
             // train new model
         let stopwatch = Stopwatch.StartNew()

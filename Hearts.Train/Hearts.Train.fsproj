@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Settings.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Trainer.fs" />
     <Compile Include="Program.fs" />

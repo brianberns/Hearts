@@ -6,9 +6,9 @@
 
   <ItemGroup>
     <None Include="Readme.md" />
-    <Compile Include="Settings.fs" />
     <Compile Include="Sample.fs" />
-    <Compile Include="Trainer.fs" />
+    <Compile Include="Store.fs" />
+    <Compile Include="State.fs" />
   </ItemGroup>
 
   <ItemGroup>

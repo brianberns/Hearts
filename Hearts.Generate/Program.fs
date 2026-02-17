@@ -43,7 +43,7 @@ module Program =
                             let rng = Random()   // each thread has its own RNG
                             Traverse.traverse settings iteration deal rng)
                         |> Inference.complete
-                            settings.TrainingSubBatchSize   // reuse setting for number of deals per inference chunk
+                            settings.InferenceBatchSize
                             state.ModelOpt
 
                     // save samples
@@ -91,7 +91,7 @@ module Program =
                         new AdvantageModel(
                             settings.HiddenSize,
                             settings.NumHiddenLayers,
-                            settings.DropoutRate,
+                            0.0,   // dropout not used during inference
                             settings.Device)
                     model.load(modelPath : string) |> ignore
                     model.eval()
