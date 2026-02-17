@@ -62,4 +62,7 @@ module Trainer =
                 |> model.save
                 |> ignore
 
+            // evaluate model
+        evaluate settings sampleStore.Iteration None model
+
         model
