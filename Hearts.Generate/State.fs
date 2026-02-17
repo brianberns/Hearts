@@ -1,6 +1,8 @@
-namespace Hearts.Learn
+namespace Hearts.Generate
 
 open System
+
+open Hearts.Learn
 open Hearts.Model
 
 /// Advantage state.
@@ -27,6 +29,7 @@ type AdvantageState =
 
 module AdvantageState =
 
+    /// Creates an advantage state.
     let create modelOpt sampleStore =
         {
             ModelOpt = modelOpt

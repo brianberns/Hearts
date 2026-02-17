@@ -1,7 +1,6 @@
 ﻿namespace Hearts.Generate
 
 open Hearts.Heuristic
-open Hearts.Learn
 open Hearts.Model
 
 module Array =

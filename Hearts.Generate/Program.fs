@@ -13,7 +13,7 @@ open Hearts.Model
 module Program =
 
     /// Generates training data for the given iteration.
-    let generateSamples settings iteration state =
+    let private generateSamples settings iteration state =
 
         /// TensorBoard logging.
         let log value step =
@@ -57,7 +57,7 @@ module Program =
         |]
 
     /// Parses command line arguments.
-    let parse (argv : string[]) =
+    let private parse (argv : string[]) =
         match argv.Length with
             | 0 -> None, 1
             | 1 ->
@@ -70,7 +70,7 @@ module Program =
             | _ -> failwith $"Invalid arguments: {argv}"
 
     /// Generates samples for the given iteration using the given model.
-    let run modelPathOpt iteration =
+    let private run modelPathOpt iteration =
 
             // get settings
         let settings =
