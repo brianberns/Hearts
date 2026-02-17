@@ -98,7 +98,7 @@ module Program =
                     model)
 
             // initialize state
-        let state =
+        use state =
             let unique =
                 let timespan = DateTime.Now - DateTime.Today
                 int timespan.TotalSeconds
