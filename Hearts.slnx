@@ -1,27 +1,18 @@
 <Solution>
-  <Configurations>
-    <Platform Name="Any CPU" />
-    <Platform Name="x64" />
-  </Configurations>
   <Folder Name="/Solution Items/">
     <File Path="README.md" />
   </Folder>
-  <Project Path="../Fable.Remoting.Suave/Fable.Remoting.Suave/Fable.Remoting.Suave.fsproj" />
-  <Project Path="Hearts.Generate/Hearts.Generate.fsproj" Id="7fb10766-b9c8-4020-829b-f49f4b079c62" />
-  <Project Path="Hearts.Heuristic/Hearts.Heuristic.fsproj" Id="ff2df4d6-c95f-4c8c-97e9-245c4fdcae7a" />
+  <Project Path="Hearts.Generate/Hearts.Generate.fsproj" />
+  <Project Path="Hearts.Heuristic/Hearts.Heuristic.fsproj" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />
-  <Project Path="Hearts.ParseKiller/Hearts.ParseKiller.fsproj" Id="80fa113e-2770-480b-ba90-7b62a571d748" />
+  <Project Path="Hearts.ParseKiller/Hearts.ParseKiller.fsproj" />
   <Project Path="Hearts.PlayKiller/Hearts.PlayKiller.fsproj" />
-  <Project Path="Hearts.PlayModel/Hearts.PlayModel.fsproj" Id="6bf9be95-db26-4b13-bb8e-ff53b4bad84a" />
-  <Project Path="Hearts.Train/Hearts.Train.fsproj" Id="22d6a9be-2c51-44ac-b9ab-0f46a94d4819" />
+  <Project Path="Hearts.PlayModel/Hearts.PlayModel.fsproj" />
+  <Project Path="Hearts.Train/Hearts.Train.fsproj" />
   <Project Path="Hearts.Web/Client/src/Hearts.Web.Client.fsproj" />
   <Project Path="Hearts.Web/Harness/Hearts.Web.Harness.fsproj" />
   <Project Path="Hearts.Web/Server/Hearts.Web.Server.fsproj" />
-  <Project Path="Hearts/Hearts.fsproj">
-    <Platform Solution="*|x64" Project="x64" />
-  </Project>
-  <Project Path="PlayingCards/PlayingCards.fsproj">
-    <Platform Solution="*|x64" Project="x64" />
-  </Project>
+  <Project Path="Hearts/Hearts.fsproj" />
+  <Project Path="PlayingCards/PlayingCards.fsproj" />
 </Solution>
