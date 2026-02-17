@@ -59,7 +59,7 @@ module Program =
     /// Parses command line arguments.
     let parse (argv : string[]) =
         match argv.Length with
-            | 0 -> None, 0
+            | 0 -> None, 1
             | 1 ->
                 let modelPath = argv[0]
                 let iter =
@@ -99,9 +99,12 @@ module Program =
 
             // initialize state
         let state =
+            let unique =
+                let timespan = DateTime.Now - DateTime.Today
+                int timespan.TotalSeconds
             Path.Combine(
                 settings.ModelDirPath,
-                $"AdvantageSamples.{iteration}.{DateTime.Now.Ticks}")
+                $"AdvantageSamples%03d{iteration}.%05d{unique}.bin")
                 |> AdvantageSampleStore.create iteration
                 |> AdvantageState.create modelOpt
 

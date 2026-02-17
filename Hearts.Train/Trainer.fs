@@ -47,7 +47,7 @@ module Trainer =
                 settings.DropoutRate,
                 settings.Device)
         let eval epoch model =
-            evaluate settings (sampleStore.Iteration + 1) (Some epoch) model
+            evaluate settings sampleStore.Iteration (Some epoch) model
         AdvantageModel.train
             settings (Some eval) sampleStore model
         stopwatch.Stop()
@@ -58,7 +58,7 @@ module Trainer =
                 (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStore.Count} ms/sample)"
         Path.Combine(
             settings.ModelDirPath,
-            $"AdvantageModel%03d{sampleStore.Iteration + 1}.pt")
+            $"AdvantageModel%03d{sampleStore.Iteration}.pt")
                 |> model.save
                 |> ignore
 

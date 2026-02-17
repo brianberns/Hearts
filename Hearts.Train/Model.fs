@@ -165,7 +165,7 @@ module AdvantageModel =
                             settings model batch criterion optimizer
                 |]
             settings.Writer.add_scalar(
-                $"advantage loss/iter%03d{sampleStore.Iteration + 1}",
+                $"advantage loss/iter%03d{sampleStore.Iteration}",
                 loss, epoch)
 
                 // evaluate?
