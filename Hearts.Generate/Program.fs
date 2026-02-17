@@ -59,7 +59,7 @@ module Program =
     /// Parses command line arguments.
     let private parse (argv : string[]) =
         match argv.Length with
-            | 0 -> None, 1
+            | 0 -> None, 0
             | 1 ->
                 let modelPath = argv[0]
                 let iter =
@@ -119,9 +119,10 @@ module Program =
         if settings.Verbose then
             printfn $"\n{numSamples} samples generated in {stopwatch.Elapsed}"
 
+    /// Generates samples for the next iteration.
     [<EntryPoint>]
     let main argv =
         Console.OutputEncoding <- Encoding.UTF8
         let modelPathOpt, iter = parse argv
-        run modelPathOpt iter
+        run modelPathOpt (iter + 1)
         0
