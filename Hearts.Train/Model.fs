@@ -192,9 +192,12 @@ module AdvantageModel =
                     for iBatch, (batch, stopwatch) in Seq.indexed batches do
                         trainBatch
                             settings model batch criterion optimizer
+
+                        let seconds =
+                            float32 stopwatch.ElapsedMilliseconds / 1000f
                         settings.Writer.add_scalar(
                             $"advantage loss/iter%03d{sampleStores.Iteration}/epoch%03d{epoch}",
-                            float32 stopwatch.ElapsedMilliseconds, iBatch)
+                            seconds, iBatch)
                 |]
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{sampleStores.Iteration}",
