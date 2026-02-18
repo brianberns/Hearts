@@ -68,9 +68,7 @@ module AdvantageModel =
 
     /// Breaks the given samples into randomized batches.
     let private createBatches
-        batchSize
-        subBatchSize
-        (sampleStores : AdvantageSampleStoreGroup) : seq<Batch> =
+        batchSize subBatchSize (sampleStores : AdvantageSampleStoreGroup) =
 
             // get every sample's index pair
         let indexPairs =
@@ -90,14 +88,17 @@ module AdvantageModel =
             // stream samples
         seq {
             for indexBatch in indexBatches do
-                [|
-                    for indexSubbatch in indexBatch do
-                        [|
-                            for iPair in indexSubbatch do
-                                let iStore, iSample = indexPairs[iPair]
-                                sampleStores[iStore][iSample]
-                        |]
-                |]
+                let stopwatch = Stopwatch.StartNew()
+                let batch : Batch =
+                    [|
+                        for indexSubbatch in indexBatch do
+                            [|
+                                for iPair in indexSubbatch do
+                                    let iStore, iSample = indexPairs[iPair]
+                                    sampleStores[iStore][iSample]
+                            |]
+                    |]
+                batch, stopwatch
         }
 
     /// Trains the given model on the given sub-batch of
@@ -179,8 +180,7 @@ module AdvantageModel =
                 // train epoch
             let loss =
                 Array.last [|
-                    for iBatch, batch in Seq.indexed batches do
-                        let stopwatch = Stopwatch.StartNew()
+                    for iBatch, (batch, stopwatch) in Seq.indexed batches do
                         trainBatch
                             settings model batch criterion optimizer
                         settings.Writer.add_scalar(
