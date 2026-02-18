@@ -14,7 +14,8 @@ open Hearts.Model
 
 module AdvantageModel =
 
-    /// A chunk of training data that fits on the GPU.
+    /// A chunk of training data that fits on the GPU and in
+    /// memory.
     type private SubBatch = AdvantageSample[]
 
     module private SubBatch =
@@ -62,9 +63,9 @@ module AdvantageModel =
             assert(weights.GetLength(1) = 1)
             inputs, targets, weights
 
-    /// A logical batch of training data that fits in memory,
-    /// but might be too large to fit on the GPU.
-    type private Batch = SubBatch[]
+    /// A logical batch of training data that might be too
+    /// large to fit on the GPU or in memory.
+    type private Batch = seq<SubBatch>
 
     /// Breaks the given samples into randomized batches.
     let private createBatches
@@ -90,14 +91,14 @@ module AdvantageModel =
             for indexBatch in indexBatches do
                 let stopwatch = Stopwatch.StartNew()
                 let batch : Batch =
-                    [|
-                        for indexSubbatch in indexBatch do
+                    seq {
+                        for indexSubBatch in indexBatch do
                             [|
-                                for iPair in indexSubbatch do
+                                for iPair in indexSubBatch do
                                     let iStore, iSample = indexPairs[iPair]
                                     sampleStores[iStore][iSample]
                             |]
-                    |]
+                    }
                 batch, stopwatch
         }
 

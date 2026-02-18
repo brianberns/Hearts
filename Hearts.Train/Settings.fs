@@ -7,20 +7,20 @@ open Hearts.Model
 /// Hyperparameters.
 type Settings =
     {
-        /// Input and output size of a hidden layer within the neural
+        /// Input and output size of a hidden layer in the neural
         /// network.
         HiddenSize : int
 
         /// Number of hidden layers within the neural network.
         NumHiddenLayers : int
 
-        /// Number of epochs to use when training the model.
+        /// Number of training epochs per iteration.
         NumTrainingEpochs : int
 
-        /// Batch size to use when training the model.
+        /// Number of samples per logical training batch.
         TrainingBatchSize : int
 
-        /// Sub-batch size to use when training the model.
+        /// Number of samples per physical training sub-batch.
         TrainingSubBatchSize : int
 
         /// Dropout rate to use when training the model.
