@@ -34,17 +34,20 @@ module Program =
             printfn $"   Model input size: {Model.inputSize}"
             printfn $"   Model output size: {Model.outputSize}"
 
+            // get training data
         let sampleStore =
             let file =
                 DirectoryInfo(settings.ModelDirPath)
                     .GetFiles("*.bin")
                     |> Array.exactlyOne
-            if settings.Verbose then
-                printfn $"Opening sample store: {file.FullName}"
             AdvantageSampleStore.openRead file.FullName
+        if settings.Verbose then
+            printfn $"Sample store: {Path.GetFileName(sampleStore.Stream.Name)}: {sampleStore.Count} samples"
+
+            // train model
         let modelPath = Trainer.trainModel settings sampleStore
         if settings.Verbose then
-            printfn $"Created model: {Path.GetFullPath(modelPath)}"
+            printfn $"Created model: {modelPath}"
 
     Console.OutputEncoding <- Encoding.UTF8
     run ()

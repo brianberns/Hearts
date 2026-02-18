@@ -61,7 +61,11 @@ module Settings =
             TrainingSubBatchSize = 50_000
             DropoutRate = 0.3
             LearningRate = 1e-3
+#if DEBUG
+            NumEvaluationDeals = 200
+#else
             NumEvaluationDeals = 20_000
+#endif
             Device = torch.CUDA
             ModelDirPath = Path.Combine(".", "Models")
             Writer = writer
