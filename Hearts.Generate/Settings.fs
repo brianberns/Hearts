@@ -50,7 +50,11 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
+#if DEBUG
+            NumDealsPerIteration = 50
+#else
             NumDealsPerIteration = 100_000
+#endif
             DealBatchSize = 25
             InferenceBatchSize = 50_000
             SampleBranchRate = 0.23

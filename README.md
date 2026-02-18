@@ -55,12 +55,14 @@ TensorBoard:
     > python3 -m venv venv
     > source venv/bin/activate
     > pip install tensorboard
-    > tensorboard --bind_all --logdir ./Hearts.Generate/runs/
+    > tensorboard --bind_all --logdir ./artifacts/Release/runs/
 
 ### Windows
 
 TensorBoard:
 
     > cd .\source\repos\Hearts\
+    > py -m venv .\venv
+    > pip install tensorboard
     > .\venv\Scripts\activate
-    > tensorboard --logdir .\Hearts.Generate\bin\Release\net10.0\
+    > tensorboard --logdir .\artifacts\Release\runs

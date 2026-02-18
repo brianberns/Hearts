@@ -122,7 +122,6 @@ module Program =
                 Path.Combine(
                     settings.ModelDirPath,
                     $"AdvantageSamples%03d{iteration}.%05d{unique}.bin")
-                    |> Path.GetFullPath
             if settings.Verbose then
                 printfn $"Creating sample store: {path}"
             path
