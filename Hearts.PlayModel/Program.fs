@@ -1,9 +1,11 @@
 ﻿namespace Hearts.PlayModel
 
 open System
-open System.Diagnostics
 open System.Runtime
 open System.Text
+
+open Microsoft.Extensions.FileSystemGlobbing
+open Microsoft.Extensions.FileSystemGlobbing.Abstractions
 
 open Hearts
 open Hearts.Heuristic
@@ -13,7 +15,16 @@ open Hearts.Train
 
 module Program =
 
-    let run path =
+    let parse (argv : _[]) =
+        if argv.Length = 0 then
+            seq { "AdvantageModel.pt" }
+        else
+            let matcher = Matcher()
+            for arg in argv do
+                matcher.AddInclude(arg) |> ignore
+            matcher.GetResultsInFullPath(".")
+
+    let run paths =
 
         let settings =
             let writer = TensorBoard.createWriter ()
@@ -25,29 +36,22 @@ module Program =
         let numDeals = 20_000
 
         use model =
-            let model =
-                new AdvantageModel(
-                    settings.HiddenSize,
-                    settings.NumHiddenLayers,
-                    0.0,
-                    settings.Device)
+            new AdvantageModel(
+                settings.HiddenSize,
+                settings.NumHiddenLayers,
+                0.0,
+                settings.Device)
+
+        for path in paths do
             model.load(path : string) |> ignore
             model.eval()
-            model
-        let player = Strategy.createPlayer model
-
-        let stopwatch = Stopwatch.StartNew()
-        let payoff =
-            Tournament.run 0 true numDeals Claude.player player
-        printfn $"Payoff: {payoff}"
-        printfn $"Elapsed time: {stopwatch.Elapsed}"
-
+            let player = Strategy.createPlayer model
+            let payoff =
+                Tournament.run 0 true numDeals Claude.player player
+            printfn $"{path}: {payoff}"
 
     [<EntryPoint>]
     let main argv =
         Console.OutputEncoding <- Encoding.UTF8
-        let path =
-            if argv.Length = 0 then "AdvantageModel.pt"
-            else argv[0]
-        run path
+        parse argv |> run
         0
