@@ -9,16 +9,21 @@ This repository solves Hearts (the card game) using a simplified version of [Dee
 3. Train a new version of the model using the comparisons generated in the previous step.
 4. Repeat from step 2 for multiple iterations.
 
-## Building and running
+## Running
 
-1. Build the training programs `Hearts.Generate` and `Hearts.Train` and copy the executables into the same directory.
-2. Generate training data by running `Hearts.Generate`. This will take several hours to complete, and the generated samples will be saved in the `./Models` directory. You can track progress via the TensorBoard directory, `./runs`. E.g. `tensorboard --bind_all --logdir ./runs`.
-3. Use the generated data to train a model by running `Hearts.Train`. This will take several more hours to complete, and the model will be saved in the `./Models` directory. You can continue to track progress via TensorBoard.
-4. Build the web server, `Hearts.Web.Server`.
-5. Copy one of the trained models to the web server's runtime directory and rename it to `AdvantageModel.pt`.
-6. Start the web server by building and running `Hearts.Web.Harness`.
-7. In the `Hearts.Web/Client` directory, start the client via `npm install` followed by `npm start`.
-8. Browse to [`http://localhost:8081/`](http://localhost:8081/) to play the game.
+Model training:
+
+1. Generate training data by running `Hearts.Generate`. This will take several hours to complete, and the generated samples will be saved in the `./Models` directory. You can track progress via the TensorBoard directory, `./runs`. E.g. `tensorboard --bind_all --logdir ./Artifacts/Release/runs`.
+2. Use the generated data to train a model by running `Hearts.Train`. This will take several more hours to complete, and the model will be saved in the `./Models` directory. You can continue to track progress via TensorBoard.
+3. Use the model to generate more training data by running `Hearts.Generate AdvantageSamples-i001.pt`, and then train another model by running `Hearts.Train` again. Iterate as many times as desired.
+
+Web app:
+
+1. Build the web server, `Hearts.Web.Server`.
+2. Copy a trained model to the web server's runtime directory and rename it to `AdvantageModel.pt`.
+3. Start the web server by building and running `Hearts.Web.Harness`.
+4. In the `Hearts.Web/Client` directory, start the client via `npm install` followed by `npm start`.
+5. Browse to [`http://localhost:8081/`](http://localhost:8081/) to play the game.
 
 You can also play the game online [on my website](https://www.bernsrite.com/Hearts/).
 
