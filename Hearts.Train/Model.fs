@@ -1,6 +1,7 @@
 ﻿namespace Hearts.Train
 
 open System.IO
+open System.Diagnostics
 
 open TorchSharp
 open type torch
@@ -159,21 +160,12 @@ module AdvantageModel =
         (sampleStores : AdvantageSampleStoreGroup)
         (model : AdvantageModel) =
 
-        /// TensorBoard logging.
-        let log loss epoch =
-            settings.Writer.add_scalar(
-                $"advantage loss/iter%03d{sampleStores.Iteration}",
-                loss, epoch)
-
             // prepare training data
         let batches =
             createBatches
                 settings.TrainingBatchSize
                 settings.TrainingSubBatchSize
                 sampleStores
-
-            // start TensorBoard graph
-        log System.Single.NaN 0
 
             // train model
         use optimizer =
@@ -187,11 +179,17 @@ module AdvantageModel =
                 // train epoch
             let loss =
                 Array.last [|
-                    for batch in batches do
+                    for iBatch, batch in Seq.indexed batches do
+                        let stopwatch = Stopwatch.StartNew()
                         trainBatch
                             settings model batch criterion optimizer
+                        settings.Writer.add_scalar(
+                            $"advantage loss/iter%03d{sampleStores.Iteration}/epoch%03d{epoch}",
+                            float32 stopwatch.ElapsedMilliseconds, iBatch)
                 |]
-            log loss epoch
+            settings.Writer.add_scalar(
+                $"advantage loss/iter%03d{sampleStores.Iteration}",
+                loss, epoch)
 
                 // save model
             let path =

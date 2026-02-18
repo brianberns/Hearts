@@ -53,8 +53,8 @@ module Settings =
             HiddenSize = Encoding.encodedLength * 2
             NumHiddenLayers = 4
             NumTrainingEpochs = 12
-            TrainingBatchSize = 200_000
-            TrainingSubBatchSize = 50_000
+            TrainingBatchSize = 100_000
+            TrainingSubBatchSize = 25_000
             DropoutRate = 0.3
             LearningRate = 1e-3
 #if DEBUG
