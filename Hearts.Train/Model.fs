@@ -1,5 +1,6 @@
 ﻿namespace Hearts.Train
 
+open System
 open System.IO
 open System.Diagnostics
 
@@ -71,12 +72,19 @@ module AdvantageModel =
     let private createBatches
         batchSize subBatchSize (sampleStores : AdvantageSampleStoreGroup) =
 
-            // get every sample's index pair
+            // get every sample's index pair (optimized for space)
         let indexPairs =
             [|
-                for iStore = 0 to sampleStores.Count - 1 do
-                    for iSample = 0L to sampleStores[iStore].Count - 1L do
-                        iStore, iSample
+                let storeCount = sampleStores.Count
+                assert(storeCount <= int32 Int16.MaxValue)
+
+                for iStore = 0s to int16 storeCount - 1s do
+
+                    let sampleCount = sampleStores[int iStore].Count
+                    assert(sampleCount <= int64 Int32.MaxValue)
+
+                    for iSample = 0 to int sampleCount - 1 do
+                        struct (iStore, iSample)
             |]
 
             // randomize index pairs into batches and sub-batches
@@ -95,8 +103,8 @@ module AdvantageModel =
                         for indexSubBatch in indexBatch do
                             [|
                                 for iPair in indexSubBatch do
-                                    let iStore, iSample = indexPairs[iPair]
-                                    sampleStores[iStore][iSample]
+                                    let struct (iStore, iSample) = indexPairs[iPair]
+                                    sampleStores[int iStore][iSample]
                             |]
                     }
                 batch, stopwatch
