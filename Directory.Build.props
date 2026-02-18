@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <OutputPath>$(MSBuildThisFileDirectory)artifacts\$(Configuration)\</OutputPath>
+    <OutputPath>$(MSBuildThisFileDirectory)Artifacts\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 </Project>
