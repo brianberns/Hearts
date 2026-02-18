@@ -1,11 +1,11 @@
 ﻿namespace Hearts.PlayModel
 
 open System
+open System.IO
 open System.Runtime
 open System.Text
 
 open Microsoft.Extensions.FileSystemGlobbing
-open Microsoft.Extensions.FileSystemGlobbing.Abstractions
 
 open Hearts
 open Hearts.Heuristic
@@ -48,7 +48,7 @@ module Program =
             let player = Strategy.createPlayer model
             let payoff =
                 Tournament.run 0 true numDeals Claude.player player
-            printfn $"{path}: {payoff}"
+            printfn $"{Path.GetFileName(path)}: {payoff}"
 
     [<EntryPoint>]
     let main argv =
