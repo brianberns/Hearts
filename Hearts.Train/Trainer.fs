@@ -36,7 +36,7 @@ module Trainer =
                     $"advantage tournament", payoff, iteration)
 
     /// Uses stored samples to train a new model.
-    let trainModel settings (sampleStore : AdvantageSampleStore) =
+    let trainModel settings (sampleStores : AdvantageSampleStoreGroup) =
 
             // train new model
         let stopwatch = Stopwatch.StartNew()
@@ -47,22 +47,22 @@ module Trainer =
                 settings.DropoutRate,
                 settings.Device)
         let eval epoch model =
-            evaluate settings sampleStore.Iteration (Some epoch) model
+            evaluate settings sampleStores.Iteration (Some epoch) model
         AdvantageModel.train
-            settings (Some eval) sampleStore model
+            settings (Some eval) sampleStores model
         stopwatch.Stop()
 
            // save the model
         if settings.Verbose then
-            printfn $"Trained model on {sampleStore.Count} samples in {stopwatch.Elapsed} \
-                (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStore.Count} ms/sample)"
+            printfn $"Trained model on {sampleStores.NumSamples} samples in {stopwatch.Elapsed} \
+                (%.2f{float stopwatch.ElapsedMilliseconds / float sampleStores.NumSamples} ms/sample)"
         let path =
             Path.Combine(
                 settings.ModelDirPath,
-                $"AdvantageModel%03d{sampleStore.Iteration}.pt")
+                $"AdvantageModel%03d{sampleStores.Iteration}.pt")
         model.save(path) |> ignore
 
             // evaluate model
-        evaluate settings sampleStore.Iteration None model
+        evaluate settings sampleStores.Iteration None model
 
         path

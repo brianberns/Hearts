@@ -63,23 +63,36 @@ module AdvantageModel =
     /// but might be too large to fit on the GPU.
     type private Batch = SubBatch[]
 
-    /// Breaks the given samples into batches.
+    /// Breaks the given samples into randomized batches.
     let private createBatches
         batchSize
         subBatchSize
-        (sampleStore : AdvantageSampleStore) : seq<Batch> =
+        (sampleStores : AdvantageSampleStoreGroup) : seq<Batch> =
+
+            // get every sample's index pair
+        let indexPairs =
+            [|
+                for iStore = 0 to sampleStores.Count - 1 do
+                    for iSample = 0L to sampleStores[iStore].Count - 1L do
+                        iStore, iSample
+            |]
+
+            // randomize index pairs into batches and sub-batches
         let indexBatches =
-            [| 0L .. sampleStore.Count - 1L |]
+            [| 0 .. indexPairs.Length - 1 |]
                 |> Array.randomShuffle
                 |> Seq.chunkBySize subBatchSize                 // e.g. sub-batches of 10,000 rows each
                 |> Seq.chunkBySize (batchSize / subBatchSize)   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
+
+            // stream samples
         seq {
             for indexBatch in indexBatches do
                 [|
                     for indexSubbatch in indexBatch do
                         [|
-                            for iSample in indexSubbatch do
-                                sampleStore[iSample]
+                            for iPair in indexSubbatch do
+                                let iStore, iSample = indexPairs[iPair]
+                                sampleStores[iStore][iSample]
                         |]
                 |]
         }
@@ -139,14 +152,14 @@ module AdvantageModel =
         loss
 
     /// Trains the given model using the given samples.
-    let train settings evalOpt sampleStore (model : AdvantageModel) =
+    let train settings evalOpt sampleStores (model : AdvantageModel) =
 
             // prepare training data
         let batches =
             createBatches
                 settings.TrainingBatchSize
                 settings.TrainingSubBatchSize
-                sampleStore
+                sampleStores
 
             // train model
         use optimizer =
@@ -165,7 +178,7 @@ module AdvantageModel =
                             settings model batch criterion optimizer
                 |]
             settings.Writer.add_scalar(
-                $"advantage loss/iter%03d{sampleStore.Iteration}",
+                $"advantage loss/iter%03d{sampleStores.Iteration}",
                 loss, epoch)
 
                 // evaluate?

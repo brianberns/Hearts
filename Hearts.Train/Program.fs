@@ -35,17 +35,19 @@ module Program =
             printfn $"   Model output size: {Model.outputSize}"
 
             // get training data
-        let sampleStore =
-            let file =
-                DirectoryInfo(settings.ModelDirPath)
-                    .GetFiles("*.bin")
-                    |> Array.exactlyOne
-            AdvantageSampleStore.openRead file.FullName
+        let sampleStores =
+            DirectoryInfo(settings.ModelDirPath)
+                .GetFiles("*.bin")
+                |> Array.map (
+                    _.FullName >> AdvantageSampleStore.openRead)
         if settings.Verbose then
-            printfn $"Sample store: {Path.GetFileName(sampleStore.Stream.Name)}: {sampleStore.Count} samples"
+            printfn "Sample stores:"
+            for store in sampleStores do
+                printfn $"   {Path.GetFileName(store.Stream.Name)}: {store.Count} samples"
 
             // train model
-        let modelPath = Trainer.trainModel settings sampleStore
+        let modelPath =
+            Trainer.trainModel settings { Stores = sampleStores }
         if settings.Verbose then
             printfn $"Created model: {modelPath}"
 
