@@ -1,5 +1,7 @@
 ﻿namespace Hearts.Train
 
+open System.IO
+
 open TorchSharp
 open type torch
 open type torch.nn
@@ -154,7 +156,6 @@ module AdvantageModel =
     /// Trains the given model using the given samples.
     let train
         settings
-        evalOpt
         (sampleStores : AdvantageSampleStoreGroup)
         (model : AdvantageModel) =
 
@@ -192,12 +193,11 @@ module AdvantageModel =
                 |]
             log loss epoch
 
-                // evaluate?
-            if epoch % settings.NumEpochsPerEvaluation = 0
-                && epoch < settings.NumTrainingEpochs then
-                Option.iter (fun eval ->
-                    model.eval()
-                    eval epoch model
-                    model.train()) evalOpt
+                // save model
+            let path =
+                Path.Combine(
+                    settings.ModelDirPath,
+                    $"AdvantageModel-i%03d{sampleStores.Iteration}-e%03d{epoch}.pt")
+            model.save(path) |> ignore
 
         model.eval()

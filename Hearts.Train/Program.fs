@@ -23,7 +23,6 @@ module Program =
             printfn $"   Hidden size: {settings.HiddenSize}"
             printfn $"   # hidden layers: {settings.NumHiddenLayers}"
             printfn $"   # training epochs: {settings.NumTrainingEpochs}"
-            printfn $"   # epochs/evaluation: {settings.NumEpochsPerEvaluation}"
             printfn $"   Training batch size: {settings.TrainingBatchSize}"
             printfn $"   Training sub-batch size: {settings.TrainingSubBatchSize}"
             printfn $"   Dropout rate: {settings.DropoutRate}"
@@ -46,10 +45,7 @@ module Program =
                 printfn $"   {Path.GetFileName(store.Stream.Name)}: {store.Count} samples"
 
             // train model
-        let modelPath =
-            Trainer.trainModel settings { Stores = sampleStores }
-        if settings.Verbose then
-            printfn $"Created model: {modelPath}"
+        Trainer.trainModel settings { Stores = sampleStores }
 
     Console.OutputEncoding <- Encoding.UTF8
     run ()

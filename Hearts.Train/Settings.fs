@@ -17,9 +17,6 @@ type Settings =
         /// Number of epochs to use when training the model.
         NumTrainingEpochs : int
 
-        /// Number of epochs per evaluation.
-        NumEpochsPerEvaluation : int
-
         /// Batch size to use when training the model.
         TrainingBatchSize : int
 
@@ -56,7 +53,6 @@ module Settings =
             HiddenSize = Encoding.encodedLength * 2
             NumHiddenLayers = 4
             NumTrainingEpochs = 12
-            NumEpochsPerEvaluation = 12
             TrainingBatchSize = 200_000
             TrainingSubBatchSize = 50_000
             DropoutRate = 0.3
@@ -84,9 +80,6 @@ module Settings =
         writer.add_text(
             $"settings/NumTrainingEpochs",
             string settings.NumTrainingEpochs, 0)
-        writer.add_text(
-            $"settings/NumEpochsPerEvaluation",
-            string settings.NumEpochsPerEvaluation, 0)
         writer.add_text(
             $"settings/TrainingBatchSize",
             string settings.TrainingBatchSize, 0)
