@@ -63,9 +63,10 @@ module Program =
             | 1 ->
                 let modelPath = argv[0]
                 let iter =
-                    let fileName = Path.GetFileNameWithoutExtension(modelPath)
-                    fileName[fileName.Length - 3 ..]   // e.g. "AdvantageModel001.pt"
-                        |> Int32.Parse
+                    let chunks =
+                        Path.GetFileNameWithoutExtension(modelPath)   // e.g. "AdvantageModel-i001.pt"
+                            .Split('-')
+                    Int32.Parse(chunks[1][1 ..])
                 Some modelPath, iter
             | _ -> failwith $"Invalid arguments: {argv}"
 
@@ -102,14 +103,9 @@ module Program =
                             settings.NumHiddenLayers,
                             0.0,   // dropout not used during inference
                             settings.Device)
-                    let modelPath =
-                        if Path.IsPathFullyQualified(modelPath : string) then
-                            modelPath
-                        else
-                            Path.Combine(settings.ModelDirPath, modelPath)
                     if settings.Verbose then
                         printfn $"Loading model from {modelPath}"
-                    model.load(modelPath) |> ignore
+                    model.load(modelPath : string) |> ignore
                     model.eval()
                     model)
 
@@ -121,7 +117,7 @@ module Program =
             let path =
                 Path.Combine(
                     settings.ModelDirPath,
-                    $"AdvantageSamples%03d{iteration}.%05d{unique}.bin")
+                    $"AdvantageSamples-i%03d{iteration}-%05d{unique}.bin")
             if settings.Verbose then
                 printfn $"Creating sample store: {path}"
             path

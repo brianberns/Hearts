@@ -59,7 +59,7 @@ module Trainer =
         let path =
             Path.Combine(
                 settings.ModelDirPath,
-                $"AdvantageModel%03d{sampleStores.Iteration}.pt")
+                $"AdvantageModel-i%03d{sampleStores.Iteration}.pt")
         model.save(path) |> ignore
 
             // evaluate model
