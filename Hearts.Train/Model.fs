@@ -152,7 +152,17 @@ module AdvantageModel =
         loss
 
     /// Trains the given model using the given samples.
-    let train settings evalOpt sampleStores (model : AdvantageModel) =
+    let train
+        settings
+        evalOpt
+        (sampleStores : AdvantageSampleStoreGroup)
+        (model : AdvantageModel) =
+
+        /// TensorBoard logging.
+        let log loss epoch =
+            settings.Writer.add_scalar(
+                $"advantage loss/iter%03d{sampleStores.Iteration}",
+                loss, epoch)
 
             // prepare training data
         let batches =
@@ -160,6 +170,9 @@ module AdvantageModel =
                 settings.TrainingBatchSize
                 settings.TrainingSubBatchSize
                 sampleStores
+
+            // start TensorBoard graph
+        log System.Single.NaN 0
 
             // train model
         use optimizer =
@@ -177,9 +190,7 @@ module AdvantageModel =
                         trainBatch
                             settings model batch criterion optimizer
                 |]
-            settings.Writer.add_scalar(
-                $"advantage loss/iter%03d{sampleStores.Iteration}",
-                loss, epoch)
+            log loss epoch
 
                 // evaluate?
             if epoch % settings.NumEpochsPerEvaluation = 0

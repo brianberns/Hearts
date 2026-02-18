@@ -21,7 +21,7 @@ module Program =
                 $"advantage samples/iter%03d{iteration}",
                 value, step)
 
-            // start TensorBoard y-axis at 0
+            // start TensorBoard graph
         log 0f 0
 
             // divide deals for this iteration into batches,
