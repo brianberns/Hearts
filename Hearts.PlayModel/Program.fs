@@ -3,26 +3,35 @@
 open System
 open System.Diagnostics
 open System.Runtime
+open System.Text
 
 open Hearts
 open Hearts.Heuristic
+open Hearts.Learn
 open Hearts.Model
+open Hearts.Train
 
 module Program =
 
-    printfn $"Server garbage collection: {GCSettings.IsServerGC}"
+    let run path =
 
-    let numDeals = 20_000
+        let settings =
+            let writer = TensorBoard.createWriter ()
+            Settings.create writer
+        Settings.write settings
 
-    do
+        printfn $"Server garbage collection: {GCSettings.IsServerGC}"
+
+        let numDeals = 20_000
+
         use model =
             let model =
                 new AdvantageModel(
-                    hiddenSize = Encoding.encodedLength * 3,
-                    numHiddenLayers = 9,
-                    dropoutRate = 0.3,
-                    device = TorchSharp.torch.CUDA)
-            model.load("AdvantageModel.pt") |> ignore
+                    settings.HiddenSize,
+                    settings.NumHiddenLayers,
+                    0.0,
+                    settings.Device)
+            model.load(path : string) |> ignore
             model.eval()
             model
         let player = Strategy.createPlayer model
@@ -33,4 +42,12 @@ module Program =
         printfn $"Payoff: {payoff}"
         printfn $"Elapsed time: {stopwatch.Elapsed}"
 
-    Console.ReadLine() |> ignore
+
+    [<EntryPoint>]
+    let main argv =
+        Console.OutputEncoding <- Encoding.UTF8
+        let path =
+            if argv.Length = 0 then "AdvantageModel.pt"
+            else argv[0]
+        run path
+        0
