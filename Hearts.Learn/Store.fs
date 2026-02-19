@@ -44,31 +44,32 @@ module AdvantageSampleStore =
                 + sizeof<int32>
 
         /// Writes a header to the given file.
-        let write (handle : SafeFileHandle) (iteration : int32) =
+        let write handle (iteration : int32) =
             assert(RandomAccess.GetLength(handle) = 0L)
 
-            RandomAccess.Write(
-                handle, magic, 0L)
+                // write magic string
+            RandomAccess.Write(handle, magic, 0L)
 
+                // write iteration number
             assert(iteration >= 0)
             let buf = BitConverter.GetBytes(iteration)
-            RandomAccess.Write(
-                handle, buf, int64 magic.Length)
+            RandomAccess.Write(handle, buf, int64 magic.Length)
 
         /// Reads a header from the given file.
         let read (handle : SafeFileHandle) =
+
+                // read magic string
             let magic' = Array.zeroCreate<byte> magic.Length
-            let bytesRead =
-                RandomAccess.Read(handle, magic', 0L)
-            assert(bytesRead = magic.Length)
+            let nBytesRead = RandomAccess.Read(handle, magic', 0L)
+            assert(nBytesRead = magic.Length)
             if magic' <> magic then
                 failwith $"Invalid magic bytes: {magic'}"
 
+                // read iteration number
             let buf = Array.zeroCreate<byte> sizeof<int32>
-            let bytesRead =
-                RandomAccess.Read(
-                    handle, buf, int64 magic.Length)
-            assert(bytesRead = sizeof<int32>)
+            let nBytesRead =
+                RandomAccess.Read(handle, buf, int64 magic.Length)
+            assert(nBytesRead = sizeof<int32>)
             let iter = BitConverter.ToInt32(buf, 0)
             assert(iter >= 0)
             iter
@@ -80,7 +81,7 @@ module AdvantageSampleStore =
             (Model.inputSize + 7) / 8   // round up
 
         /// Writes the given encoding to the given file.
-        let write (handle : SafeFileHandle) (fileOffset : int64) (encoding : Encoding) =
+        let write handle fileOffset (encoding : Encoding) =
             assert(encoding.Length = Model.inputSize)
             let buf =
                 [|
@@ -90,15 +91,14 @@ module AdvantageSampleStore =
                                 if flag then byte ||| (1uy <<< i)
                                 else byte)
                 |]
-            RandomAccess.Write(
-                handle, buf, fileOffset)
+            RandomAccess.Write(handle, buf, fileOffset)
 
         /// Reads an encoding from the given file.
-        let read (handle : SafeFileHandle) (fileOffset : int64) : Encoding =
+        let read handle fileOffset : Encoding =
             let buf = Array.zeroCreate<byte> packedSize
-            let bytesRead =
+            let nBytesRead =
                 RandomAccess.Read(handle, buf, fileOffset)
-            assert(bytesRead = packedSize)
+            assert(nBytesRead = packedSize)
             buf
                 |> Array.collect (fun byte ->
                     Array.init 8 (fun i ->      // 8 bits/byte
@@ -120,37 +120,39 @@ module AdvantageSampleStore =
             maxActionCount * entrySize
 
         /// Writes the given regrets to the given file.
-        let write (handle : SafeFileHandle) (fileOffset : int64) (regrets : Vector<float32>) =
+        let write handle fileOffset (regrets : Vector<float32>) =
 
-            let tuples =
+                // get non-zero value pairs
+            let pairs =
                 [|
                     for i, regret in Seq.indexed regrets do
                         if regret <> 0f then
                             i, regret
                 |]
-            assert(tuples.Length <= maxActionCount)
+            assert(pairs.Length <= maxActionCount)
 
+                // write value pairs with padding
             let buf =
                 [|
-                    for i, regret in tuples do
+                        // write value pairs
+                    for i, regret in pairs do
                         assert(i < int Byte.MaxValue)
                         byte i
                         yield! BitConverter.GetBytes(regret)
 
-                    for _ = tuples.Length to maxActionCount - 1 do
+                        // write padding
+                    for _ = pairs.Length to maxActionCount - 1 do
                         Byte.MaxValue
                         yield! BitConverter.GetBytes(0f)
                 |]
-
-            RandomAccess.Write(
-                handle, buf, fileOffset)
+            RandomAccess.Write(handle, buf, fileOffset)
 
         /// Reads regrets from the given file.
         let read (handle : SafeFileHandle) (fileOffset : int64) =
             let buf = Array.zeroCreate<byte> packedSize
-            let bytesRead =
+            let nBytesRead =
                 RandomAccess.Read(handle, buf, fileOffset)
-            assert(bytesRead = packedSize)
+            assert(nBytesRead = packedSize)
             seq {
                 for j = 0 to maxActionCount - 1 do
                     let pos = j * entrySize
@@ -228,10 +230,10 @@ module AdvantageSampleStore =
         assert(isValid store)
         assert(idx >= 0)
         assert(idx < getSampleCount store)
+
         let fileOffset =
             int64 Header.packedSize
                 + idx * int64 packedSampleSize
-
         let encoding =
             Encoding.read store.Handle fileOffset
         let regrets =
@@ -242,9 +244,9 @@ module AdvantageSampleStore =
     /// Appends the given samples to the end of the given store.
     let appendSamples samples store =
         assert(isValid store)
+
         let mutable fileOffset =
             RandomAccess.GetLength(store.Handle)
-
         for sample in samples do
             Encoding.write store.Handle fileOffset sample.Encoding
             Regrets.write store.Handle
