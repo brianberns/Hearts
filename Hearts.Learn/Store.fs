@@ -245,14 +245,14 @@ module AdvantageSampleStore =
     let appendSamples samples store =
         assert(isValid store)
 
-        let mutable fileOffset =
-            RandomAccess.GetLength(store.Handle)
-        for sample in samples do
+        let baseOffset = RandomAccess.GetLength(store.Handle)
+        for i, sample in Seq.indexed samples do
+            let fileOffset =
+                baseOffset + int64 (i * packedSampleSize)
             Encoding.write store.Handle fileOffset sample.Encoding
             Regrets.write store.Handle
                 (fileOffset + int64 Encoding.packedSize)
                 sample.Regrets
-            fileOffset <- fileOffset + int64 packedSampleSize
 
         assert(isValid store)
 
