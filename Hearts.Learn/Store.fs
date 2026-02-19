@@ -208,7 +208,7 @@ module AdvantageSampleStore =
         AdvantageSample.create encoding regrets store.Iteration
 
     /// Appends the given samples to the end of the given store.
-    let writeSamples samples store =
+    let appendSamples samples store =
         assert(isValid store)
         store.Stream.Position <- store.Stream.Length
 
