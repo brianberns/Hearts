@@ -207,18 +207,27 @@ module AdvantageSampleStore =
         let regrets = Regrets.read rdr
         AdvantageSample.create encoding regrets store.Iteration
 
-    /// Appends the given samples to the end of the given store.
-    let writeSamples samples store =
+    /// Writes the given sample at the given index in the given store.
+    let writeSample (idx : int64) sample store =
         assert(isValid store)
-        store.Stream.Position <- store.Stream.Length
+        assert(idx >= 0)
+        assert(idx <= getSampleCount store)   // allow append
+        store.Stream.Position <-
+            int64 Header.packedSize
+                + idx * int64 packedSampleSize
 
         use wtr = getWriter store.Stream
-
-        for sample in samples do
-            Encoding.write wtr sample.Encoding
-            Regrets.write wtr sample.Regrets
+        Encoding.write wtr sample.Encoding
+        Regrets.write wtr sample.Regrets
 
         assert(isValid store)
+
+    /// Appends the given samples to the end of the given store.
+    let appendSamples samples store =
+        let count = getSampleCount store
+        for iSample, sample in Seq.indexed samples do
+            let idx = count + int64 iSample
+            writeSample idx sample store
 
 type AdvantageSampleStore with
 
@@ -228,8 +237,10 @@ type AdvantageSampleStore with
 
     /// Gets the sample at the given index in this store.
     member store.Item
-        with get(idx) =
+        with get idx =
             AdvantageSampleStore.readSample idx store
+        and set idx sample =
+            AdvantageSampleStore.writeSample idx sample store
 
 /// A group of sample stores.
 type AdvantageSampleStoreGroup =

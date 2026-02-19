@@ -47,7 +47,7 @@ module Program =
                             state.ModelOpt
 
                     // save samples
-                AdvantageSampleStore.writeSamples
+                AdvantageSampleStore.appendSamples
                     samples state.SampleStore
                 log
                     (float32 samples.Length / float32 numDeals)    // average number of generated samples per deal in this batch
