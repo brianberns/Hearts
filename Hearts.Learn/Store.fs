@@ -48,26 +48,26 @@ module AdvantageSampleStore =
             assert(RandomAccess.GetLength(handle) = 0L)
 
             RandomAccess.Write(
-                handle, ReadOnlySpan(magic), 0L)
+                handle, magic, 0L)
 
             assert(iteration >= 0)
             let buf = BitConverter.GetBytes(iteration)
             RandomAccess.Write(
-                handle, ReadOnlySpan(buf), int64 magic.Length)
+                handle, buf, int64 magic.Length)
 
         /// Reads a header from the given file.
         let read (handle : SafeFileHandle) =
-            let magic' = Array.zeroCreate magic.Length
+            let magic' = Array.zeroCreate<byte> magic.Length
             let bytesRead =
-                RandomAccess.Read(handle, Span(magic'), 0L)
+                RandomAccess.Read(handle, magic', 0L)
             assert(bytesRead = magic.Length)
             if magic' <> magic then
                 failwith $"Invalid magic bytes: {magic'}"
 
-            let buf = Array.zeroCreate sizeof<int32>
+            let buf = Array.zeroCreate<byte> sizeof<int32>
             let bytesRead =
                 RandomAccess.Read(
-                    handle, Span(buf), int64 magic.Length)
+                    handle, buf, int64 magic.Length)
             assert(bytesRead = sizeof<int32>)
             let iter = BitConverter.ToInt32(buf, 0)
             assert(iter >= 0)
@@ -91,13 +91,13 @@ module AdvantageSampleStore =
                                 else byte)
                 |]
             RandomAccess.Write(
-                handle, ReadOnlySpan(buf), fileOffset)
+                handle, buf, fileOffset)
 
         /// Reads an encoding from the given file.
         let read (handle : SafeFileHandle) (fileOffset : int64) : Encoding =
-            let buf = Array.zeroCreate packedSize
+            let buf = Array.zeroCreate<byte> packedSize
             let bytesRead =
-                RandomAccess.Read(handle, Span(buf), fileOffset)
+                RandomAccess.Read(handle, buf, fileOffset)
             assert(bytesRead = packedSize)
             buf
                 |> Array.collect (fun byte ->
@@ -143,13 +143,13 @@ module AdvantageSampleStore =
                 |]
 
             RandomAccess.Write(
-                handle, ReadOnlySpan(buf), fileOffset)
+                handle, buf, fileOffset)
 
         /// Reads regrets from the given file.
         let read (handle : SafeFileHandle) (fileOffset : int64) =
-            let buf = Array.zeroCreate packedSize
+            let buf = Array.zeroCreate<byte> packedSize
             let bytesRead =
-                RandomAccess.Read(handle, Span(buf), fileOffset)
+                RandomAccess.Read(handle, buf, fileOffset)
             assert(bytesRead = packedSize)
             seq {
                 for j = 0 to maxActionCount - 1 do
