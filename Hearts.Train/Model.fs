@@ -101,11 +101,10 @@ module AdvantageModel =
                 let batch : Batch =
                     seq {
                         for indexSubBatch in indexBatch do
-                            [|
-                                for iPair in indexSubBatch do
+                            indexSubBatch
+                                |> Array.Parallel.map (fun iPair ->
                                     let struct (iStore, iSample) = indexPairs[iPair]
-                                    sampleStores[int iStore][iSample]
-                            |]
+                                    sampleStores[int iStore][iSample])
                     }
                 batch, stopwatch
         }
