@@ -12,13 +12,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TorchSharp-cpu" Version="0.106.0" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.3" />
+    <PackageReference Include="TorchSharp-cuda-windows" Version="0.106.0" Condition="'$(OS)' == 'Windows_NT'" />
+    <PackageReference Include="TorchSharp-cuda-linux" Version="0.106.0" Condition="'$(OS)' != 'Windows_NT'" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
+    <ProjectReference Include="..\Hearts.Train\Hearts.Train.fsproj" />
     <ProjectReference Include="..\Hearts\Hearts.fsproj" />
-    <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
   </ItemGroup>
 
 </Project>
