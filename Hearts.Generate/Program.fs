@@ -47,7 +47,7 @@ module Program =
                             state.ModelOpt
 
                     // save samples
-                AdvantageSampleStore.appendSamples
+                AdvantageSampleStore.writeSamples
                     samples state.SampleStore
                 log
                     (float32 samples.Length / float32 numDeals)    // average number of generated samples per deal in this batch
@@ -129,10 +129,6 @@ module Program =
         let numSamples = generateSamples settings iteration state
         if settings.Verbose then
             printfn $"{numSamples} samples generated in {stopwatch.Elapsed}"
-
-            // shuffle samples
-        AdvantageSampleStore.shuffle (Random()) state.SampleStore
-            |> ignore
 
     /// Generates samples for the next iteration.
     [<EntryPoint>]

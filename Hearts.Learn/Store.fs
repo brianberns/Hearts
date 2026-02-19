@@ -151,7 +151,7 @@ module AdvantageSampleStore =
             new FileStream(
                 path,
                 FileMode.CreateNew,
-                FileAccess.ReadWrite,
+                FileAccess.Write,
                 FileShare.Read)
         use wtr = getWriter stream
 
@@ -207,57 +207,18 @@ module AdvantageSampleStore =
         let regrets = Regrets.read rdr
         AdvantageSample.create encoding regrets store.Iteration
 
-    /// Writes the given sample at the given index in the given store.
-    let writeSample (idx : int64) sample store =
+    /// Appends the given samples to the end of the given store.
+    let writeSamples samples store =
         assert(isValid store)
-        assert(idx >= 0)
-        assert(idx <= getSampleCount store)   // allow append
-        store.Stream.Position <-
-            int64 Header.packedSize
-                + idx * int64 packedSampleSize
+        store.Stream.Position <- store.Stream.Length
 
         use wtr = getWriter store.Stream
-        Encoding.write wtr sample.Encoding
-        Regrets.write wtr sample.Regrets
+
+        for sample in samples do
+            Encoding.write wtr sample.Encoding
+            Regrets.write wtr sample.Regrets
 
         assert(isValid store)
-
-    /// Appends the given samples to the end of the given store.
-    let appendSamples samples store =
-        let count = getSampleCount store
-        for iSample, sample in Seq.indexed samples do
-            let idx = count + int64 iSample
-            writeSample idx sample store
-
-    /// Shuffles the given store.
-    let shuffle (rnd : Random) store =
-
-            // create temp store and write shuffled samples
-        let originalPath = store.Stream.Name
-        let tempPath = originalPath + ".tmp"
-        let tempStore = create store.Iteration tempPath
-
-            // shuffle indices
-        let count = getSampleCount store
-        assert(count <= Int32.MaxValue)
-        let indices = Array.init (int count) id   // .NET array can't be longer than Int32.MaxValue anyway
-        rnd.Shuffle(indices)
-
-            // shuffle samples
-        for i = 0 to indices.Length - 1 do
-            let sample = readSample indices[i] store
-            writeSample i sample tempStore
-
-            // replace old store with new
-        tempStore.Dispose()
-        store.Dispose()
-        let oldPath = originalPath + ".old"
-        File.Move(originalPath, oldPath)
-        File.Move(tempPath, originalPath)
-        File.Delete(oldPath)
-
-            // re-open shuffled store
-        openRead originalPath
 
 type AdvantageSampleStore with
 
@@ -267,10 +228,8 @@ type AdvantageSampleStore with
 
     /// Gets the sample at the given index in this store.
     member store.Item
-        with get idx =
+        with get(idx) =
             AdvantageSampleStore.readSample idx store
-        and set idx sample =
-            AdvantageSampleStore.writeSample idx sample store
 
 /// A group of sample stores.
 type AdvantageSampleStoreGroup =

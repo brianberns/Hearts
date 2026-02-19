@@ -68,46 +68,43 @@ module AdvantageModel =
     /// large to fit on the GPU or in memory.
     type private Batch = seq<SubBatch>
 
-    /// Breaks the given samples into batches. We assume the stores
-    /// have already been randomized.
+    /// Breaks the given samples into randomized batches.
     let private createBatches
         batchSize subBatchSize (sampleStores : AdvantageSampleStoreGroup) =
 
-            // batch sample indexrd
+            // get every sample's index pair (optimized for space)
+        let indexPairs =
+            [|
+                let storeCount = sampleStores.Count
+                assert(storeCount <= int32 Int16.MaxValue)
+
+                for iStore = 0s to int16 storeCount - 1s do
+
+                    let sampleCount = sampleStores[int iStore].Count
+                    assert(sampleCount <= int64 Int32.MaxValue)
+
+                    for iSample = 0 to int sampleCount - 1 do
+                        struct (iStore, iSample)
+            |]
+
+            // randomize index pairs into batches and sub-batches
         let indexBatches =
-
-                // get random permutation of store indexes
-            let storeIndexes =
-                Array.init sampleStores.Count id
-                    |> Array.randomShuffle
-
-                // get size of largest store
-            let maxCount =
-                sampleStores.Stores
-                    |> Seq.map _.Count
-                    |> Seq.max
-
-                // generate and batch sample indexes
-            seq {
-                for iSample = 0L to maxCount - 1L do
-                    for iStore in storeIndexes do
-                        let store = sampleStores[iStore]
-                        if iSample < store.Count then
-                            iStore, iSample
-            }
+            [| 0 .. indexPairs.Length - 1 |]
+                |> Array.randomShuffle
                 |> Seq.chunkBySize subBatchSize                 // e.g. sub-batches of 10,000 rows each
                 |> Seq.chunkBySize (batchSize / subBatchSize)   // e.g. each batch contains 500,000 / 10,000 = 50 sub-batches
 
-            // fetch samples
+            // stream samples
         seq {
             for indexBatch in indexBatches do
                 let stopwatch = Stopwatch.StartNew()
                 let batch : Batch =
                     seq {
-                        for indexPairs in indexBatch do
+                        for indexSubBatch in indexBatch do
                             [|
-                                for iStore, iSample in indexPairs do
-                                    sampleStores[iStore][iSample]
+                                for iPair in indexSubBatch do
+                                    let struct (iStore, iSample) = indexPairs[iPair]
+                                    sampleStores[int iStore][iSample]
                             |]
                     }
                 batch, stopwatch

@@ -51,7 +51,7 @@ module Settings =
     let create writer =
         {
 #if DEBUG
-            NumDealsPerIteration = 30
+            NumDealsPerIteration = 50
 #else
             NumDealsPerIteration = 100_000
 #endif
