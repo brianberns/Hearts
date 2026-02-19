@@ -42,7 +42,7 @@ module Program =
         if settings.Verbose then
             printfn "Sample stores:"
             for store in sampleStores do
-                printfn $"   {Path.GetFileName(store.Stream.Name)}: {store.Count} samples"
+                printfn $"   {Path.GetFileName(store.Path)}: {store.Count} samples"
 
             // train model
         Trainer.trainModel settings { Stores = sampleStores }
