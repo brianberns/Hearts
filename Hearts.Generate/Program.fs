@@ -130,6 +130,10 @@ module Program =
         if settings.Verbose then
             printfn $"{numSamples} samples generated in {stopwatch.Elapsed}"
 
+            // shuffle samples
+        AdvantageSampleStore.shuffle (Random()) state.SampleStore
+            |> ignore
+
     /// Generates samples for the next iteration.
     [<EntryPoint>]
     let main argv =

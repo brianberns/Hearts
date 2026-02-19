@@ -151,7 +151,7 @@ module AdvantageSampleStore =
             new FileStream(
                 path,
                 FileMode.CreateNew,
-                FileAccess.Write,
+                FileAccess.ReadWrite,
                 FileShare.Read)
         use wtr = getWriter stream
 
@@ -228,6 +228,36 @@ module AdvantageSampleStore =
         for iSample, sample in Seq.indexed samples do
             let idx = count + int64 iSample
             writeSample idx sample store
+
+    /// Shuffles the given store.
+    let shuffle (rnd : Random) store =
+
+            // create temp store and write shuffled samples
+        let originalPath = store.Stream.Name
+        let tempPath = originalPath + ".tmp"
+        let tempStore = create store.Iteration tempPath
+
+            // shuffle indices
+        let count = getSampleCount store
+        assert(count <= Int32.MaxValue)
+        let indices = Array.init (int count) id   // .NET array can't be longer than Int32.MaxValue anyway
+        rnd.Shuffle(indices)
+
+            // shuffle samples
+        for i = 0 to indices.Length - 1 do
+            let sample = readSample indices[i] store
+            writeSample i sample tempStore
+
+            // replace old store with new
+        tempStore.Dispose()
+        store.Dispose()
+        let oldPath = originalPath + ".old"
+        File.Move(originalPath, oldPath)
+        File.Move(tempPath, originalPath)
+        File.Delete(oldPath)
+
+            // re-open shuffled store
+        openRead originalPath
 
 type AdvantageSampleStore with
 
