@@ -40,7 +40,7 @@ module Program =
                 settings.HiddenSize,
                 settings.NumHiddenLayers,
                 0.0,
-                settings.Device)
+                TorchSharp.torch.CPU)   // always run on CPU
 
         for path in paths do
             model.load(path : string) |> ignore
