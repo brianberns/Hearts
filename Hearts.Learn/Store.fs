@@ -1,8 +1,8 @@
 namespace Hearts.Learn
 
 open System
-open System.Buffers.Binary
 open System.IO
+
 open Microsoft.Win32.SafeHandles
 
 open MathNet.Numerics.LinearAlgebra
@@ -47,30 +47,29 @@ module AdvantageSampleStore =
         let write (handle : SafeFileHandle) (iteration : int32) =
             assert(RandomAccess.GetLength(handle) = 0L)
 
-            let buf = Array.zeroCreate packedSize
-            Array.blit magic 0 buf 0 magic.Length
+            RandomAccess.Write(
+                handle, ReadOnlySpan(magic), 0L)
 
             assert(iteration >= 0)
-            BinaryPrimitives.WriteInt32LittleEndian(
-                Span(buf, magic.Length, sizeof<int32>), iteration)
-
+            let buf = BitConverter.GetBytes(iteration)
             RandomAccess.Write(
-                handle, ReadOnlySpan(buf), 0L)
+                handle, ReadOnlySpan(buf), int64 magic.Length)
 
         /// Reads a header from the given file.
         let read (handle : SafeFileHandle) =
-            let buf = Array.zeroCreate packedSize
+            let magic' = Array.zeroCreate magic.Length
             let bytesRead =
-                RandomAccess.Read(handle, Span(buf), 0L)
-            assert(bytesRead = packedSize)
-
-            let magic' = buf[.. magic.Length - 1]
+                RandomAccess.Read(handle, Span(magic'), 0L)
+            assert(bytesRead = magic.Length)
             if magic' <> magic then
                 failwith $"Invalid magic bytes: {magic'}"
 
-            let iter =
-                BinaryPrimitives.ReadInt32LittleEndian(
-                    ReadOnlySpan(buf, magic.Length, sizeof<int32>))
+            let buf = Array.zeroCreate sizeof<int32>
+            let bytesRead =
+                RandomAccess.Read(
+                    handle, Span(buf), int64 magic.Length)
+            assert(bytesRead = sizeof<int32>)
+            let iter = BitConverter.ToInt32(buf, 0)
             assert(iter >= 0)
             iter
 
@@ -80,21 +79,27 @@ module AdvantageSampleStore =
         let packedSize =
             (Model.inputSize + 7) / 8   // round up
 
-        /// Writes the given encoding to the given buffer.
-        let write (buf : byte[]) (offset : int) (encoding : Encoding) =
+        /// Writes the given encoding to the given file.
+        let write (handle : SafeFileHandle) (fileOffset : int64) (encoding : Encoding) =
             assert(encoding.Length = Model.inputSize)
-            let mutable pos = offset
-            for chunk in Array.chunkBySize 8 encoding do   // 8 bits/byte
-                buf[pos] <-
-                    (0uy, Array.indexed chunk)
-                        ||> Array.fold (fun byte (i, flag) ->
-                            if flag then byte ||| (1uy <<< i)
-                            else byte)
-                pos <- pos + 1
+            let buf =
+                [|
+                    for chunk in Array.chunkBySize 8 encoding do   // 8 bits/byte
+                        (0uy, Array.indexed chunk)
+                            ||> Array.fold (fun byte (i, flag) ->
+                                if flag then byte ||| (1uy <<< i)
+                                else byte)
+                |]
+            RandomAccess.Write(
+                handle, ReadOnlySpan(buf), fileOffset)
 
-        /// Reads an encoding from the given buffer.
-        let read (buf : byte[]) (offset : int) : Encoding =
-            Array.init packedSize (fun i -> buf[offset + i])
+        /// Reads an encoding from the given file.
+        let read (handle : SafeFileHandle) (fileOffset : int64) : Encoding =
+            let buf = Array.zeroCreate packedSize
+            let bytesRead =
+                RandomAccess.Read(handle, Span(buf), fileOffset)
+            assert(bytesRead = packedSize)
+            buf
                 |> Array.collect (fun byte ->
                     Array.init 8 (fun i ->      // 8 bits/byte
                         (byte &&& (1uy <<< i)) <> 0uy))
@@ -114,13 +119,8 @@ module AdvantageSampleStore =
         let packedSize =
             maxActionCount * entrySize
 
-        /// Reads a little-endian float32 from the given buffer.
-        let private readSingle (buf : byte[]) offset =
-            BinaryPrimitives.ReadSingleLittleEndian(
-                ReadOnlySpan(buf, offset, sizeof<float32>))
-
-        /// Writes the given regrets to the given buffer.
-        let write (buf : byte[]) (offset : int) (regrets : Vector<float32>) =
+        /// Writes the given regrets to the given file.
+        let write (handle : SafeFileHandle) (fileOffset : int64) (regrets : Vector<float32>) =
 
             let tuples =
                 [|
@@ -130,27 +130,32 @@ module AdvantageSampleStore =
                 |]
             assert(tuples.Length <= maxActionCount)
 
-            let mutable pos = offset
-            for i, regret in tuples do
-                assert(i < int Byte.MaxValue)
-                buf[pos] <- byte i
-                BinaryPrimitives.WriteSingleLittleEndian(
-                    Span(buf, pos + 1, sizeof<float32>), regret)
-                pos <- pos + entrySize
+            let buf =
+                [|
+                    for i, regret in tuples do
+                        assert(i < int Byte.MaxValue)
+                        byte i
+                        yield! BitConverter.GetBytes(regret)
 
-            for _ = tuples.Length to maxActionCount - 1 do
-                buf[pos] <- Byte.MaxValue
-                BinaryPrimitives.WriteSingleLittleEndian(
-                    Span(buf, pos + 1, sizeof<float32>), 0f)
-                pos <- pos + entrySize
+                    for _ = tuples.Length to maxActionCount - 1 do
+                        Byte.MaxValue
+                        yield! BitConverter.GetBytes(0f)
+                |]
 
-        /// Reads regrets from the given buffer.
-        let read (buf : byte[]) (offset : int) =
+            RandomAccess.Write(
+                handle, ReadOnlySpan(buf), fileOffset)
+
+        /// Reads regrets from the given file.
+        let read (handle : SafeFileHandle) (fileOffset : int64) =
+            let buf = Array.zeroCreate packedSize
+            let bytesRead =
+                RandomAccess.Read(handle, Span(buf), fileOffset)
+            assert(bytesRead = packedSize)
             seq {
                 for j = 0 to maxActionCount - 1 do
-                    let pos = offset + j * entrySize
+                    let pos = j * entrySize
                     let i = buf[pos]
-                    let regret = readSingle buf (pos + 1)
+                    let regret = BitConverter.ToSingle(buf, pos + 1)
                     if regret = 0f then
                         assert(i = Byte.MaxValue)
                     else
@@ -227,14 +232,11 @@ module AdvantageSampleStore =
             int64 Header.packedSize
                 + idx * int64 packedSampleSize
 
-        let buf = Array.zeroCreate packedSampleSize
-        let bytesRead =
-            RandomAccess.Read(
-                store.Handle, Span(buf), fileOffset)
-        assert(bytesRead = packedSampleSize)
-
-        let encoding = Encoding.read buf 0
-        let regrets = Regrets.read buf Encoding.packedSize
+        let encoding =
+            Encoding.read store.Handle fileOffset
+        let regrets =
+            Regrets.read store.Handle
+                (fileOffset + int64 Encoding.packedSize)
         AdvantageSample.create encoding regrets store.Iteration
 
     /// Appends the given samples to the end of the given store.
@@ -243,13 +245,11 @@ module AdvantageSampleStore =
         let mutable fileOffset =
             RandomAccess.GetLength(store.Handle)
 
-        let buf = Array.zeroCreate packedSampleSize
-
         for sample in samples do
-            Encoding.write buf 0 sample.Encoding
-            Regrets.write buf Encoding.packedSize sample.Regrets
-            RandomAccess.Write(
-                store.Handle, ReadOnlySpan(buf), fileOffset)
+            Encoding.write store.Handle fileOffset sample.Encoding
+            Regrets.write store.Handle
+                (fileOffset + int64 Encoding.packedSize)
+                sample.Regrets
             fileOffset <- fileOffset + int64 packedSampleSize
 
         assert(isValid store)
