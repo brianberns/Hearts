@@ -248,7 +248,7 @@ module AdvantageSampleStore =
         let baseOffset = RandomAccess.GetLength(store.Handle)
         for i, sample in Seq.indexed samples do
             let fileOffset =
-                baseOffset + int64 (i * packedSampleSize)
+                baseOffset + int64 i * int64 packedSampleSize
             Encoding.write store.Handle fileOffset sample.Encoding
             Regrets.write store.Handle
                 (fileOffset + int64 Encoding.packedSize)
