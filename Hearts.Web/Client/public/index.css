@@ -143,7 +143,7 @@ caption {
 }
 
 .inactive {
-    filter: contrast(70%);
+    filter: brightness(0.75) saturate(0.5);
 }
 
 .chooser {
