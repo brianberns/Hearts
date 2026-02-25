@@ -245,6 +245,12 @@ caption {
 
 .banner.moonShoot {
     background-color: #1a1a4e;
+    animation: bannerEntrance 0.4s ease-out, moonPulse 3s ease-in-out 0.4s infinite;
+}
+
+@keyframes moonPulse {
+    0%, 100% { background-color: #1a1a4e; text-shadow: 0 0 8px rgba(200, 220, 255, 0.4); }
+    50%       { background-color: #2d1b69; text-shadow: 0 0 20px rgba(200, 220, 255, 1), 0 0 40px rgba(150, 150, 255, 0.4); }
 }
 
 @keyframes bannerEntrance {
