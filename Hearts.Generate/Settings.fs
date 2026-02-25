@@ -53,7 +53,7 @@ module Settings =
 #if DEBUG
             NumDealsPerIteration = 50
 #else
-            NumDealsPerIteration = 100_000
+            NumDealsPerIteration = 20_000
 #endif
             DealBatchSize = 25
             InferenceBatchSize = 50_000
