@@ -238,7 +238,23 @@ caption {
     transform: translate(-50%, -50%);
 }
 
+.banner.winner {
+    background-color: #FFD700;
+    color: #3d2b00;
+}
+
+.banner.moonShoot {
+    background-color: #1a1a4e;
+}
+
+@keyframes bannerEntrance {
+    0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    70%  { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
 .banner {
+    animation: bannerEntrance 0.4s ease-out;
     font-size: x-large;
     width: fit-content;
     height: fit-content;

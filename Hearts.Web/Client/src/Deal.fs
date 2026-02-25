@@ -121,10 +121,12 @@ module Deal =
                 shooterOpt
                     |> Option.map (fun shooter ->
                         console.log($"{Seat.toString shooter} shot the moon!")
-                        $"{Seat.toString shooter} shot the moon!<br /><span style=\"font-size: 100px\">🎆🌕🎆</span>")
+                        $"{Seat.toString shooter} shot the moon!<br /><span style=\"font-size: 100px; white-space: nowrap\">🎆🌕🎆</span>")
                     |> Option.defaultValue "Deal is over"
             ~~HTMLDivElement.Create(innerHTML = html)
         banner.addClass("banner")
+        if shooterOpt.IsSome then
+            banner.addClass("moonShoot")
         surface.append(banner)
 
             // wait for user to click banner
@@ -169,6 +171,7 @@ module Deal =
             console.log($"{sWinners} win{suffix} the game!")
             ~~HTMLDivElement.Create(innerText = text)
         banner.addClass("banner")
+        banner.addClass("winner")
         surface.append(banner)
 
             // wait for user to click banner
