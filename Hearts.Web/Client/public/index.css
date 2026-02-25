@@ -135,6 +135,7 @@ caption {
     background-color: gray;
     border-radius: 10px;
     transform: translate(-50%, -50%);
+    box-shadow: 2px 4px 8px rgba(0,0,0,0.4);
 }
 
 .active {
