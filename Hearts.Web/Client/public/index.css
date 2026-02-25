@@ -246,7 +246,9 @@ caption {
     cursor: pointer;
     color: white;
     background-color: darkred;
-    padding: 100px;
+    padding: min(5vw, 5vh) min(8vw, 8vh);
+    border-radius: min(1vw, 1vh);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     position: absolute;
     top: 50%;
     left: 50%;
