@@ -3,7 +3,8 @@
 }
 
 main {
-    background-color: lightblue;
+    background-color: #4a8468;
+    color: #f5f0e4;
     font-size: min(2vw, 2vh);
     font-family: sans-serif;
     width: 100vw;
@@ -13,10 +14,11 @@ main {
 
 a {
     text-decoration: none;
+    color: white;
 }
 
 td {
-    background-color: #9DC8D6;
+    background-color: #3a6e57;
 }
 
 caption {
@@ -119,11 +121,11 @@ caption {
 }
 
 .♣ {
-    color: black;
+    color: white;
 }
 
 .♠ {
-    color: black;
+    color: white;
 }
 
 .card {
@@ -148,6 +150,7 @@ caption {
     font-size: min(2vw, 2vh);
     padding: min(1vw, 1vh);
     background-color: lightcyan;
+    color: #2a3a30;
     text-align: center;
     border-radius: min(0.5vw, 0.5vh);
 }
