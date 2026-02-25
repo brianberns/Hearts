@@ -197,17 +197,25 @@ caption {
 .chooser {
     display: none; /* hidden when created */
     font-size: min(2vw, 2vh);
-    padding: min(1vw, 1vh);
+    padding: min(1vw, 1vh) min(2vw, 2vh);
     background-color: lightcyan;
     color: #2a3a30;
     text-align: center;
     border-radius: min(0.5vw, 0.5vh);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
     .chooser.ready {
         background: #FFD700;
         cursor: pointer;
+        animation: pulse 1.5s ease-in-out infinite;
     }
+
+@keyframes pulse {
+    0%, 100% { background: #FFD700; }
+    50%       { background: #ffaa00; }
+}
 
 #playChooser {
     position: absolute;
