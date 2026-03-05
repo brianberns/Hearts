@@ -1,4 +1,11 @@
-# Solving Hearts with Deep Learning
+# Building a superhuman Hearts player with Deep CFR and F#
+
+[![Screenshot](Screenshot.png)](https://www.bernsrite.com/Hearts/)
+[Bernsrite Hearts](https://www.bernsrite.com/Hearts/)
+
+## Imperfect information games
+
+Unlike Chess or Go, the card game Hearts is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge from a pure search of the game tree to finding a robust strategy across all possible hidden card distributions (approaching an ideal "Nash equilibrium").
 
 ## Overview
 
