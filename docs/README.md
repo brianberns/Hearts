@@ -3,13 +3,15 @@
 [![Screenshot](Screenshot.png)](https://www.bernsrite.com/Hearts/)
 [Bernsrite Hearts](https://www.bernsrite.com/Hearts/)
 
-## Imperfect information games
+## Imperfect information games and Deep CFR
 
-Unlike Chess or Go, the card game Hearts is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge from a pure search of the game tree to finding a robust strategy across all possible hidden card distributions (approaching an ideal "Nash equilibrium").
+Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge of mastering the game from a pure search of the game tree to finding a robust strategy across all possible hidden card distributions. Such a strategy is said to approach an ideal "Nash equilibrium".
+
+[Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164) (Deep CFR) is a powerful technique for solving imperfect information games. However, applying it to a game as large as Hearts is challenging technically. To the best of my knowledge, this project is the most successful application to date of deep learning to Hearts.
 
 ## Overview
 
-This repository solves Hearts (the card game) using a simplified version of [Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164), aka Deep CFR. The basic idea is:
+This repository solves Hearts (the card game) using a simplified version of , aka Deep CFR. The basic idea is:
 
 1. Start with a model that considers all actions to be equally advantageous. This model plays randomly, since all actions are equally likely to be chosen.
 2. Play the model against itself for thousands of games. Compare the predicted outcome of each action to the actual outcome of taking that action. (This is called "regret".)
