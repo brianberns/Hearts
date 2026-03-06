@@ -5,16 +5,12 @@
 
 ## Imperfect information games and Deep CFR
 
-Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge of mastering the game from a pure search of the game tree to finding a robust strategy across all possible hidden card distributions. Such a strategy is said to approach an ideal "Nash equilibrium".
+Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge of mastering the game from a pure game tree search to finding a strategy that works well for all possible opponent hands. Such a strategy approximates an ideal "[Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium)".
 
-[Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164) (Deep CFR) is a powerful technique for solving imperfect information games. However, applying it to a game as large as Hearts is challenging technically. To the best of my knowledge, this project is the most successful application to date of deep learning to Hearts.
+[Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164) (Deep CFR) is a powerful technique for solving such games. However, applying it to a game as complex as Hearts is challenging technically. Fortunately, empirical results demonstrate that we can simplify Deep CFR specifically for Hearts. The basic idea is:
 
-## Overview
-
-This repository solves Hearts (the card game) using a simplified version of , aka Deep CFR. The basic idea is:
-
-1. Start with a model that considers all actions to be equally advantageous. This model plays randomly, since all actions are equally likely to be chosen.
-2. Play the model against itself for thousands of games. Compare the predicted outcome of each action to the actual outcome of taking that action. (This is called "regret".)
+1. Start with a model that plays randomly.
+2. Play the current model against itself for thousands of games. At various points within these game, compare the predicted outcome of each legal action to the actual outcome of taking that action. (This is called "regret" in CFR parlance.)
 3. Train a new version of the model using the comparisons generated in the previous step.
 4. Repeat from step 2 for multiple iterations.
 
