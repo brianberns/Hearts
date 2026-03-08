@@ -7,11 +7,13 @@
 
 ### Perfect information games
 
-Games like tic-tac-toe and chess are called ["perfect information"](https://en.wikipedia.org/wiki/Perfect_information) games because each player knows all relevant information about the state of the game. Nothing is hidden in a tic-tac-toe or chess game, so luck and chance have no role in the outcome.
+Games like tic-tac-toe and chess are called ["perfect information"](https://en.wikipedia.org/wiki/Perfect_information) games because each player knows all relevant information about the state of the game. Nothing is hidden from the players in a tic-tac-toe or chess game.
 
 Playing tic-tac-toe well is much easier than playing chess well, though, because chess has a much larger ["game tree"](https://en.wikipedia.org/wiki/Game_tree) of possible moves. Writing an AI that plays tic-tac-toe perfectly only requires a few lines of code, but a program that plays chess well is much more difficult to create. In recent years, great progress towards this goal has been achieved by deep learning programs like [AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), which mastered chess by playing itself for a few hours.
 
 ### Imperfect information games
+
+AlphaZero doesn't do as well with "imperfect information" games, like rock-paper-scissors or poker, though. In these games, some information is hidden from the players.[^0]
 
 ### Counterfactual regret minimization (CFR)
 
@@ -88,3 +90,5 @@ TensorBoard:
     > pip install tensorboard
     > .\venv\Scripts\activate
     > tensorboard --logdir .\artifacts\Release\runs
+
+[^0] I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
