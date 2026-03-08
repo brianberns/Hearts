@@ -1,25 +1,31 @@
 # Crushing Hearts with Deep CFR
 
 [![Screenshot](Bernsrite.png)](https://www.bernsrite.com/Hearts/)
-[Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/)
+♠️♥️♦️♣️ [Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/) ♣️♦️♥️♠️
 
 ## Background
 
 ### Perfect information games
 
-Games like tic-tac-toe and chess are called ["perfect information"](https://en.wikipedia.org/wiki/Perfect_information) games because each player knows all relevant information about the state of the game. Nothing is hidden from the players in a tic-tac-toe or chess game.
+Games like tic-tac-toe and chess are called "[perfect information](https://en.wikipedia.org/wiki/Perfect_information)" games because each player knows all relevant information about the state of the game. Nothing is hidden from the players in such games.
 
-Playing tic-tac-toe well is much easier than playing chess well, though, because chess has a much larger ["game tree"](https://en.wikipedia.org/wiki/Game_tree) of possible moves. Writing an AI that plays tic-tac-toe perfectly only requires a few lines of code, but a program that plays chess well is much more difficult to create. In recent years, great progress towards this goal has been achieved by deep learning programs like [AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), which mastered chess by playing itself for a few hours.
+Playing tic-tac-toe well is much easier than playing chess well, though, because chess has a much larger "[game tree](https://en.wikipedia.org/wiki/Game_tree)" of possible moves. Writing an AI that plays tic-tac-toe perfectly only requires a few lines of code, but a program that plays chess well is much more difficult to create. In recent years, great progress towards this goal has been achieved by deep learning programs like [AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), which mastered chess by playing itself for a few hours.
 
 ### Imperfect information games
 
-AlphaZero doesn't do as well with "imperfect information" games, like rock-paper-scissors or poker, though. In these games, some information is hidden from the players.[^0]
+AlphaZero doesn't do as well with "imperfect information" games like rock-paper-scissors or poker, though. In these games, some information is hidden from the players.[^1] This introduces a role for chance in the outcome of the game. An expert poker player can sometimes be beaten by a beginner, depending on the luck of the draw.
+
+In such games, the best strategy sometimes involves a degree of randomness. For example, in rock-paper-scissors, a player who chooses their moves randomly can't be beaten over the long run.[^2] Bluffing in poker is another example of strategic random behavior. Over time, a player who never bluffs isn't going to win as much as a player who bluffs well.
+
+Most card games have imperfect information, because players have "hands" that they keep private. Bridge is another good example.
+
+Again, imperfect information games have game trees that can be small (e.g. rock-paper-scissors) or large (e.g. bridge). It doesn't take much to realize that  strategy for rock-paper-scissors is to play randomly.
 
 ### Counterfactual regret minimization (CFR)
 
 ### Deep CFR
 
-Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge of mastering the game from a pure game tree search to finding a strategy that works well for all possible opponent hands. Such a strategy approximates an ideal "[Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium)".
+Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge of mastering the game from a pure game tree search to finding a strategy that works well for all possible opponent hands. Such a strategy approximates an ideal .
 
 [Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164) (Deep CFR) is a powerful technique for solving such games. However, applying it to a game as complex as Hearts is challenging technically. Fortunately, empirical results demonstrate that we can simplify Deep CFR specifically for Hearts. The basic idea is:
 
@@ -91,4 +97,6 @@ TensorBoard:
     > .\venv\Scripts\activate
     > tensorboard --logdir .\artifacts\Release\runs
 
-[^0] I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
+[^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
+
+[^2]: Such a strategy is called a "[Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium)". A Nash equilibrium can't be beaten over the long run, but it doesn't do anything to exploit weaknesses in other strategies. Note that many imperfect information games have multiple Nash equilibria, rather than a single best strategy.
