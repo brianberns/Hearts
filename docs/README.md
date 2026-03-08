@@ -1,9 +1,21 @@
-# Building a superhuman Hearts player with Deep CFR and F#
+# Crushing Hearts with Deep CFR
 
-[![Screenshot](Screenshot.png)](https://www.bernsrite.com/Hearts/)
-[Bernsrite Hearts](https://www.bernsrite.com/Hearts/)
+[![Screenshot](Bernsrite.png)](https://www.bernsrite.com/Hearts/)
+[Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/)
 
-## Imperfect information games and Deep CFR
+## Background
+
+### Perfect information games
+
+Games like tic-tac-toe and chess are called ["perfect information"](https://en.wikipedia.org/wiki/Perfect_information) games because each player knows all relevant information about the state of the game. Nothing is hidden in a tic-tac-toe or chess game, so luck and chance have no role in the outcome.
+
+Playing tic-tac-toe well is much easier than playing chess well, though, because chess has a much larger ["game tree"](https://en.wikipedia.org/wiki/Game_tree) of possible moves. Writing an AI that plays tic-tac-toe perfectly only requires a few lines of code, but a program that plays chess well is much more difficult to create. In recent years, great progress towards this goal has been achieved by deep learning programs like [AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), which mastered chess by playing itself for a few hours.
+
+### Imperfect information games
+
+### Counterfactual regret minimization (CFR)
+
+### Deep CFR
 
 Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is an "imperfect information" game in which each player has private information about their own hand. This shifts the challenge of mastering the game from a pure game tree search to finding a strategy that works well for all possible opponent hands. Such a strategy approximates an ideal "[Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium)".
 
