@@ -17,11 +17,9 @@ Playing tic-tac-toe well is much easier than playing chess well, though, because
 
 ### Imperfect information games
 
-AlphaZero doesn't do as well with "imperfect information" games like rock-paper-scissors or poker, though. In these games, some information is hidden from the players.[^1] This introduces a role for chance in the game. An expert poker player can sometimes be beaten by a beginner, depending on the luck of the draw.
+AlphaZero doesn't do as well with "imperfect information" games like rock-paper-scissors or poker, though. In these games, some information is hidden from the players,[^1] which introduces a role for chance in the game. An expert poker player can sometimes be beaten by a beginner, depending on the luck of the draw. Most card games have imperfect information, because players have "hands" that they keep private. Bridge is another good example.
 
-Most card games have imperfect information, because players have "hands" that they keep private. Bridge is another good example.
-
-In imperfect information games, a good strategy sometimes involves a degree of randomness. For example, the best strategy in rock-paper-scissors is to choose your hand shapes randomly.[^2] Bluffing in poker is another example of strategic random behavior. Over time, a poker player who never bluffs isn't going to win as much as a player who bluffs well.
+In imperfect information games, a good strategy sometimes involves a degree of randomness. For example, the best strategy in rock-paper-scissors is to choose your hand shapes randomly.[^2] Bluffing in poker is another example of strategic random behavior. Over time, a poker player who never bluffs isn't going to win as much as a player who bluffs well at the right time.
 
 ### Counterfactual regret minimization
 
@@ -37,3 +35,7 @@ Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) i
 2. Play the current model against itself for thousands of games. At various points within these game, compare the predicted outcome of each legal action to the actual outcome of taking that action. (This is called "regret" in CFR parlance.)
 3. Train a new version of the model using the comparisons generated in the previous step.
 4. Repeat from step 2 for multiple iterations.
+
+[^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
+
+[^2]: Such a strategy is called a "[Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium)". A Nash equilibrium can't be beaten over the long run, but it doesn't do anything to exploit weaknesses that might exist in other strategies. Note that an imperfect information game might have multiple Nash equilibria, rather than a single best strategy.

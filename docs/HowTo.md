@@ -60,7 +60,3 @@ TensorBoard:
     > pip install tensorboard
     > .\venv\Scripts\activate
     > tensorboard --logdir .\artifacts\Release\runs
-
-[^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
-
-[^2]: Such a strategy is called a "[Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium)". A Nash equilibrium can't be beaten over the long run, but it doesn't do anything to exploit weaknesses that might exist in other strategies. Note that an imperfect information game might have multiple Nash equilibria, rather than a single best strategy.
