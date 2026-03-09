@@ -3,6 +3,10 @@
 [![Screenshot](Bernsrite.png)](https://www.bernsrite.com/Hearts/)
 ♠️♥️♦️♣️ [Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/) ♣️♦️♥️♠️
 
+## Overview
+
+The card game [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is difficult for a computer to master because it has a large game tree with elements of chance and uncertainty. [Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164) (Deep CFR) is an algorithm designed specifically to tackle such games. We use a simplified version of Deep CFR to build an AI that plays Hearts at a superhuman level!
+
 ## Background
 
 ### Perfect information games
