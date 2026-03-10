@@ -1,7 +1,11 @@
 # Crushing Hearts with Deep CFR
 
+<div align="center">
+
 [![Screenshot](Bernsrite.png)](https://www.bernsrite.com/Hearts/)
 ♠️♥️♦️♣️ [Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/) ♣️♦️♥️♠️
+
+</div>
 
 ## Overview
 
