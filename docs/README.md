@@ -48,15 +48,15 @@ The basic idea is:
 
 As with vanilla CFR, however, the strategy learned by this process is not guaranteed to converge on a Nash equilibrium. Instead, we need to train a final network for each player at the end of the run that approximates the average strategy across all iterations.
 
-Deep CFR is designed to work specifically for two-player zero-sum games. Each player requires a separate model, because (for some games) they use different strategies depending on their role (e.g. seat order). Deep CFR has been used successfully to master complex imperfect information games, such as a popular Poker variant called Texas Hold'em. And now, Hearts as well!
+Deep CFR is designed to work specifically for two-player zero-sum games. Each player requires a separate model, because they might use different strategies depending on their role (e.g. seat order). Deep CFR has been used successfully to master complex imperfect information games, such as a popular Poker variant called Texas Hold'em. And now, Hearts as well!
 
 ## Hearts and Deep CFR
 
-To the best of my knowledge, there have been few attempts to create strong Hearts-playing programs, and most of those that do exist are based on heuristic rules, rather than rigorous algorithmic techniques. The website [Trickster](https://www.trickstercards.com/games/hearts/), for example, has written [such a program](https://github.com/TricksterCards/TricksterBots/blob/main/TricksterBots/Bots/Hearts/HeartsBot.cs), but it does not play Hearts at a high level. My father, Gerald Berns, also created a heuristic program called [*Killer Hearts*](https://mark.random-article.com/hearts/on_hearts.txt) that was, I believe, the best Hearts program in existence prior to this project.
+To my knowledge, there have been few attempts to create strong Hearts-playing programs, and most of those that do exist are based on heuristic rules, rather than rigorous algorithmic techniques. The website [Trickster](https://www.trickstercards.com/games/hearts/), for example, has written [such a program](https://github.com/TricksterCards/TricksterBots/blob/main/TricksterBots/Bots/Hearts/HeartsBot.cs), but it does not play Hearts at a high level. My father, Gerald Berns, also created a heuristic program called [*Killer Hearts*](https://mark.random-article.com/hearts/on_hearts.txt) that was, I believe, the best Hearts program in existence prior to this project.
 
 "Shooting the moon" makes Hearts particularly difficult to master for both computers and humans. A good Hearts player cannot focus on just minimizing points taken. They must also be able to shoot the moon when possible, and try to prevent other players from shooting the moon. Balancing these goals requires a great deal of acumen.
 
-Although Hearts is neither a two-player nor a zero-sum game, this project serves as a demonstration that it is still a good candidate for Deep CFR, with some adaptations.
+Although Hearts is neither a two-player nor a zero-sum game, this project serves as a demonstration that it is nonetheless still a good candidate for Deep CFR, with some adaptations.
 
 ### Simplifying Deep CFR
 
@@ -70,9 +70,7 @@ Several simplifications to Deep CFR are possible when applying it Hearts:
 
 #### Zero-sum, two-player game
 
-There are 26 points in each Hearts deal: one point for each Heart card, and thirteen points for the Queen of Spades.
-
-To convert Hearts to a zero-sum game, we define a payoff function that subtracts each player's score from the average score of the other players. This ensures that the sum of all payoffs is always zero. For example:
+There are 26 points in each Hearts deal: one point for each Heart card, and thirteen points for the Queen of Spades. To convert Hearts to a zero-sum game, we define a payoff function that subtracts each player's score from the average score of the other players. This ensures that the sum of all payoffs is always zero. For example:
 
 Seat | Points | Payoff
 -----| -----: | -----:
@@ -82,16 +80,24 @@ East | 0 | 8⅔
 South | 19 | -16⅔
 *Sum* | *26* | *0*
 
-Note that the sign of the payoff is reversed so that taking more points results in a lower payoff. Taking more than 8⅔ (= 26/3) points in a (non-shoot) deal results in a negative payoff for that player. Shooting the moon has a payoff of 26 points, regardless of whether points are subtracted from the shooter's score or added to the other players' scores.
+Note that the sign of the payoff is reversed so that taking more points results in a lower payoff. Taking seven or more points in a (non-shoot) deal results in a negative payoff for that player, because the average number of points taken per player is 26/4 = 6½. Shooting the moon has a payoff of 26 points, regardless of whether points are subtracted from the shooter's score or added to the other players' scores. In a moon shoot, the other players each receive a payoff of -8⅔, which is one third of -26.
 
-Using this payoff function, Hearts can be seen as a cutthroat two-player game in which each player is simply trying to maximize their own payoff versus the combined payoff of the other players.
+Using this payoff function, Hearts can be seen as a cutthroat two-player game in which each player is simply trying to maximize their own payoff versus the combined payoff of the other players. It's always just "me vs. the world".
 
 #### Non-cooperation
 
-Because a game of Hearts ends only when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game, in order to avoid going over the limit. Modeling this correctly requires a separate game-level payoff function. Is it better to play it safe and finish in second place rather than take a big risk and finish last? If two players tie for first place, does this dilute their accomplishment? One simple answer is to reward one point to each winning player (including ties) and no points to the other players. This is the approach taken by *Killer Hearts*.
+Because a game of Hearts ends only when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game in order to avoid going over the limit. For example, if South is the current low-scorer, and North is near 100 points, East might try to make South take the Queen of Spades instead of giving it to North, which would end the game.
 
-In contrast, this project currently ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.
+Modeling this correctly requires a separate game-level payoff function. Is it better to play it safe and finish in second place rather than take a big risk and finish last? If two players tie for first place, does this dilute their accomplishment? One simple answer is to reward one point to each winning player (including ties) and no points to the other players. This is the approach taken by *Killer Hearts*. Note that this results in a aggregate win rate of more than 100% due to ties.
+
+In contrast, this project currently ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.[^3]
+
+## Authorship
+
+Except where noted, all source code and documentation in this project was written by me (not by generative AI).
 
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
 
 [^2]: In fact, it might be possible to use only training data from the most recent iteration, but I haven't proven this yet.
+
+[^3]: As of this writing, the Deep CFR technique produces a player that wins about 58.0% of games vs. 43.7% for *Killer Hearts* in a set of 10,000 two-against-two games.
