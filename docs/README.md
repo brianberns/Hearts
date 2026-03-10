@@ -41,18 +41,19 @@ To address this problem, [Deep Counterfactual Regret Minimization](https://arxiv
 
 The basic idea is:
 
-1. Start with a model that plays randomly.
-2. Generate sample data by playing the current model against itself for many games. At various decision points within these games, compute the value of each legal action by comparing the predicted outcome of the action to the actual outcome of taking that action.
-3. Train a new version of the model using the comparisons generated in the previous step.
+1. Start with a model for each player that plays randomly.
+2. Generate sample data by playing the current models against each other for many games. At various decision points within these games, compute the value of each legal action by comparing the predicted outcome of the action to the actual outcome of taking that action.
+3. Train new versions of the models using the comparisons generated in the previous step.
 4. Repeat from step 2 for multiple iterations.
 
-As with vanilla CFR, however, the strategy learned by this process is not guaranteed to converge on a Nash equilibrium. Instead, we need to train a final network at the end of the run that approximates the average strategy across all iterations.
+As with vanilla CFR, however, the strategy learned by this process is not guaranteed to converge on a Nash equilibrium. Instead, we need to train a final network for each player at the end of the run that approximates the average strategy across all iterations.
+
+Note that each player requires a separate model, because, at least for some games, players require different strategies.
 
 Deep CFR has been used successfully to master complex imperfect information games, such as a popular Poker variant called Texas Hold'em. And now, Hearts as well!
 
 ## Hearts and Deep CFR
 
-[Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game))
-
+[Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is a great candidate for machine learning in general, and Deep CFR in particular. To the best of my knowledge, there have been few attempts to create strong Hearts-playing programs, and most of those that do exist are based on heuristic rules, rather than rigorous algorithmic techniques. The website [Trickster](https://www.trickstercards.com/games/hearts/), for example, has written [such a program](https://github.com/TricksterCards/TricksterBots/blob/main/TricksterBots/Bots/Hearts/HeartsBot.cs), but it does not play Hearts at a high level.
 
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
