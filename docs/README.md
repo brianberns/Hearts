@@ -25,7 +25,11 @@ We have to rethink the idea of a game tree for imperfect information games, sinc
 
 ### Counterfactual regret minimization
 
-As with perfect information games, imperfect information games can have a small number of information sets (e.g. rock-paper-scissors) or a large number (e.g. bridge). There's a powerful machine learning technique for solving imperfect information games called [counterfactual regret minimization (CFR)](https://github.com/brianberns/CFR-Explained), but it is only practical for fairly small imperfect information games.
+As with perfect information games, imperfect information games can have a small number of information sets (e.g. rock-paper-scissors) or a large number (e.g. bridge). There's a powerful machine learning technique for solving imperfect information games called [counterfactual regret minimization (CFR)](https://github.com/brianberns/CFR-Explained), but it is only practical for fairly small imperfect information games, because it must visit each information set many times as it iterates to a good strategy.
+
+CFR works by minimizing "counterfactual regret" at each information set. Regret is a confusing concept (at least to me), so I prefer to think of this as maximizing the value (aka "utility" or "advantage") of each node instead. Roughly speaking, the idea is to start with a random strategy and then refine it so that actions with high value are favored. In this way, CFR "learns" how to play well over time.
+
+However, due to the nature of imperfect information games, we have to be careful about evolving strategies that chase their own tail. For example, in rock-paper-scissors, CFR might start off with an accidental bias towards "rock". In the next iteration, it learns to play "paper" more often in response. Then in the next iteration, it learns to play "scissors" in order to take advantage of the bias towards "paper", and so on. In order to avoid this, CFR takes the average of all strategies at the end of the run, rather than keeping whatever the last strategy might be. In rock-paper-scissors, CFR finds that the average value of rock, paper, and scissors are all 1/3, which gives us the best strategy. It is only this average over time that is guaranteed to converge to the correct strategy. Visually, we can think of CFR as circling endlessly around this strategy, rather than landing right on it.
 
 ### Deep CFR
 
