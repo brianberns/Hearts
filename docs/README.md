@@ -1,11 +1,7 @@
 # Crushing Hearts with Deep CFR
 
-<div align="center">
-
 [![Screenshot](Bernsrite.png)](https://www.bernsrite.com/Hearts/)
 ♠️♥️♦️♣️ [Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/) ♣️♦️♥️♠️
-
-</div>
 
 ## Overview
 
@@ -72,8 +68,17 @@ Several simplifications to Deep CFR are possible when applying it Hearts:
 
 ## Adapting Hearts
 
-To convert Hearts to a zero-sum game, we must define a payoff function that 
+To convert Hearts to a zero-sum game, we define a payoff function that subtracts each player's score from the average score of the other players. This ensures that the sum of all payoffs is zero. For example:
 
+Seat | Points | Payoff
+-----| -----: | -----:
+West | 2 | 6
+North | 5 | 2
+East | 0 | 8⅔
+South | 19 | -16⅔
+*Sum* | *26* | *0*
+
+Note that the sign of the payoff is reversed so that taking more points results in a lower payoff. Taking more than 8⅔ (= 26/3) points in a (non-shoot) deal results in a negative payoff for that player. Shooting the moon has a payoff of 26 points, regardless of whether points are subtracted from the shooter's score or added to the other players' scores.
 
 * Two-player
 * Zero-sum
