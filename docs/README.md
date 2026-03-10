@@ -48,20 +48,35 @@ The basic idea is:
 
 As with vanilla CFR, however, the strategy learned by this process is not guaranteed to converge on a Nash equilibrium. Instead, we need to train a final network for each player at the end of the run that approximates the average strategy across all iterations.
 
-Note that each player requires a separate model, because, at least for some games, players require different strategies depending on, say, seat order.
-
-Deep CFR has been used successfully to master complex imperfect information games, such as a popular Poker variant called Texas Hold'em. And now, Hearts as well!
+Deep CFR is designed to work specifically for two-player zero-sum games. Each player requires a separate model, because (for some games) they use different strategies depending on their role (e.g. seat order). Deep CFR has been used successfully to master complex imperfect information games, such as a popular Poker variant called Texas Hold'em. And now, Hearts as well!
 
 ## Hearts and Deep CFR
 
-[Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is a great candidate for machine learning in general, and Deep CFR in particular. To the best of my knowledge, there have been few attempts to create strong Hearts-playing programs, and most of those that do exist are based on heuristic rules, rather than rigorous algorithmic techniques. The website [Trickster](https://www.trickstercards.com/games/hearts/), for example, has written [such a program](https://github.com/TricksterCards/TricksterBots/blob/main/TricksterBots/Bots/Hearts/HeartsBot.cs), but it does not play Hearts at a high level.
+To the best of my knowledge, there have been few attempts to create strong Hearts-playing programs, and most of those that do exist are based on heuristic rules, rather than rigorous algorithmic techniques. The website [Trickster](https://www.trickstercards.com/games/hearts/), for example, has written [such a program](https://github.com/TricksterCards/TricksterBots/blob/main/TricksterBots/Bots/Hearts/HeartsBot.cs), but it does not play Hearts at a high level. My father, Gerald Berns, also created a heuristic program called [*Killer Hearts*](https://mark.random-article.com/hearts/on_hearts.txt) that was, I believe, the best Hearts program in existence prior to this project.
 
-## Differences from Deep CFR
+"Shooting the moon" makes Hearts particularly difficult to master for both computers and humans. A good Hearts player cannot focus on just minimizing points taken. They must also be able to shoot the moon when possible, and try to prevent other players from shooting the moon. Balancing these goals requires a great deal of acumen.
 
-* Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players share the same model.
-* Because misdirection/bluffing is not a major part of Hearts, there is no need to train a separate "strategy" model from the advantage models at the end of the run. Instead, the advantage model converges on a strategy after a few iterations.
-* Ignore old sample data.
+Although Hearts is neither a two-player nor a zero-sum game, this project serves as a demonstration that it is still a good candidate for Deep CFR, with some adaptations.
+
+## Simplified Deep CFR
+
+Several simplifications to Deep CFR are possible when applying it Hearts:
+
+Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players can share the same model.
+
+Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on a Nash equilibrium after less than ten iterations. There is no need to train a separate network on the average strategy.
+
+For the same reason, sample data from early iterations is far less important.
 
 *** To-do: shooting the moon adds difficulty. ***
+
+## Hearts changes
+
+Although [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is not a two-player zero-sum game, it is still a good candidate for Deep CFR.
+
+* Two-player
+* Zero-sum
+
+Deal-oriented
 
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
