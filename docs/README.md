@@ -17,9 +17,11 @@ Playing tic-tac-toe well is much easier than playing chess well, though, because
 
 ### Imperfect information games
 
-AlphaZero doesn't do as well with "imperfect information" games like rock-paper-scissors or poker, though. In these games, some information is hidden from the players,[^1] which introduces a role for chance in the game. An expert poker player can sometimes be beaten by a beginner, depending on the luck of the draw. Most card games have imperfect information, because players have "hands" that they keep private. Bridge is another good example.
+AlphaZero doesn't do as well with "imperfect information" games like rock-paper-scissors or poker, however. In these games, some information is hidden from the players,[^1] which introduces a role for chance in the game. A beginner poker player can sometimes beat an expert, depending on the luck of the draw. Card games typically have imperfect information, because players have "hands" that they keep private. Bridge is another example of such a card game.
 
 In imperfect information games, a good strategy sometimes involves a degree of randomness. For example, the best strategy in rock-paper-scissors is to choose your hand shapes randomly.[^2] Bluffing in poker is another example of strategic random behavior. Over time, a poker player who never bluffs isn't going to win as much as a player who bluffs well at the right time.
+
+We have to rethink the idea of a game tree for imperfect information games, since multiple game states might be indistinguishable to a player, given their imperfect knowledge (e.g. they don't know the cards in other players' hands). Instead, we consider a tree where each node contains all of the active player's information about the state of the game when it is their turn to play. Each such node is called an "information set".
 
 ### Counterfactual regret minimization
 
