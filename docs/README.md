@@ -58,7 +58,7 @@ To the best of my knowledge, there have been few attempts to create strong Heart
 
 Although Hearts is neither a two-player nor a zero-sum game, this project serves as a demonstration that it is still a good candidate for Deep CFR, with some adaptations.
 
-## Simplifying Deep CFR
+### Simplifying Deep CFR
 
 Several simplifications to Deep CFR are possible when applying it Hearts:
 
@@ -66,7 +66,11 @@ Several simplifications to Deep CFR are possible when applying it Hearts:
 2. Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on a Nash equilibrium after less than ten iterations. There is no need to train a separate network on the average strategy.
 3. For the same reason, training data from earlier iterations is less important for keeping the strategy evolution "on track" to a Nash equilibrium. Instead of reservoir sampling, we can train the next iteration using data generated only by recent iterations.[^2] This speeds up the training phase considerably.
 
-## Adapting Hearts
+### Adapting Hearts
+
+#### Zero-sum, two-player game
+
+There are 26 points in each Hearts deal: one point for each Heart card, and thirteen points for the Queen of Spades.
 
 To convert Hearts to a zero-sum game, we define a payoff function that subtracts each player's score from the average score of the other players. This ensures that the sum of all payoffs is zero. For example:
 
@@ -80,10 +84,13 @@ South | 19 | -16⅔
 
 Note that the sign of the payoff is reversed so that taking more points results in a lower payoff. Taking more than 8⅔ (= 26/3) points in a (non-shoot) deal results in a negative payoff for that player. Shooting the moon has a payoff of 26 points, regardless of whether points are subtracted from the shooter's score or added to the other players' scores.
 
-* Two-player
-* Zero-sum
+Using this payoff function, Hearts can be seen as a cutthroat two-player game in which each player is simply trying to maximize their own payoff versus the combined payoff of the other players.
 
-Because Hearts ends when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game, in order to avoid going over the limit. This model ignores that aspect of the game entirely, and focuses only on the score within the current deal.
+#### Non-cooperation
+
+Because Hearts ends when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game, in order to avoid going over the limit. Modeling this from a game theory point-of-view requires a different game-level payoff function. Is it better to play it safe and finish in second place rather than take a big risk and finish last? If two players tie for first place, does this dilute their accomplishment? One simple answer is to reward one point to each winning player (including ties) and no points to the other players.
+
+For the time being, this project ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.
 
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
 
