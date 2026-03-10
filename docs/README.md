@@ -13,7 +13,7 @@ The card game [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is diff
 
 Games like tic-tac-toe and chess are called "[perfect information](https://en.wikipedia.org/wiki/Perfect_information)" games because each player knows all relevant information about the state of the game. Nothing is hidden from the players in such games.
 
-Playing tic-tac-toe well is much easier than playing chess well, though, because chess has a much larger "[game tree](https://en.wikipedia.org/wiki/Game_tree)" of possible moves. An AI that plays tic-tac-toe perfectly can be written a few lines of code, but a program that plays chess well is much more difficult to create. In recent years, great progress towards this goal has been achieved by deep learning programs like [AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), which mastered chess by playing against itself for a few hours.
+Playing tic-tac-toe well is much easier than playing chess well, though, because chess has a much larger "[game tree](https://en.wikipedia.org/wiki/Game_tree)" of possible moves. An AI that plays tic-tac-toe perfectly can be written in a few lines of code, but a program that plays chess well is much more difficult to create. In recent years, great progress towards this goal has been achieved by deep learning programs like [AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), which mastered chess by playing against itself for a few hours.
 
 ### Imperfect information games
 
@@ -21,11 +21,11 @@ AlphaZero doesn't do as well with "imperfect information" games like rock-paper-
 
 In imperfect information games, a good strategy sometimes involves a degree of randomness. For example, the best strategy in rock-paper-scissors is to choose your hand shapes randomly.[^2] Bluffing in poker is another example of strategic random behavior. Over time, a poker player who never bluffs isn't going to win as much as a player who bluffs well at the right time.
 
-We have to rethink the idea of a game tree for imperfect information games, since multiple game states might be indistinguishable to a player, given their imperfect knowledge (e.g. they don't know the cards in other players' hands). Instead, we consider a tree where each node contains all of the active player's information about the state of the game when it is their turn to play. Each such node is called an "information set".
+We have to rethink the idea of a game tree for imperfect information games, since multiple game states might be indistinguishable to a player, given their imperfect knowledge (e.g. they don't know the cards in other players' hands). Instead, we consider a graph where each node represents all of the active player's information about the state of the game when it is their turn to play. Each such node contains one or more distinct game states (from the point of view of an omniscient observer) and is called an "information set".
 
 ### Counterfactual regret minimization
 
-As with perfect information games, imperfect information games have game trees that can be small (e.g. rock-paper-scissors) or large (e.g. bridge). There's a powerful machine learning technique for solving imperfect information games called [counterfactual regret minimization (CFR)](https://github.com/brianberns/CFR-Explained), but it is only practical for fairly small game trees.
+As with perfect information games, imperfect information games can have a small number of information sets (e.g. rock-paper-scissors) or a large number (e.g. bridge). There's a powerful machine learning technique for solving imperfect information games called [counterfactual regret minimization (CFR)](https://github.com/brianberns/CFR-Explained), but it is only practical for fairly small imperfect information games.
 
 ### Deep CFR
 
@@ -34,7 +34,7 @@ Unlike Chess or Go, [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) i
 [Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164) (Deep CFR) is a powerful technique for solving such games. However, applying it to a game as complex as Hearts is challenging technically. Fortunately, empirical results demonstrate that we can simplify Deep CFR specifically for Hearts. The basic idea is:
 
 1. Start with a model that plays randomly.
-2. Play the current model against itself for thousands of games. At various points within these game, compare the predicted outcome of each legal action to the actual outcome of taking that action. (This is called "regret" in CFR parlance.)
+2. Play the current model against itself for thousands of games. At various points within these games, compare the predicted outcome of each legal action to the actual outcome of taking that action. (This is called "regret" in CFR parlance.)
 3. Train a new version of the model using the comparisons generated in the previous step.
 4. Repeat from step 2 for multiple iterations.
 
