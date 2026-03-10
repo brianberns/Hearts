@@ -16,13 +16,7 @@ Web app:
 
 You can also play the game online [on my website](https://www.bernsrite.com/Hearts/).
 
-## Modeling Hearts
-
-Because Hearts ends when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game, in order to avoid going over the limit. This model ignores that aspect of the game entirely, and focuses only on the score within the current deal.
-
-## Detailed instructions
-
-### Linux
+## Linux
 
 Install .NET:
 
@@ -46,7 +40,7 @@ TensorBoard:
     > pip install tensorboard
     > tensorboard --bind_all --logdir ./artifacts/Release/runs/
 
-### Windows
+## Windows
 
 TensorBoard:
 

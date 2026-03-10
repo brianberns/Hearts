@@ -58,25 +58,25 @@ To the best of my knowledge, there have been few attempts to create strong Heart
 
 Although Hearts is neither a two-player nor a zero-sum game, this project serves as a demonstration that it is still a good candidate for Deep CFR, with some adaptations.
 
-## Simplified Deep CFR
+## Simplifying Deep CFR
 
 Several simplifications to Deep CFR are possible when applying it Hearts:
 
-Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players can share the same model.
+1. Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players can share the same model.
 
-Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on a Nash equilibrium after less than ten iterations. There is no need to train a separate network on the average strategy.
+2. Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on a Nash equilibrium after less than ten iterations. There is no need to train a separate network on the average strategy.
 
-For the same reason, sample data from early iterations is far less important.
+3. For the same reason, training data from earlier iterations is less important for keeping the strategy evolution "on track" to a Nash equilibrium. Instead of reservoir sampling, we can train the next iteration using data generated only by recent iterations.[^2] This speeds up the training phase considerably.
 
-*** To-do: shooting the moon adds difficulty. ***
-
-## Hearts changes
+## Adapting Hearts
 
 Although [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is not a two-player zero-sum game, it is still a good candidate for Deep CFR.
 
 * Two-player
 * Zero-sum
 
-Deal-oriented
+Because Hearts ends when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game, in order to avoid going over the limit. This model ignores that aspect of the game entirely, and focuses only on the score within the current deal.
 
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
+
+[^2]: In fact, it might be possible to use only training data from the most recent iteration, but I haven't proven this yet.
