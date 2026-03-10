@@ -80,9 +80,9 @@ East | 0 | 8⅔
 South | 19 | -16⅔
 *Sum* | *26* | *0*
 
-Note that the sign of the payoff is reversed so that taking more points results in a lower payoff. Taking seven or more points in a (non-shoot) deal results in a negative payoff for that player, because the average number of points taken per player is 26/4 = 6½. Shooting the moon has a payoff of 26 points, regardless of whether points are subtracted from the shooter's score or added to the other players' scores. In a moon shoot, the other players each receive a payoff of -8⅔, which is one third of -26.
+Note that the sign of the payoff is reversed so that taking more points results in a lower payoff. Taking seven or more points in a (non-shoot) deal results in a negative payoff for that player, because the average number of points taken per player is 26/4 = 6½. Shooting the moon has a payoff of 26 points, regardless of whether points are subtracted from the shooter's score or added to the other players' scores. The other players each receive a payoff of -8⅔, which is one third of -26.
 
-Using this payoff function, Hearts can be seen as a cutthroat two-player game in which each player is simply trying to maximize their own payoff versus the combined payoff of the other players. It's always just "me vs. the world".
+Using this payoff function, Hearts can be seen as a cutthroat two-player game in which each player is simply trying to maximize their own payoff versus the combined payoff of the other players. It's "me vs. the world".
 
 #### Non-cooperation
 
