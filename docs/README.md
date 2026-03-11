@@ -1,21 +1,19 @@
-# Crushing Hearts with Deep CFR
-
 [![Screenshot](Bernsrite.png)](https://www.bernsrite.com/Hearts/)
 ♠️♥️♦️♣️ [Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/) ♣️♦️♥️♠️
 
-## Overview
+# Overview
 
 The card game [Hearts](https://en.wikipedia.org/wiki/Hearts_(card_game)) is difficult for a computer to master because it has a large game tree with elements of chance and uncertainty. [Deep Counterfactual Regret Minimization](https://arxiv.org/abs/1811.00164) (Deep CFR) is an algorithm designed specifically to tackle such games. We use a simplified version of Deep CFR to train an AI that plays Hearts at a superhuman level!
 
-## Background
+# Background
 
-### Perfect information games
+## Perfect information games
 
 Games like Tic-Tac-Toe and Chess are called "[perfect information](https://en.wikipedia.org/wiki/Perfect_information)" games because each player knows all relevant information about the state of the game. Nothing is hidden from the players in such games.
 
 Playing Tic-Tac-Toe well is much easier than playing Chess well, though, because Chess has a much larger "[game tree](https://en.wikipedia.org/wiki/Game_tree)" of possible moves. An AI that plays Tic-Tac-Toe perfectly can be written in a few lines of code, but a program that plays Chess well is much more difficult to create. In recent years, great progress towards this goal has been achieved by deep learning programs like [AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), which mastered Chess by playing against itself for a few hours.
 
-### Imperfect information games
+## Imperfect information games
 
 AlphaZero doesn't do as well with "imperfect information" games like Rock-Paper-Scissors (RPS) or Poker, however. In these games, some information is hidden from the players,[^1] which introduces a role for chance in the game. A beginner Poker player can sometimes beat an expert, depending on the luck of the draw. Card games typically have imperfect information, because players have "hands" that they keep private. Bridge is another example of such a card game.
 
@@ -25,7 +23,7 @@ A strategy is called a "[Nash equilibrium](https://en.wikipedia.org/wiki/Nash_eq
 
 We have to rethink the idea of a game tree for imperfect information games, since multiple game states might be indistinguishable to a player, given their imperfect knowledge (e.g. they don't know the cards in other players' hands). Instead, we consider a graph where each node represents all of the active player's information about the state of the game when it is their turn to play. Each such node contains one or more distinct game states (from the point of view of an omniscient observer) and is called an "information set".
 
-### Counterfactual regret minimization
+## Counterfactual regret minimization
 
 As with perfect information games, imperfect information games can have a small number of information sets (e.g. RPS) or a large number (e.g. Bridge). There's a powerful machine learning technique for solving imperfect information games called [counterfactual regret minimization (CFR)](https://github.com/brianberns/CFR-Explained), but it is only practical for fairly small imperfect information games, because it must visit each information set many times as it iterates to a good strategy.
 
@@ -33,7 +31,7 @@ CFR works by minimizing "counterfactual regret" at each information set. Regret 
 
 However, due to the nature of imperfect information games, we have to be careful about evolving strategies that chase their own tail. For example, in RPS, CFR might start off with a bias towards Rock due purely to random accident. In the next iteration, it would learn to play Paper more often in response. Then in the next iteration, it would learn to play Scissors in order to take advantage of the bias towards Paper, and so on. In order to avoid this, CFR takes the average of all strategies at the end of the run, rather than keeping just whatever the last strategy happened to be. Over many iterations of RPS, CFR finds that the average value of Rock, Paper, and Scissors are all ⅓, which gives us the best strategy. It is only this average over time that is guaranteed to converge to a Nash equilibrium. Visually, we can think of CFR as circling endlessly around this average strategy, rather than necessarily landing right on it.
 
-### Deep CFR
+## Deep CFR
 
 CFR keeps a table of regrets and strategies for each information set. This quickly becomes untenable for many games, due to the exponential explosion of game tree sizes. For example, Bridge has at least 10<sup>50</sup> information sets, which is far too large to track individually.
 
@@ -50,7 +48,7 @@ As with vanilla CFR, however, the strategy learned by this process is not guaran
 
 Deep CFR is designed to work specifically for two-player zero-sum games. Each player requires a separate model, because they might use different strategies depending on their role (e.g. seat order). Deep CFR has been used successfully to master complex imperfect information games, such as a popular Poker variant called Texas Hold'em. And now, Hearts as well!
 
-## Hearts and Deep CFR
+# Hearts and Deep CFR
 
 To my knowledge, there have been few attempts to create strong Hearts-playing programs, and most of those that do exist are based on heuristic rules, rather than rigorous algorithmic techniques. The website [Trickster](https://www.trickstercards.com/games/hearts/), for example, has written [such a program](https://github.com/TricksterCards/TricksterBots/blob/main/TricksterBots/Bots/Hearts/HeartsBot.cs), but it does not play Hearts at a high level. My father, Gerald Berns, also created a heuristic program called [*Killer Hearts*](https://mark.random-article.com/hearts/on_hearts.txt) that was, I believe, the best Hearts program in existence prior to this project.
 
@@ -58,7 +56,7 @@ To my knowledge, there have been few attempts to create strong Hearts-playing pr
 
 Although Hearts is neither a two-player nor a zero-sum game, this project serves as a demonstration that it is nonetheless still a good candidate for Deep CFR, with some adaptations.
 
-### Simplifying Deep CFR
+## Simplifying Deep CFR
 
 Several simplifications to Deep CFR are possible when applying it Hearts:
 
@@ -66,9 +64,9 @@ Several simplifications to Deep CFR are possible when applying it Hearts:
 2. Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on an approximate Nash equilibrium after fewer than ten iterations. There is no need to train a separate network on the average strategy.[^2]
 3. For the same reason, training data from earlier iterations is less important for keeping the strategy evolution "on track" to a Nash equilibrium. Instead of reservoir sampling, we can train the next iteration using data generated only by recent iterations.[^3] This can speed up the training phase considerably.
 
-### Adapting Hearts
+## Adapting Hearts
 
-#### Zero-sum, two-player game
+### Zero-sum, two-player game
 
 There are 26 points in each Hearts deal: one point for each Heart card, and thirteen points for the Queen of Spades. To convert Hearts to a zero-sum game, we define a payoff function that subtracts each player's score from the average score of the other players. This ensures that the sum of all payoffs is always zero. For example:
 
@@ -84,7 +82,7 @@ Note that the sign of the payoff is reversed so that taking more points results 
 
 Using this payoff function, Hearts can be seen as a cutthroat two-player game in which each player is simply trying to maximize their own payoff versus the combined payoff of the other players. It's "me vs. the world".
 
-#### Non-cooperation
+### Non-cooperation
 
 Because a game of Hearts ends only when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game in order to avoid going over the limit. For example, if South is the current low-scorer, and North is near 100 points, East might try to make South take the Queen of Spades instead of giving it to North, which would end the game.
 
@@ -92,13 +90,13 @@ Modeling this correctly requires a separate game-level payoff function that is n
 
 In contrast, this project currently ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.[^4]
 
-## Design
+# Design
 
-### Card exchange
+## Card exchange
 
 At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. The actual order of these actions is not specified by the rules of Hearts and does not matter as long as players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
 
-### Information set
+## Information set
 
 An information set contains all information known to a player about the game state, including information known only to that player. Specifically, a Hearts information set contains the following information about the deal:
 
@@ -119,11 +117,11 @@ From an information set, one can deduce:
   * The set of unplayed cards.
   * The set of legal actions available to the current player.
 
-### Neural network
+## Neural network
 
 Logically, a strategy model is a neural network that takes an information set as input and produces the value of each possible action as output. Implementing this physically required major design choices.
 
-#### Input encoding
+### Input encoding
 
 An information set is encoded into a vector of Boolean flags, laid out linearly as follows:
 
@@ -141,13 +139,13 @@ An information set is encoded into a vector of Boolean flags, laid out linearly 
 
 Note that some information is lost in this encoding, such as the order of cards played in previous tricks. In game theory terms, this means that we now have "imperfect recall" of past actions. Technically, Deep CFR is not guaranteed to converge for such a representation, but this small degree of abstraction does not present a hindrance to success in practice.
 
-#### Output encoding
+### Output encoding
 
 Outputs are encoded as a vector of 52 floating point numbers, representing the value (aka regret, utility, advantage) of passing/playing each card in the deck.
 
 To convert this output to a strategy, illegal actions are ignored, and the remaining values are normalized to sum to 1.0 ("regret matching"). An action can then be chosen by sampling this probability vector non-deterministically.[^5]
 
-#### Structure
+### Structure
 
 The architecture of the neural network is relatively straightfoward, consisting of a fully-connected input layer, some number of repeated hidden layers, and a fully-connected output layer. Someone with more deep learning ability than me might be able to come up with a better design, but this one worked quite well in practice.
 
@@ -157,25 +155,25 @@ The architecture of the neural network is relatively straightfoward, consisting 
 
 In practice, I found that a hidden size of 1080 (twice the input size) with four hidden layers worked well. I was surprised that a model this small could master Hearts, but adding more layers or features proved fruitless.
 
-## Implementation
+# Implementation
 
 My background is in software development, not game theory or machine learning, so I had significant learning to do while implementing this project. There were many wrong turns and failed experiments that are not described here.
 
-### Programming language
+## Programming language
 
 F# is my preferred programming language and I chose to use it for the implementation. As a functional programming language, F# is well-suited for the generation of sample data, which is essentially a black box that takes the current strategy model as input and emits sample data generated by playing that model against itself. Training the next iteration of the strategy model from that sample data was a bit more of a reach in F#, but fortunately I found [TorchSharp](https://github.com/dotnet/TorchSharp) to be an adequate .NET stand-in for PyTorch.[^6] I was even able to write the Hearts web application's user interface in F# by compiling it to browser-friendly JavaScript using [Fable](https://fable.io/). This allowed the app client and server to share the same core Hearts library code and communicate seamlessly over the web.
 
-### Code organization
+## Code organization
 
 The major F# projects in this solution are organized as follows:
 
-#### Core Hearts logic
+### Core Hearts logic
 
 * `PlayingCards.fsproj`: A library that provides general support for playing cards, but is not specific to Hearts. This is intended to be reusable for other card games.
 
 * `Hearts.fsproj`: A library that implements the basic rules of Hearts. It provides a `ClosedDeal` type that represents the public, shared information in a deal, and an omniscient `OpenDeal` type that adds in all private information, such as each player's hand.[^7] It also provides an `InformationSet` type that gathers all information known to a player about a deal and a `Tournament` module for runing a 2v2 tournament between two players (with duplicate deals for fairness).
 
-#### Deep learning
+### Deep learning
 
 * `Hearts.Model.fsproj`: A library that defines the neural network and encoding.
 
@@ -196,7 +194,7 @@ The major F# projects in this solution are organized as follows:
 
 The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` for multiple iterations.
 
-#### Web application
+### Web application
 
 * `Hearts.Web.Server`: A [Suave web part](https://suave.io/) that exposes an API for playing against a trained Hearts model:
   * `GetActionIndex`: A function that maps a given information set to a single action. This is used to implement the computer players.
@@ -206,13 +204,13 @@ The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` f
 
 * `Hearts.Web.Client`: An F# Fable user interface for playing Hearts in a web browser.[^8]
 
-## Results
+# Results
 
 ![Results](Results.png)
 
 This graph was generated retrospectively by choosing the best player from Iteration 5 (`AdvantageModel-i005-e027.pt`) and running each of the checkpoint models against it.
 
-### Iteration details
+## Iteration details
 
 One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of approximately 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
 
@@ -228,11 +226,11 @@ One of the few constants I encountered in training a Hearts model is that more s
 
 I stopped at this point, but it's entirely possible that another iteration would produce an even stronger player. There's no way to know how close we are to an actual Nash equilibrium.
 
-## Authorship
+# Authorship
 
 Except where noted, all source code and documentation in this project was written by me (not by generative AI).
 
-## Footnotes
+# Footnotes
 
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
 
