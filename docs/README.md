@@ -204,9 +204,9 @@ The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` f
 
 ## Results
 
-One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deals for a total of 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
+One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
 
-I used Claude Code to create a baseline heuristic player (in `Hearts.Heuristic\Claude.fs` for comparison. Unfortunately, in later iterations, this player was so far inferior to the trained model that such comparisons became nearly useless. It might be useful to have access to a better .NET-compatible heuristic player. (I used *Killer Hearts* for these comparisons at the end, but this is a very manual process.)
+I used Claude Code to create a baseline heuristic player (in `Hearts.Heuristic\Claude.fs`) for comparison. Unfortunately, in later iterations, this player was so far inferior to the trained model that such comparisons became nearly useless. It might be useful to have access to a better .NET-compatible heuristic player. (I used *Killer Hearts* instead for these comparisons at the end, but this is a very manual process.)
 
 ## Authorship
 
