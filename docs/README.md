@@ -208,17 +208,35 @@ The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` f
 
 ## Results
 
-One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
-
 ![Results](Results.png)
+
+This graph was generated retrospectively by choosing the best player from Iteration 5 (`AdvantageModel-i005-e027.pt`) and running each of the checkpoint models against it.
+
+### Iteration details
+
+One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of approximately 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
+
+* **Iteration 1**: I generated approximately 200,000,000 samples from a random player. Since no neural network inference was involved, this is much faster than sample generation in subsequent iterations. A model was then trained on all the samples. It's remarkable that a fairly strong Hearts player can be created just from a large amount of random play data.
+
+* **Iteration 2**: I generated approximately 100,000,000 more samples from the best Iteration 1 model and trained a new model from those samples plus ~100,000,000 of the Iteration 1 samples.
+
+* **Iteration 3**: I generated ~80,000,000 samples from the best Iteration 2 model and trained a new model from those new samples plus ~80,000,000 of the Iteration 1 samples. No samples from Iteration 2 were used. My thinking here was that using Iteration 1 samples would be better at keeping training "on track", but I'm no longer confident that this is true.
+
+* **Iteration 4**: I generated ~90,000,000 samples from the best Iteration 3 model and again trained a new model from those plus ~80,000,000 of the Iteration 1 samples. The graph above implies that the resulting model was a no better than the previous iteration's result, but I was not aware of this at the time.
+
+* **Iteration 5**: I generated ~120,000,000 new samples from the best Iteration 4 model and trained a new model from those plus about 90,000,000 samples from Iteration 4. This seemed to produce a much stronger player than re-using Iteration 1 samples again.
+
+I stopped at this point, but it's entirely possible that another iteration would produce an even stronger player. There's no way to know how close we are to an actual Nash equilibrium.
 
 ## Authorship
 
 Except where noted, all source code and documentation in this project was written by me (not by generative AI).
 
+## Footnotes
+
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
 
-[^2]: In the terminology of Deep CFR, the "advantage model" and the "strategy model" are the same thing for Hearts.
+[^2]: In the terminology of Deep CFR, the "advantage model" and the "strategy model" are the same thing for this Hearts project.
 
 [^3]: In fact, it might be possible to use only training data from the most recent iteration, but I haven't proven this yet.
 
