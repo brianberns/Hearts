@@ -177,9 +177,16 @@ The major F# projects in this solution are organized as follows:
 
 * `Hearts.Model.fsproj`: A library that defines the neural network and encoding.
 
-* `Hearts.Learn.fsproj`: A library that provides shared logic for both generating sample data and training new models. In particular, this library defines a binary file format for storing large numbers of training samples. These "sample stores" have a `.bin` file extension.
+* `Hearts.Learn.fsproj`: A library that provides shared logic for both generating sample data and training new models. A sample consists of:
+  * An encoded information set.
+  * A vector of observed regrets for that information set.
+  * Iteration number, which is used for weighting the sample. Later iterations are given a greater weight.
 
-* `Hearts.Generate.fsproj`: An executable for generating new samples from an existing model.
+  This library also defines a binary file format for storing large numbers of training samples. These "sample stores" have a `.bin` file extension.
+
+* `Hearts.Generate.fsproj`: An executable for generating new samples from an existing model. This traverses many game trees in parallel, generating samples at a relatively small number of decision points within each game. (The game tree is far too large to generate a sample at each node.) Nodes closer to the root have a greater chance of being sampled (via a "decay function") because there are fewer of them.
+
+  Multi-threaded batch inference in the traversal of these deals is crucial to performance and was probably the most technically difficult code to write in the entire project.
 
 * `Hearts.Train.fsproj`: An executable for training a new model from existing samples. The resulting model is stored in a PyTorch `.pt` file.
 
@@ -196,6 +203,10 @@ The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` f
 * `Hearts.Web.Client`: An F# Fable user interface for playing Hearts in a web browser.
 
 ## Results
+
+One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deals for a total of 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
+
+I used Claude Code to create a baseline heuristic player (in `Hearts.Heuristic\Claude.fs` for comparison. Unfortunately, in later iterations, this player was so far inferior to the trained model that such comparisons became nearly useless. It might be useful to have access to a better .NET-compatible heuristic player. (I used *Killer Hearts* for these comparisons at the end, but this is a very manual process.)
 
 ## Authorship
 
