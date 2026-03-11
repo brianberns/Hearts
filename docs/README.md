@@ -1,5 +1,9 @@
-[![Screenshot](Bernsrite.png)](https://www.bernsrite.com/Hearts/)
-♠️♥️♦️♣️ [Play Hearts against a superhuman AI](https://www.bernsrite.com/Hearts/) ♣️♦️♥️♠️
+<div align="center">
+  <a href="https://www.bernsrite.com/Hearts">
+    <img src="Bernsrite.png">
+  </a>
+  ♠️♥️♦️♣️ <a href="https://www.bernsrite.com/Hearts">Play Hearts against a superhuman AI</a> ♣️♦️♥️♠️
+</div>
 
 # Overview
 
