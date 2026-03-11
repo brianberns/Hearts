@@ -92,7 +92,32 @@ Modeling this correctly requires a separate game-level payoff function. Is it be
 
 In contrast, this project currently ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.[^3]
 
+## Design
+
+### Card exchange
+
+At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. Of course, players are not privy to incoming passed cards until they have finished choosing all three outgoing cards.
+
 ### Information set
+
+An information set contains all information known to a player about a deal, including information known only to that player. More specifically an information set provides:
+
+* The dealer's seat.
+* The current player's seat (West, North, East, or South).
+* The current player's hand.
+* Card exchange details:
+  * The direction of the pass (Left, Right, Across, or Hold).
+  * The set of cards passed by the current player so far, if any.
+  * The set of cards passed to the current player so far, if any.
+* The set of cards played so far (and which player played them), organized chronologically into tricks.
+
+From an information set, one can deduce:
+
+  * Whether Hearts have been broken.
+  * Which players are void in which suits.
+  * The number of points taken so far by each player.
+  * The set of unplayed cards.
+  * The set of legal actions available to the current player.
 
 ### Neural network design
 
