@@ -63,8 +63,8 @@ Although Hearts is neither a two-player nor a zero-sum game, this project serves
 Several simplifications to Deep CFR are possible when applying it Hearts:
 
 1. Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players can share the same model.
-2. Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on a Nash equilibrium after less than ten iterations. There is no need to train a separate network on the average strategy.
-3. For the same reason, training data from earlier iterations is less important for keeping the strategy evolution "on track" to a Nash equilibrium. Instead of reservoir sampling, we can train the next iteration using data generated only by recent iterations.[^2] This speeds up the training phase considerably.
+2. Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on an approximate Nash equilibrium after fewer than ten iterations. There is no need to train a separate network on the average strategy.[^2]
+3. For the same reason, training data from earlier iterations is less important for keeping the strategy evolution "on track" to a Nash equilibrium. Instead of reservoir sampling, we can train the next iteration using data generated only by recent iterations.[^3] This can speed up the training phase considerably.
 
 ### Adapting Hearts
 
@@ -88,19 +88,19 @@ Using this payoff function, Hearts can be seen as a cutthroat two-player game in
 
 Because a game of Hearts ends only when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game in order to avoid going over the limit. For example, if South is the current low-scorer, and North is near 100 points, East might try to make South take the Queen of Spades instead of giving it to North, which would end the game.
 
-Modeling this correctly requires a separate game-level payoff function. Is it better to play it safe and finish in second place rather than take a big risk and finish last? If two players tie for first place, does this dilute their accomplishment? One simple answer is to reward one point to each winning player (including ties) and no points to the other players. This is the approach taken by *Killer Hearts*. Note that this results in a aggregate win rate of more than 100% due to ties.
+Modeling this correctly requires a separate game-level payoff function that is not explicitly defined by the rules of Hearts. For example, is it better to play it safe and finish in second place rather than take a big risk and finish last? If two players tie for first place at the end of a game, does this dilute their accomplishments? One simple answer is to reward one point to each winning player (including ties) and no points to the other players. This is the approach taken by *Killer Hearts*. Note that this results in a aggregate win rate of more than 100% due to ties.
 
-In contrast, this project currently ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.[^3]
+In contrast, this project currently ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.[^4]
 
 ## Design
 
 ### Card exchange
 
-At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. Of course, players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
+At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to describe this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. The order of these actions does not matter as long as players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
 
 ### Information set
 
-An information set contains all information known to a player about the game state, including information known only to that player. More specifically, a Hearts information set contains the following information about the deal:
+An information set contains all information known to a player about the game state, including information known only to that player. Specifically, a Hearts information set contains the following information about the deal:
 
 * The dealer's seat.
 * The current player's seat (West, North, East, or South).
@@ -145,7 +145,7 @@ Note that some information is lost in this encoding, such as the order of cards 
 
 Outputs are encoded as a vector of 52 floating point numbers, representing the value (aka regret, utility, advantage) of passing/playing each card in the deck.
 
-To convert this output to a strategy, illegal actions are ignored, and the remaining values are normalized to sum to 1.0 ("regret matching"). An action can then be chosen by sampling this probability vector non-deterministically.[^4]
+To convert this output to a strategy, illegal actions are ignored, and the remaining values are normalized to sum to 1.0 ("regret matching"). An action can then be chosen by sampling this probability vector non-deterministically.[^5]
 
 #### Structure
 
@@ -214,8 +214,10 @@ Except where noted, all source code and documentation in this project was writte
 
 [^1]: I think "hidden information" would have been a better name for these types of games. "Incomplete information" might have also been a good name, but that actually means something [completely different](https://web.stanford.edu/~jdlevin/Econ%20203/Bayesian.pdf). Game theory is confusing sometimes.
 
-[^2]: In fact, it might be possible to use only training data from the most recent iteration, but I haven't proven this yet.
+[^2]: In the terminology of Deep CFR, the "advantage model" and the "strategy model" are the same thing for Hearts.
 
-[^3]: As of this writing, the Deep CFR technique produces a player that wins about 58.0% of games vs. 43.7% for *Killer Hearts* in a set of 10,000 two-against-two games.
+[^3]: In fact, it might be possible to use only training data from the most recent iteration, but I haven't proven this yet.
 
-[^4]: Non-determinism is important for games of deception, like RPS and Poker, but probably not crucial for Hearts. One might instead always choose the card with the highest value, although I have not investigated this possibility much. Note that, in Hearts, a group of cards might be logically equivalent in a given information set, so perhaps their total value should be used as the decision basis, rather than their individual values.
+[^4]: As of this writing, the Deep CFR technique produces a player that wins about 58.0% of games vs. 43.7% for *Killer Hearts* in a set of 10,000 two-against-two games. Since *Killer Hearts* plays at the level of an expert human, this result is the basis of my claim that the Deep CFR player is superhuman. (Plus, anecdotally, I've not been able to win a single game against it.)
+
+[^5]: Non-determinism is important for games of deception, like RPS and Poker, but probably not crucial for Hearts. One might instead always choose the card with the highest value, although I have not investigated this possibility much. Note that, in Hearts, a group of cards might be logically equivalent in a given information set, so perhaps their total value should be used as the decision basis, rather than their individual values.
