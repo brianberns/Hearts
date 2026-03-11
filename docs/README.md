@@ -86,7 +86,7 @@ Using this payoff function, Hearts can be seen as a cutthroat two-player game in
 
 Because a game of Hearts ends only when one of the players reaches 100 points, it can sometimes benefit players to cooperate near the end of a game in order to avoid going over the limit. For example, if South is the current low-scorer, and North is near 100 points, East might try to make South take the Queen of Spades instead of giving it to North, which would end the game.
 
-Modeling this correctly requires a separate game-level payoff function that is not explicitly defined by the rules of Hearts. For example, is it better to play it safe and finish in second place rather than take a big risk and finish last? If two players tie for first place at the end of a game, does this dilute their accomplishments? One simple answer is to reward one point to each winning player (including ties) and no points to the other players. This is the approach taken by *Killer Hearts*. Note that this results in a aggregate win rate of more than 100% due to ties.
+Modeling this correctly requires a separate game-level payoff function that is not explicitly defined by the rules of Hearts. For example, is it better to play it safe and finish in second place rather than take a big risk and finish last? If two players tie for first place at the end of a game, does this dilute their accomplishments? One simple answer is to reward one point to each winning player (including ties) and no points to the other players. This is the approach taken by *Killer Hearts*. Note that this results in an aggregate win rate of more than 100% due to ties.
 
 In contrast, this project currently ignores the game-level payoff entirely, and focuses only on the score within the current deal. Like the [fabled scorpion](https://en.wikipedia.org/wiki/The_Scorpion_and_the_Frog), players never cooperate, even when it means their own destruction. This approach is nonetheless still good enough to dominate game-aware heuristic players, like *Killer Hearts*, over the course of a full game.[^4]
 
@@ -147,7 +147,7 @@ To convert this output to a strategy, illegal actions are ignored, and the remai
 
 ### Structure
 
-The architecture of the neural network is relatively straightfoward, consisting of a fully-connected input layer, some number of repeated hidden layers, and a fully-connected output layer. Someone with more deep learning ability than me might be able to come up with a better design, but this one worked quite well in practice.
+The architecture of the neural network is relatively straightforward, consisting of a fully-connected input layer, some number of repeated hidden layers, and a fully-connected output layer. Someone with more deep learning ability than me might be able to come up with a better design, but this one worked quite well in practice.
 
 ![Strategy Network](Model.svg)
 
@@ -171,7 +171,7 @@ The major F# projects in this solution are organized as follows:
 
 * `PlayingCards.fsproj`: A library that provides general support for playing cards, but is not specific to Hearts. This is intended to be reusable for other card games.
 
-* `Hearts.fsproj`: A library that implements the basic rules of Hearts. It provides a `ClosedDeal` type that represents the public, shared information in a deal, and an omniscient `OpenDeal` type that adds in all private information, such as each player's hand.[^7] It also provides an `InformationSet` type that gathers all information known to a player about a deal and a `Tournament` module for runing a 2v2 tournament between two players (with duplicate deals for fairness).
+* `Hearts.fsproj`: A library that implements the basic rules of Hearts. It provides a `ClosedDeal` type that represents the public, shared information in a deal, and an omniscient `OpenDeal` type that adds in all private information, such as each player's hand.[^7] It also provides an `InformationSet` type that gathers all information known to a player about a deal and a `Tournament` module for running a 2v2 tournament between two players (with duplicate deals for fairness).
 
 ### Deep learning
 
