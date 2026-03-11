@@ -100,7 +100,7 @@ At beginning of every non-Hold deal, each player must pass three cards to anothe
 
 ### Information set
 
-An information set contains all information known to a player about a deal, including information known only to that player. More specifically an information set provides:
+An information set contains all information known to a player about the game state, including information known only to that player. More specifically, a Hearts information set contains the following information about the deal:
 
 * The dealer's seat.
 * The current player's seat (West, North, East, or South).
@@ -114,16 +114,24 @@ An information set contains all information known to a player about a deal, incl
 From an information set, one can deduce:
 
   * Whether Hearts have been broken.
-  * Which players are void in which suits.
-  * The number of points taken so far by each player.
+  * Which players are known to be void in which suits.
+  * The number of points taken so far by each player in the deal (but not in the overall game).
   * The set of unplayed cards.
   * The set of legal actions available to the current player.
 
 ### Neural network design
 
+At the logical level, a strategy model is a neural network that takes an information set as input and produces the value of each possible action as output. Implementing this physically required major design choices.
+
+#### Input encoding
+
+#### Output encoding
+
+#### Structure
+
 ## Implementation
 
-My background is in software development, but I'm not an expert on game theory or neural networks, so I had some learning to do while implementing this project.
+My background is in software development, but I'm not an expert on game theory or neural networks, so I had significant learning to do while implementing this project. There were many wrong turns and failed experiments that are not described here.
 
 ### Programming language
 
