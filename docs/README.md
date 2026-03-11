@@ -136,11 +136,15 @@ An information set is encoded into a vector of Boolean flags as follows:
 | Cards previously played by each player | 208 | A multi-hot vector in the deck size for each player, starting with the current player |
 | Current trick | 156 | A multi-hot vector in the deck size for each card played so far in the current trick. The maximum number of cards already played in an active trick is three, so zero-hot placeholders are used to pad out shorter tricks. |
 | Known voids | 12 | A multi-hot vector in the number of suits times the number of other players |
-| Deal score | 4 | A multi-hot vector in the number of seats. This simply encodes whether each player has taken any points, but not how many many points each player has taken. |
+| Deal score | 4 | A multi-hot vector in the number of seats. This simply encodes whether each player has taken any points, but not how many points each player has taken. |
 
 Note that some information is lost in this encoding, such as the order of cards played in previous tricks. In game theory terms, this means that we have "imperfect recall" of past actions. Technically, Deep CFR is not guaranteed to converge for such a representation, but this small degree of abstraction does not present a hindrance in practice.
 
 #### Output encoding
+
+Outputs are encoded as a vector of 52 floating point numbers, representing the value (aka regret, utility, advantage) of passing/playing each card in the deck.
+
+To convert this output to a strategy, illegal actions are ignored, and the remaining values are normalized to sum to 1.0 ("regret matching"). An action can then be chosen by sampling this probability vector non-deterministically.[^4]
 
 #### Structure
 
@@ -171,3 +175,5 @@ Except where noted, all source code and documentation in this project was writte
 [^2]: In fact, it might be possible to use only training data from the most recent iteration, but I haven't proven this yet.
 
 [^3]: As of this writing, the Deep CFR technique produces a player that wins about 58.0% of games vs. 43.7% for *Killer Hearts* in a set of 10,000 two-against-two games.
+
+[^4]: Non-determinism is important for games of deception, like RPS and Poker, but probably not crucial for Hearts. One might instead always choose the card with the highest value, although I have not investigated this possibility much. Note that, in Hearts, a group of cards might be logically equivalent in a given information set, so perhaps their total value should be used as the decision basis, rather than their individual values.
