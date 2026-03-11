@@ -150,6 +150,7 @@ To convert this output to a strategy, illegal actions are ignored, and the remai
 #### Structure
 
 ![Strategy Network](Model.svg)
+
 (Original diagram created by Gemini, with my edits.)
 
 In practice, I found that a hidden size of 1080 (twice the input size) with four hidden layers worked well. I was surprised that a model this small could master Hearts, but adding more layers or features proved fruitless.
@@ -170,7 +171,29 @@ The major F# projects in this solution are organized as follows:
 
 * `PlayingCards.fsproj`: A library that provides general support for playing cards, but is not specific to Hearts. This is intended to be reusable for other card games.
 
-* `Hearts.fsproj`: A library that implements the basic rules of Hearts. It provides a `ClosedDeal` type that represents the public, shared information in a deal, and an `OpenDeal` type that adds in all private information, such as each player's hand.
+* `Hearts.fsproj`: A library that implements the basic rules of Hearts. It provides a `ClosedDeal` type that represents the public, shared information in a deal, and an `OpenDeal` type that adds in all private information, such as each player's hand. It also provides an `InformationSet` type that gathers information known to a player about a deal and a `Tournament` module for runing a 2v2 tournament between two players.
+
+#### Deep learning
+
+* `Hearts.Model.fsproj`: A library that defines the neural network and encoding.
+
+* `Hearts.Learn.fsproj`: A library that provides shared logic for both generating sample data and training new models. In particular, this library defines a binary file format for storing large numbers of training samples. These "sample stores" have a `.bin` file extension.
+
+* `Hearts.Generate.fsproj`: An executable for generating new samples from an existing model.
+
+* `Hearts.Train.fsproj`: An executable for training a new model from existing samples.
+
+The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` for multiple iterations.
+
+#### Hearts web application
+
+* `Hearts.Web.Server`: A [Suave web part](https://suave.io/) that exposes an API for playing against a trained Hearts model.
+  * `GetActionIndex`: A function that maps a given information set to a single action.
+  * `GetStrategy`: A function that maps a given information set to a strategy vector. This can be used to provide the user with a hint about what to play next.
+
+* `Hearts.Web.Harness`: A console program that hosts the Suave web part in a web server.
+
+* `Hearts.Web.Client`: An F# Fable user interface for playing Hearts in a web browser.
 
 ## Authorship
 
