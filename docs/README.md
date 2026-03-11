@@ -181,11 +181,11 @@ The major F# projects in this solution are organized as follows:
 
 * `Hearts.Generate.fsproj`: An executable for generating new samples from an existing model.
 
-* `Hearts.Train.fsproj`: An executable for training a new model from existing samples.
+* `Hearts.Train.fsproj`: An executable for training a new model from existing samples. The resulting model is stored in a PyTorch `.pt` file.
 
 The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` for multiple iterations.
 
-#### Hearts web application
+#### Web application
 
 * `Hearts.Web.Server`: A [Suave web part](https://suave.io/) that exposes an API for playing against a trained Hearts model.
   * `GetActionIndex`: A function that maps a given information set to a single action.
@@ -194,6 +194,8 @@ The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` f
 * `Hearts.Web.Harness`: A console program that hosts the Suave web part in a web server.
 
 * `Hearts.Web.Client`: An F# Fable user interface for playing Hearts in a web browser.
+
+## Results
 
 ## Authorship
 
