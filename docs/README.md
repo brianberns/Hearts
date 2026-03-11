@@ -133,10 +133,12 @@ An information set is encoded into a vector of Boolean flags as follows:
 | Exchange direction | 4 | One-hot vector in the number of exchange directions (Left, Right, Across, Hold) |
 | Outgoing pass | 52 | Multi-hot vector in the deck size |
 | Incoming pass | 52 | Multi-hot vector in the deck size |
-| Cards previously played by each player | 4 * 52 | A multi-hot vector in the deck size for each player, starting with the current player |
-| Current trick | 3 * 52 | A multi-hot vector in the deck size for each card played so far in the current trick. The maximum number of cards already played in an active trick is three, so zero-hot placeholders are used to pad out shorter tricks. |
-| Known voids | 3 * 4 | A multi-hot vector in the number of suits times the number of other players |
+| Cards previously played by each player | 208 | A multi-hot vector in the deck size for each player, starting with the current player |
+| Current trick | 156 | A multi-hot vector in the deck size for each card played so far in the current trick. The maximum number of cards already played in an active trick is three, so zero-hot placeholders are used to pad out shorter tricks. |
+| Known voids | 12 | A multi-hot vector in the number of suits times the number of other players |
 | Deal score | 4 | A multi-hot vector in the number of seats. This simply encodes whether each player has taken any points, but not how many many points each player has taken. |
+
+Note that some information is lost in this encoding, such as the order of cards played in previous tricks. In game theory terms, this means that we have "imperfect recall" of past actions. Technically, Deep CFR is not guaranteed to converge for such a representation, but this small degree of abstraction does not present a hindrance in practice.
 
 #### Output encoding
 
