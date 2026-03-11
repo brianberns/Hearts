@@ -96,7 +96,7 @@ In contrast, this project currently ignores the game-level payoff entirely, and 
 
 ### Card exchange
 
-At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to describe this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. The order of these actions does not matter as long as players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
+At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. The actual order of these actions is not specified by the rules of Hearts and does not matter as long as players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
 
 ### Information set
 
@@ -125,21 +125,21 @@ Logically, a strategy model is a neural network that takes an information set as
 
 #### Input encoding
 
-An information set is encoded into a vector of Boolean flags, laid out as:
+An information set is encoded into a vector of Boolean flags, laid out linearly as follows:
 
 | Data | Size | Description |
 | :--- | ---: | :---------- |
-| Current player's hand | 52 | Multi-hot vector in the deck size |
+| Current player's hand | 52 | Multi-hot vector in the deck size, with no more than 13 hot values |
 | Exchange direction | 4 | One-hot vector in the number of exchange directions (Left, Right, Across, Hold) |
-| Outgoing pass | 52 | Multi-hot vector in the deck size |
-| Incoming pass | 52 | Multi-hot vector in the deck size |
-| Cards previously played by each player | 208 | A multi-hot vector in the deck size for each player, starting with the current player |
+| Outgoing pass | 52 | Multi-hot vector in the deck size, with no more than three hot values |
+| Incoming pass | 52 | Multi-hot vector in the deck size, with either exactly zero or exactly three hot values |
+| Cards previously played by each player | 208 | A multi-hot vector in the deck size for each of the four players, starting with the current player. Each vector will have no more than 13 hot values. |
 | Current trick | 156 | A multi-hot vector in the deck size for each card played so far in the current trick. The maximum number of cards already played in an active trick is three, so zero-hot placeholders are used to pad out shorter tricks. |
 | Known voids | 12 | A multi-hot vector in the number of suits times the number of other players |
-| Deal score | 4 | A multi-hot vector in the number of seats. This simply encodes whether each player has taken any points, but not how many points each player has taken. |
+| Deal score | 4 | A multi-hot vector in the number of seats. This simply encodes whether each player has taken any points, but not how many points each player has taken. This is crucial for determining which players can shoot the moon. |
 | *Sum* | *540* | |
 
-Note that some information is lost in this encoding, such as the order of cards played in previous tricks. In game theory terms, this means that we have "imperfect recall" of past actions. Technically, Deep CFR is not guaranteed to converge for such a representation, but this small degree of abstraction does not present a hindrance in practice.
+Note that some information is lost in this encoding, such as the order of cards played in previous tricks. In game theory terms, this means that we now have "imperfect recall" of past actions. Technically, Deep CFR is not guaranteed to converge for such a representation, but this small degree of abstraction does not present a hindrance to success in practice.
 
 #### Output encoding
 
@@ -149,6 +149,8 @@ To convert this output to a strategy, illegal actions are ignored, and the remai
 
 #### Structure
 
+The architecture of the neural network is relatively straightfoward, consisting of a fully-connected input layer, some number of repeated hidden layers, and a fully-connected output layer. Someone with more deep learning ability than me might be able to come up with a better design, but this one worked quite well in practice.
+
 ![Strategy Network](Model.svg)
 
 (Original diagram created by Gemini, with my edits.)
@@ -157,11 +159,11 @@ In practice, I found that a hidden size of 1080 (twice the input size) with four
 
 ## Implementation
 
-My background is in software development, but I'm not an expert on game theory or neural networks, so I had significant learning to do while implementing this project. There were many wrong turns and failed experiments that are not described here.
+My background is in software development, not game theory or machine learning, so I had significant learning to do while implementing this project. There were many wrong turns and failed experiments that are not described here.
 
 ### Programming language
 
-F# is my preferred programming language and I chose to use it for the implementation of this project. As a functional programming language, F# is well-suited for the generation of sample data, which is essentially a black box that takes the current strategy model as input and emits sample data generated by playing that model against itself. Training the next iteration of the strategy model from that sample data was a bit more of a reach in F#, but fortunately I found that [TorchSharp](https://github.com/dotnet/TorchSharp) to be an adequate .NET replacement for PyTorch. I was even able to write the Hearts web application's user interface in F# by compiling it to browser-friendly JavaScript using [Fable](https://fable.io/). This allowed the app client and server to share the same core Hearts library code and communicate seamlessly over the web.
+F# is my preferred programming language and I chose to use it for the implementation. As a functional programming language, F# is well-suited for the generation of sample data, which is essentially a black box that takes the current strategy model as input and emits sample data generated by playing that model against itself. Training the next iteration of the strategy model from that sample data was a bit more of a reach in F#, but fortunately I found [TorchSharp](https://github.com/dotnet/TorchSharp) to be an adequate .NET stand-in for PyTorch.[^6] I was even able to write the Hearts web application's user interface in F# by compiling it to browser-friendly JavaScript using [Fable](https://fable.io/). This allowed the app client and server to share the same core Hearts library code and communicate seamlessly over the web.
 
 ### Code organization
 
@@ -171,42 +173,44 @@ The major F# projects in this solution are organized as follows:
 
 * `PlayingCards.fsproj`: A library that provides general support for playing cards, but is not specific to Hearts. This is intended to be reusable for other card games.
 
-* `Hearts.fsproj`: A library that implements the basic rules of Hearts. It provides a `ClosedDeal` type that represents the public, shared information in a deal, and an `OpenDeal` type that adds in all private information, such as each player's hand. It also provides an `InformationSet` type that gathers information known to a player about a deal and a `Tournament` module for runing a 2v2 tournament between two players.
+* `Hearts.fsproj`: A library that implements the basic rules of Hearts. It provides a `ClosedDeal` type that represents the public, shared information in a deal, and an omniscient `OpenDeal` type that adds in all private information, such as each player's hand.[^7] It also provides an `InformationSet` type that gathers all information known to a player about a deal and a `Tournament` module for runing a 2v2 tournament between two players (with duplicate deals for fairness).
 
 #### Deep learning
 
 * `Hearts.Model.fsproj`: A library that defines the neural network and encoding.
 
-* `Hearts.Learn.fsproj`: A library that provides shared logic for both generating sample data and training new models. A sample consists of:
+* `Hearts.Learn.fsproj`: A library that provides shared Deep CFR support for both generating sample data and training new models. An `AdvantageSample` consists of:
   * An encoded information set.
-  * A vector of observed regrets for that information set.
+  * A 52-vector of observed regrets for that information set. (Illegal actions will have a zero value.)
   * Iteration number, which is used for weighting the sample. Later iterations are given a greater weight.
 
-  This library also defines a binary file format for storing large numbers of training samples. These "sample stores" have a `.bin` file extension.
+  This library also defines a binary file format for storing large numbers of advantage samples. These "sample stores" have a `.bin` file extension.
 
 * `Hearts.Generate.fsproj`: An executable for generating new samples from an existing model. This traverses many game trees in parallel, generating samples at a relatively small number of decision points within each game. (The game tree is far too large to generate a sample at each node.) Nodes closer to the root have a greater chance of being sampled (via a "decay function") because there are fewer of them.
 
   Multi-threaded batch inference in the traversal of these deals is crucial to performance and was probably the most technically difficult code to write in the entire project.
 
-* `Hearts.Train.fsproj`: An executable for training a new model from existing samples. The resulting model is stored in a PyTorch `.pt` file.
+  This executable can be run simultaneously across multiple machines (each with a copy of the same model) in order to generate samples more rapidly. The resulting sample stores can then be aggregated for training in the next step.
+
+* `Hearts.Train.fsproj`: An executable for training a new model from existing samples. After each epoch, the state of the model is saved in a PyTorch `.pt` file. For example, `AdvantageModel-i005-e023.pt` is the model from the 23<sup>rd</sup> epoch of the 5<sup>th</sup> iteration. Training cannot currently be distributed over multiple machines.
 
 The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` for multiple iterations.
 
 #### Web application
 
-* `Hearts.Web.Server`: A [Suave web part](https://suave.io/) that exposes an API for playing against a trained Hearts model.
-  * `GetActionIndex`: A function that maps a given information set to a single action.
+* `Hearts.Web.Server`: A [Suave web part](https://suave.io/) that exposes an API for playing against a trained Hearts model:
+  * `GetActionIndex`: A function that maps a given information set to a single action. This is used to implement the computer players.
   * `GetStrategy`: A function that maps a given information set to a strategy vector. This can be used to provide the user with a hint about what to play next.
 
-* `Hearts.Web.Harness`: A console program that hosts the Suave web part in a web server.
+* `Hearts.Web.Harness`: A console program that hosts the Suave web part in a simple web server for development, debugging, and testing.
 
-* `Hearts.Web.Client`: An F# Fable user interface for playing Hearts in a web browser.
+* `Hearts.Web.Client`: An F# Fable user interface for playing Hearts in a web browser.[^8]
 
 ## Results
 
 One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
 
-[![Results](Results.png)]
+![Results](Results.png)
 
 ## Authorship
 
@@ -218,6 +222,12 @@ Except where noted, all source code and documentation in this project was writte
 
 [^3]: In fact, it might be possible to use only training data from the most recent iteration, but I haven't proven this yet.
 
-[^4]: As of this writing, the Deep CFR technique produces a player that wins about 58.0% of games vs. 43.7% for *Killer Hearts* in a set of 10,000 two-against-two games. Since *Killer Hearts* plays at the level of an expert human, this result is the basis of my claim that the Deep CFR player is superhuman. (Plus, anecdotally, I've not been able to win a single game against it.)
+[^4]: As of this writing, the Deep CFR technique produces a player that wins about 58.0% of games vs. 43.7% for *Killer Hearts* in a set of 10,000 two-against-two games. Since *Killer Hearts* plays at the level of an expert human, this result is the basis of my claim that the Deep CFR player is superhuman. (Plus, anecdotally, I've not been able to win a single game against it myself.)
 
 [^5]: Non-determinism is important for games of deception, like RPS and Poker, but probably not crucial for Hearts. One might instead always choose the card with the highest value, although I have not investigated this possibility much. Note that, in Hearts, a group of cards might be logically equivalent in a given information set, so perhaps their total value should be used as the decision basis, rather than their individual values.
+
+[^6]: I really dislike Python, but PyTorch is king.
+
+[^7]: The `OpenDeal` type is necessary for managing an actual game of Hearts, but it would be cheating to use this type in the implementation of a Hearts player, so the API makes it impossible.
+
+[^8]: Disclaimer: I am not much of a front-end developer, but I tried my best. JQuery is hard.
