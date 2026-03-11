@@ -129,8 +129,12 @@ caption {
 #more {
     position: absolute;
     left: 73%;
-    top: 5%;
+    top: 10%;
 }
+
+    #more a {
+        font-size: smaller;
+    }
 
 .slider {
     -webkit-appearance: none;
