@@ -73,7 +73,7 @@ Several simplifications to Deep CFR are possible when applying it Hearts:
 There are 26 points in each Hearts deal: one point for each Heart card, and thirteen points for the Queen of Spades. To convert Hearts to a zero-sum game, we define a payoff function that subtracts each player's score from the average score of the other players. This ensures that the sum of all payoffs is always zero. For example:
 
 Seat | Points | Payoff
------| -----: | -----:
+:--- | -----: | -----:
 West | 2 | 6
 North | 5 | 2
 East | 0 | 8⅔
@@ -96,7 +96,7 @@ In contrast, this project currently ignores the game-level payoff entirely, and 
 
 ### Card exchange
 
-At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. Of course, players are not privy to incoming passed cards until they have finished choosing all three outgoing cards.
+At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. Of course, players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
 
 ### Information set
 
@@ -108,22 +108,35 @@ An information set contains all information known to a player about the game sta
 * Card exchange details:
   * The direction of the pass (Left, Right, Across, or Hold).
   * The set of cards passed by the current player so far, if any.
-  * The set of cards passed to the current player so far, if any.
-* The set of cards played so far (and which player played them), organized chronologically into tricks.
+  * The set of cards passed to the current player, if the exchange is over.
+* The set of cards played so far (and which players played them), organized chronologically into tricks.
 
 From an information set, one can deduce:
 
   * Whether Hearts have been broken.
   * Which players are known to be void in which suits.
-  * The number of points taken so far by each player in the deal (but not in the overall game).
+  * The number of points taken so far by each player in the deal.
   * The set of unplayed cards.
   * The set of legal actions available to the current player.
 
-### Neural network design
+### Neural network
 
-At the logical level, a strategy model is a neural network that takes an information set as input and produces the value of each possible action as output. Implementing this physically required major design choices.
+Logically, a strategy model is a neural network that takes an information set as input and produces the value of each possible action as output. Implementing this physically required major design choices.
 
 #### Input encoding
+
+An information set is encoded into a vector of Boolean flags as follows:
+
+| Data | Size | Description |
+| :--- | ---: | :---------- |
+| Current player's hand | 52 | Multi-hot vector in the deck size |
+| Exchange direction | 4 | One-hot vector in the number of exchange directions (Left, Right, Across, Hold) |
+| Outgoing pass | 52 | Multi-hot vector in the deck size |
+| Incoming pass | 52 | Multi-hot vector in the deck size |
+| Cards previously played by each player | 4 * 52 | A multi-hot vector in the deck size for each player, starting with the current player |
+| Current trick | 3 * 52 | A multi-hot vector in the deck size for each card played so far in the current trick. The maximum number of cards already played in an active trick is three, so zero-hot placeholders are used to pad out shorter tricks. |
+| Known voids | 3 * 4 | A multi-hot vector in the number of suits times the number of other players |
+| Deal score | 4 | A multi-hot vector in the number of seats. This simply encodes whether each player has taken any points, but not how many many points each player has taken. |
 
 #### Output encoding
 
