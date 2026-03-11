@@ -137,6 +137,7 @@ An information set is encoded into a vector of Boolean flags as follows:
 | Current trick | 156 | A multi-hot vector in the deck size for each card played so far in the current trick. The maximum number of cards already played in an active trick is three, so zero-hot placeholders are used to pad out shorter tricks. |
 | Known voids | 12 | A multi-hot vector in the number of suits times the number of other players |
 | Deal score | 4 | A multi-hot vector in the number of seats. This simply encodes whether each player has taken any points, but not how many points each player has taken. |
+| *Sum* | *540* | |
 
 Note that some information is lost in this encoding, such as the order of cards played in previous tricks. In game theory terms, this means that we have "imperfect recall" of past actions. Technically, Deep CFR is not guaranteed to converge for such a representation, but this small degree of abstraction does not present a hindrance in practice.
 
@@ -147,6 +148,11 @@ Outputs are encoded as a vector of 52 floating point numbers, representing the v
 To convert this output to a strategy, illegal actions are ignored, and the remaining values are normalized to sum to 1.0 ("regret matching"). An action can then be chosen by sampling this probability vector non-deterministically.[^4]
 
 #### Structure
+
+![Strategy Network](Model.svg)
+(Original diagram created by Gemini, with my edits.)
+
+In practice, I found that a hidden size of 1080 (twice the input size) with four hidden layers worked well. I was surprised that a model this small could master Hearts, but adding more layers or features proved fruitless.
 
 ## Implementation
 

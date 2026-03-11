@@ -1,0 +1,58 @@
+<svg width="800" height="500" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="500" fill="#f8f9fa" />
+  
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+    <filter id="shadow" x="0" y="0" width="200%" height="200%">
+      <feOffset result="offOut" in="SourceAlpha" dx="2" dy="2" />
+      <feGaussianBlur result="blurOut" in="offOut" stdDeviation="2" />
+      <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+    </filter>
+  </defs>
+
+  <text x="400" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#2c3e50">Strategy Network</text>
+
+  <rect x="50" y="100" width="150" height="60" rx="8" fill="#e9ecef" stroke="#adb5bd" stroke-width="2" filter="url(#shadow)"/>
+  <text x="125" y="130" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Information set</text>
+  <text x="125" y="150" font-family="Arial" font-size="12" text-anchor="middle">Vector: NInput</text>
+
+  <path d="M 125 160 L 125 210" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" />
+  <rect x="50" y="220" width="150" height="100" rx="8" fill="#d1ecf1" stroke="#0c5460" stroke-width="2" filter="url(#shadow)"/>
+  <text x="125" y="245" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Input Layer</text>
+  <text x="125" y="270" font-family="Arial" font-size="12" text-anchor="middle">Linear(NInput, NHidden)</text>
+  <text x="125" y="285" font-family="Arial" font-size="12" text-anchor="middle">ReLU + Dropout</text>
+
+  <path d="M 200 270 L 250 270" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" />
+  
+  <rect x="260" y="180" width="280" height="180" rx="15" fill="#fff" stroke="#6c757d" stroke-width="2" stroke-dasharray="5,5"/>
+  <text x="400" y="205" font-family="Arial" font-size="14" font-style="italic" text-anchor="middle">Repeated for NumHiddenLayers</text>
+
+  <rect x="300" y="220" width="200" height="100" rx="8" fill="#cfe2ff" stroke="#084298" stroke-width="2" filter="url(#shadow)"/>
+  <text x="400" y="245" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Residual Block</text>
+  <text x="400" y="270" font-family="Arial" font-size="12" text-anchor="middle">Linear(NHidden, NHidden)</text>
+  <text x="400" y="285" font-family="Arial" font-size="12" text-anchor="middle">ReLU + Dropout</text>
+
+  <path d="M 260 270 L 300 270" stroke="#333" stroke-width="2" />
+  <path d="M 280 270 L 280 340 L 520 340 L 520 280 L 500 270" fill="none" stroke="#007bff" stroke-width="2" stroke-dasharray="2,2"/>
+  <circle cx="520" cy="270" r="12" fill="#fff" stroke="#007bff" stroke-width="2" />
+  <text x="520" y="274" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#007bff">+</text>
+
+  <path d="M 540 270 L 590 270" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" />
+  <rect x="600" y="220" width="150" height="100" rx="8" fill="#d4edda" stroke="#155724" stroke-width="2" filter="url(#shadow)"/>
+  <text x="675" y="245" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Output Layer</text>
+  <text x="675" y="270" font-family="Arial" font-size="12" text-anchor="middle">Linear(NHidden, NOutput)</text>
+
+  <path d="M 675 320 L 675 370" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" />
+  <rect x="600" y="380" width="150" height="60" rx="8" fill="#fff3cd" stroke="#856404" stroke-width="2" filter="url(#shadow)"/>
+  <text x="675" y="410" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Advantages</text>
+  <text x="675" y="430" font-family="Arial" font-size="12" text-anchor="middle">Logits for 52 Cards</text>
+
+  <rect x="50" y="400" width="200" height="80" rx="5" fill="white" stroke="#ccc" />
+  <text x="60" y="420" font-family="Arial" font-size="12" font-weight="bold">Legend:</text>
+  <line x1="60" y1="435" x2="90" y2="435" stroke="#333" stroke-width="2" />
+  <text x="100" y="440" font-family="Arial" font-size="11">Sequential Flow</text>
+  <line x1="60" y1="455" x2="90" y2="455" stroke="#007bff" stroke-width="2" stroke-dasharray="2,2" />
+  <text x="100" y="460" font-family="Arial" font-size="11">Skip Connection</text>
+</svg>
