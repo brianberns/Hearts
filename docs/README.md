@@ -216,7 +216,7 @@ This graph was generated retrospectively by choosing the best player from Iterat
 
 ## Training details
 
-One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of approximately 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations. The entire process took several days, running mostly on my desktop computer (CPU: Intel i9-12900, GPU: NVIDIA GeForce RTX 3070), with minor assistance from an old laptop and a Vast.ai instance for sample generation.
+One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of approximately 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations. The entire process took several days, running mostly on my desktop computer (Intel i9-12900 CPU with a NVIDIA GeForce RTX 3070 GPU), with minor assistance from an old laptop and a Vast.ai instance for sample generation.
 
 * **Iteration 1**: I generated approximately 200,000,000 samples from a random player. Since no neural network inference was involved, this is much faster than sample generation in subsequent iterations. A model was then trained on all the samples. It's remarkable that a fairly strong Hearts player can be created just from a large amount of random play data.
 
