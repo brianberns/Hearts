@@ -200,13 +200,13 @@ The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` f
 
 ### Web application
 
-* `Hearts.Web.Server`: A [Suave web part](https://suave.io/) that exposes an API for playing against a trained Hearts model:
+* `Hearts.Web.Server.fsproj`: A [Suave web part](https://suave.io/) that exposes an API for playing against a trained Hearts model:
   * `GetActionIndex`: A function that maps a given information set to a single action. This is used to implement the computer players.
   * `GetStrategy`: A function that maps a given information set to a strategy vector. This can be used to provide the user with a hint about what to play next.
 
-* `Hearts.Web.Harness`: A console program that hosts the Suave web part in a simple web server for development, debugging, and testing.
+* `Hearts.Web.Harness.fsproj`: A console program that hosts the Suave web part in a simple web server for development, debugging, and testing.
 
-* `Hearts.Web.Client`: An F# Fable user interface for playing Hearts in a web browser.[^8]
+* `Hearts.Web.Client.fsproj`: An F# Fable user interface for playing Hearts in a web browser.[^8]
 
 # Results
 
