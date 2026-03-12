@@ -62,7 +62,7 @@ Although Hearts is neither a two-player nor a zero-sum game, this project serves
 
 ## Simplifying Deep CFR
 
-Several simplifications to Deep CFR are possible when applying it Hearts:
+Several simplifications to Deep CFR are possible when applying it to Hearts:
 
 1. Since Hearts strategy is the same for all players, there is no need to train a separate model for each player. Instead, all players can share the same model.
 2. Because misdirection and bluffing are not a major part of Hearts strategy, the "tail chasing" behavior of CFR described above is not a concern. Empirical results show that the strategy network converges directly on an approximate Nash equilibrium after fewer than ten iterations. There is no need to train a separate network on the average strategy.[^2]
