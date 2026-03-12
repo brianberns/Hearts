@@ -52,22 +52,29 @@ module PersistentState =
             DealOpt = None
         }
 
-    /// Local storage key.
-    let private key = "HeartsPersistentState"
+    /// Local storage keys.
+    let private key = "Hearts"
+    let private oldKey = "HeartsPersistentState"
 
     /// Saves the given state.
     let save (persState : PersistentState) =
         WebStorage.localStorage[key]
             <- Json.serialize persState
 
-    /// Save's initial state on client.
+    /// Saves initial state on client.
     let private createInitial () =
         save initial
         initial
 
     /// Answers the current state.
     let get () =
-        let json = WebStorage.localStorage[key] 
+        let json =
+            let json = WebStorage.localStorage[key]
+            if isNull json then
+                let json = WebStorage.localStorage[oldKey]   // backward compatibility
+                WebStorage.localStorage.removeItem(oldKey)
+                json
+            else json
         if isNull json then
             createInitial ()
         else
