@@ -98,7 +98,7 @@ In contrast, this project currently ignores the game-level payoff entirely, and 
 
 ## Card exchange
 
-At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. The actual order of these actions is not specified by the rules of Hearts and does not matter as long as players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
+At beginning of every non-Hold deal, each player must pass three cards to another player. I chose to model this exchange as twelve separate actions (four players × three cards each), each of which represents passing a single card. This made it easier to unify card passing and card playing in a single neural network, since the output of the network is always a single card. The actual order of these card passes is not specified by the rules of Hearts and does not matter as long as players are not privy to any incoming passed cards until they have finished choosing all three outgoing cards.
 
 ## Information set
 
