@@ -214,15 +214,15 @@ The basic process is to alternate running `Hearts.Generate` and `Hearts.Train` f
 
 This graph was generated retrospectively by choosing the best player from Iteration 5 (`AdvantageModel-i005-e027.pt`) and running each of the checkpoint models against it.
 
-## Iteration details
+## Training details
 
-One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of approximately 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations.
+One of the few constants I encountered in training a Hearts model is that more sample data produces better results. For each iteration, I aimed to traverse about 100,000 deals, producing about 1,000 samples per deal, for a total of approximately 100,000,000 samples per iteration. This is a large amount of data, amounting to about 100 GB of packed binary files over five iterations. The entire process took several days, running mostly on my desktop computer (CPU: Intel i9-12900, GPU: NVIDIA GeForce RTX 3070), with minor assistance from an old laptop and a Vast.ai instance for sample generation.
 
 * **Iteration 1**: I generated approximately 200,000,000 samples from a random player. Since no neural network inference was involved, this is much faster than sample generation in subsequent iterations. A model was then trained on all the samples. It's remarkable that a fairly strong Hearts player can be created just from a large amount of random play data.
 
 * **Iteration 2**: I generated approximately 100,000,000 more samples from the best Iteration 1 model and trained a new model from those samples plus ~100,000,000 of the Iteration 1 samples.
 
-* **Iteration 3**: I generated ~80,000,000 samples from the best Iteration 2 model and trained a new model from those new samples plus ~80,000,000 of the Iteration 1 samples. No samples from Iteration 2 were used. My thinking here was that using Iteration 1 samples would be better at keeping training "on track", but I'm no longer confident that this is true.
+* **Iteration 3**: I generated ~80,000,000 samples from the best Iteration 2 model and trained a new model from those new samples plus ~80,000,000 of the Iteration 1 samples. No samples from Iteration 2 were used. My thinking at the time was that using Iteration 1 samples would be better at keeping training "on track", but I'm no longer confident that this is true.
 
 * **Iteration 4**: I generated ~90,000,000 samples from the best Iteration 3 model and again trained a new model from those plus ~80,000,000 of the Iteration 1 samples. The graph above implies that the resulting model was a no better than the previous iteration's result, but I was not aware of this at the time.
 
