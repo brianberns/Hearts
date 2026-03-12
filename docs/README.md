@@ -161,7 +161,7 @@ In practice, I found that a hidden size of 1080 (twice the input size) with four
 
 # Implementation
 
-My background is in software development, not game theory or machine learning, so I had significant learning to do while implementing this project. There were many wrong turns and failed experiments that are not described here.
+My background is in software development, not game theory or machine learning, so I had a significant amount to learn while working on this project. There were many wrong turns and failed experiments that are not described here.
 
 ## Programming language
 
