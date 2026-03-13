@@ -174,7 +174,7 @@ module ClosedHandView =
 module OpenHandView =
 
     /// Sort key for the given card.
-    let sortKey card =
+    let sortKey (card : Card) =
         let suitKey =
             match card.Suit with
                 | Suit.Spades   -> 1   // black

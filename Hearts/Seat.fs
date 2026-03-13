@@ -19,16 +19,6 @@ module Seat =
     let toChar (seat : Seat) =
         "WNES"[int seat]
 
-#if FABLE_COMPILER
-    /// Display name.
-    let toString = function
-        | Seat.West -> "West"
-        | Seat.North -> "North"
-        | Seat.East -> "East"
-        | Seat.South -> "South"
-        | _ -> failwith "Unexpected seat"
-#endif
-
     /// Converts the given character to a seat.
     let fromChar = function
         | 'W' -> Seat.West

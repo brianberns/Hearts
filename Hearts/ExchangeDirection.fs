@@ -15,16 +15,6 @@ module ExchangeDirection =
     let numDirections =
         Enum.getValues<ExchangeDirection>.Length
 
-#if FABLE_COMPILER
-    /// Display name.
-    let toString = function
-        | ExchangeDirection.Left -> "Left"
-        | ExchangeDirection.Right -> "Right"
-        | ExchangeDirection.Across -> "Across"
-        | ExchangeDirection.Hold -> "Hold"
-        | _ -> failwith "Unexpected exchange direction"
-#endif
-
     /// Applies the given exchange direction to the given seat.
     let apply seat dir =
         let n =

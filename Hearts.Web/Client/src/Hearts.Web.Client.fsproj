@@ -9,13 +9,13 @@
     <DefineConstants>TRACE;FABLE_COMPILER</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\PlayingCards\PlayingCards\Prelude.fs" Link="CardPrelude.fs" />
+    <Compile Include="..\..\..\PlayingCards\PlayingCards\Prelude.fs" Link="CardsPrelude.fs" />
     <Compile Include="..\..\..\PlayingCards\PlayingCards\Rank.fs" />
     <Compile Include="..\..\..\PlayingCards\PlayingCards\Suit.fs" />
     <Compile Include="..\..\..\PlayingCards\PlayingCards\Card.fs" />
     <Compile Include="Deck.fs" />
     <Compile Include="..\..\..\PlayingCards\PlayingCards\Hand.fs" />
-    <Compile Include="..\..\..\Hearts\Prelude.fs" />
+    <Compile Include="..\..\..\Hearts\Prelude.fs" Link="HeartsPrelude.fs" />
     <Compile Include="..\..\..\Hearts\Seat.fs" />
     <Compile Include="..\..\..\Hearts\Trick.fs" />
     <Compile Include="..\..\..\Hearts\Score.fs" />

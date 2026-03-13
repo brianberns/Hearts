@@ -6,6 +6,26 @@ open Fable.Core
 open PlayingCards
 open Hearts
 
+module Seat =
+
+    /// Display name.
+    let toString = function
+        | Seat.West -> "West"
+        | Seat.North -> "North"
+        | Seat.East -> "East"
+        | Seat.South -> "South"
+        | _ -> failwith "Unexpected seat"
+
+module ExchangeDirection =
+
+    /// Display name.
+    let toString = function
+        | ExchangeDirection.Left -> "Left"
+        | ExchangeDirection.Right -> "Right"
+        | ExchangeDirection.Across -> "Across"
+        | ExchangeDirection.Hold -> "Hold"
+        | _ -> failwith "Unexpected exchange direction"
+
 /// Widget that prompts the user to choose a legal pass.
 module PassChooser =
 
