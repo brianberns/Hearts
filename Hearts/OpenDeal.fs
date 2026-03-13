@@ -286,11 +286,11 @@ module OpenDeal =
                         |> Map.toSeq
                         |> Seq.where (fst >> (<>) player)
                         |> Seq.collect snd
-                        |> Seq.groupBy Card.suit
+                        |> Seq.groupBy _.Suit
                         |> Seq.map (fun (suit, cards) ->
                             let ranks =
                                 cards
-                                    |> Seq.map Card.rank
+                                    |> Seq.map _.Rank
                                     |> Seq.toArray
                             suit, ranks)
                         |> Map

@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Prelude.fs" />
     <Compile Include="Seat.fs" />
     <Compile Include="Trick.fs" />
     <Compile Include="Score.fs" />
@@ -20,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PlayingCards\PlayingCards.fsproj" />
+    <ProjectReference Include="..\PlayingCards\PlayingCards\PlayingCards.fsproj" />
   </ItemGroup>
 
 </Project>

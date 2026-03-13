@@ -2,6 +2,19 @@
 
 open System
 
+module Array =
+
+    /// Clones the given array.
+    let clone (items : 'item[]) =
+#if FABLE_COMPILER
+        items
+            |> Seq.readonly   // force a copy
+            |> Seq.toArray
+#else
+        items.Clone()
+            :?> 'item[]
+#endif
+
 /// Restartable random number generator.
 /// https://en.wikipedia.org/wiki/Linear_congruential_generator
 type Random(seed) =

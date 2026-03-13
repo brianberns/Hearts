@@ -19,5 +19,5 @@
   <Project Path="Hearts.Web/Harness/Hearts.Web.Harness.fsproj" />
   <Project Path="Hearts.Web/Server/Hearts.Web.Server.fsproj" />
   <Project Path="Hearts/Hearts.fsproj" />
-  <Project Path="PlayingCards/PlayingCards.fsproj" />
+  <Project Path="PlayingCards/PlayingCards/PlayingCards.fsproj" />
 </Solution>
