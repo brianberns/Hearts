@@ -7,8 +7,8 @@ open Hearts
 /// Model Hearts as a zero-sum game.
 module ZeroSum =
 
-    /// Gets the payoff for the given raw score from each
-    /// player's point of view.
+    /// Gets the payoff for the given raw score from each player's
+    /// point of view.
     let getPayoff score =
         let points = score.Points
         assert(points.Length = Seat.numSeats)
@@ -21,8 +21,7 @@ module ZeroSum =
                 otherAvg - float32 pt
         |]
 
-    /// Computes the payoff for the given deal, if it is
-    /// inevitable.
+    /// Computes the payoff for the given deal, if it is inevitable.
     let tryGetPayoff deal =
         Game.tryUpdateScore deal Score.zero
             |> Option.map getPayoff
