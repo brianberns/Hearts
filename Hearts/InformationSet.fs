@@ -3,13 +3,13 @@
 open PlayingCards
 open Hearts
 
-/// An action is either a pass (during the exchange) or
-/// a play (after the exchange).
+/// An action is either a pass (during the exchange) or a play
+/// (after the exchange).
 [<RequireQualifiedAccess>]
 type ActionType = Pass | Play
 
-/// All information known to a player about a deal,
-/// including information known only to that player.
+/// All information known to a player about a deal, including
+/// information known only to that player.
 type InformationSet =
     {
         /// Player.
