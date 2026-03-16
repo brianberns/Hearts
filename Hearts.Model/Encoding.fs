@@ -26,8 +26,8 @@ type Encoding = bool[]
 
 module Encoding =
 
-    /// Encodes the given (card, value) pairs as a
-    /// vector in the deck size.
+    /// Encodes the given (card, value) pairs as a vector
+    /// in the deck size.
     let inline encodeCardValues pairs =
         let valueMap =
             pairs
