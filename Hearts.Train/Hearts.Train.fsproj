@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Hearts.Heuristic\Hearts.Heuristic.fsproj" />
     <ProjectReference Include="..\Hearts.Learn\Hearts.Learn.fsproj" />
   </ItemGroup>
 

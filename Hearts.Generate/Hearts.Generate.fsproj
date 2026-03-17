@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Hearts.Learn\Hearts.Learn.fsproj" />
+    <ProjectReference Include="..\Hearts.Model\Hearts.Model.fsproj" />
   </ItemGroup>
 
 </Project>

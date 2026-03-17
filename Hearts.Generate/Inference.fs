@@ -1,6 +1,5 @@
 ﻿namespace Hearts.Generate
 
-open Hearts.Heuristic
 open Hearts.Model
 
 module Array =
@@ -29,14 +28,11 @@ module Inference =
                     |> Array.collect (
                         Strategy.getFromAdvantage model)
 
-                // no model yet, heuristic strategies
+                // no model yet, random strategies
             | None ->
                 infoSets
                     |> Array.map (fun infoSet ->
-                        let card = Claude.player.Act infoSet
-                        let idx =
-                            Array.findIndex ((=) card) infoSet.LegalActions
-                        Strategy.createOneHot idx infoSet.LegalActions.Length)
+                        Strategy.random infoSet.LegalActions.Length)
 
     /// Replaces items in the given arrays.
     let private replace chooser fromItems (toItems : _[]) =
