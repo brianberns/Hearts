@@ -66,9 +66,8 @@ module Playout =
 
                 // if this card completes the trick, determine winner
             assert(Trick.highPlayerOpt trick' |> Option.isSome)
-            let! highPlayer = Trick.highPlayerOpt trick'
             if Trick.isComplete trick' then
-                return highPlayer
+                return! Trick.highPlayerOpt trick'
         }
 
     /// Plays the given card in the given deal and then continues
