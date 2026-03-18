@@ -109,10 +109,10 @@ module Playout =
     /// Allows user to play a card.
     let private playUser (handView : HandView) context =
 
-            // determine all legal actions
+            // determine all legal plays
         let infoSet = OpenDeal.currentInfoSet context.Deal
-        let legalActions = infoSet.LegalActions
-        assert(legalActions.Length > 0)
+        let legalPlays = set infoSet.LegalActions
+        assert(not legalPlays.IsEmpty)
 
             // enable user to select one of the corresponding card views
         Promise.create(fun resolve _reject ->
@@ -122,10 +122,9 @@ module Playout =
             logHint infoSet context.Deal
 
                 // handle card clicks
-            let legalPlaySet = set legalActions
             for cardView in handView do
                 let card = cardView |> CardView.card
-                if legalPlaySet.Contains(card) then
+                if legalPlays.Contains(card) then
                     cardView.addClass("active")
                     cardView.click(fun () ->
 
