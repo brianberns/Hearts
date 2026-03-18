@@ -8,7 +8,7 @@ module Session =
     /// Runs a new session.
     let run surface persState =
 
-        /// Plays a pair of duplicate games.
+        /// Plays a game.
         let rec loop persState =
             async {
                 if persState.DealOpt.IsSome then
