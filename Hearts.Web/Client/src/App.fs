@@ -8,7 +8,7 @@ module Session =
     /// Runs a new session.
     let run surface persState =
 
-        /// Plays a game.
+        /// Plays deals forever.
         let rec loop persState =
             async {
                 if persState.DealOpt.IsSome then
@@ -18,7 +18,7 @@ module Session =
 
                 let! persState = Deal.run surface persState
                 do! loop persState
-        }
+            }
 
         async {
             try
