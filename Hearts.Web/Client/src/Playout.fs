@@ -78,7 +78,7 @@ module Playout =
 
                 // write to log
             let seat =
-                context.Deal.ClosedDeal |> ClosedDeal.currentPlayer
+                context.Deal |> OpenDeal.currentPlayer
             console.log($"{Seat.toString seat} plays {card}")
 
                 // play the card
