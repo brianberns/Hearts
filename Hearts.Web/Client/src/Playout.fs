@@ -55,14 +55,14 @@ module Playout =
 
             | _ -> ()
 
-    /// Plays the given card on the current trick, and returns the
+    /// Plays the given card on the current trick to determine the
     /// seat of the resulting trick winner, if any.
     let private getTrickWinnerOpt context card =
         option {
                 // play card on current trick
             assert(context.Deal.ClosedDeal.CurrentTrickOpt.IsSome)
             let! trick = context.Deal.ClosedDeal.CurrentTrickOpt
-            let trick' = Trick.addPlay card trick
+            let trick' = Trick.addPlay card trick   // deal is not affected
 
                 // if this card completes the trick, determine winner
             assert(Trick.highPlayerOpt trick' |> Option.isSome)
@@ -82,16 +82,13 @@ module Playout =
                 context.Deal.ClosedDeal |> ClosedDeal.currentPlayer
             console.log($"{Seat.toString seat} plays {card}")
 
-                // add the card to the deal
-            let deal = OpenDeal.addPlay card context.Deal
-
                 // play the card
+            let deal = OpenDeal.addPlay card context.Deal
             do! context.AnimCardPlay cardView
                 |> Animation.run
             DealView.displayStatus deal
 
                 // trick is complete?
-            let dealComplete = ClosedDeal.isComplete deal.ClosedDeal
             match getTrickWinnerOpt context card with
                 | Some winner ->
 
@@ -99,6 +96,7 @@ module Playout =
                     let animate () =
                         context.AnimTrickFinish winner
                             |> Animation.run
+                    let dealComplete = ClosedDeal.isComplete deal.ClosedDeal
                     if winner.IsUser && not dealComplete then
                         animate () |> ignore   // don't force user to wait for animation to finish
                     else
