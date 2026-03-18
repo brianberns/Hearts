@@ -1,6 +1,5 @@
 ﻿namespace Hearts.Web
 
-open PlayingCards
 open Hearts
 
 type IHeartsApi =
