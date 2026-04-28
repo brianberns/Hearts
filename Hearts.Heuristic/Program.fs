@@ -1,6 +1,5 @@
 namespace Hearts.Heuristic
 
-open System
 open Hearts
 
 module Program =
