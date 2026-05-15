@@ -274,11 +274,9 @@ module Deal =
                     else
                             // increment games won
                         let persState = incrGamesWon winners persState
-                        persState.Save()
-
-                            // display game result
                         do! gameOver surface winners persState.GamesWon
                             |> Async.AwaitPromise
+                        persState.Save()
 
                         return persState
 
