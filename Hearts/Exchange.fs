@@ -82,12 +82,15 @@ module Exchange =
         }
 
     /// Gets passes from and to the given player in the
-    /// given exchange, if any.
+    /// given exchange, if any. Incoming cards are known only
+    /// after the exchange is complete.
     let getPassOpts player dir exchange =
         let outOpt =
             exchange.PassMap |> Map.tryFind player
         let inOpt =
-            let sender =
-                ExchangeDirection.unapply player dir
-            exchange.PassMap |> Map.tryFind sender
+            if isComplete exchange then
+                let sender =
+                    ExchangeDirection.unapply player dir
+                exchange.PassMap |> Map.tryFind sender
+            else None
         outOpt, inOpt
