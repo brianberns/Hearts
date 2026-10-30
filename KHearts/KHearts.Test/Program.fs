@@ -7,6 +7,8 @@
 ///                     with the port's (see HostClient.fs)
 ///    replay <transcript> [deal]
 ///                     checks a Client session's transcript again, printing one deal in full
+///    reference <deals> <file>
+///                     records one-seat decisions on an exact table, for checking another port (see referenceDeal)
 ///    features <transcript> <csv>
 ///                     records the port's state at each of the Host's sluffs, for finding patterns in mismatches
 module KHearts.Test.Program
@@ -68,6 +70,50 @@ let agreeOnDeal (deal : OpenDeal) =
     loop deal []
     agree, differ, claims, passDiffer
 
+/// Plays one deal on an exact table, as agreeOnDeal does but with a random game score, and records each
+/// decision with the one-seat player's answer, for checking another port of the one-seat player:
+///
+///    D <dealer> <direction> <4 scores> <13 cards dealt to each seat, west first>
+///    P <seat> <card the table passes> <one-seat player's card>
+///    X <seat> <card the table plays> <one-seat player's card> <number of legal cards>
+///
+/// Cards and seats are Killer Hearts': see Table.cs.
+let referenceDeal (rng : Random) (writer : IO.TextWriter) (deal : OpenDeal) =
+    let table = KhEngine()
+    let dealer = int deal.ClosedDeal.Dealer
+    let dir = int deal.ClosedDeal.ExchangeDirection
+    let gameScore =
+        if rng.Next(4) = 0 then Array.zeroCreate 4
+        else Array.init 4 (fun _ -> rng.Next(100))
+    let hands =
+        [| for seat in Enum.getValues<Seat> ->
+            deal.UnplayedCardMap[seat] |> Seq.map KillerHearts.ToKh |> Seq.toArray |]
+    table.StartDeal(dealer, dir, gameScore, hands, gameScore |> Array.forall ((=) 0))
+    let numbers (xs : seq<int>) = String.Join(" ", xs)
+    writer.WriteLine($"D {dealer} {dir} {numbers gameScore} {numbers (Seq.concat hands)}")
+    let rec loop (deal : OpenDeal) (passQueue : Card list) =
+        if not (ClosedDeal.isComplete deal.ClosedDeal) then
+            let infoSet = OpenDeal.currentInfoSet deal
+            let seat = int infoSet.Player
+            let answer = KillerHearts.Act(infoSet, gameScore) |> KillerHearts.ToKh
+            match infoSet.LegalActionType with
+                | ActionType.Pass ->
+                    let queue =
+                        if passQueue.IsEmpty then
+                            let pass = table.ComputePass()
+                            table.ApplyPass(pass, true)
+                            pass |> Seq.map KillerHearts.FromKh |> Seq.toList
+                        else passQueue
+                    let card = queue.Head
+                    writer.WriteLine($"P {seat} {KillerHearts.ToKh card} {answer}")
+                    loop (OpenDeal.addPass card deal) queue.Tail
+                | ActionType.Play ->
+                    let card = table.ComputePlay()
+                    writer.WriteLine($"X {seat} {card} {answer} {infoSet.LegalActions.Length}")
+                    table.ApplyPlay(card)
+                    loop (OpenDeal.addPlay (KillerHearts.FromKh card) deal) passQueue
+    loop deal []
+
 [<EntryPoint>]
 let main argv =
     match argv with
@@ -104,6 +150,12 @@ let main argv =
             printfn "%s" (tally.Report())
             for n in tally.Notes do printfn "  %s" n
             0
+        | [| "reference"; deals; path |] ->
+            use writer = new IO.StreamWriter(path: string)
+            let rng = Random(1)
+            for deal in OpenDeal.generate (Random(2)) |> Seq.take (int deals) do
+                referenceDeal rng writer deal
+            0
         | [| "features"; transcriptPath; csvPath |] ->
             use csv = new IO.StreamWriter(csvPath)
             csv.WriteLine("agree,host_suit,port_suit," + KhEngine.FeatureHeader)
@@ -118,5 +170,5 @@ let main argv =
             for n in tally.Notes do printfn "  %s" n
             0
         | _ ->
-            eprintfn "usage: KHearts.Test smoke <deals> | agree <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | features <transcript> <csv>"
+            eprintfn "usage: KHearts.Test smoke <deals> | agree <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | reference <deals> <file> | features <transcript> <csv>"
             1
