@@ -395,6 +395,7 @@ public partial class KhEngine
         Claimed = false;
         if (points_played == 26)
             return HighestLegalCard();                  // the original ends the hand once all points are played
+        all_winners = false;
         this_is_best_player = play_skill[player] == best_player;
         show_thinking = false;
         determine_card_to_play_automatically();         // sets khrank_to_play, khsuit_to_play, can_lead_H

@@ -154,6 +154,8 @@ partial class KhEngine
 
     void bb_cla(string s) { }
 
+    void notice_board_cla(string msg, string r, string s) { }
+
     void display_center_message(string msg, int color) { }
 
     void capture_snapshot(string message) { }

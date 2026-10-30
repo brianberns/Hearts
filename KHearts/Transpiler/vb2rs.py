@@ -33,7 +33,7 @@ RS_TYPES = {'int': 'i32', 'bool': 'bool', 'float': 'f32', 'double': 'f64', 'stri
 DEFAULTS = {'int': '0', 'bool': 'false', 'float': '0.0f32', 'double': '0.0f64', 'string': 'String::new()'}
 
 # The user interface: calls are dropped (see above)
-UI_PROCS = {'bb_add', 'bb_cla', 'display_center_message', 'capture_snapshot', 'print_instantaneous_data',
+UI_PROCS = {'bb_add', 'bb_cla', 'notice_board_cla', 'display_center_message', 'capture_snapshot', 'print_instantaneous_data',
             'playsoundx', 'turn_off_sound'}
 
 ALLOWS = ('non_snake_case, non_upper_case_globals, non_camel_case_types, unused_variables, unused_mut, '
@@ -42,8 +42,12 @@ ALLOWS = ('non_snake_case, non_upper_case_globals, non_camel_case_types, unused_
 
 
 # The arena's rules (std-1) differ from Killer Hearts': the Q♠ doesn't break hearts, so can_lead_H can be
-# false after QS_played. These lines lead a heart whenever the Q♠ has been played, assuming hearts are then
-# broken; the guard keeps them to Killer Hearts' play under its own rules, where QS_played implies can_lead_H.
+# false after QS_played. The first two lines lead a heart whenever the Q♠ has been played, assuming hearts are
+# then broken; the guard keeps them to Killer Hearts' play under its own rules, where QS_played implies
+# can_lead_H. The third is where a leader claims the remaining tricks after the Q♠ with the top hearts, but has
+# no suit it may lead to start: Killer Hearts halts, as under its own rules the leader always has one (hearts,
+# once the Q♠ is played). For the arena, the leader claims anyway, as through V7.03, and plays on with its
+# highest legal card (see table.rs). Not claiming instead leads to other lines that lead a heart.
 ARENA_PATCHES = [
     ('Playing.bas',
      'If est_tr(hearts) > 0 And LU(hearts) >= mini(est_tr(hearts), 2) Then',
@@ -52,6 +56,9 @@ ARENA_PATCHES = [
      'ElseIf pts_sit = player And HU(hearts) < 2 And suit_len_H > HU(hearts) And mode <> Equivocate Then',
      'ElseIf pts_sit = player And HU(hearts) < 2 And suit_len_H > HU(hearts) And mode <> Equivocate And can_lead_H '
      "Then 'patched: see ARENA_PATCHES"),
+    ('Playing.bas',
+     'If suit_with_HU = illegal_value Then Call diagnose_and_halt("No suit with HU")',
+     "'If suit_with_HU = illegal_value Then Call diagnose_and_halt(\"No suit with HU\") patched: see ARENA_PATCHES"),
 ]
 
 

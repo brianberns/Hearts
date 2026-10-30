@@ -15,6 +15,7 @@ partial class KhEngine
     const int ini_file_number = 3;
     const int Client_log_file = 4;
     const int Host_Client_filenumber = 5;
+    const int access_file = 6;
     int AKS_played = 0;  // count of AKS played in the hand; = 0, 1, or 2
     bool background_Click = false;
     bool basic_Hearts = false;  // true: user right-clicks on Play button
@@ -184,6 +185,7 @@ partial class KhEngine
     // None
     // None
     // None
+    // None
     void update_private_info_with_pass_information()
     {
         // This routine is from player's point of view.  She records information about the pass she sends to receiving
@@ -197,8 +199,8 @@ partial class KhEngine
             
             // absolute info about player's pass to receiving_player and pass rec'd from passing_player
             {  // handle incoming and outgoing passes
-                int __t186 = 3;
-                for (update_private_info_with_pass_information_i = 1; update_private_info_with_pass_information_i <= __t186; update_private_info_with_pass_information_i++)
+                int __t188 = 3;
+                for (update_private_info_with_pass_information_i = 1; update_private_info_with_pass_information_i <= __t188; update_private_info_with_pass_information_i++)
                 {
                     // passing player no longer has card passed
                     private_info[player, p_p[player], recd_p_rank[player, update_private_info_with_pass_information_i], recd_p_suit[player, update_private_info_with_pass_information_i]] = 559;
@@ -213,8 +215,8 @@ partial class KhEngine
             {
                 update_private_info_with_pass_information_passed_3_of_suit = illegal_value;
                 {
-                    int __t187 = diamonds;
-                    for (update_private_info_with_pass_information_i = spades; update_private_info_with_pass_information_i <= __t187; update_private_info_with_pass_information_i++)
+                    int __t189 = diamonds;
+                    for (update_private_info_with_pass_information_i = spades; update_private_info_with_pass_information_i <= __t189; update_private_info_with_pass_information_i++)
                     {
                         if ((update_private_info_with_pass_information_suit_size[update_private_info_with_pass_information_i] == 3))
                         {
@@ -233,8 +235,8 @@ partial class KhEngine
                 if (((score[p_p[player]] - score_between_hands[low]) <= 10))
                 {
                     {
-                        int __t188 = 3;
-                        for (update_private_info_with_pass_information_i = 1; update_private_info_with_pass_information_i <= __t188; update_private_info_with_pass_information_i++)
+                        int __t190 = 3;
+                        for (update_private_info_with_pass_information_i = 1; update_private_info_with_pass_information_i <= __t190; update_private_info_with_pass_information_i++)
                         {
                             update_private_info_with_pass_information_r = recd_p_rank[player, update_private_info_with_pass_information_i];
                             update_private_info_with_pass_information_s = recd_p_suit[player, update_private_info_with_pass_information_i];  // rank <= 5 (except in spades): passing player is now void in suit
@@ -351,8 +353,8 @@ partial class KhEngine
         if ((count_played[khsuit_to_play] == 13))  // everyone is void in suit khsuit_to_play
         {
             {
-                int __t189 = player_south;
-                for (update_void_records_and_other_parameters_i = player_west; update_void_records_and_other_parameters_i <= __t189; update_void_records_and_other_parameters_i++)
+                int __t191 = player_south;
+                for (update_void_records_and_other_parameters_i = player_west; update_void_records_and_other_parameters_i <= __t191; update_void_records_and_other_parameters_i++)
                 {
                     @void[update_void_records_and_other_parameters_i, khsuit_to_play] = true;
                 }
@@ -364,8 +366,8 @@ partial class KhEngine
             if (((khsuit_to_play == hearts) & (points_played == 0)))
             {
                 {
-                    int __t190 = diamonds;
-                    for (update_void_records_and_other_parameters_i = spades; update_void_records_and_other_parameters_i <= __t190; update_void_records_and_other_parameters_i++)
+                    int __t192 = diamonds;
+                    for (update_void_records_and_other_parameters_i = spades; update_void_records_and_other_parameters_i <= __t192; update_void_records_and_other_parameters_i++)
                     {
                         if ((update_void_records_and_other_parameters_i == hearts))
                         {
@@ -413,8 +415,8 @@ partial class KhEngine
                     diagnose_and_halt("Sluffer does not hold only point cards");
                 }
                 {  // player sluffed QS or H
-                    int __t191 = diamonds;
-                    for (update_void_records_and_other_parameters_i = spades; update_void_records_and_other_parameters_i <= __t191; update_void_records_and_other_parameters_i++)
+                    int __t193 = diamonds;
+                    for (update_void_records_and_other_parameters_i = spades; update_void_records_and_other_parameters_i <= __t193; update_void_records_and_other_parameters_i++)
                     {
                         if (((update_void_records_and_other_parameters_i == hearts) | (update_void_records_and_other_parameters_i == suit_led)))  // player is void in all but H
                         {
@@ -430,8 +432,8 @@ partial class KhEngine
                 if ((points_in_trick == 1))
                 {
                     {
-                        int __t192 = player_south;
-                        for (update_void_records_and_other_parameters_i = player_west; update_void_records_and_other_parameters_i <= __t192; update_void_records_and_other_parameters_i++)
+                        int __t194 = player_south;
+                        for (update_void_records_and_other_parameters_i = player_west; update_void_records_and_other_parameters_i <= __t194; update_void_records_and_other_parameters_i++)
                         {
                             if ((update_void_records_and_other_parameters_i != player))
                             {
@@ -445,8 +447,8 @@ partial class KhEngine
             else if (((points_in_trick == 14) & (khsuit_to_play == hearts)))
             {
                 {  // earlier player sluffed QS
-                    int __t193 = player_south;
-                    for (update_void_records_and_other_parameters_i = player_west; update_void_records_and_other_parameters_i <= __t193; update_void_records_and_other_parameters_i++)
+                    int __t195 = player_south;
+                    for (update_void_records_and_other_parameters_i = player_west; update_void_records_and_other_parameters_i <= __t195; update_void_records_and_other_parameters_i++)
                     {
                         if ((update_void_records_and_other_parameters_i != player_played_QS))
                         {
@@ -822,8 +824,8 @@ partial class KhEngine
         compute_public_parameters_j = 0;  // counts void followers
         compute_public_parameters_p = get_next_player(player);
         {
-            int __t194 = 3;
-            for (compute_public_parameters_i = (seq + 1); compute_public_parameters_i <= __t194; compute_public_parameters_i++)
+            int __t196 = 3;
+            for (compute_public_parameters_i = (seq + 1); compute_public_parameters_i <= __t196; compute_public_parameters_i++)
             {
                 if (pub_player_void(compute_public_parameters_p, suit_led))
                 {
@@ -842,8 +844,8 @@ partial class KhEngine
         {
             compute_public_parameters_j = 0;  // count of inferred or known owners
             {
-                int __t195 = player_south;
-                for (compute_public_parameters_p = player_west; compute_public_parameters_p <= __t195; compute_public_parameters_p++)
+                int __t197 = player_south;
+                for (compute_public_parameters_p = player_west; compute_public_parameters_p <= __t197; compute_public_parameters_p++)
                 {
                     if (((public_info[compute_public_parameters_p, queen, spades] >= 1024) | (public_info[compute_public_parameters_p, queen, spades] == 0)))
                     {
@@ -879,8 +881,8 @@ partial class KhEngine
         {
             compute_public_parameters_p = get_next_player(player);
             {
-                int __t196 = 3;
-                for (compute_public_parameters_i = (seq + 1); compute_public_parameters_i <= __t196; compute_public_parameters_i++)
+                int __t198 = 3;
+                for (compute_public_parameters_i = (seq + 1); compute_public_parameters_i <= __t198; compute_public_parameters_i++)
                 {
                     if (((public_info[compute_public_parameters_p, queen, spades] >= 1024) | (public_info[compute_public_parameters_p, queen, spades] == 0)))
                     {
@@ -897,8 +899,8 @@ partial class KhEngine
         
         // set pub_tgt(player, p1): true if observer knows that p1 is player's target
         {
-            int __t197 = player_south;
-            for (compute_public_parameters_p = player_west; compute_public_parameters_p <= __t197; compute_public_parameters_p++)
+            int __t199 = player_south;
+            for (compute_public_parameters_p = player_west; compute_public_parameters_p <= __t199; compute_public_parameters_p++)
             {
                 pub_tgt[player, compute_public_parameters_p] = false;
                 compute_public_parameters_i = low_score;
@@ -977,8 +979,8 @@ partial class KhEngine
         else
         {
             {
-                int __t198 = ace;
-                for (pub_player_void_r = 2; pub_player_void_r <= __t198; pub_player_void_r++)
+                int __t200 = ace;
+                for (pub_player_void_r = 2; pub_player_void_r <= __t200; pub_player_void_r++)
                 {
                     if (((public_info[p, pub_player_void_r, s] >= 1024) | (public_info[p, pub_player_void_r, s] == 0)))
                     {
@@ -998,8 +1000,8 @@ partial class KhEngine
         if (((code >= 512) & (code <= 767)))  // cards are not present
         {
             {
-                int __t199 = hi;
-                for (Form_update_private_info_i = lo; Form_update_private_info_i <= __t199; Form_update_private_info_i++)
+                int __t201 = hi;
+                for (Form_update_private_info_i = lo; Form_update_private_info_i <= __t201; Form_update_private_info_i++)
                 {
                     if ((((private_info[owning_p, p, Form_update_private_info_i, s] & 15)) <= ((code & 15))))
                     {
@@ -1021,8 +1023,8 @@ partial class KhEngine
         if (((code >= 512) & (code <= 767)))  // cards are not present
         {
             {
-                int __t200 = hi;
-                for (update_pub_info_on_player_i = lo; update_pub_info_on_player_i <= __t200; update_pub_info_on_player_i++)
+                int __t202 = hi;
+                for (update_pub_info_on_player_i = lo; update_pub_info_on_player_i <= __t202; update_pub_info_on_player_i++)
                 {
                     if ((((update_pub_info_on_player_i == queen) & (s == spades)) & (lo != hi)))
                     {
@@ -1051,8 +1053,8 @@ partial class KhEngine
         if ((code >= 1024))
         {
             {
-                int __t201 = player_south;
-                for (update_others_public_info_for_card_i = player_west; update_others_public_info_for_card_i <= __t201; update_others_public_info_for_card_i++)
+                int __t203 = player_south;
+                for (update_others_public_info_for_card_i = player_west; update_others_public_info_for_card_i <= __t203; update_others_public_info_for_card_i++)
                 {
                     if (((public_info[update_others_public_info_for_card_i, r, s] >= 1024) & (((public_info[update_others_public_info_for_card_i, r, s] & 15)) >= update_others_public_info_for_card_j)))  // no update made
                     {
@@ -1062,8 +1064,8 @@ partial class KhEngine
             }
             public_info[p, r, s] = code;  // p has card
             {
-                int __t202 = player_south;
-                for (update_others_public_info_for_card_i = player_west; update_others_public_info_for_card_i <= __t202; update_others_public_info_for_card_i++)
+                int __t204 = player_south;
+                for (update_others_public_info_for_card_i = player_west; update_others_public_info_for_card_i <= __t204; update_others_public_info_for_card_i++)
                 {
                     if (((update_others_public_info_for_card_i != p) & (((public_info[update_others_public_info_for_card_i, r, s] & 15)) < update_others_public_info_for_card_j)))  // mark players without QS
                     {
@@ -1077,8 +1079,8 @@ partial class KhEngine
             if ((public_info[p, r, s] >= 1024))  // p was earlier inferred to own card
             {
                 {
-                    int __t203 = player_south;
-                    for (update_others_public_info_for_card_i = player_west; update_others_public_info_for_card_i <= __t203; update_others_public_info_for_card_i++)
+                    int __t205 = player_south;
+                    for (update_others_public_info_for_card_i = player_west; update_others_public_info_for_card_i <= __t205; update_others_public_info_for_card_i++)
                     {
                         if (((update_others_public_info_for_card_i != p) & (((public_info[update_others_public_info_for_card_i, r, s] & 15)) <= update_others_public_info_for_card_j)))
                         {
@@ -1111,8 +1113,8 @@ partial class KhEngine
         // "start" is 1 (an illegal rank) the function returns the count of all cards in suit s that have not been played.
         __ret = 0;
         {
-            int __t204 = ace;
-            for (cards_higher_than_r = (start + 1); cards_higher_than_r <= __t204; cards_higher_than_r++)
+            int __t206 = ace;
+            for (cards_higher_than_r = (start + 1); cards_higher_than_r <= __t206; cards_higher_than_r++)
             {
                 if ((cards_played[cards_higher_than_r, s] == 0))
                 {

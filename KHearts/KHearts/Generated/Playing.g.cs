@@ -149,6 +149,7 @@ partial class KhEngine
     int suit_with_HU = 0;  // last suit of SHCD with HU
     int suit_without_HU = 0;  // last suit of SHCD without HU
     int suits_in_hand = 0;  // number of suits in hand
+    int sum_of_HUs = 0;
     bool take_points = false;  // true: player should take trick with points
     int third_place = 0;  // player who is in 3rd place
     int Playing_threshold = 0;  // used by Goren-related logic
@@ -213,6 +214,9 @@ partial class KhEngine
     bool initialize_general_parameters_change = false;
     bool initialize_general_parameters_flag = false;
     int initialize_general_parameters_HltW_QS = 0;
+    int initialize_general_parameters_HU_beats_W = 0;
+    int initialize_general_parameters_non_HU_beats_W = 0;
+    VbArray<int> initialize_general_parameters_HU_prime = new(spades, diamonds);
     VbArray<int> initialize_general_parameters_p_has = new(spades, diamonds);
     int initialize_general_parameters_pr_abs_no = 0;
     int initialize_general_parameters_pr_abs_yes = 0;
@@ -331,6 +335,7 @@ partial class KhEngine
     bool best_script_for_Shooting_the_Moon_z = false;
     // Static locals of select_best_card_for_situation
     int select_best_card_for_situation_i = 0;
+    bool select_best_card_for_situation_z = false;
     // Static locals of opp_winners
     int opp_winners_i = 0;
     int opp_winners_j = 0;
@@ -459,12 +464,6 @@ partial class KhEngine
                 }
                 return;
             }
-        }
-        else if ((suit_len[suit_led] == 1))  // seq > 0, singleton
-        {
-            khrank_to_play = suit_card[suit_led, 0];
-            khsuit_to_play = suit_led;
-            return;
         }
         
         if (((Playing_suit_len_H == (T_left - 1)) & Playing_QS_in_hand))
@@ -648,6 +647,9 @@ partial class KhEngine
         // situation from the player's hand using these parameters.
         // true: a change occurs
         // like HltW but can be QS
+        // card rank that beats W and is an HU
+        // card rank that beats W and is not an HU
+        // HU(s) plus cards that exceed opponents' holdings in suit s
         // count of cards in suit that an opponent has
         // total of -2, -1, 0, 1, and 2 cells in opp_hands() for player p
         initialize_general_parameters_absolute_owners_of_suits.Clear();
@@ -658,6 +660,7 @@ partial class KhEngine
         Playing_def_winners.Clear();
         highest_outcard.Clear();
         Playing_HU.Clear();
+        initialize_general_parameters_HU_prime.Clear();
         low_opp_card.Clear();
         LU.Clear();
         Playing_off_winners.Clear();
@@ -686,6 +689,7 @@ partial class KhEngine
         HltW = 0;
         initialize_general_parameters_HltW_QS = 0;
         Hsl = 0;
+        initialize_general_parameters_HU_beats_W = 0;
         last_H = false;
         len_suit_led = 0;
         LgtW = 0;
@@ -693,6 +697,7 @@ partial class KhEngine
         mano_a_mano = false;
         moderate_rank = illegal_value;
         moderate_suit = illegal_value;
+        initialize_general_parameters_non_HU_beats_W = 0;
         number_LT_W = 0;
         number_of_outcards = 0;
         number_of_out_suits = 0;
@@ -730,6 +735,7 @@ partial class KhEngine
         suit_with_HU = illegal_value;
         suit_without_HU = illegal_value;
         suit_with_LU = illegal_value;
+        sum_of_HUs = 0;
         take_points = false;
         total_dead_cards = 0;
         total_LU = 0;
@@ -1570,7 +1576,8 @@ partial class KhEngine
         
         // ——————————————————————— end of inference post-processing ———————————————————————
         
-        // a_case_suit, case_cards, case_suit(), HU(), number_of_singletons, number_of_voids, suit_with_HU, suit_without_HU
+        // a_case_suit, case_cards, case_suit(), HU(), number_of_singletons, number_of_voids, suit_with_HU, suit_without_HU,
+        // number_of_out_suits
         {
             int __t28 = diamonds;
             for (initialize_general_parameters_i = spades; initialize_general_parameters_i <= __t28; initialize_general_parameters_i++)
@@ -1597,29 +1604,39 @@ partial class KhEngine
                         int __t29 = 0;
                         for (initialize_general_parameters_j = (initialize_general_parameters_m - 1); initialize_general_parameters_j >= __t29; initialize_general_parameters_j--)
                         {
-                            initialize_general_parameters_l = suit_card[initialize_general_parameters_i, initialize_general_parameters_j];
-                            if (((opps_higher_ranks[initialize_general_parameters_l, initialize_general_parameters_i] == 0) & ((((seq == 0) | (initialize_general_parameters_i != suit_led)) | (initialize_general_parameters_l > W)))))
+                            initialize_general_parameters_q = suit_card[initialize_general_parameters_i, initialize_general_parameters_j];
+                            if ((opps_higher_ranks[initialize_general_parameters_q, initialize_general_parameters_i] == 0))
                             {
-                                Playing_HU[initialize_general_parameters_i] = (initialize_general_parameters_j + 1);  // count highest unplayed in suit
                                 if (((initialize_general_parameters_i != hearts) | (((seq == 0) & can_lead_H))))
                                 {
                                     suit_with_HU = initialize_general_parameters_i;
                                 }
+                                Playing_HU[initialize_general_parameters_i] = (initialize_general_parameters_j + 1);  // count highest unplayed in suit
+                                sum_of_HUs = (sum_of_HUs + Playing_HU[initialize_general_parameters_i]);
+                                initialize_general_parameters_HU_prime[initialize_general_parameters_i] = Playing_HU[initialize_general_parameters_i];
                                 if ((Playing_HU[initialize_general_parameters_i] >= opps_have[initialize_general_parameters_i]))
                                 {
-                                    total_unbeatables = (total_unbeatables + initialize_general_parameters_m);
+                                    initialize_general_parameters_HU_prime[initialize_general_parameters_i] = initialize_general_parameters_m;
                                 }
-                                else
-                                {
-                                    total_unbeatables = (total_unbeatables + Playing_HU[initialize_general_parameters_i]);
-                                }
+                                total_unbeatables = (total_unbeatables + initialize_general_parameters_HU_prime[initialize_general_parameters_i]);
                                 break;  // HU is case suit length
+                            }
+                            else if (((seq == 0) | (initialize_general_parameters_i != suit_led)))  // null
+                            {
+                            }
+                            else if ((((initialize_general_parameters_q > W) & ((3 - seq) == void_followers(suit_led))) & (initialize_general_parameters_non_HU_beats_W == 0)))
+                            {
+                                initialize_general_parameters_non_HU_beats_W = initialize_general_parameters_q;
                             }
                         }
                     }
                     if ((Playing_HU[initialize_general_parameters_i] == 0))
                     {
                         suit_without_HU = initialize_general_parameters_i;
+                    }
+                    else if (((initialize_general_parameters_i == suit_led) & (Playing_high_in[initialize_general_parameters_i] > W)))
+                    {
+                        initialize_general_parameters_HU_beats_W = Playing_high_in[initialize_general_parameters_i];
                     }
                 }
                 else
@@ -1871,35 +1888,152 @@ partial class KhEngine
         total_win_R = (float)(((double)((double)((float)(Playing_total_off_winners))) / ((double)((float)(T_left)))));
         
         // all_winners, all_winners_type
-        if ((seq > 0))
+        // Note in the following that all_winners = True can occur for a non-Shooter
+        if (((pts_sit != unplayed) & (pts_sit != player)))  // an opponent has won points
         {
-            // null
+            if ((trick >= 12))
+            {
+                // null
+            }
+            else if ((seq == 0))
+            {
+                if ((sum_of_HUs == T_left))
+                {
+                    all_winners = true;
+                }
+            }
+            else
+            {
+                if ((len_suit_led == 0))
+                {
+                    // null
+                }
+                else if ((Playing_low_in[suit_led] < W))  // null
+                {
+                }
+                else if ((sum_of_HUs == T_left))
+                {
+                    all_winners = true;
+                }
+                else if ((((sum_of_HUs == (T_left - 1)) & (initialize_general_parameters_non_HU_beats_W > 0)) & (len_suit_led == 1)))
+                {
+                    all_winners = true;
+                }
+            }
         }
-        else if (((pts_sit == unplayed) | (pts_sit == player)))  // no points played or player has won them all so far
+        else if ((seq > 0))
+        {
+            if ((len_suit_led == 0))
+            {
+                // null
+            }
+            else if ((total_unbeatables == T_left))
+            {
+                all_winners = true;
+                initialize_general_parameters_j = Playing_high_in[suit_led];
+                if ((initialize_general_parameters_non_HU_beats_W > 0))
+                {
+                    initialize_general_parameters_j = initialize_general_parameters_non_HU_beats_W;
+                }
+                notice_board_cla(" wins trick with ", rank_abbrev[initialize_general_parameters_j], suit_name[suit_led]);
+            }
+            else if ((initialize_general_parameters_non_HU_beats_W > 0))
+            {
+                if ((Playing_HU[hearts] < opps_have[hearts]))  // null
+                {
+                }
+                else if ((QS_played | (QS_is_HU == 1)))
+                {
+                    all_winners = true;
+                }
+                else if ((Playing_HU[spades] >= opps_have[spades]))
+                {
+                    all_winners = true;
+                }
+                if (all_winners)
+                {
+                    all_winners_type = 1;
+                    notice_board_cla(" wins trick with ", rank_abbrev[initialize_general_parameters_non_HU_beats_W], suit_name[suit_led]);
+                }
+            }
+            else if ((initialize_general_parameters_HU_beats_W > 0))
+            {
+                initialize_general_parameters_i = (Playing_HU[suit_led] - 1);  // the top cards less the one that just won the trick
+                if ((initialize_general_parameters_i > opps_have[suit_led]))
+                {
+                    initialize_general_parameters_i = (len_suit_led - 1);
+                }
+                initialize_general_parameters_j = ((total_unbeatables - initialize_general_parameters_HU_prime[suit_led]) + initialize_general_parameters_i);
+                if ((initialize_general_parameters_j == (T_left - 1)))
+                {
+                    all_winners = true;
+                }
+                else if ((Playing_HU[hearts] < opps_have[hearts]))  // null
+                {
+                }
+                else if ((QS_played | (QS_is_HU == 1)))
+                {
+                    all_winners = true;
+                }
+                else if ((Playing_HU[spades] >= opps_have[spades]))
+                {
+                    all_winners = true;
+                }
+                if (all_winners)
+                {
+                    all_winners_type = 1;
+                    notice_board_cla(" wins trick with ", rank_abbrev[initialize_general_parameters_HU_beats_W], suit_name[suit_led]);
+                }
+            }
+        }
+        else  // this player leads
         {
             if ((total_unbeatables == T_left))
             {
                 all_winners = true;
-                all_winners_type = 1;
             }
-            else if (((!case_suit[hearts]) & (Playing_HU[hearts] < opps_have[hearts])))  // null
+            else if ((Playing_HU[hearts] < opps_have[hearts]))  // null
             {
             }
-            else if (((QS_played | (((p_QS >= 0) & (p_QS < Playing_HU[spades])))) | (Playing_HU[spades] >= opps_have[spades])))
+            else if ((QS_played | (QS_is_HU == 1)))
             {
                 all_winners = true;
-                all_winners_type = 1;
+            }
+            else if ((Playing_HU[spades] >= opps_have[spades]))
+            {
+                all_winners = true;
+            }
+            if (all_winners)
+            {
+                if ((suit_with_HU == illegal_value))
+                {
+                    diagnose_and_halt("No suit with HU");
+                }
+                notice_board_cla(" leads with ", rank_abbrev[Playing_high_in[suit_with_HU]], suit_name[suit_with_HU]);
             }
         }
-        else if ((number_of_out_suits == 0))
+        
+        // The all_winners exit
+        if (all_winners)
         {
-            all_winners = true;  // all_winners_type = 0: player with lead cannot lose it
+            return;
         }
         
-        // The hand leading a trick has all hearts but one and cannot lead a heart
-        if ((((seq > 0) | (Playing_suit_len_H < (T_left - 1))) | can_lead_H))
+        if ((len_suit_led == 1))  // seq > 0, singleton
+        {
+            khrank_to_play = Playing_high_in[suit_led];
+            khsuit_to_play = suit_led;
+            exit_to_Red_felt_caller = true;
+            return;
+        }
+        
+        if ((seq > 0))
         {
             // null
+        }
+        else if (((Playing_suit_len_H < (T_left - 1)) | can_lead_H))  // null
+        {
+            // The hand leading a trick has all hearts but one and cannot lead a heart
         }
         else if (Playing_QS_in_hand)  // hand holds QS and all hearts
         {
@@ -1917,19 +2051,13 @@ partial class KhEngine
                 {
                     if ((suit_len[khsuit_to_play] == 1))  // suit cannot be hearts
                     {
-                        khrank_to_play = suit_card[khsuit_to_play, 0];
+                        khrank_to_play = Playing_high_in[khsuit_to_play];
                         exit_to_Red_felt_caller = true;
                         return;
                     }
                 }
             }
             diagnose_and_halt("Cannot find suit to lead");
-        }
-        
-        // The all_winners exit
-        if (all_winners)
-        {
-            return;
         }
         
         // opp_H_winners, wins_all_H
@@ -2373,7 +2501,7 @@ partial class KhEngine
                             {
                                 // null
                             }
-                            else if (((suit_card[initialize_general_parameters_s, (initialize_general_parameters_l - 1)] > W) & (initialize_general_parameters_k == suit_card[initialize_general_parameters_s, 0])))  // null  Lsl > W so assume player will play Hsl
+                            else if (((suit_card[initialize_general_parameters_s, (initialize_general_parameters_l - 1)] > W) & (initialize_general_parameters_k == Playing_high_in[initialize_general_parameters_s])))  // null  Lsl > W so assume player will play Hsl
                             {
                             }
                             else
@@ -2705,7 +2833,6 @@ partial class KhEngine
         arc_Shooter[player] = Shooter;
         arc_poss_opp_Shoot[player] = poss_opp_Shoot;
         arc_prob_opp_Shoot[player] = prob_opp_Shoot;
-        
     }
 
     // None
@@ -3779,7 +3906,7 @@ partial class KhEngine
         {
             best_determine_mode_mode_type[best_determine_mode_off] = 4;
         }
-        else if ((((((VB.B2I((Playing_total_off_winners == 1)) & QS_is_HU) & VB.B2I((suits_in_hand == 2))) & VB.B2I((opps_have[suit_without_HU] == 1))) & VB.B2I((Playing_Shoot_helpers >= 2))) != 0))
+        else if ((((((Playing_total_off_winners == 1) & (QS_is_HU == 1)) & (suits_in_hand == 2)) & (opps_have[suit_without_HU] == 1)) & (Playing_Shoot_helpers >= 2)))
         {
             best_determine_mode_mode_type[best_determine_mode_off] = 4;
             // all wins_all_H = -12 come here
@@ -8593,7 +8720,7 @@ partial class KhEngine
             {
                 safe_card = Hsl;
             }
-            else if ((suit_led == spades))
+            else if (((suit_led == spades) & (HnQS > 0)))
             {
                 safe_card = HnQS;
             }
@@ -10963,7 +11090,7 @@ partial class KhEngine
                 {
                     if ((((W > queen) & (!opp_target[likely_T_winner])) & ((im_score[likely_T_winner] + 13) >= final_score)))
                     {
-                        sit = 5;  // eat QS
+                        sit = 11;  // Lsl
                     }
                     else if (((W > queen) & ((opp_target[likely_T_winner] | (((!can_hold_QS) & (im_score[likely_T_winner] != high_score)))))))
                     {
@@ -11186,6 +11313,7 @@ partial class KhEngine
         {
             Playing_rank = rank_to_sluff;
             Playing_suit = suit_to_sluff;
+            select_best_card_for_situation_z = ((suit_is_live[spades] & (!QS_played)));  // workaround of VB compilation error
             if (suit_is_live[Playing_suit])
             {
                 // null
@@ -11193,7 +11321,7 @@ partial class KhEngine
             else if ((suit_is_live[hearts] | (a_live_suit == illegal_value)))  // null
             {
             }
-            else if ((false & ((suit_is_live[spades] & (!QS_played)))))  // null (patched: see SOURCE_PATCHES)
+            else if (select_best_card_for_situation_z)  // null
             {
             }
             else

@@ -12,6 +12,7 @@ partial class KhEngine
     // None
     // This module contains all the Public constants, variables, and arrays.
     // None
+    // None
     // The API function to play sound is PlaySound
     // The first argument of Playsound is the name, including full path, of the Wave file to play
     // The second argument is not used when playing sound files: pass a value of zero
@@ -37,11 +38,11 @@ partial class KhEngine
     const int SND_PURGE = 64;  // stop playing
     const int SND_FILENAME = 131072;  // the first argument, lpszName, is a file name
     const int Characteristics_normal_width = 8535;
-    const string copyright_year = "2017";
+    const string copyright_year = "2025";
     const int final_score = 100;
     const int illegal_value = (-1);
     const int log_file = 1;
-    const string version = "7.02";
+    const string version = "7.1";
     const int jack = 11;
     const int queen = 12;
     const int king = 13;
@@ -89,6 +90,7 @@ partial class KhEngine
     int card_led = 0;  // first card on trick, suit is suit_led
     int center_x = 0;  // x coordinate of center of red_felt pane
     int center_y = 0;  // y coordinate of center of screen
+    bool Client = false;  // true: this instance is Client in Host-Client mode
     string dat_filename = "";
     int dat_num_user_aliases = 0;
     int dat_this_user_ptr = 0;
@@ -97,7 +99,6 @@ partial class KhEngine
     int deficit = 0;  // player's points behind low-scorer; >= 0
     bool developer = false;
     bool display = false;  // false iff AutoPlay Continuous
-    bool Client = false;  // true: this instance is Client in Host-Client mode
     int entries_clipped = 0;  // number of entry points that new algorithm eliminates
     bool first_hand = false;  // true: first hand of game
     int follows_with_AKS_on_first_pull = 0;  // opponent who plays AKS on first S pull
@@ -135,6 +136,8 @@ partial class KhEngine
     bool QS_on_trick = false;  // true: QS is on current trick
     bool QS_played = false;
     int receiving_player = 0;  // player who receives pass
+    int screen_height = 0;
+    int screen_width = 0;
     int seq = 0;
     int Shoot_try = 0;  // player who tries to Shoot the Moon
     bool show_thinking = false;  // true: billboard displays KHearts' thinking
@@ -145,6 +148,9 @@ partial class KhEngine
     bool suppress_msg_1 = false;
     bool suppress_msg_2 = false;
     bool suppress_msg_3 = false;
+    bool temp_debug = false;  // set to False
+    int temp_long = 0;  // set to 0
+    string temp_string = "";  // for debugging
     bool this_is_best_player = false;  // true: play_skill(player) = best_player
     int T_left = 0;  // remaining tricks, including current trick
     int trick = 0;
@@ -201,11 +207,13 @@ partial class KhEngine
     VbArray<int> public_info = new(player_west, player_south, 2, ace, spades, diamonds);
     VbArray<int> q_posn = new(1, 8);
     VbArray<string> rank_abbrev = new(2, ace);
+    VbArray<string> rank_abbrev_sym = new(2, ace);
     VbArray<int> r_p = new(player_west, player_south);
     VbArray<int> score = new(illegal_value, player_south);
     VbArray<int> score_between_hands = new(low, high);
     VbArray<int> score_in_game = new(player_west, player_south);  // excludes current trick
     VbArray<string> suit_abbrev = new(spades, diamonds);
+    VbArray<string> suit_abbrev_sym = new(spades, diamonds);
     VbArray<int> suit_card = new(illegal_value, diamonds, 0, 13);  // ranks of cards in each suit from high to low
     VbArray<int> suit_len = new(illegal_value, diamonds);
     VbArray<string> suit_name = new(spades, diamonds);

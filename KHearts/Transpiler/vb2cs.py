@@ -33,15 +33,12 @@ SOURCES = [
 
 # Lines where the compiled program does not do what its source says, so the port follows the program.
 # Each is (file, line as written, replacement); each must match exactly one line.
-SOURCE_PATCHES = [
-    # In select_best_card_for_situation's general sluff (sit = 14), the compiled program never takes this
-    # branch: it always goes on to sluff high in a_live_suit. Both the 2020 build of this source and the
-    # 2025 build of V7.03 do so in every one of more than 500 cases where suit_is_live(spades) is true and
-    # QS_played is false, so the condition is effectively false there; why, the source doesn't say.
-    ('Playing.bas',
-     "ElseIf suit_is_live(spades) And Not QS_played Then 'null",
-     "ElseIf False And (suit_is_live(spades) And Not QS_played) Then 'null (patched: see SOURCE_PATCHES)"),
-]
+#
+# There are none in V7.1. Through V7.03, VB6 miscompiled "ElseIf suit_is_live(spades) And Not QS_played
+# Then 'null" in select_best_card_for_situation's general sluff (sit = 14): the program never took the
+# branch, so a patch here made the condition false. V7.1 works around the miscompilation by computing the
+# condition beforehand, so the program now does what the source says.
+SOURCE_PATCHES = []
 
 # Playing.bas: only the best player is ported
 def playing_excluded(name):
@@ -67,6 +64,7 @@ HANDWRITTEN = {
     'truth_map': ('int', ['bool', 'int', 'int'], [False, False, False]),
     'bb_add': (None, ['string'], [False]),
     'bb_cla': (None, ['string'], [False]),
+    'notice_board_cla': (None, ['string', 'string', 'string'], [False, False, False]),
     'display_center_message': (None, ['string', 'int'], [False, False]),
     'diagnose_and_halt': (None, ['string'], [False]),
     'capture_snapshot': (None, ['string'], [False]),

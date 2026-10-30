@@ -26,6 +26,7 @@ partial class KhEngine
     int CD_long_suit = 0;  // longer of C and D; = illegal_value if both are zero
     int CD_singleton_passed = 0;  // cards_selected of CD singleton
     int ceiling = 0;  // final_score - high_score; must be > 0 else game would be over
+    int DoD = 0;  // degree of difficulty of worst suit
     int Goren_count = 0;  // Goren-based point-counting system
     int Passing_hi_scorer = 0;
     int high_CDH = 0;  // which of CDH has highest card
@@ -58,13 +59,14 @@ partial class KhEngine
     int thresh3 = 0;
     int Passing_total_off_winners = 0;
     int weakest_suit = 0;
+    int worst_suit = 0;  // suit most likely to take most tricks
     VbArray<int> all_suits_by_len = new(0, 13);  // count of all suits by length
     VbArray<int> CD_by_len = new(0, 13);  // for clubs and diamonds only: CD_by_len(1) = 2: clubs is singleton
     VbArray<int> Passing_def_losers = new(spades, diamonds);  // cards in suit that do not win
     VbArray<int> Passing_def_winners = new(spades, diamonds);  // tricks suits can't avoid winning
     VbArray<int> Gc_by_suit = new(spades, diamonds);  // Goren-based point-counting system, by suit
-    VbArray<int> Passing_high_in = new(illegal_value, diamonds);
-    VbArray<int> Passing_HU = new(spades, diamonds);  // hand's unbeatable cards
+    VbArray<int> Passing_high_in = new(illegal_value, diamonds);  // highest rank
+    VbArray<int> Passing_HU = new(spades, diamonds);  // number of hand's highest unplayed cards in each suit
     VbArray<int> Passing_low_in = new(spades, diamonds);
     VbArray<int> Passing_off_winners = new(spades, diamonds);  // tricks each suit will win
     VbArray<int> CD_suits_by_len = new(0, 13);  // count of CD suits by length
@@ -108,7 +110,7 @@ partial class KhEngine
     // None
     void determine_3_card_pass()
     {
-        // this module selects three cards to be passed, but it does NOT remove them from hand()
+        // This module selects three cards to be passed, but it does NOT remove them from hand()
         // input: player
         // output: p_rank(1-3), p_suit(1-3)
         set_initial_parameters();
@@ -178,6 +180,7 @@ partial class KhEngine
         
         Passing_AKS_in_hand = 0;
         CD_long_suit = illegal_value;
+        DoD = illegal_value;
         high_CDH = illegal_value;
         Passing_high_in[illegal_value] = 0;
         longest_suit = illegal_value;
@@ -189,6 +192,8 @@ partial class KhEngine
         Passing_suit_len_D = suit_len[diamonds];
         Passing_suit_len_H = suit_len[hearts];
         Passing_suit_len_S = suit_len[spades];
+        weakest_suit = illegal_value;
+        worst_suit = illegal_value;
         
         small_C_suit = (((Passing_suit_len_C > 0) & (Passing_suit_len_C <= (4 - cards_selected))));  // if True: 1 <= suit_len_C <= 3
         
@@ -483,7 +488,6 @@ partial class KhEngine
         len_smallest_CD = truth_map((smallest_CD > spades), suit_len[smallest_CD], 100);
         
         // weakest_suit (from point of view of Shooting the Moon) — always has valid value
-        weakest_suit = illegal_value;
         if (((Passing_suit_len_H > Passing_off_winners[hearts]) & (((!this_is_best_player) | (Passing_suit_len_H < 5)))))
         {
             weakest_suit = hearts;
@@ -599,6 +603,30 @@ partial class KhEngine
         {
             weakest_suit = longest_suit;
         }
+        
+        // worst_suit and DoD: worst suit is one most likely to take a lot of tricks; cannot be spades
+        {
+            int __t175 = diamonds;
+            for (set_parameters_from_current_short_hand_s = hearts; set_parameters_from_current_short_hand_s <= __t175; set_parameters_from_current_short_hand_s++)
+            {
+                set_parameters_from_current_short_hand_m = suit_len[set_parameters_from_current_short_hand_s];
+                set_parameters_from_current_short_hand_j = 0;
+                set_parameters_from_current_short_hand_p = 0;
+                {
+                    int __t176 = maxi((double)((set_parameters_from_current_short_hand_m - 3)), (double)(0));
+                    for (set_parameters_from_current_short_hand_i = (set_parameters_from_current_short_hand_m - 1); set_parameters_from_current_short_hand_i >= __t176; set_parameters_from_current_short_hand_i--)
+                    {
+                        set_parameters_from_current_short_hand_j = (((set_parameters_from_current_short_hand_j + suit_card[set_parameters_from_current_short_hand_s, set_parameters_from_current_short_hand_i]) - 2) - set_parameters_from_current_short_hand_p);
+                        set_parameters_from_current_short_hand_p = (set_parameters_from_current_short_hand_p + 1);
+                    }
+                }
+                if ((set_parameters_from_current_short_hand_j > DoD))
+                {
+                    worst_suit = set_parameters_from_current_short_hand_s;
+                    DoD = set_parameters_from_current_short_hand_j;  // if hand is all spades, DoD is illegal_value
+                }
+            }
+        }
     }
 
     // None
@@ -646,8 +674,8 @@ partial class KhEngine
         
         suit_card[p_suit[cards_selected], card_posn] = 0;  // for safety
         {  // remove card and pack
-            int __t175 = suit_len[p_suit[cards_selected]];
-            for (remove_card_from_short_hand_k = (card_posn + 1); remove_card_from_short_hand_k <= __t175; remove_card_from_short_hand_k++)
+            int __t177 = suit_len[p_suit[cards_selected]];
+            for (remove_card_from_short_hand_k = (card_posn + 1); remove_card_from_short_hand_k <= __t177; remove_card_from_short_hand_k++)
             {
                 suit_card[p_suit[cards_selected], (remove_card_from_short_hand_k - 1)] = suit_card[p_suit[cards_selected], remove_card_from_short_hand_k];
                 suit_card[p_suit[cards_selected], remove_card_from_short_hand_k] = 0;  // for safety
@@ -663,16 +691,16 @@ partial class KhEngine
         if (this_is_best_player)
         {
             best_determine_kind_of_pass_to_make();
-            int __t176 = kind_of_pass;
-            if (__t176 == Lie_Low)
+            int __t178 = kind_of_pass;
+            if (__t178 == Lie_Low)
             {
                 best_pass_to_lie_low();
             }
-            else if (__t176 == Get_Low_Scorer)
+            else if (__t178 == Get_Low_Scorer)
             {
                 best_pass_to_get_low_scorer();
             }
-            else if (__t176 == Shoot_the_Moon)
+            else if (__t178 == Shoot_the_Moon)
             {
                 pass_to_Shoot_the_Moon();
             }
@@ -685,28 +713,28 @@ partial class KhEngine
             {
                 // Billboard messages regarding intent of the pass
                 ui_billboard_Width = billboard_width;  // to restore proper width and overcome VB error
-                int __t177 = kind_of_pass;
-                if (__t177 == Lie_Low)
+                int __t179 = kind_of_pass;
+                if (__t179 == Lie_Low)
                 {
                     bb_cla(("Passing to lie low"));
                 }
-                else if (__t177 == Get_Low_Scorer)
+                else if (__t179 == Get_Low_Scorer)
                 {
                     bb_cla(("Passing to get low-scorer"));
                 }
-                else if (__t177 == Shoot_the_Moon)
+                else if (__t179 == Shoot_the_Moon)
                 {
                     bb_cla(("Passing to Shoot"));
                 }
             }
             
-            // Determine if hand is so strong offensively that we should keep a lower CD if singleton remains
+            // Determine if hand is strong enough offensively that we should keep a higher CD if singleton remains
             set_parameters_from_current_short_hand();
-            if (((((kind_of_pass != Shoot_the_Moon) & (CD_by_len[1] > 0)) & (Goren_count >= thresh2)) & (deficit > 8)))
+            if (((((kind_of_pass != Shoot_the_Moon) & (CD_by_len[1] > 0)) & (Goren_count >= Passing_threshold)) & (deficit > 8)))
             {
                 {
-                    int __t178 = 3;
-                    for (determine_best_pass_s = 1; determine_best_pass_s <= __t178; determine_best_pass_s++)
+                    int __t180 = 3;
+                    for (determine_best_pass_s = 1; determine_best_pass_s <= __t180; determine_best_pass_s++)
                     {
                         determine_best_pass_p = p_suit[determine_best_pass_s];
                         if (((determine_best_pass_p == CD_by_len[1]) & (Passing_high_in[determine_best_pass_p] < p_rank[determine_best_pass_s])))
@@ -737,16 +765,16 @@ partial class KhEngine
         else
         {
             VB.NotPorted("determine_kind_of_pass_to_make");
-            int __t179 = kind_of_pass;
-            if (__t179 == Lie_Low)
+            int __t181 = kind_of_pass;
+            if (__t181 == Lie_Low)
             {
                 VB.NotPorted("pass_to_lie_low");
             }
-            else if (__t179 == Get_Low_Scorer)
+            else if (__t181 == Get_Low_Scorer)
             {
                 VB.NotPorted("pass_to_get_low_scorer");
             }
-            else if (__t179 == Shoot_the_Moon)
+            else if (__t181 == Shoot_the_Moon)
             {
                 pass_to_Shoot_the_Moon();
             }
@@ -928,8 +956,8 @@ partial class KhEngine
         Passing_high_score = (-200);
         determine_hi_and_low_scorers_p = player;
         {
-            int __t180 = player_south;
-            for (determine_hi_and_low_scorers_i = player_west; determine_hi_and_low_scorers_i <= __t180; determine_hi_and_low_scorers_i++)
+            int __t182 = player_south;
+            for (determine_hi_and_low_scorers_i = player_west; determine_hi_and_low_scorers_i <= __t182; determine_hi_and_low_scorers_i++)
             {
                 if ((score[determine_hi_and_low_scorers_p] < low_score))
                 {
@@ -1000,7 +1028,8 @@ partial class KhEngine
         // without further consideration of AKQS (except as mentioned)
         // 1] CD singleton (but not clubs if twoC_leads)
         // 2] H singleton >= 5
-        // 2a] twoC_leads, QS neither in hand nor passed, A/KS, S <= 4, small_C_suit: highest C
+        // 2a] high in worst_suit if DoD >= 15
+        // 2b] twoC_leads, QS neither in hand nor passed, A/KS, S <= 4, small_C_suit: highest C
         // 3] suit_len(CD) <= 4 and def_losers = 0: high card, smallest suit first
         // 3a] H doubleton and high H >= 10: high H
         // 5] <= 5 H with def_losers = 0
@@ -1008,6 +1037,7 @@ partial class KhEngine
         // 7] singleton heart when there is already a CDS void(s)
         // 8] CD doubleton with highest low card >= 5: D or C but if C and twoC_Leads then not AC
         // 9] H singleton >= 5
+        // 9a] high in worst_suit if DoD >= 10
         // 10a] suit_len(CD) = 5 and def_losers < 2: high card, smallest suit first
         // 10b] with many S and QS and A/KS in hand: A/KS
         // 11] non-HU H iff all such can be passed
@@ -1022,16 +1052,16 @@ partial class KhEngine
         // 17] low S
         best_pass_to_lie_low_pass_H = false;
         {
-            int __t181 = 3;
-            for (cards_selected = 1; cards_selected <= __t181; cards_selected++)
+            int __t183 = 3;
+            for (cards_selected = 1; cards_selected <= __t183; cards_selected++)
             {
                 set_parameters_from_current_short_hand();
                 card_posn = 0;  // point to highest card in a suit
-                ps = spades;  // S is default suit
+                ps = spades;  // spades is default suit
                 best_pass_to_lie_low_l = Passing_suit_len_S;
                 if ((Passing_QS_in_hand & (best_pass_to_lie_low_l == 1)))
                 {
-                    // null                                       A1]
+                    // null                                                                             A1]
                 }
                 else if ((Passing_QS_in_hand & (best_pass_to_lie_low_l <= 3)))
                 {
@@ -1056,20 +1086,20 @@ partial class KhEngine
                         diagnose_and_halt("With QxxxS and xxxxxH, cannot find CD with length <= 3");
                     }
                 }
-                else if (((Passing_AKS_in_hand > 0) & (best_pass_to_lie_low_l == Passing_AKS_in_hand)))  // null                              A5]
+                else if (((Passing_AKS_in_hand > 0) & (best_pass_to_lie_low_l == Passing_AKS_in_hand)))  // null                               A5]
                 {
                 }
                 else if ((((Passing_AKS_in_hand == 2) & (best_pass_to_lie_low_l == 3)) & (!passed_QS_right)))  // null if dealt AKQS, QS was passed A6]
                 {
                 }
-                else if ((((Passing_AKS_in_hand > 0) & (best_pass_to_lie_low_l <= 2)) & passed_QS_left))  // null                    A7]
+                else if ((((Passing_AKS_in_hand > 0) & (best_pass_to_lie_low_l <= 2)) & passed_QS_left))  // null                     A7]
                 {
                 }
                 else if ((((twoC_leads & (!Passing_QS_in_hand)) & (best_pass_to_lie_low_l <= 2)) & small_C_suit))
                 {
                     ps = clubs;  // B1]   6/14/2016
                 }
-                else if ((((((!Passing_QS_in_hand) & (!passed_QS_right)) & (Passing_AKS_in_hand > 0)) & (best_pass_to_lie_low_l <= (Passing_AKS_in_hand + 2))) & (((!twoC_leads) | (Passing_suit_len_C > 0)))))  // null                 B2]
+                else if ((((((!Passing_QS_in_hand) & (!passed_QS_right)) & (Passing_AKS_in_hand > 0)) & (best_pass_to_lie_low_l <= (Passing_AKS_in_hand + 2))) & (((!twoC_leads) | (Passing_suit_len_C > 0)))))  // null                                                       B2]
                 {
                 }
                 else if (((CD_by_len[1] > 0) & (((!twoC_leads) | (CD_by_len[1] == diamonds)))))  // 1]
@@ -1086,9 +1116,13 @@ partial class KhEngine
                 {
                     ps = hearts;  // 2]
                 }
+                else if ((DoD >= 15))
+                {
+                    ps = worst_suit;  // 2a]
+                }
                 else if ((((((twoC_leads & (!Passing_QS_in_hand)) & (Passing_AKS_in_hand > 0)) & (passed_QS[player] == illegal_value)) & (best_pass_to_lie_low_l <= 4)) & small_C_suit))
                 {
-                    ps = clubs;  // 2a]
+                    ps = clubs;  // 2b]
                 }
                 else if (((CD_by_len[2] > 0) & (Passing_def_losers[CD_by_len[2]] == 0)))
                 {
@@ -1148,6 +1182,10 @@ partial class KhEngine
                 {
                     ps = hearts;  // 9]
                 }
+                else if ((DoD >= 10))
+                {
+                    ps = worst_suit;  // 9a]
+                }
                 else if (((CD_by_len[5] > 0) & (Passing_def_losers[CD_by_len[5]] < 2)))
                 {
                     ps = CD_by_len[5];  // 10a]
@@ -1156,7 +1194,7 @@ partial class KhEngine
                         card_posn = 2;
                     }
                 }
-                else if (((((Passing_QS_in_hand & pass_recvr_is_target) & (pass_direction != pass_left)) & (Passing_AKS_in_hand > 0)) & ((best_pass_to_lie_low_l - Passing_AKS_in_hand) >= 5)))  // null            10b]
+                else if (((((Passing_QS_in_hand & pass_recvr_is_target) & (pass_direction != pass_left)) & (Passing_AKS_in_hand > 0)) & ((best_pass_to_lie_low_l - Passing_AKS_in_hand) >= 5)))  // null                                                  10b]
                 {
                 }
                 else if ((((Passing_suit_len_H > Passing_HU[hearts]) & ((Passing_suit_len_H - Passing_HU[hearts]) <= (4 - cards_selected))) & (deficit >= 60)))  // pass all H
@@ -1237,7 +1275,7 @@ partial class KhEngine
                 }
                 else
                 {
-                    card_posn = (best_pass_to_lie_low_l - 1);  // 17] low spade from all S
+                    card_posn = (best_pass_to_lie_low_l - 1);  // low spade from all S                  17]
                 }
                 if ((ps == hearts))
                 {
@@ -1273,6 +1311,7 @@ partial class KhEngine
         // 3] suit_len(CD) <= 4 and def_losers = 0: high card, smallest suit first
         // 5] <= 5 H with def_losers = 0
         // 6] suit_len(CD) <= 4 and def_losers < 2: high card, smallest suit first
+        // 6a] high in worst_suit if DoD >= 15
         // 7] QS to opponent sitting behind low-scorer
         // 8] CD doubleton with highest low card >= 5: diamonds or clubs, but if clubs and twoC_Leads then not the ace
         // 9] H singleton >= 5
@@ -1308,8 +1347,8 @@ partial class KhEngine
             best_pass_to_get_low_scorer_pass_QS_to_opp_in_better_seat = 1;
         }
         {
-            int __t182 = 3;
-            for (cards_selected = 1; cards_selected <= __t182; cards_selected++)
+            int __t184 = 3;
+            for (cards_selected = 1; cards_selected <= __t184; cards_selected++)
             {
                 set_parameters_from_current_short_hand();
                 card_posn = 0;  // point to highest card in a suit
@@ -1374,6 +1413,10 @@ partial class KhEngine
                 {
                     ps = CD_by_len[2];  // 6] 1/3
                 }
+                else if ((DoD >= 15))
+                {
+                    ps = worst_suit;  // 6a]
+                }
                 else if (((CD_by_len[3] > 0) & (Passing_def_losers[CD_by_len[3]] < 2)))
                 {
                     ps = CD_by_len[3];
@@ -1419,7 +1462,7 @@ partial class KhEngine
                     best_pass_to_get_low_scorer_pass_QS = true;
                     card_posn = QS_posn;
                 }
-                else if ((best_pass_to_get_low_scorer_pass_QS & (best_pass_to_get_low_scorer_l > 0)))  // null  highest S                          11]
+                else if ((best_pass_to_get_low_scorer_pass_QS & (best_pass_to_get_low_scorer_l > 0)))  // null  highest S                         11]
                 {
                 }
                 else if (((CD_by_len[5] > 0) & (Passing_def_losers[CD_by_len[5]] < 2)))
@@ -1536,8 +1579,8 @@ partial class KhEngine
         // 3] same as A2]
         // 4] same as A3]
         {
-            int __t183 = 3;
-            for (cards_selected = 1; cards_selected <= __t183; cards_selected++)
+            int __t185 = 3;
+            for (cards_selected = 1; cards_selected <= __t185; cards_selected++)
             {
                 set_parameters_from_current_short_hand();
                 ps = spades;  // S is default suit
@@ -1626,8 +1669,8 @@ partial class KhEngine
         Goren_count = 0;
         suit_of_5_or_more_with_high_GCount = illegal_value;
         {
-            int __t184 = diamonds;
-            for (compute_Goren_count_j = spades; compute_Goren_count_j <= __t184; compute_Goren_count_j++)
+            int __t186 = diamonds;
+            for (compute_Goren_count_j = spades; compute_Goren_count_j <= __t186; compute_Goren_count_j++)
             {
                 if ((suit_len[compute_Goren_count_j] <= 2))
                 {
@@ -1638,8 +1681,8 @@ partial class KhEngine
                     Gc_by_suit[compute_Goren_count_j] = (mini((double)(suit_len[compute_Goren_count_j]), (double)(7)) - 4);  // 2] long suits
                 }
                 {
-                    int __t185 = (suit_len[compute_Goren_count_j] - 1);
-                    for (compute_Goren_count_g = 0; compute_Goren_count_g <= __t185; compute_Goren_count_g++)
+                    int __t187 = (suit_len[compute_Goren_count_j] - 1);
+                    for (compute_Goren_count_g = 0; compute_Goren_count_g <= __t187; compute_Goren_count_g++)
                     {
                         if ((suit_card[compute_Goren_count_j, compute_Goren_count_g] < jack))
                         {
