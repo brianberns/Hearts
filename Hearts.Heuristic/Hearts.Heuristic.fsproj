@@ -6,6 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Killer/Basics.fs" />
+    <Compile Include="Killer/Table.fs" />
+    <Compile Include="Killer/OppHands.fs" />
+    <Compile Include="Killer/Analysis.fs" />
+    <Compile Include="Killer/Decision.fs" />
+    <Compile Include="Killer/Scripts.fs" />
+    <Compile Include="Killer/Select.fs" />
+    <Compile Include="Killer/Play.fs" />
+    <Compile Include="Killer/Pass.fs" />
     <Compile Include="Claude.fs" />
     <Compile Include="Gemini.fs" />
     <Compile Include="Program.fs" />

@@ -2,6 +2,8 @@
 ///
 ///    smoke <deals>    plays Killer Hearts against the Claude heuristic in Hearts' own tournament
 ///    agree <deals>    compares the one-seat player with the exact four-seat table, decision by decision
+///    fsport <deals>   compares the F# port of Killer Hearts (Hearts.Heuristic/Killer) with the
+///                     one-seat player, at every pass and play decision of Killer Hearts self-play
 ///    client <shared file> <transcript> kh|random
 ///                     plays Client to the original program as Host, and compares the Host's decisions
 ///                     with the port's (see HostClient.fs)
@@ -114,9 +116,54 @@ let referenceDeal (rng : Random) (writer : IO.TextWriter) (deal : OpenDeal) =
                     loop (OpenDeal.addPlay (KillerHearts.FromKh card) deal) passQueue
     loop deal []
 
+/// How often the F# port of Killer Hearts chooses the same card as the one-seat player.
+type PortAgreement =
+    {
+        PassAgree : int
+        PassDiffer : int
+        PlayAgree : int
+        PlayDiffer : int
+    }
+
+/// Plays one deal with Killer Hearts in every seat, and counts how often the F# port of Killer Hearts
+/// chooses the same card, at each pass, and at each play decision with a choice.
+let agreeWithFSharpPort (kh : Player) (deal : OpenDeal) =
+    let rec loop deal counts =
+        let infoSet = OpenDeal.currentInfoSet deal
+        let action =
+            match Seq.tryExactlyOne infoSet.LegalActions with
+                | Some action -> action
+                | None -> kh.Act infoSet
+        let counts =
+            match infoSet.LegalActionType with
+                | ActionType.Pass ->
+                    if Killer.Pass.pass Killer.Pass.Bold infoSet = action then { counts with PassAgree = counts.PassAgree + 1 }
+                    else { counts with PassDiffer = counts.PassDiffer + 1 }
+                | ActionType.Play when infoSet.LegalActions.Length > 1 ->
+                    if Killer.Play.play infoSet = action then { counts with PlayAgree = counts.PlayAgree + 1 }
+                    else { counts with PlayDiffer = counts.PlayDiffer + 1 }
+                | _ -> counts
+        let deal = OpenDeal.addAction infoSet.LegalActionType action deal
+        match Game.tryUpdateScore deal Score.zero with
+            | Some _ -> counts
+            | None -> loop deal counts
+    loop deal { PassAgree = 0; PassDiffer = 0; PlayAgree = 0; PlayDiffer = 0 }
+
 [<EntryPoint>]
 let main argv =
     match argv with
+        | [| "fsport"; deals |] ->
+            let kh = KillerHearts.CreatePlayer()
+            let results =
+                OpenDeal.generate (Random(0))
+                    |> Seq.take (int deals)
+                    |> Seq.toArray
+                    |> Array.Parallel.map (agreeWithFSharpPort kh)
+            let report name agree differ =
+                printfn $"{agree + differ} {name}: the F# port agrees in {agree} (%.4f{100.0 * float agree / float (agree + differ)}%%)"
+            report "passes" (results |> Array.sumBy _.PassAgree) (results |> Array.sumBy _.PassDiffer)
+            report "play decisions with a choice" (results |> Array.sumBy _.PlayAgree) (results |> Array.sumBy _.PlayDiffer)
+            0
         | [| "smoke"; deals |] ->
             let payoff =
                 Tournament.run 0 true (int deals) Claude.player (KillerHearts.CreatePlayer())
