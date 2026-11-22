@@ -108,8 +108,7 @@ module Game =
         }
 
     /// Plays one deal in a game.
-    let private playDeal
-        scoringRule (playerMap : Map<_, _>) game =
+    let private playDeal scoringRule (playerMap : Map<_, _>) game =
 
         let rec loop game =
 
