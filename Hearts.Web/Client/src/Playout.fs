@@ -21,8 +21,8 @@ module Playout =
             /// Current dealer's seat.
             Dealer : Seat
 
-            /// Current deal.
-            Deal : OpenDeal
+            /// Current game.
+            Game : Game
 
             /// Animation of playing a card.
             AnimCardPlay : CardView -> Animation
@@ -32,10 +32,10 @@ module Playout =
         }
 
     /// Logs hint information.
-    let private logHint (infoSet : InformationSet) deal =
-        assert(infoSet.Deal = deal.ClosedDeal)
+    let private logHint game =
+        let infoSet = Game.currentInfoSet game
         let legalActions = infoSet.LegalActions
-        match deal |> OpenDeal.tryFindInevitable with
+        match game.Deal |> OpenDeal.tryFindInevitable with
 
             | Some score ->
                 console.log("Inevitable:")
@@ -60,8 +60,8 @@ module Playout =
     let private getTrickWinnerOpt context card =
         option {
                 // play card on current trick
-            assert(context.Deal.ClosedDeal.CurrentTrickOpt.IsSome)
-            let! trick = context.Deal.ClosedDeal.CurrentTrickOpt
+            assert(context.Game.Deal.ClosedDeal.CurrentTrickOpt.IsSome)
+            let! trick = context.Game.Deal.ClosedDeal.CurrentTrickOpt
             let trick' = Trick.addPlay card trick   // deal is not affected
 
                 // if this card completes the trick, determine winner
@@ -78,11 +78,11 @@ module Playout =
 
                 // write to log
             let seat =
-                context.Deal |> OpenDeal.currentPlayer
+                context.Game.Deal |> OpenDeal.currentPlayer
             console.log($"{Seat.toString seat} plays {card}")
 
                 // play the card
-            let deal = OpenDeal.addPlay card context.Deal
+            let deal = OpenDeal.addPlay card context.Game.Deal
             do! context.AnimCardPlay cardView
                 |> Animation.run
             DealView.displayStatus deal
@@ -110,7 +110,7 @@ module Playout =
     let private playUser (handView : HandView) context =
 
             // determine all legal plays
-        let infoSet = OpenDeal.currentInfoSet context.Deal
+        let infoSet = Game.currentInfoSet context.Game
         let legalPlays = set infoSet.LegalActions
         assert(not legalPlays.IsEmpty)
 
@@ -119,7 +119,7 @@ module Playout =
 
                 // prompt user to play
             PlayChooser.element.show()
-            logHint infoSet context.Deal
+            logHint context.Game
 
                 // handle card clicks
             for cardView in handView do
@@ -149,7 +149,7 @@ module Playout =
     let private playAuto context =
         async {
                 // determine card to play
-            let! card = WebPlayer.takeAction context.Deal
+            let! card = WebPlayer.takeAction context.Game
 
                 // create view of the selected card
             let! cardView =
@@ -170,14 +170,14 @@ module Playout =
         /// Plays a single card and then loops recursively.
         let rec loop (persState : PersistentState) =
             async {
-                let deal = persState.Deal
+                let game = persState.Game
                 let isComplete =
-                    ClosedDeal.isComplete deal.ClosedDeal
+                    ClosedDeal.isComplete game.Deal.ClosedDeal
                 if isComplete then
                     return persState
                 else
                         // prepare current player
-                    let seat = ClosedDeal.currentPlayer deal.ClosedDeal
+                    let seat = ClosedDeal.currentPlayer game.Deal.ClosedDeal
                     let (handView : HandView),
                         animCardPlay,
                         animTrickFinish =
@@ -192,7 +192,7 @@ module Playout =
                     let! deal' =
                         player {
                             Dealer = dealer
-                            Deal = deal
+                            Game = game
                             AnimCardPlay = animCardPlay
                             AnimTrickFinish = animTrickFinish
                         }

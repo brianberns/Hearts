@@ -6,11 +6,33 @@ open System.IO
 open System.Runtime
 open System.Text
 
+open PlayingCards
+
 open Hearts
 open Hearts.Learn
 open Hearts.Model
 
 module Program =
+
+    /// Generates an infinite sequence of deals.
+    let private generate (rng : Random) =
+        Seq.initInfinite (fun iDeal ->
+            let dir =
+                enum<ExchangeDirection>
+                    (iDeal % ExchangeDirection.numDirections)
+            let deck = Deck.shuffle rng
+            let dealer = enum<Seat> (iDeal % Seat.numSeats)
+            OpenDeal.fromDeck dealer dir deck)
+
+    /// Plays the given number of deals.
+    let private playDeals rng inParallel numDeals playFun =
+        let map =
+            if inParallel then Array.Parallel.map
+            else Array.map
+        generate rng
+            |> Seq.take numDeals
+            |> Seq.toArray
+            |> map playFun
 
     /// Generates training data for the given iteration.
     let private generateSamples settings iteration state =
@@ -38,7 +60,7 @@ module Program =
 
                     // generate samples
                 let samples =
-                    OpenDeal.playDeals (Random()) true numDeals
+                    playDeals (Random()) true numDeals
                         (fun deal ->
                             let rng = Random()   // each thread has its own RNG
                             Traverse.traverse settings iteration deal rng)

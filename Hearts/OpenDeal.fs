@@ -115,20 +115,6 @@ module OpenDeal =
     let currentHand deal =
         deal.UnplayedCardMap[currentPlayer deal]
 
-    /// Answers the current player's information set.
-    let currentInfoSet deal =
-        let player = currentPlayer deal
-        let hand = deal.UnplayedCardMap[player]
-        let outOpt, inOpt =
-            deal.ExchangeOpt
-                |> Option.map (
-                    Exchange.getPassOpts
-                        player
-                        deal.ClosedDeal.ExchangeDirection)
-                |> Option.defaultValue (None, None)
-        InformationSet.create
-            player hand outOpt inOpt deal.ClosedDeal
-
     /// Receives cards from the given passer in the given deal.
     let private receivePass passer (cards : Pass) deal =
         assert(deal.ExchangeOpt.IsSome)
@@ -226,26 +212,6 @@ module OpenDeal =
             | ActionType.Pass -> addPass action deal
             | ActionType.Play -> addPlay action deal
 
-    /// Generates an infinite sequence of deals.
-    let generate (rng : Random) =
-        Seq.initInfinite (fun iDeal ->
-            let dir =
-                enum<ExchangeDirection>
-                    (iDeal % ExchangeDirection.numDirections)
-            let deck = Deck.shuffle rng
-            let dealer = enum<Seat> (iDeal % Seat.numSeats)
-            fromDeck dealer dir deck)
-
-    /// Plays the given number of deals.
-    let playDeals rng inParallel numDeals playFun =
-        let map =
-            if inParallel then Array.Parallel.map
-            else Array.map
-        generate rng
-            |> Seq.take numDeals
-            |> Seq.toArray
-            |> map playFun
-
     /// Determines the inevitable additional score of the given deal,
     /// if possible.
     let tryFindInevitable deal =
@@ -317,43 +283,3 @@ module OpenDeal =
                 else None
 
         else None
-
-    /// Applies the shoot reward to the given game score for
-    /// the given shooter.
-    let private applyShootReward gameScore shooter =
-
-            // add points to non-shooters
-        let gameScore' =
-            let dealScore =
-                Enum.getValues<Seat>
-                    |> Array.map (fun seat ->
-                        if seat = shooter then 0
-                        else ClosedDeal.numPointsPerDeal)
-                    |> Score.ofPoints
-            gameScore + dealScore
-
-            // subtract points from shooter instead?
-        let leaders = Game.findGameLeaders gameScore'
-        if leaders.Contains(shooter) then
-            gameScore'
-        else
-            let dealScore =
-                Enum.getValues<Seat>
-                    |> Array.map (fun seat ->
-                        if seat = shooter then
-                            -ClosedDeal.numPointsPerDeal
-                        else 0)
-                    |> Score.ofPoints
-            gameScore + dealScore
-
-    /// Updates the given game score, including shoot reward, if
-    /// the final score of the given deal is inevitable.
-    let tryUpdateScore gameScore deal =
-        option {
-            let! inevitable = tryFindInevitable deal
-            let dealScore = deal.ClosedDeal.Score + inevitable
-            assert(Score.sum dealScore = ClosedDeal.numPointsPerDeal)
-            return ClosedDeal.tryFindScoreShooter dealScore
-                |> Option.map (applyShootReward gameScore)
-                |> Option.defaultValue (gameScore + dealScore)
-        }

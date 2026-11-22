@@ -1,5 +1,6 @@
 ﻿namespace Hearts.Train
 
+open System
 open System.Diagnostics
 open System.IO
 
@@ -15,8 +16,9 @@ module Trainer =
     let private evaluate settings iteration model =
 
         let payoff =
+            let rng = Random(0)
             Tournament.run
-                0
+                rng
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
                 settings.NumEvaluationDeals
                 Claude.player

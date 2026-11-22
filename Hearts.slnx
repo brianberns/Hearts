@@ -12,8 +12,6 @@
   <Project Path="Hearts.Heuristic/Hearts.Heuristic.fsproj" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
   <Project Path="Hearts.Model/Hearts.Model.fsproj" />
-  <Project Path="Hearts.ParseKiller/Hearts.ParseKiller.fsproj" />
-  <Project Path="Hearts.PlayKiller/Hearts.PlayKiller.fsproj" />
   <Project Path="Hearts.PlayModel/Hearts.PlayModel.fsproj" />
   <Project Path="Hearts.Train/Hearts.Train.fsproj" />
   <Project Path="Hearts.Web/Client/src/Hearts.Web.Client.fsproj" />

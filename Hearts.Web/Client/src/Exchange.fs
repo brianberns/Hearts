@@ -53,17 +53,17 @@ module Exchange =
             /// Current dealer's seat.
             Dealer : Seat
 
-            /// Current deal.
-            Deal : OpenDeal
+            /// Current game.
+            Game : Game
 
             /// Animation of passing cards.
             AnimCardsPass : CardView[] -> Animation
         }
 
     /// Logs hint information.
-    let private logHint deal =
+    let private logHint game =
         async {
-            let infoSet = OpenDeal.currentInfoSet deal
+            let infoSet = Game.currentInfoSet game
             let! strategy = Remoting.getStrategy infoSet
             let pairs =
                 Array.zip (Seq.toArray infoSet.Hand) strategy
@@ -82,7 +82,7 @@ module Exchange =
         promise {
 
                 // write to log
-            let seat = OpenDeal.currentPlayer context.Deal
+            let seat = OpenDeal.currentPlayer context.Game.Deal
             let str =
                 cards
                     |> Seq.map _.String
@@ -91,7 +91,7 @@ module Exchange =
 
                 // add the cards to the deal
             let deal =
-                (context.Deal, cards)
+                (context.Game.Deal, cards)
                     ||> Seq.fold (fun deal card ->
                         OpenDeal.addPass card deal)
 
@@ -108,7 +108,7 @@ module Exchange =
 
             // prompt user to pass
         PassChooser.element.show()
-        logHint context.Deal
+        logHint context.Game
 
             // handle card clicks
         let cardViews =
@@ -138,10 +138,10 @@ module Exchange =
                             PassChooser.element.addClass
                         else
                             if nRemaining > 0 then
-                                (context.Deal, cardViews)
-                                    ||> Seq.fold (fun deal cardView ->
+                                (context.Game, cardViews)
+                                    ||> Seq.fold (fun game cardView ->
                                         let card = CardView.card cardView
-                                        OpenDeal.addPass card deal)
+                                        Game.addPass card game)
                                     |> logHint
                             PassChooser.element.removeClass
                     toggleClass("ready")))
@@ -172,20 +172,20 @@ module Exchange =
     let private passAuto context =
 
         /// Passes N cards asynchronously.
-        let rec loop n deal cards =
+        let rec loop n game cards =
             async {
                 if n <= 0 then
                     return cards
                 else
-                    let! card = WebPlayer.takeAction deal
-                    let deal = OpenDeal.addPass card deal
+                    let! card = WebPlayer.takeAction game
+                    let game = Game.addPass card game
                     let cards = Set.add card cards
-                    return! loop (n - 1) deal cards
+                    return! loop (n - 1) game cards
             }            
 
         async {
                 // determine cards to pass
-            let! cards = loop Pass.numCards context.Deal Set.empty
+            let! cards = loop Pass.numCards context.Game Set.empty
 
                 // create views of the selected cards
             let! cardViews =
@@ -314,15 +314,15 @@ module Exchange =
         /// Passes a group of cards and then loops recursively.
         let rec loop (persState : PersistentState) =
             async {
-                let deal = persState.Deal
+                let game = persState.Game
                 let isComplete =
-                    OpenDeal.getExchange deal
+                    OpenDeal.getExchange game.Deal
                         |> Exchange.isComplete 
                 if isComplete then
-                    return! finish persState deal exchangeMap
+                    return! finish persState game.Deal exchangeMap
                 else
                         // prepare current passer
-                    let seat = OpenDeal.currentPlayer deal
+                    let seat = OpenDeal.currentPlayer game.Deal
                     let (handView : HandView),
                         animCardsPass, _, _ =
                             exchangeMap[seat]
@@ -336,7 +336,7 @@ module Exchange =
                     let! deal' =
                         passer {
                             Dealer = dealer
-                            Deal = deal
+                            Game = game
                             AnimCardsPass = animCardsPass
                         }
 

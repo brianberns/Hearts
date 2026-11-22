@@ -235,8 +235,9 @@ module Deal =
             let! persState = playout surface persState seatViews
 
                 // deal is over
-            match OpenDeal.tryUpdateScore persState.GameScore persState.Deal with
-                | Some gameScore ->
+            let game = Game.create persState.Deal persState.GameScore
+            match Game.tryUpdateScore game with
+                | Some game ->
 
                         // display deal results
                     for seat in Enum.getValues<Seat> do
@@ -250,14 +251,14 @@ module Deal =
                         // update game score
                     for seat in Enum.getValues<Seat> do
                         console.log(
-                            $"{Seat.toString seat} has {gameScore[seat]} point(s)")
-                    displayGameScore gameScore
+                            $"{Seat.toString seat} has {game.Score[seat]} point(s)")
+                    displayGameScore game.Score
 
                         // is the game over?
-                    let winners = Game.findGameWinners gameScore
+                    let winners = GameScore.findGameWinners game.Score
                     let persState =
                         { persState with
-                            GameScore = gameScore
+                            GameScore = game.Score
                             Dealer = Seat.next persState.Dealer
                             DealOpt = None }
                     if winners.IsEmpty then

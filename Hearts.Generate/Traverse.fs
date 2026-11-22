@@ -99,7 +99,10 @@ module Traverse =
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal depth =
-            let infoSet = OpenDeal.currentInfoSet deal
+            let infoSet =
+                deal
+                    |> Game.createFirst                               // as if this is the first deal of a game
+                    |> Game.currentInfoSet
             let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
                 addLoop deal depth

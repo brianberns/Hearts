@@ -38,6 +38,10 @@ type PersistentState =
             | Some deal -> deal
             | None -> failwith "No current deal"
 
+    /// Current game.
+    member this.Game =
+        Game.create this.Deal this.GameScore   // to-do: store a Game rather than a deal and game score?
+
 module PersistentState =
 
     /// Initial persistent state.
