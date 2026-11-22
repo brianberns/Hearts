@@ -119,18 +119,14 @@ module Tournament =
 
             // run games
         let scores =
-            let map =
-                if inParallel then Array.Parallel.map
-                else Array.map
-            [|
-                for iGame = 0 to numGames - 1 do
-                    let rng =
-                        SplitMixRandom.GetSeed(rngSeed, iGame)   // give each game its own RNG
-                            |> SplitMixRandom
-                    let dealer =
-                        enum<Seat> (iGame % Seat.numSeats)       // rotate dealer at the start of each game
-                    rng, dealer
-            |] |> map (fun (rng, dealer) ->
+            let init =
+                if inParallel then Array.Parallel.init
+                else Array.init
+            init numGames (fun iGame ->
+                let rng =
+                    SplitMixRandom.GetSeed(rngSeed, iGame)        // give each game its own RNG
+                        |> SplitMixRandom
+                let dealer = enum<Seat> (iGame % Seat.numSeats)   // rotate dealer at the start of each game
                 Game.playGame Rules.arena rng playerMap dealer)
 
             // compute results
