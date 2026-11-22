@@ -22,9 +22,10 @@ module Tournament =
 
             // run games
         let games =
+            let allowSubtraction = false   // Hearts Arena rules
             let rng = Random(rngSeed)
             Game.playGames rng inParallel numGames (
-                Game.playGame rng playerMap)
+                Game.playGame allowSubtraction rng playerMap)
 
             // compute results
         let winnerMap =
@@ -42,4 +43,4 @@ module Tournament =
                         | Some wins -> wins
                         | None -> 0
             |]
-        (float32 score[challengerSeat] / float32 numGames)
+        float32 score[challengerSeat] / float32 numGames

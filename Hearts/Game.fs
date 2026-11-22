@@ -66,10 +66,10 @@ module Game =
 
     /// Applies the shoot reward to the given game for the
     /// given shooter.
-    let private applyShootReward shooter game =
+    let private applyShootReward allowSubtraction shooter game =
 
             // add points to non-shooters
-        let game =
+        let game' =
             let dealScore =
                 Enum.getValues<Seat>
                     |> Array.map (fun seat ->
@@ -79,33 +79,36 @@ module Game =
             addDealScore dealScore game
 
             // subtract points from shooter instead?
-        let leaders = GameScore.findGameLeaders game.Score
-        if leaders.Contains(shooter) then game
-        else
-            let dealScore =
-                Enum.getValues<Seat>
-                    |> Array.map (fun seat ->
-                        if seat = shooter then
-                            -ClosedDeal.numPointsPerDeal
-                        else 0)
-                    |> Score.ofPoints
-            addDealScore dealScore game
+        if allowSubtraction then
+            let leaders = GameScore.findGameLeaders game'.Score
+            if leaders.Contains(shooter) then game'
+            else
+                let dealScore =
+                    Enum.getValues<Seat>
+                        |> Array.map (fun seat ->
+                            if seat = shooter then
+                                -ClosedDeal.numPointsPerDeal
+                            else 0)
+                        |> Score.ofPoints
+                addDealScore dealScore game
+        else game'
 
     /// Updates the given game's score, including shoot reward, if
     /// the final score of the current deal is inevitable.
-    let tryUpdateScore game =
+    let tryUpdateScore allowSubtraction game =
         option {
             let! inevitable = OpenDeal.tryFindInevitable game.Deal
             let dealScore = game.Deal.ClosedDeal.Score + inevitable
             assert(Score.sum dealScore = ClosedDeal.numPointsPerDeal)
             return
                 match ClosedDeal.tryFindScoreShooter dealScore with
-                    | Some shooter -> applyShootReward shooter game
+                    | Some shooter ->
+                        applyShootReward allowSubtraction shooter game
                     | None -> addDealScore dealScore game
         }
 
     /// Plays one deal in a game.
-    let private playDeal (playerMap : Map<_, _>) game =
+    let private playDeal allowSubtraction (playerMap : Map<_, _>) game =
 
         let rec loop game =
 
@@ -119,7 +122,7 @@ module Game =
                 addAction infoSet.LegalActionType action game
 
                 // deal is over?
-            match tryUpdateScore game with
+            match tryUpdateScore allowSubtraction game with
                 | Some game -> game
                 | None -> loop game
 
@@ -131,13 +134,13 @@ module Game =
             |> OpenDeal.fromDeck dealer dir
 
     /// Plays the given game to completion.
-    let playGame rng playerMap game =
+    let playGame allowSubtraction rng playerMap game =
 
         let rec loop game =
             assert(GameScore.isOver game.Score |> not)
 
                 // play current deal to completion
-            let game = playDeal playerMap game
+            let game = playDeal allowSubtraction playerMap game
 
                 // stop if game is over
             if GameScore.isOver game.Score then game
