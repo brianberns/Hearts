@@ -131,14 +131,15 @@ module Tournament =
             init numSeeds (fun iSeed ->
                 let seed = SplitMixRandom.GetSeed(rngSeed, iSeed)
                 Seat.cycle Seat.South
-                    |> Seq.where (fun challengerSeat ->
+                    |> Seq.sumBy (fun challengerSeat ->
                         let playerMap = createPlayerMap challengerSeat
-                        let rng = SplitMixRandom(seed)                       // restart RNG for duplicate deals
-                        Game.playGame Rules.arena rng playerMap Seat.South   // players rotate seats, so first dealer can be constant
-                            |> GameScore.findGameWinners
-                            |> Set.contains challengerSeat)
-                    |> Seq.length)
-                |> Seq.sum
+                        let rng = SplitMixRandom(seed)                           // restart RNG for duplicate deals
+                        let isWinner =
+                            Game.playGame Rules.arena rng playerMap Seat.South   // players rotate seats, so first dealer can be constant
+                                |> GameScore.findGameWinners
+                                |> Set.contains challengerSeat
+                        if isWinner then 1 else 0))
+                |> Array.sum
 
             // compute results
         let numGames = numSeeds * Seat.numSeats
