@@ -25,14 +25,14 @@ module Program =
             let dealer = enum<Seat> (iDeal % Seat.numSeats)
             OpenDeal.fromDeck dealer dir deck)
 
-    /// Plays the given number of deals.
+    /// Plays the given number of deals in parallel.
     let private playDeals settings iteration numDeals =
         let rng = Random()
         generate rng
             |> Seq.take numDeals
             |> Seq.toArray
             |> Array.Parallel.map (fun deal ->
-                let rng = Random()   // each thread has its own RNG
+                let rng = Random()   // give each thread its own RNG
                 Traverse.traverse settings iteration deal rng)
 
     /// Generates training data for the given iteration.
