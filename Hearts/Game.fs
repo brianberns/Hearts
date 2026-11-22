@@ -108,7 +108,8 @@ module Game =
         }
 
     /// Plays one deal in a game.
-    let private playDeal allowSubtraction (playerMap : Map<_, _>) game =
+    let private playDeal
+        scoringRule (playerMap : Map<_, _>) game =
 
         let rec loop game =
 
@@ -122,7 +123,7 @@ module Game =
                 addAction infoSet.LegalActionType action game
 
                 // deal is over?
-            match tryUpdateScore allowSubtraction game with
+            match tryUpdateScore scoringRule game with
                 | Some game -> game
                 | None -> loop game
 
