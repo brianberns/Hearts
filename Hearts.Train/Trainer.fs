@@ -17,7 +17,7 @@ module Trainer =
             Tournament.run
                 0
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
-                settings.NumEvaluationDeals
+                settings.NumEvaluationGames
                 Claude.player
                 (Strategy.createPlayer model)
 

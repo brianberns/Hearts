@@ -33,7 +33,7 @@ module Program =
 
         printfn $"Server garbage collection: {GCSettings.IsServerGC}"
 
-        let numDeals = 20_000
+        let numGames = 2000
 
         use model =
             new AdvantageModel(
@@ -47,7 +47,7 @@ module Program =
             model.eval()
             let player = Strategy.createPlayer model
             let payoff =
-                Tournament.run 0 true numDeals Claude.player player
+                Tournament.run 0 true numGames Claude.player player
             printfn $"{Path.GetFileName(path)}: {payoff}"
 
     [<EntryPoint>]

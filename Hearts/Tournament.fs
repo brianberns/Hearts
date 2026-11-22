@@ -120,7 +120,7 @@ module Tournament =
             // determine number of seeds needed
         let numSeeds = numGames / Seat.numSeats
 
-            // count number of time challenger wins
+            // count number of times challenger wins
         let nWins =
 
             let init =

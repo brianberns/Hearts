@@ -4,8 +4,8 @@ open System
 open Hearts
 
 module Program =
-    let numDeals = 200_000
+    let numGames = 2000
     let claudePayoff =
-        Tournament.run 0 true numDeals Gemini.player Claude.player
+        Tournament.run 0 true numGames Gemini.player Claude.player
     printfn $"Gemini payoff: {-claudePayoff}"
     printfn $"Claude payoff: {claudePayoff}"
