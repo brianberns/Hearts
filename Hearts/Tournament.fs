@@ -103,12 +103,12 @@ type SplitMixRandom(seed : uint64) =
 
 module Tournament =
 
-    /// Runs a deterministic tournament between two players.
+    /// Runs a deterministic tournament between two players
+    /// using duplicate deals.
     let run rngSeed inParallel numGames champion challenger =
 
-            // prepare players
-        let challengerSeat = Seat.South
-        let playerMap =
+        /// Puts challenger in the given seat.
+        let createPlayerMap challengerSeat =
             Enum.getValues<Seat>
                 |> Seq.map (fun seat ->
                     let player =
@@ -117,31 +117,29 @@ module Tournament =
                     seat, player)
                 |> Map
 
-            // run games
-        let scores =
+            // determine number of seeds needed
+        let numSeeds = numGames / Seat.numSeats
+
+            // count number of time challenger wins
+        let nWins =
+
             let init =
                 if inParallel then Array.Parallel.init
                 else Array.init
-            init numGames (fun iGame ->
-                let rng =
-                    SplitMixRandom.GetSeed(rngSeed, iGame)        // give each game its own RNG
-                        |> SplitMixRandom
-                let dealer = enum<Seat> (iGame % Seat.numSeats)   // rotate dealer at the start of each game
-                Game.playGame Rules.arena rng playerMap dealer)
+
+                // rotate challenger through each seat for each seed
+            init numSeeds (fun iSeed ->
+                let seed = SplitMixRandom.GetSeed(rngSeed, iSeed)
+                Seat.cycle Seat.South
+                    |> Seq.where (fun challengerSeat ->
+                        let playerMap = createPlayerMap challengerSeat
+                        let rng = SplitMixRandom(seed)                       // restart RNG for duplicate deals
+                        Game.playGame Rules.arena rng playerMap Seat.South   // players rotate seats, so first dealer can be constant
+                            |> GameScore.findGameWinners
+                            |> Set.contains challengerSeat)
+                    |> Seq.length)
+                |> Seq.sum
 
             // compute results
-        let winnerMap =
-            scores
-                |> Seq.collect GameScore.findGameWinners
-                |> Seq.groupBy id
-                |> Seq.map (fun (seat, group) ->
-                    seat, Seq.length group)
-                |> Map
-        let score =
-            Score.ofPoints [|
-                for seat in Enum.getValues<Seat> do
-                    match Map.tryFind seat winnerMap with
-                        | Some wins -> wins
-                        | None -> 0
-            |]
-        float32 score[challengerSeat] / float32 numGames
+        let numGames = numSeeds * Seat.numSeats
+        float32 nWins / float32 numGames
