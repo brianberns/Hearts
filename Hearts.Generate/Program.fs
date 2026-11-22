@@ -25,14 +25,11 @@ module Program =
             OpenDeal.fromDeck dealer dir deck)
 
     /// Plays the given number of deals.
-    let private playDeals rng inParallel numDeals playFun =
-        let map =
-            if inParallel then Array.Parallel.map
-            else Array.map
+    let private playDeals rng numDeals playFun =
         generate rng
             |> Seq.take numDeals
             |> Seq.toArray
-            |> map playFun
+            |> Array.Parallel.map playFun
 
     /// Generates training data for the given iteration.
     let private generateSamples settings iteration state =
@@ -60,7 +57,7 @@ module Program =
 
                     // generate samples
                 let samples =
-                    playDeals (Random()) true numDeals
+                    playDeals (Random()) numDeals
                         (fun deal ->
                             let rng = Random()   // each thread has its own RNG
                             Traverse.traverse settings iteration deal rng)
