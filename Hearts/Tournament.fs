@@ -4,7 +4,8 @@ open System
 open PlayingCards
 open Hearts
 
-/// SplitMix64 behind the System.Random API, by Claude.
+/// SplitMix64 behind the System.Random API, by Claude. This is
+/// not thread-safe.
 /// https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
 type SplitMixRandom(seed : uint64) =
     inherit Random()
@@ -69,7 +70,7 @@ module Tournament =
             let rng = Random(rngSeed)
             Game.playGames rng inParallel numGames (fun iGame game ->
                 let rng =
-                    SplitMixRandom.GetSeed(rngSeed, iGame)   // give each thread its own RNG
+                    SplitMixRandom.GetSeed(rngSeed, iGame)   // give each game its own RNG
                         |> SplitMixRandom
                 Game.playGame Rules.arena rng playerMap game)
 

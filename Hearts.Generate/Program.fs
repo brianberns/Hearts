@@ -32,7 +32,7 @@ module Program =
             |> Seq.take numDeals
             |> Seq.toArray
             |> Array.Parallel.map (fun deal ->
-                let rng = Random()   // give each thread its own RNG
+                let rng = Random()   // give each deal its own RNG
                 Traverse.traverse settings iteration deal rng)
 
     /// Generates training data for the given iteration.
