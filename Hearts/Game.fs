@@ -174,8 +174,8 @@ module Game =
     /// Plays the given number of games.
     let playGames rng inParallel numGames playFun =
         let map =
-            if inParallel then Array.Parallel.map
-            else Array.map
+            if inParallel then Array.Parallel.mapi
+            else Array.mapi
         generate rng
             |> Seq.take numGames
             |> Seq.toArray

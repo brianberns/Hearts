@@ -1,8 +1,6 @@
 ﻿namespace Hearts.Train
 
-open System
 open System.Diagnostics
-open System.IO
 
 open Hearts
 open Hearts.Heuristic
