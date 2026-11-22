@@ -66,7 +66,7 @@ module Game =
 
     /// Applies the shoot reward to the given game for the
     /// given shooter.
-    let private applyShootReward allowSubtraction shooter game =
+    let private applyShootReward scoringRule shooter game =
 
             // add points to non-shooters
         let game' =
@@ -79,7 +79,7 @@ module Game =
             addDealScore dealScore game
 
             // subtract points from shooter instead?
-        if allowSubtraction then
+        if scoringRule = AllowSubtraction then
             let leaders = GameScore.findGameLeaders game'.Score
             if leaders.Contains(shooter) then game'
             else
@@ -95,7 +95,7 @@ module Game =
 
     /// Updates the given game's score, including shoot reward, if
     /// the final score of the current deal is inevitable.
-    let tryUpdateScore allowSubtraction game =
+    let tryUpdateScore scoringRule game =
         option {
             let! inevitable = OpenDeal.tryFindInevitable game.Deal
             let dealScore = game.Deal.ClosedDeal.Score + inevitable
@@ -103,7 +103,7 @@ module Game =
             return
                 match ClosedDeal.tryFindScoreShooter dealScore with
                     | Some shooter ->
-                        applyShootReward allowSubtraction shooter game
+                        applyShootReward scoringRule shooter game
                     | None -> addDealScore dealScore game
         }
 
@@ -134,13 +134,13 @@ module Game =
             |> OpenDeal.fromDeck dealer dir
 
     /// Plays the given game to completion.
-    let playGame allowSubtraction rng playerMap game =
+    let playGame rules rng playerMap game =
 
         let rec loop game =
             assert(GameScore.isOver game.Score |> not)
 
                 // play current deal to completion
-            let game = playDeal allowSubtraction playerMap game
+            let game = playDeal rules.MoonShotScoringRule playerMap game
 
                 // stop if game is over
             if GameScore.isOver game.Score then game

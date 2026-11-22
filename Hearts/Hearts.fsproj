@@ -11,6 +11,7 @@
     <Compile Include="Trick.fs" />
     <Compile Include="Score.fs" />
     <Compile Include="ExchangeDirection.fs" />
+    <Compile Include="Rules.fs" />
     <Compile Include="ClosedDeal.fs" />
     <Compile Include="Pass.fs" />
     <Compile Include="GameScore.fs" />

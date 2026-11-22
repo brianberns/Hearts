@@ -236,8 +236,7 @@ module Deal =
 
                 // deal is over
             let game = Game.create persState.Deal persState.GameScore
-            let allowSubtraction = true
-            match Game.tryUpdateScore allowSubtraction game with
+            match Game.tryUpdateScore Rules.standard.MoonShotScoringRule game with
                 | Some game ->
 
                         // display deal results

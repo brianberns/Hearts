@@ -21,11 +21,10 @@ module ZeroSum =
 
     /// Computes the payoff for the given deal, if it is inevitable.
     let tryGetPayoff deal =
-        let allowSubtraction = true          // both values work the same
         option {
             let! game =
                 deal
                     |> Game.createFirst      // as if this is the first deal of a game
-                    |> Game.tryUpdateScore allowSubtraction
+                    |> Game.tryUpdateScore AlwaysAddToOthers
             return getPayoff game.Score      // game score is now raw deal score
         }
