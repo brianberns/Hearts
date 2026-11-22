@@ -140,7 +140,7 @@ module Game =
             assert(GameScore.isOver game.Score |> not)
 
                 // play current deal to completion
-            let game = playDeal rules.MoonShotScoringRule playerMap game
+            let game = playDeal rules.MoonShotScoring playerMap game
 
                 // stop if game is over
             if GameScore.isOver game.Score then game
