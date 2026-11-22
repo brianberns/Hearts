@@ -14,7 +14,8 @@ open Hearts.Model
 
 module Program =
 
-    /// Generates an infinite sequence of deals.
+    /// Generates an infinite sequence of deals with rotating
+    /// dealers and exchange directions.
     let private generate (rng : Random) =
         Seq.initInfinite (fun iDeal ->
             let dir =
