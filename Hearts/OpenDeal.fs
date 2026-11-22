@@ -317,3 +317,43 @@ module OpenDeal =
                 else None
 
         else None
+
+    /// Applies the shoot reward to the given game score for
+    /// the given shooter.
+    let private applyShootReward gameScore shooter =
+
+            // add points to non-shooters
+        let gameScore' =
+            let dealScore =
+                Enum.getValues<Seat>
+                    |> Array.map (fun seat ->
+                        if seat = shooter then 0
+                        else ClosedDeal.numPointsPerDeal)
+                    |> Score.ofPoints
+            gameScore + dealScore
+
+            // subtract points from shooter instead?
+        let leaders = Game.findGameLeaders gameScore'
+        if leaders.Contains(shooter) then
+            gameScore'
+        else
+            let dealScore =
+                Enum.getValues<Seat>
+                    |> Array.map (fun seat ->
+                        if seat = shooter then
+                            -ClosedDeal.numPointsPerDeal
+                        else 0)
+                    |> Score.ofPoints
+            gameScore + dealScore
+
+    /// Updates the given game score, including shoot reward, if
+    /// the final score of the given deal is inevitable.
+    let tryUpdateScore gameScore deal =
+        option {
+            let! inevitable = tryFindInevitable deal
+            let dealScore = deal.ClosedDeal.Score + inevitable
+            assert(Score.sum dealScore = ClosedDeal.numPointsPerDeal)
+            return ClosedDeal.tryFindScoreShooter dealScore
+                |> Option.map (applyShootReward gameScore)
+                |> Option.defaultValue (gameScore + dealScore)
+        }

@@ -24,8 +24,11 @@ type InformationSet =
         /// Cards received by the player, if any.
         IncomingPassOpt : Option<Pass>
 
-        /// Public information.
+        /// Public deal information.
         Deal : ClosedDeal
+
+        /// Game score at the start of the deal.
+        GameScore : Score
 
         /// What action type can be taken in this information set?
         LegalActionType : ActionType
@@ -67,12 +70,15 @@ module InformationSet =
                     |> Seq.toArray
 
     /// Creates an information set.
-    let create player hand outgoingPassOpt incomingPassOpt deal =
+    let create
+        player hand outgoingPassOpt incomingPassOpt deal =
         assert(Option.isNone incomingPassOpt
             || Option.isSome outgoingPassOpt)
         assert(deal.CurrentTrickOpt.IsNone
             || ClosedDeal.currentPlayer deal = player)
         assert(ClosedDeal.isComplete deal |> not)
+        let gameScore = Score.zero
+        assert(Game.isOver gameScore |> not)
         let actionType =
             legalActionType outgoingPassOpt incomingPassOpt deal
         {
@@ -81,6 +87,7 @@ module InformationSet =
             OutgoingPassOpt = outgoingPassOpt
             IncomingPassOpt = incomingPassOpt
             Deal = deal
+            GameScore = gameScore
             LegalActionType = actionType
             LegalActions = legalActions actionType hand deal
         }

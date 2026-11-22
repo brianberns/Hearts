@@ -235,7 +235,7 @@ module Deal =
             let! persState = playout surface persState seatViews
 
                 // deal is over
-            match Game.tryUpdateScore persState.Deal persState.GameScore with
+            match OpenDeal.tryUpdateScore persState.GameScore persState.Deal with
                 | Some gameScore ->
 
                         // display deal results

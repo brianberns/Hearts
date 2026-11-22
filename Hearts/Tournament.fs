@@ -23,7 +23,7 @@ module ZeroSum =
 
     /// Computes the payoff for the given deal, if it is inevitable.
     let tryGetPayoff deal =
-        Game.tryUpdateScore deal Score.zero
+        OpenDeal.tryUpdateScore Score.zero deal
             |> Option.map getPayoff
 
 module Tournament =
@@ -40,7 +40,7 @@ module Tournament =
                         | None -> playerMap[infoSet.Player].Act infoSet
                 OpenDeal.addAction
                     infoSet.LegalActionType action deal
-            match Game.tryUpdateScore deal Score.zero with
+            match OpenDeal.tryUpdateScore Score.zero deal with
                 | Some gameScore -> gameScore
                 | None -> loop deal
 
