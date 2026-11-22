@@ -7,7 +7,7 @@ open Hearts
 module Tournament =
 
     /// Runs a tournament between two players.
-    let run rng inParallel numGames champion challenger =
+    let run rngSeed inParallel numGames champion challenger =
 
             // prepare players
         let challengerSeat = Seat.South
@@ -22,6 +22,7 @@ module Tournament =
 
             // run games
         let games =
+            let rng = Random(rngSeed)
             Game.playGames rng inParallel numGames (
                 Game.playGame rng playerMap)
 

@@ -16,9 +16,8 @@ module Trainer =
     let private evaluate settings iteration model =
 
         let payoff =
-            let rng = Random(0)
             Tournament.run
-                rng
+                0
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
                 settings.NumEvaluationDeals
                 Claude.player
