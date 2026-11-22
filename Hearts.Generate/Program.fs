@@ -25,11 +25,14 @@ module Program =
             OpenDeal.fromDeck dealer dir deck)
 
     /// Plays the given number of deals.
-    let private playDeals rng numDeals playFun =
+    let private playDeals settings iteration numDeals =
+        let rng = Random()
         generate rng
             |> Seq.take numDeals
             |> Seq.toArray
-            |> Array.Parallel.map playFun
+            |> Array.Parallel.map (fun deal ->
+                let rng = Random()   // each thread has its own RNG
+                Traverse.traverse settings iteration deal rng)
 
     /// Generates training data for the given iteration.
     let private generateSamples settings iteration state =
@@ -57,10 +60,7 @@ module Program =
 
                     // generate samples
                 let samples =
-                    playDeals (Random()) numDeals
-                        (fun deal ->
-                            let rng = Random()   // each thread has its own RNG
-                            Traverse.traverse settings iteration deal rng)
+                    playDeals settings iteration numDeals
                         |> Inference.complete
                             settings.InferenceBatchSize
                             state.ModelOpt

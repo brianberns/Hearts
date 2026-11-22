@@ -162,7 +162,8 @@ module Game =
         createDeal rng dealer ExchangeDirection.Left   // games always start with Left pass
             |> createFirst
 
-    /// Generates an infinite sequence of games.
+    /// Generates an infinite sequence of games with rotating
+    /// dealers.
     let generate rng =
         Seq.initInfinite (fun iGame ->
             iGame % Seat.numSeats
