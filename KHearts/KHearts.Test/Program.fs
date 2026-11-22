@@ -1,6 +1,6 @@
 /// Checks of the Killer Hearts port.
 ///
-///    smoke <deals>    plays Killer Hearts against the Claude heuristic in Hearts' own tournament
+///    smoke <games>    plays Killer Hearts against three Claude heuristics in Hearts' own tournament
 ///    agree <deals>    compares the one-seat player with the exact four-seat table, decision by decision
 ///    fsport <deals>   compares the F# port of Killer Hearts (Hearts.Heuristic/Killer) with the
 ///                     one-seat player, at every pass and play decision of Killer Hearts self-play
@@ -22,6 +22,19 @@ open Hearts
 open Hearts.Heuristic
 open KHearts
 
+/// Generates an infinite sequence of deals, rotating dealer and exchange direction, from the given RNG. This is
+/// the sequence the Hearts library's OpenDeal.generate produced, so results compare with earlier runs.
+let generateDeals (rng : Random) =
+    Seq.initInfinite (fun iDeal ->
+        let dir = enum<ExchangeDirection> (iDeal % ExchangeDirection.numDirections)
+        let deck = Deck.shuffle rng
+        let dealer = enum<Seat> (iDeal % Seat.numSeats)
+        OpenDeal.fromDeck dealer dir deck)
+
+/// The current player's information set in the given deal, played as if it were the first deal of a game.
+let currentInfoSet deal =
+    deal |> Game.createFirst |> Game.currentInfoSet
+
 /// Plays one deal on an exact table, with Killer Hearts in every seat, alongside Hearts' own deal.
 /// At each decision, asks the one-seat player too, and counts how often the two agree.
 let agreeOnDeal (deal : OpenDeal) =
@@ -39,7 +52,7 @@ let agreeOnDeal (deal : OpenDeal) =
     let mutable passDiffer = 0
     let rec loop (deal : OpenDeal) (passQueue : Card list) =
         if not (ClosedDeal.isComplete deal.ClosedDeal) then
-            let infoSet = OpenDeal.currentInfoSet deal
+            let infoSet = currentInfoSet deal
             let seat = int infoSet.Player
             match infoSet.LegalActionType with
                 | ActionType.Pass ->
@@ -95,7 +108,7 @@ let referenceDeal (rng : Random) (writer : IO.TextWriter) (deal : OpenDeal) =
     writer.WriteLine($"D {dealer} {dir} {numbers gameScore} {numbers (Seq.concat hands)}")
     let rec loop (deal : OpenDeal) (passQueue : Card list) =
         if not (ClosedDeal.isComplete deal.ClosedDeal) then
-            let infoSet = OpenDeal.currentInfoSet deal
+            let infoSet = currentInfoSet deal
             let seat = int infoSet.Player
             let answer = KillerHearts.Act(infoSet, gameScore) |> KillerHearts.ToKh
             match infoSet.LegalActionType with
@@ -129,7 +142,7 @@ type PortAgreement =
 /// chooses the same card, at each pass, and at each play decision with a choice.
 let agreeWithFSharpPort (kh : Player) (deal : OpenDeal) =
     let rec loop deal counts =
-        let infoSet = OpenDeal.currentInfoSet deal
+        let infoSet = currentInfoSet deal
         let action =
             match Seq.tryExactlyOne infoSet.LegalActions with
                 | Some action -> action
@@ -144,7 +157,7 @@ let agreeWithFSharpPort (kh : Player) (deal : OpenDeal) =
                     else { counts with PlayDiffer = counts.PlayDiffer + 1 }
                 | _ -> counts
         let deal = OpenDeal.addAction infoSet.LegalActionType action deal
-        match Game.tryUpdateScore deal Score.zero with
+        match Game.tryUpdateScore Rules.arena.MoonShotScoring (Game.createFirst deal) with
             | Some _ -> counts
             | None -> loop deal counts
     loop deal { PassAgree = 0; PassDiffer = 0; PlayAgree = 0; PlayDiffer = 0 }
@@ -155,7 +168,7 @@ let main argv =
         | [| "fsport"; deals |] ->
             let kh = KillerHearts.CreatePlayer()
             let results =
-                OpenDeal.generate (Random(0))
+                generateDeals (Random(0))
                     |> Seq.take (int deals)
                     |> Seq.toArray
                     |> Array.Parallel.map (agreeWithFSharpPort kh)
@@ -164,14 +177,14 @@ let main argv =
             report "passes" (results |> Array.sumBy _.PassAgree) (results |> Array.sumBy _.PassDiffer)
             report "play decisions with a choice" (results |> Array.sumBy _.PlayAgree) (results |> Array.sumBy _.PlayDiffer)
             0
-        | [| "smoke"; deals |] ->
-            let payoff =
-                Tournament.run 0 true (int deals) Claude.player (KillerHearts.CreatePlayer())
-            printfn $"Killer Hearts vs Claude heuristic: payoff per seat-deal %+.4f{payoff}"
+        | [| "smoke"; games |] ->
+            let winRate =
+                Tournament.run 0 true (int games) Claude.player (KillerHearts.CreatePlayer())
+            printfn $"Killer Hearts vs three Claude heuristics: wins %.4f{winRate} of games (0.25 is even)"
             0
         | [| "agree"; deals |] ->
             let results =
-                OpenDeal.generate (Random(0))
+                generateDeals (Random(0))
                     |> Seq.take (int deals)
                     |> Seq.toArray
                     |> Array.Parallel.map agreeOnDeal
@@ -200,7 +213,7 @@ let main argv =
         | [| "reference"; deals; path |] ->
             use writer = new IO.StreamWriter(path: string)
             let rng = Random(1)
-            for deal in OpenDeal.generate (Random(2)) |> Seq.take (int deals) do
+            for deal in generateDeals (Random(2)) |> Seq.take (int deals) do
                 referenceDeal rng writer deal
             0
         | [| "features"; transcriptPath; csvPath |] ->
@@ -217,5 +230,5 @@ let main argv =
             for n in tally.Notes do printfn "  %s" n
             0
         | _ ->
-            eprintfn "usage: KHearts.Test smoke <deals> | agree <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | reference <deals> <file> | features <transcript> <csv>"
+            eprintfn "usage: KHearts.Test smoke <games> | agree <deals> | fsport <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | reference <deals> <file> | features <transcript> <csv>"
             1

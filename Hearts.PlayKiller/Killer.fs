@@ -93,13 +93,19 @@ module Killer =
                     HandMap = handMap
             }
 
+    /// Game score at the start of the current deal.
+    let private getGameScore state =
+        match state.GameScoreOpt with
+            | Some gameScore -> gameScore
+            | None -> failwith "Unexpected"
+
     /// Gets the player's full set of passed cards.
-    let private getPass seat deal (hand : Hand) player =
+    let private getPass seat deal gameScore (hand : Hand) player =
         ((hand, Set.empty), [1 .. Pass.numCards])
             ||> Seq.fold (fun (hand, pass) _ ->
                 let card =
                     InformationSet.create
-                        seat hand (Some pass) None deal
+                        seat hand (Some pass) None deal gameScore
                         |> player.Act
                 assert(hand.Contains(card))
                 hand.Remove(card),
@@ -118,6 +124,7 @@ module Killer =
                             getPass
                                 record.Seat
                                 deal.ClosedDeal
+                                (getGameScore state)
                                 (OpenDeal.currentHand deal)
                                 state.PlayerMap[record.Seat]
                         Protocol.writePassOutgoing cards
@@ -194,6 +201,7 @@ module Killer =
                                     outPassOpt
                                     inPassOpt
                                     deal.ClosedDeal
+                                    (getGameScore state)
                             player.Act infoSet
                         Protocol.writePlay card
                         card
