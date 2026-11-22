@@ -133,9 +133,10 @@ module Game =
         Deck.shuffle rng
             |> OpenDeal.fromDeck dealer dir
 
-    /// Plays the given game to completion.
-    let playGame rules rng playerMap game =
+    /// Starts a new game and plays it to completion.
+    let playGame rules rng playerMap dealer =
 
+        /// Plays the given game to completion.
         let rec loop game =
             assert(GameScore.isOver game.Score |> not)
 
@@ -143,7 +144,8 @@ module Game =
             let game = playDeal rules.MoonShotScoring playerMap game
 
                 // stop if game is over
-            if GameScore.isOver game.Score then game
+            if GameScore.isOver game.Score then
+                game.Score
             else
                     // create and play another deal
                 let deal =
@@ -155,28 +157,6 @@ module Game =
                     createDeal rng dealer dir
                 loop { game with Deal = deal }
 
-        loop game
-
-    /// Creates a new game.
-    let private createNew rng dealer =
         createDeal rng dealer ExchangeDirection.Left   // games always start with Left pass
             |> createFirst
-
-    /// Generates an infinite sequence of new games. Since the games
-    /// are not complete, we rotate the dealer from the start of the
-    /// previous game (not the last deal of the previous game).
-    let generate rng =
-        Seq.initInfinite (fun iGame ->
-            iGame % Seat.numSeats
-                |> enum<Seat>
-                |> createNew rng)
-
-    /// Plays the given number of games.
-    let playGames rng inParallel numGames playFun =
-        let map =
-            if inParallel then Array.Parallel.mapi
-            else Array.mapi
-        generate rng
-            |> Seq.take numGames
-            |> Seq.toArray
-            |> map playFun
+            |> loop
