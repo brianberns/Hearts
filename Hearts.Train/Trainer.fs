@@ -11,15 +11,27 @@ module Trainer =
 
     /// Evaluates the given model by playing it against a
     /// standard.
-    let private evaluate settings iteration model =
+    let private evaluate settings iteration (model : AdvantageModel) =
 
+            // copy model to CPU for stability and performance
+        use cpuModel =
+            new AdvantageModel(
+                settings.HiddenSize,
+                settings.NumHiddenLayers,
+                settings.DropoutRate,
+                TorchSharp.torch.CPU)
+        cpuModel.load_state_dict(model.state_dict()) |> ignore   // copies the weights across devices
+        cpuModel.eval()
+
+            // run tournament using CPU model
         let winRate =
             Tournament.run
                 0
                 settings.NumEvaluationGames
                 Claude.player
-                (Strategy.createPlayer model)
+                (Strategy.createPlayer cpuModel)
 
+            // log results
         if settings.Verbose then
             printfn $"Tournament win rate: %0.5f{winRate}"
         settings.Writer.add_scalar(
