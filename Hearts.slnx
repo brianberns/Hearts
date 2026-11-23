@@ -8,6 +8,7 @@
   <Project Path="Fable.Remoting.Suave/Fable.Remoting.MsgPack/Fable.Remoting.MsgPack.fsproj" />
   <Project Path="Fable.Remoting.Suave/Fable.Remoting.Server/Fable.Remoting.Server.fsproj" />
   <Project Path="Fable.Remoting.Suave/Fable.Remoting.Suave/Fable.Remoting.Suave.fsproj" />
+  <Project Path="Hearts.Experiments/Hearts.Experiments.fsproj" />
   <Project Path="Hearts.Generate/Hearts.Generate.fsproj" />
   <Project Path="Hearts.Heuristic/Hearts.Heuristic.fsproj" />
   <Project Path="Hearts.Learn/Hearts.Learn.fsproj" />
