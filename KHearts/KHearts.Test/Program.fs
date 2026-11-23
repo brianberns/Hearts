@@ -212,7 +212,9 @@ let describeMismatch (infoSet : InformationSet, action : Card, port : Card, trac
     let tricks = deal.CompletedTricks.Length + 1
     let score = infoSet.GameScore.Points |> Seq.map string |> String.concat ","
     $"{infoSet.LegalActionType} seat {infoSet.Player} score {score} "
-        + $"dealer {deal.Dealer} dir {deal.ExchangeDirection} trick {tricks}: KH {action}, port {port}; hand {cards infoSet.Hand}{trace}"
+        + $"dealer {deal.Dealer} dir {deal.ExchangeDirection} trick {tricks}: KH {action}, port {port}; hand {cards infoSet.Hand}; "
+        + $"legal {cards infoSet.LegalActions}; hearts broken {deal.HeartsBroken}; "
+        + $"played {cards (Seq.rev deal.CompletedTricks |> Seq.collect (fun t -> Seq.rev t.Cards))}{trace}"
 
 /// Claude as it was before it saw the game score: Killer Hearts' play as if every score were zero, under
 /// Killer Hearts' own moon rule, shooting from the cautious pass whatever the score.

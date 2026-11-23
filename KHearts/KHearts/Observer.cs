@@ -32,6 +32,16 @@ public partial class KhEngine
     }
 
     /// <summary>
+    /// Under the arena's rules, playing the Q♠ doesn't break hearts, as it does in Killer Hearts: only a heart
+    /// does. Call after each Q♠; the same as unbreak_hearts in the arena bot.
+    /// </summary>
+    public void UnbreakHearts()
+    {
+        if (count_played[hearts] == 0)
+            can_lead_H = false;
+    }
+
+    /// <summary>
     /// Starts a deal from the observer's point of view, ready to replay play from the first trick. The
     /// observer's dealt hand and passes are exact; each other seat holds at least the cards it has played.
     /// </summary>

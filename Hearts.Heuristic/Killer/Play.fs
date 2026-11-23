@@ -100,8 +100,9 @@ module Play =
                     let path = Scripted (d.Mode, sit)
                     card, path, decided
 
-    /// The table for a seat's view of a deal, replayed with the seat's own decisions at its turns.
-    let replay (options : Options) (me : KSeat) (dealer : KSeat) (direction : int) (gameScore : int[]) (held : KCard[]) (passed : KCard[]) (received : KCard[])
+    /// The table for a seat's view of a deal, replayed with the seat's own decisions at its turns, under the
+    /// given rule for what breaks hearts.
+    let replay (options : Options) (heartsBreak : HeartsBreakRule) (me : KSeat) (dealer : KSeat) (direction : int) (gameScore : int[]) (held : KCard[]) (passed : KCard[]) (received : KCard[])
                (plays : (KSeat * KCard) list) =
         let playedBy p = plays |> List.filter (fst >> (=) p) |> List.map snd |> List.toArray
         let t = Table(me, dealer, direction, gameScore, held, passed, received, playedBy)
@@ -111,6 +112,7 @@ module Play =
                 let _, _, memory = decide t
                 t.Remember(memory)
             t.Play(card)
+            if heartsBreak = HeartsOnly && card = { Rank = queen; Suit = spades } then t.UnbreakHearts()
         t
 
     /// Every card played in the deal so far, in order, with its player.
@@ -137,7 +139,7 @@ module Play =
             passOpt |> Option.map (Seq.map KCard.Of >> Seq.toArray) |> Option.defaultValue [||]
         let deal = infoSet.Deal
         let t =
-            replay options me (int deal.Dealer) (int deal.ExchangeDirection) (killerScores infoSet.GameScore.Points) held
+            replay options infoSet.Rules.HeartsBreak me (int deal.Dealer) (int deal.ExchangeDirection) (killerScores infoSet.GameScore.Points) held
                 (cards infoSet.OutgoingPassOpt) (cards infoSet.IncomingPassOpt) plays
         let card, _, _ = decide t
         card.ToCard()

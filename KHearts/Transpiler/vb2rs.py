@@ -41,25 +41,7 @@ ALLOWS = ('non_snake_case, non_upper_case_globals, non_camel_case_types, unused_
           'clippy::all')
 
 
-# The arena's rules (std-1) differ from Killer Hearts': the Q♠ doesn't break hearts, so can_lead_H can be
-# false after QS_played. The first two lines lead a heart whenever the Q♠ has been played, assuming hearts are
-# then broken; the guard keeps them to Killer Hearts' play under its own rules, where QS_played implies
-# can_lead_H. The third is where a leader claims the remaining tricks after the Q♠ with the top hearts, but has
-# no suit it may lead to start: Killer Hearts halts, as under its own rules the leader always has one (hearts,
-# once the Q♠ is played). For the arena, the leader claims anyway, as through V7.03, and plays on with its
-# highest legal card (see table.rs). Not claiming instead leads to other lines that lead a heart.
-ARENA_PATCHES = [
-    ('Playing.bas',
-     'If est_tr(hearts) > 0 And LU(hearts) >= mini(est_tr(hearts), 2) Then',
-     "If est_tr(hearts) > 0 And LU(hearts) >= mini(est_tr(hearts), 2) And can_lead_H Then 'patched: see ARENA_PATCHES"),
-    ('Playing.bas',
-     'ElseIf pts_sit = player And HU(hearts) < 2 And suit_len_H > HU(hearts) And mode <> Equivocate Then',
-     'ElseIf pts_sit = player And HU(hearts) < 2 And suit_len_H > HU(hearts) And mode <> Equivocate And can_lead_H '
-     "Then 'patched: see ARENA_PATCHES"),
-    ('Playing.bas',
-     'If suit_with_HU = illegal_value Then Call diagnose_and_halt("No suit with HU")',
-     "'If suit_with_HU = illegal_value Then Call diagnose_and_halt(\"No suit with HU\") patched: see ARENA_PATCHES"),
-]
+# ARENA_PATCHES (in vb2cs.py) guard three lines for the arena's rules.
 
 
 def rs_name(cs_name):
@@ -812,7 +794,7 @@ HEADER = [
 
 def main():
     src, outdir = sys.argv[1], sys.argv[2]
-    vb.SOURCE_PATCHES.extend(ARENA_PATCHES)
+    vb.SOURCE_PATCHES.extend(vb.ARENA_PATCHES)
     modules = [vb.read_module(os.path.join(src, f), name, excl, incl) for f, name, excl, incl in SOURCES]
     tr = vb.Translator(modules)
     os.makedirs(outdir, exist_ok=True)

@@ -655,7 +655,7 @@ type Decision(a : Analysis) =
     member _.Analysis = a
 
     /// The seat's main choices, in the same form as Killer Hearts' KhEngine.Brief, for checking the port.
-    member _.Brief(sit : int) =
+    member this.Brief(sit : int) =
         let seats (xs : 'T[]) = String.Join(",", xs)
         let b (x : bool) = if x then "True" else "False"
         String.Join(" ",
@@ -665,6 +665,19 @@ type Decision(a : Analysis) =
                 $"im={seats imScore} low={lowScore} high={highScore} deficit={deficit} ltw={likelyTWinner} tgt={seats (Array.map b oppTarget)}"
                 $"hold={b canHoldQS} eat={b eatQS} take={b takePoints} safe={safeCard} sluff={suitToSluff}/{rankToSluff} lead={bestLeadSuit}/{bestLeadRank}"
                 $"thr={threshold} goren={modGorenCount} go={b goShoot} quit={b quitShoot} rel={b relinquishQS}"
+                this.LeadDetail()
+            |])
+
+    /// The leading computation's main intermediate results, in the same form as Killer Hearts' KhEngine.LeadDetail.
+    member _.LeadDetail() =
+        let b (x : bool) = if x then "True" else "False"
+        let suits (f : int -> int) = String.Join(",", [| for s in allSuits -> f s |])
+        let order = String.Join(",", [| for i in 1 .. numberOfLeadableSuits -> riskRankOfSuit[i] |])
+        String.Join(" ",
+            [|
+                $"\n      len={suits (fun s -> suitLen[s])} HU={suits hu} LU={suits lu} est={suits estTr} opps={suits oppsHave}"
+                $"\n      safe={b spadesSafe} pull={b pullSpades} wlu={suitWithLU} power={powerSuit} lowrisk={suitOfLowestRisk}"
+                $"risk={suits (fun s -> riskRank[s])} order={order} ss={suitSmallest}/{lenSS} snal={suitNotAllLosers} pri={priority}"
             |])
     member _.ImScore = imScore
     member _.LowScore = lowScore
@@ -1072,8 +1085,11 @@ type Decision(a : Analysis) =
                 lead (highIn a.ACaseSuit) a.ACaseSuit
             elif a.HnQS > 0 then bestLeadRank <- a.HnQS
         elif table.QSPlayed then
+                // Under the arena's rules, the Q♠ doesn't break hearts, so hearts may not be leadable here. Killer
+                // Hearts' two heart leads below assume they are; the CanLeadH guards (ARENA_PATCHES in the
+                // transpiler) keep them to its own play under its own rules, where QSPlayed implies CanLeadH.
             let z = suitOfAllWinners >= 0 && a.OppsVoidIn[suitOfAllWinners] < 2 && len suitOfAllWinners = 1
-            if estTr hearts > 0 && lu hearts >= min (estTr hearts) 2 then
+            if estTr hearts > 0 && lu hearts >= min (estTr hearts) 2 && a.CanLeadH then
                 lead (lowIn hearts) hearts
                 priority <- 10
             elif z && suitOfAllWinners <> hearts then
@@ -1082,7 +1098,7 @@ type Decision(a : Analysis) =
             elif useItOrLoseIt then
                 lead a.HighestOutcard[soo] soo
                 priority <- 9
-            elif a.PtsSit = me && hu hearts < 2 && lenH > hu hearts && mode <> Mode.Equivocate then
+            elif a.PtsSit = me && hu hearts < 2 && lenH > hu hearts && mode <> Mode.Equivocate && a.CanLeadH then
                 lead (card hearts (hu hearts)) hearts   // fishing for a sucker
             elif lenSS <= 2 && (a.EstOppsVoidIn[ss] < 2 || lenSS = lu ss)
                 && (ss <> hearts || (hu hearts = 0 && (a.DefLosers[hearts] > 0 || lenH = 1))) then
@@ -1359,6 +1375,9 @@ type Decision(a : Analysis) =
                 this.PlayerReaches()
                 this.ReachedPlayerSuits(false, false, qsOwner)
                 if suitConduit[opp1] >= 0 then lead (lowIn suitConduit[opp1]) suitConduit[opp1]
+                elif oppReachCount > 0 then
+                    let s = this.SuitSolution()
+                    lead (lowIn s) s
         elif mode = Mode.Equivocate then
             if a.CanLeadH && lenH > 0 && hu hearts = 0 && spadesSafe then lead (highIn hearts) hearts
             elif a.OppOwnsQS then

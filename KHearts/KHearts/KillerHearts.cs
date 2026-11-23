@@ -129,11 +129,16 @@ public static class KillerHearts
             }
             else
                 engine.ApplyObservedPlay(card);
+            if (card == QueenOfSpades && infoSet.Rules.HeartsBreak.IsHeartsOnly)
+                engine.UnbreakHearts();
         }
         if (engine.CurrentPlayer != me)
             throw new InvalidOperationException($"Replay ends with {engine.CurrentPlayer} to play, not {me}");
         return engine;
     }
+
+    /// <summary>The Q♠, as the engine numbers cards.</summary>
+    static readonly int QueenOfSpades = ToKh(new Card(Rank.Queen, Suit.Spades));
 
     /// <summary>Every card played in the deal so far, in order, with its player.</summary>
     static IEnumerable<(int Seat, int Card)> Plays(ClosedDeal deal)
