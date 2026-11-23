@@ -95,8 +95,8 @@ module Strategy =
 
         { Act = act }
 
-    /// Creates a repeatable, thread-safe Hearts player using
-    /// the given model.
+    /// Creates a non-repeatable, thread-safe Hearts player
+    /// using the given model.
     let createPlayer model =
         let rng = Random.Shared
         createPlayerImpl model rng

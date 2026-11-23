@@ -45,9 +45,12 @@ module Program =
         for path in paths do
             model.load(path : string) |> ignore
             model.eval()
-            let player = Strategy.createPlayer model
             let winRate =
-                Tournament.run 0 numGames Claude.player player
+                Tournament.runSeeded
+                    0
+                    numGames
+                    (fun _ -> Claude.player)
+                    (Strategy.createPlayerSeeded model)
             printfn $"{Path.GetFileName(path)}: {winRate}"
 
     [<EntryPoint>]
