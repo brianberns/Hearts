@@ -84,11 +84,11 @@ module Strategy =
         getFromAdvantage model [|infoSet|]
             |> Array.exactlyOne
 
-    /// Creates a non-deterministic Hearts player using the
-    /// given model.
+    /// Creates a thread-safe, non-deterministic Hearts player
+    /// using the given model.
     let createPlayer model =
 
-        let rng = Random()
+        let rng = Random.Shared
 
         let act infoSet =
             getStrategy model infoSet
