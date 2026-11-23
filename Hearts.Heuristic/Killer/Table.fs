@@ -533,8 +533,10 @@ type Table(me : KSeat, dealer : KSeat, passDirection : int, gameScore : int[], h
             for r in 0 .. 14 do
                 for s in 0 .. 3 do privateInfo[p, r, s] <- memory.PrivateInfo[p, r, s]
 
-    /// Never try to Shoot (not Killer Hearts': see Claude.fs). Set before replaying a deal.
-    member val NoShoot = false with get, set
+    /// How to depart from Killer Hearts, if at all. Set before replaying a deal.
+    member val Options = Options.faithful with get, set
+    member t.NoShoot = t.Options.NoShoot
+    member t.FixQuirks = t.Options.FixQuirks
 
     member _.Me = me
     member _.Dealer = dealer

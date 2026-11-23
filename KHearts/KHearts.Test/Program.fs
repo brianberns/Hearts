@@ -226,6 +226,8 @@ let scoreBlindClaude =
 
 /// Plays whole games under arena rules with the given challenger at South and the given champion
 /// elsewhere, and counts the challenger's moon shots, and those that lost it the game.
+let losingMoons = Collections.Concurrent.ConcurrentQueue<string>()
+
 let countMoons numGames (champion : Player) (challenger : Player) =
     let rules = Rules.arena
     let playerMap =
@@ -245,12 +247,31 @@ let countMoons numGames (champion : Player) (challenger : Player) =
                     | None -> playDeal game
             let rec loop (game : Game) moons losing =
                 let before = game.Score.Points
+                let dealt = game.Deal.UnplayedCardMap[Seat.South]
                 let game = playDeal game
                 let delta = Array.map2 (-) game.Score.Points before
                 let moon = delta[int Seat.South] = 0 && delta |> Array.sum = 3 * ClosedDeal.numPointsPerDeal
                 let winners = GameScore.findGameWinners rules.TieGame game.Score
                 let moons = if moon then moons + 1 else moons
-                let losing = if moon && not winners.IsEmpty && not (winners.Contains Seat.South) then losing + 1 else losing
+                let lost = moon && not winners.IsEmpty && not (winners.Contains Seat.South)
+                if lost then
+                    let cards (cs : seq<Card>) = cs |> Seq.map string |> String.concat " "
+                    let deal = game.Deal
+                    let passes =
+                        match deal.ExchangeOpt with
+                            | Some exchange -> exchange.PassMap |> Map.toSeq |> Seq.map (fun (s, cs) -> $"{s}:{cards cs}") |> String.concat " "
+                            | None -> "hold"
+                    let tricks =
+                        deal.ClosedDeal.CompletedTricks
+                            |> List.rev
+                            |> List.mapi (fun i trick ->
+                                let plays = Trick.plays trick |> Seq.map (fun (s, c) -> $"{s}:{c}") |> String.concat " "
+                                $"    {i + 1,2}. {plays}  -> {Trick.highPlayerOpt trick |> Option.get}")
+                            |> String.concat "\n"
+                    losingMoons.Enqueue(
+                        $"game {iGame} score before {String.Join(',', before)} dealer {deal.ClosedDeal.Dealer} dir {deal.ClosedDeal.ExchangeDirection}\n"
+                            + $"  South dealt {cards dealt}\n  passes {passes}\n{tricks}")
+                let losing = if lost then losing + 1 else losing
                 if not winners.IsEmpty then moons, losing
                 else
                     let deal =
@@ -265,6 +286,31 @@ let countMoons numGames (champion : Player) (challenger : Player) =
 [<EntryPoint>]
 let main argv =
     match argv with
+        | [| "quirks"; games |] ->
+            let games = int games
+            let kh = KillerHearts.CreatePlayer()
+            let fixedClaude, quirkyClaude = Claude.playerWith true, Claude.playerWith false
+            let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
+            report "Fixed Claude vs three quirky Claude:" (Tournament.run 0 true games quirkyClaude fixedClaude)
+            report "Quirky Claude vs three fixed Claude:" (Tournament.run 0 true games fixedClaude quirkyClaude)
+            report "Fixed Claude vs three Killer Hearts:" (Tournament.run 0 true games kh fixedClaude)
+            report "Quirky Claude vs three Killer Hearts:" (Tournament.run 0 true games kh quirkyClaude)
+            0
+        | [| "daring"; games |] ->
+            let games = int games
+            let kh = KillerHearts.CreatePlayer()
+            let cautious, bold = Claude.create true Killer.Pass.Cautious, Claude.create true Killer.Pass.Bold
+            let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
+            report "Bold Claude vs three cautious Claude:" (Tournament.run 0 true games cautious bold)
+            report "Cautious Claude vs three bold Claude:" (Tournament.run 0 true games bold cautious)
+            report "Bold Claude vs three Killer Hearts:" (Tournament.run 0 true games kh bold)
+            report "Cautious Claude vs three Killer Hearts:" (Tournament.run 0 true games kh cautious)
+            0
+        | [| "moons"; games |] ->
+            let moons, losing = countMoons (int games) (KillerHearts.CreatePlayer()) Claude.player
+            printfn $"Claude vs three Killer Hearts, {games} games: {moons} moons, {losing} of them lost the game"
+            for s in losingMoons do printfn "%s" s
+            0
         | [| "claude"; games |] ->
             let games = int games
             let kh = KillerHearts.CreatePlayer()

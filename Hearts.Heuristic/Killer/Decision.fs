@@ -207,7 +207,9 @@ type Decision(a : Analysis) =
                 let helps =
                     if not table.QSPlayed then   // Q♠ is unplayed or on the trick
                         if score[p] = sbh[1] then
-                            sbh[1] - score[p] >= 20 && score[me] - 26 >= sbh[1] + 10
+                            // Killer Hearts subtracts two equal scores here; the pass compares the two lowest
+                            (if table.FixQuirks then sbh[2] - sbh[1] else sbh[1] - score[p]) >= 20
+                                && score[me] - 26 >= sbh[1] + 10
                                 && (score[me] < sbh[4] || score[me] < 100 - 25)
                         else score[me] - 26 >= sbh[1]
                     elif score[p] = sbh[1] then false

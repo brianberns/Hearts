@@ -101,11 +101,11 @@ module Play =
                     card, path, decided
 
     /// The table for a seat's view of a deal, replayed with the seat's own decisions at its turns.
-    let replay (noShoot : bool) (me : KSeat) (dealer : KSeat) (direction : int) (gameScore : int[]) (held : KCard[]) (passed : KCard[]) (received : KCard[])
+    let replay (options : Options) (me : KSeat) (dealer : KSeat) (direction : int) (gameScore : int[]) (held : KCard[]) (passed : KCard[]) (received : KCard[])
                (plays : (KSeat * KCard) list) =
         let playedBy p = plays |> List.filter (fst >> (=) p) |> List.map snd |> List.toArray
         let t = Table(me, dealer, direction, gameScore, held, passed, received, playedBy)
-        t.NoShoot <- noShoot
+        t.Options <- options
         for seat, card in plays do
             if seat = me then
                 let _, _, memory = decide t
@@ -125,10 +125,10 @@ module Play =
             for i, card in List.indexed (List.rev trick.Cards) ->
                 (leader + i) % 4, KCard.Of card ]
 
-    /// Killer Hearts' card for the information set, never trying to Shoot if so told. Like Killer Hearts'
+    /// Killer Hearts' card for the information set, departing from it as the options say. Like Killer Hearts'
     /// own table, it replays the deal from the seat's point of view, deciding again at each of the seat's
     /// earlier turns, for those decisions leave behind what the seat suspects of a Shoot, among other things.
-    let playWith (noShoot : bool) (infoSet : InformationSet) =
+    let playWith (options : Options) (infoSet : InformationSet) =
         let me = int infoSet.Player
         let plays = plays infoSet.Deal
         let mine = plays |> List.filter (fst >> (=) me) |> List.map snd
@@ -137,10 +137,10 @@ module Play =
             passOpt |> Option.map (Seq.map KCard.Of >> Seq.toArray) |> Option.defaultValue [||]
         let deal = infoSet.Deal
         let t =
-            replay noShoot me (int deal.Dealer) (int deal.ExchangeDirection) (killerScores infoSet.GameScore.Points) held
+            replay options me (int deal.Dealer) (int deal.ExchangeDirection) (killerScores infoSet.GameScore.Points) held
                 (cards infoSet.OutgoingPassOpt) (cards infoSet.IncomingPassOpt) plays
         let card, _, _ = decide t
         card.ToCard()
 
     /// Killer Hearts' card for the information set.
-    let play infoSet = playWith false infoSet
+    let play infoSet = playWith Options.faithful infoSet

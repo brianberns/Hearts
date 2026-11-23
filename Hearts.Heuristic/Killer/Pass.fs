@@ -463,7 +463,7 @@ module Pass =
 
         /// A chooser of the next card to pass, by the first rule that applies, with whether it's a club or
         /// diamond singleton. It remembers whether it has passed Q♠ across the three cards.
-        let create (scores : Scores) (dealtHasQS : bool) =
+        let create (fixQuirks : bool) (scores : Scores) (dealtHasQS : bool) =
 
             // pass Q♠ to the opponent sitting behind the low scorer: 0 no, 1 if opportune, 2 passed
             let mutable toBetterSeat =
@@ -542,7 +542,7 @@ module Pass =
                         singleton (fun () ->
                             // Killer Hearts tests low_in(CD_by_len(1) >= 5), the low spade, for low_in(CD_by_len(1)) >= 5
                             match minorOfLength 1 with
-                                | Some s when low Suit.Spades <> 0 -> card s 0
+                                | Some s when (if fixQuirks then low s >= 5 else low Suit.Spades <> 0) -> card s 0
                                 | _ -> None)
                         singleton (fun () ->
                             match minorOfLength 1 with
@@ -723,11 +723,11 @@ module Pass =
     /// How readily to pass to shoot the moon.
     type Daring =
         /// As readily as Killer Hearts, whenever the hand left after a pass to shoot is strong enough
-        /// to try. Most of these tries pay against weak players but cost against strong ones.
+        /// to try.
         | Bold
 
-        /// Only when the hand left after a pass to shoot has winners everywhere, which pays against
-        /// strong players too.
+        /// Only when the hand left after a pass to shoot has winners everywhere. This did better than Bold
+        /// at zero game scores, but worse with real ones.
         | Cautious
 
         /// Never (not Killer Hearts': see Claude.fs).
@@ -749,7 +749,7 @@ module Pass =
     /// (by Killer Hearts seat, none 100 or more): Killer Hearts' pass to shoot the moon, if the hand is
     /// strong enough to try at the given daring; else its pass to stick the low scorer, if the seat
     /// sits right; else its pass to lie low (best_determine_kind_of_pass_to_make, determine_best_pass).
-    let private chooseFor (daring : Daring) (score : int[]) (me : KSeat) (dealt : Card[]) (direction : ExchangeDirection) =
+    let private chooseFor (options : Options) (daring : Daring) (score : int[]) (me : KSeat) (dealt : Card[]) (direction : ExchangeDirection) =
         let scores = createScores score me (int direction)
 
             // trial pass to shoot
@@ -761,7 +761,7 @@ module Pass =
                 | Cautious -> hasWinnersEverywhere
                 | Never -> fun _ -> false
             // Killer Hearts tests its spades after the trial pass, which it doesn't recompute for the dealt hand
-        let trialSpades = (createShape shootRest).Cards[Suit.Spades]
+        let trialSpades = (createShape (if options.FixQuirks then dealt else shootRest)).Cards[Suit.Spades]
         let trialHoldsQS = trialSpades |> Array.exists (fun c -> rankOf c = queen)
         let kind =
             if isStrongEnough (createShape shootRest) then ToShoot
@@ -776,14 +776,15 @@ module Pass =
         let passed, rest, singletonStep =
             match kind with
                 | ToShoot -> shootPass, shootRest, shootSingleton
-                | ToGetLowScorer -> passThree (GetLowScorerRules.create scores trialHoldsQS) dealt direction
+                | ToGetLowScorer -> passThree (GetLowScorerRules.create options.FixQuirks scores trialHoldsQS) dealt direction
                 | ToLieLow -> passThree (LieLowRules.chooseNext scores) dealt direction
 
             // Killer Hearts doesn't reset its record of a passed club or diamond singleton after the trial pass
         let kindNumber = match kind with ToShoot -> 1 | ToGetLowScorer -> 3 | ToLieLow -> 5
         lastBrief.Value <-
             $"kind={kindNumber} thr={scores.Threshold} helpers={scores.ShootHelpers} deficit={scores.Deficit} low={scores.LowScore}/{scores.LowScorer} second={scores.SecondLowestScore} high={scores.HighScore} target={scores.ReceiverIsTarget} single={defaultArg singletonStep 0}"
-        let singletonStep = if singletonStep.IsSome then singletonStep else shootSingleton
+        let singletonStep =
+            if singletonStep.IsSome || options.FixQuirks then singletonStep else shootSingleton
 
             // with a hand strong enough to Shoot later, keep the higher club or diamond singleton
         let shape = createShape rest
@@ -807,10 +808,14 @@ module Pass =
                     | None, None -> passed
             | None -> passed
 
-    /// The next card to pass for the information set, at the given daring.
-    let pass (daring : Daring) (infoSet : InformationSet) =
+    /// The next card to pass for the information set, at the given daring, departing from Killer Hearts as the
+    /// options say.
+    let passWith (options : Options) (daring : Daring) (infoSet : InformationSet) =
         let passed = infoSet.OutgoingPassOpt |> Option.defaultValue Set.empty
         let dealt = Seq.append infoSet.Hand passed |> Seq.toArray
         let score = killerScores infoSet.GameScore.Points
-        chooseFor daring score (int infoSet.Player) dealt infoSet.Deal.ExchangeDirection
+        chooseFor options daring score (int infoSet.Player) dealt infoSet.Deal.ExchangeDirection
             |> List.find (passed.Contains >> not)
+
+    /// Killer Hearts' next card to pass for the information set, at the given daring.
+    let pass daring infoSet = passWith Options.faithful daring infoSet

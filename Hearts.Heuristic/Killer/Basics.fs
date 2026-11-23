@@ -87,6 +87,21 @@ module Info =
     /// The seat may hold the card: it is known or inferred to, or nothing is known.
     let mayHold code = code >= 1024 || code = 0
 
+/// Ways Claude departs from Killer Hearts. Killer Hearts' own play has every option off.
+type Options =
+    {
+        /// Never try to Shoot.
+        NoShoot : bool
+
+        /// Fix what look like slips in Killer Hearts' code (see FixQuirks uses).
+        FixQuirks : bool
+    }
+
+module Options =
+
+    /// Killer Hearts, exactly.
+    let faithful = { NoShoot = false; FixQuirks = false }
+
 /// Game scores as Killer Hearts expects them: none 100 or more before a deal. A game that continues
 /// after a tie at 100 or more (Rules.arena) would otherwise be out of Killer Hearts' range, so the scores
 /// are shifted down until the highest is 99, keeping their differences (as the arena bot does).
