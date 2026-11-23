@@ -44,7 +44,7 @@ module WebPlayer =
     let takeAction game =
 
             // get legal actions in this situation
-        let infoSet = Game.currentInfoSet game
+        let infoSet = Game.currentInfoSet Rules.standard game
         let legalActions = infoSet.LegalActions
 
             // choose play

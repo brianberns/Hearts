@@ -102,7 +102,7 @@ module Traverse =
             let infoSet =
                 deal
                     |> Game.createFirst                               // as if this is the first deal of a game
-                    |> Game.currentInfoSet
+                    |> Game.currentInfoSet Rules.arena
             let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
                 addLoop deal depth

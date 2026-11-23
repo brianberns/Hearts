@@ -71,13 +71,13 @@ module InformationSet =
 
     /// Creates an information set.
     let create
-        player hand outgoingPassOpt incomingPassOpt deal gameScore =
+        rules player hand outgoingPassOpt incomingPassOpt deal gameScore =
         assert(Option.isNone incomingPassOpt
             || Option.isSome outgoingPassOpt)
         assert(deal.CurrentTrickOpt.IsNone
             || ClosedDeal.currentPlayer deal = player)
         assert(ClosedDeal.isComplete deal |> not)
-        assert(GameScore.isOver gameScore |> not)
+        assert(GameScore.isOver rules.TieGame gameScore |> not)
         let actionType =
             legalActionType outgoingPassOpt incomingPassOpt deal
         {

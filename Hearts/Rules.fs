@@ -14,11 +14,23 @@ type MoonShotScoringRule =
     /// lead.
     | AllowSubtraction
 
+/// How tie games are handled.
+type TieGameRule =
+
+    /// Low-scorers tie for the win.
+    | MultipleWinners
+
+    /// Keep playing until there is only one winner.
+    | KeepPlaying
+
 /// Rule variations.
 type Rules =
     {
         /// How a moon shot affects players' scores.
         MoonShotScoring : MoonShotScoringRule
+
+        /// How tie games are handled.
+        TieGame : TieGameRule
     }
 
 module Rules =
@@ -27,6 +39,7 @@ module Rules =
     let standard =
         {
             MoonShotScoring = AllowSubtraction
+            TieGame = MultipleWinners
         }
 
     /// Hearts Arena rules.
@@ -34,4 +47,5 @@ module Rules =
     let arena =
         {
             MoonShotScoring = AlwaysAddToOthers
+            TieGame = KeepPlaying
         }

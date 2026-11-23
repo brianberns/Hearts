@@ -105,7 +105,7 @@ module Killer =
             ||> Seq.fold (fun (hand, pass) _ ->
                 let card =
                     InformationSet.create
-                        seat hand (Some pass) None deal gameScore
+                        Rules.standard seat hand (Some pass) None deal gameScore
                         |> player.Act
                 assert(hand.Contains(card))
                 hand.Remove(card),
@@ -196,6 +196,7 @@ module Killer =
                                     deal.ExchangeOpt
                                         |> Option.map _.PassMap[seat]
                                 InformationSet.create
+                                    Rules.standard
                                     record.Seat
                                     (OpenDeal.currentHand deal)
                                     outPassOpt

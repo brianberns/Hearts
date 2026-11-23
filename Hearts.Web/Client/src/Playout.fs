@@ -33,7 +33,7 @@ module Playout =
 
     /// Logs hint information.
     let private logHint game =
-        let infoSet = Game.currentInfoSet game
+        let infoSet = Game.currentInfoSet Rules.standard game
         let legalActions = infoSet.LegalActions
         match game.Deal |> OpenDeal.tryFindInevitable with
 
@@ -110,7 +110,7 @@ module Playout =
     let private playUser (handView : HandView) context =
 
             // determine all legal plays
-        let infoSet = Game.currentInfoSet context.Game
+        let infoSet = Game.currentInfoSet Rules.standard context.Game
         let legalPlays = set infoSet.LegalActions
         assert(not legalPlays.IsEmpty)
 

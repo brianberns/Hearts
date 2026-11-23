@@ -28,7 +28,7 @@ module Game =
         create deal Score.zero
 
     /// Answers the current player's information set.
-    let currentInfoSet game =
+    let currentInfoSet rules game =
         let deal = game.Deal
         let player = OpenDeal.currentPlayer deal
         let hand = deal.UnplayedCardMap[player]
@@ -40,7 +40,7 @@ module Game =
                         deal.ClosedDeal.ExchangeDirection)
                 |> Option.defaultValue (None, None)
         InformationSet.create
-            player hand outOpt inOpt deal.ClosedDeal game.Score
+            rules player hand outOpt inOpt deal.ClosedDeal game.Score
 
     /// Passes the given card in the given game.
     let addPass card game =
@@ -108,13 +108,13 @@ module Game =
         }
 
     /// Plays one deal in a game.
-    let private playDeal scoringRule (playerMap : Map<_, _>) game =
+    let private playDeal rules (playerMap : Map<_, _>) game =
 
         let rec loop game =
 
                 // take action in the current deal
             let game =
-                let infoSet = currentInfoSet game
+                let infoSet = currentInfoSet rules game
                 let action =
                     match Seq.tryExactlyOne infoSet.LegalActions with
                         | Some action -> action
@@ -122,7 +122,7 @@ module Game =
                 addAction infoSet.LegalActionType action game
 
                 // deal is over?
-            match tryUpdateScore scoringRule game with
+            match tryUpdateScore rules.MoonShotScoring game with
                 | Some game -> game
                 | None -> loop game
 
@@ -138,13 +138,13 @@ module Game =
 
         /// Plays the given game to completion.
         let rec loop game =
-            assert(GameScore.isOver game.Score |> not)
+            assert(GameScore.isOver rules.TieGame game.Score |> not)
 
                 // play current deal to completion
-            let game = playDeal rules.MoonShotScoring playerMap game
+            let game = playDeal rules playerMap game
 
                 // stop if game is over
-            if GameScore.isOver game.Score then
+            if GameScore.isOver rules.TieGame game.Score then
                 game.Score
             else
                     // create and play another deal

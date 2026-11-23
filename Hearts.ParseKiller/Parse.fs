@@ -298,7 +298,7 @@ module Log =
             return (Score.zero, entries)
                 ||> List.mapFold (fun score entry ->
                     let score =
-                        if GameScore.isOver score then Score.zero
+                        if GameScore.isOver Rules.standard.TieGame score then Score.zero
                         else score
                     { entry with GameScore = score },   // game score at start of deal
                     entry.GameScore)

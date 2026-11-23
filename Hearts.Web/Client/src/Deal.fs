@@ -255,7 +255,8 @@ module Deal =
                     displayGameScore game.Score
 
                         // is the game over?
-                    let winners = GameScore.findGameWinners game.Score
+                    let winners =
+                        GameScore.findGameWinners Rules.standard.TieGame game.Score
                     let persState =
                         { persState with
                             GameScore = game.Score

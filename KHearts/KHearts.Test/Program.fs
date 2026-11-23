@@ -33,7 +33,7 @@ let generateDeals (rng : Random) =
 
 /// The current player's information set in the given deal, played as if it were the first deal of a game.
 let currentInfoSet deal =
-    deal |> Game.createFirst |> Game.currentInfoSet
+    deal |> Game.createFirst |> Game.currentInfoSet Rules.standard
 
 /// Plays one deal on an exact table, with Killer Hearts in every seat, alongside Hearts' own deal.
 /// At each decision, asks the one-seat player too, and counts how often the two agree.

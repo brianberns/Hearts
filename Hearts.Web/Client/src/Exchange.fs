@@ -63,7 +63,7 @@ module Exchange =
     /// Logs hint information.
     let private logHint game =
         async {
-            let infoSet = Game.currentInfoSet game
+            let infoSet = Game.currentInfoSet Rules.standard game
             let! strategy = Remoting.getStrategy infoSet
             let pairs =
                 Array.zip (Seq.toArray infoSet.Hand) strategy
