@@ -101,15 +101,28 @@ type SplitMixRandom(seed : uint64) =
                 ||| uint64 (uint32 iOffset)
         mix (x + gamma)
 
+    /// Distinct, well-mixed seed for child i of the given seed, as for the
+    /// players in a rotation. Children start far from the stream that
+    /// SplitMixRandom(seed) itself produces, so neither shares numbers.
+    static member GetChildSeed(seed : uint64, i : int) =
+        let start = mix (seed ^^^ 0x5851F42D4C957F2DUL)   // leave seed's own stream
+        mix (start + gamma * (uint64 (uint32 i) + 1UL))
+
 module Tournament =
 
     /// Runs a deterministic tournament between two players
     /// using duplicate deals, answering the challenger's
     /// win rate.
-    let run rngSeed numGames champion challenger =
+    let runSeeded rngSeed numGames makeChampion makeChallenger =
+
+        /// Creates a player.
+        let createPlayer rotationSeed offset makePlayer =
+            let seed =
+                SplitMixRandom.GetChildSeed(rotationSeed, offset)
+            makePlayer seed
 
         /// Puts challenger in the given seat.
-        let createPlayerMap challengerSeat =
+        let createPlayerMap champion challenger challengerSeat =
             Enum.getValues<Seat>
                 |> Seq.map (fun seat ->
                     let player =
@@ -118,20 +131,23 @@ module Tournament =
                     seat, player)
                 |> Map
 
-            // determine number of seeds needed
-        let numSeeds = numGames / Seat.numSeats
-        assert(numSeeds > 0)
+            // determine number of rotations needed
+        let numRotations = numGames / Seat.numSeats
+        assert(numRotations > 0)
 
             // count number of times challenger wins
         let nWins =
 
-                // rotate challenger through each seat for each seed
-            Array.Parallel.init numSeeds (fun iSeed ->
-                let seed = SplitMixRandom.GetSeed(rngSeed, iSeed)
+                // rotate challenger through each seat
+            Array.Parallel.init numRotations (fun iRotation ->
+                let rotationSeed = SplitMixRandom.GetSeed(rngSeed, iRotation)
+                let champion = createPlayer rotationSeed 0 makeChampion
+                let challenger = createPlayer rotationSeed 1 makeChallenger
                 Seat.cycle Seat.South
                     |> Seq.sumBy (fun challengerSeat ->
-                        let playerMap = createPlayerMap challengerSeat
-                        let rng = SplitMixRandom(seed)                           // restart RNG for duplicate deals
+                        let playerMap =
+                            createPlayerMap champion challenger challengerSeat
+                        let rng = SplitMixRandom(rotationSeed)                   // restart RNG for duplicate deals
                         let isWinner =
                             Game.playGame Rules.arena rng playerMap Seat.South   // players rotate seats, so first dealer can be constant
                                 |> GameScore.findGameWinners Rules.arena.TieGame
@@ -140,5 +156,14 @@ module Tournament =
                 |> Array.sum
 
             // compute results
-        let numGames = numSeeds * Seat.numSeats
+        let numGames = numRotations * Seat.numSeats
         float32 nWins / float32 numGames
+
+    /// Runs a deterministic tournament between two players
+    /// using duplicate deals, answering the challenger's
+    /// win rate.
+    let run rngSeed numGames champion challenger =
+        runSeeded
+            rngSeed numGames
+            (fun _ -> champion)
+            (fun _ -> challenger)

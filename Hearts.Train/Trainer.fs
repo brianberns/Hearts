@@ -27,11 +27,11 @@ module Trainer =
 
             // run tournament using CPU model
         let winRate =
-            Tournament.run
+            Tournament.runSeeded
                 0
                 settings.NumEvaluationGames
-                Claude.player
-                (Strategy.createPlayer cpuModel)
+                (fun _ -> Claude.player)
+                (Strategy.createPlayerSeeded cpuModel)
 
             // log results
         if settings.Verbose then

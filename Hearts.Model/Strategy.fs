@@ -84,11 +84,9 @@ module Strategy =
         getFromAdvantage model [|infoSet|]
             |> Array.exactlyOne
 
-    /// Creates a thread-safe, non-deterministic Hearts player
-    /// using the given model.
-    let createRandomPlayer model =
-
-        let rng = Random.Shared
+    /// Creates a repeatable Hearts player using the given
+    /// model and RNG.
+    let private createPlayerImpl model rng =
 
         let act infoSet =
             getStrategy model infoSet
@@ -97,76 +95,14 @@ module Strategy =
 
         { Act = act }
 
-    /// Groups the given info set's legal passes into classes of
-    /// equivalent actions. When passing, every card is its own
-    /// class.
-    let private passClasses infoSet =
-        infoSet.LegalActions
-            |> Array.indexed
-            |> Array.sortBy (fun (_, card) ->
-                card.Suit, card.Rank)
-            |> Array.map List.singleton
-
-    /// Groups the given info set's legal plays into classes of
-    /// equivalent cards: cards of the same suit such that every
-    /// card ranked between them, inclusive, has the same point
-    /// value, and no card between them might be held by an
-    /// opponent. Answers each card with its index among the legal
-    /// actions. Classes are ordered by suit, then rank, and each
-    /// class's cards by rank.
-    let private playClasses (infoSet : InformationSet) =
-
-        /// Is the given card unaccounted for?
-        let isOutstanding card =
-            infoSet.Deal.UnplayedCards.Contains(card)
-                && not (infoSet.Hand.Contains(card))
-
-        /// Are all cards in the given range equivalent?
-        let isRun (low : Card) (high : Card) =
-            assert(low.Suit = high.Suit)
-            assert(low.Rank <= high.Rank)
-            assert(not (isOutstanding low))
-            assert(not (isOutstanding high))
-            let lowValue = Card.pointValue low
-            [ int low.Rank .. int high.Rank ]   // inclusive of both cards
-                |> Seq.forall (fun r ->
-                    let card = Card(enum<Rank> r, low.Suit)
-                    Card.pointValue card = lowValue
-                        && not (isOutstanding card))
-
-        infoSet.LegalActions
-            |> Array.indexed
-            |> Array.groupBy (fun (_, card) -> card.Suit)
-            |> Array.sortBy fst   // sort groups by suit for determinism
-            |> Array.collect (fun (_, group) ->
-                group
-                    |> Array.sortByDescending (fun (_, card) ->
-                        card.Rank)
-                    |> Array.fold (fun classes (i, card) ->
-                        match classes with
-                            | ((_, lowest) :: _ as cls) :: rest
-                                when isRun card lowest ->
-                                ((i, card) :: cls) :: rest   // join the current class
-                            | _ -> [ i, card ] :: classes)   // start a new class
-                        []
-                    |> List.toArray)
-
-    /// Creates a deterministic Hearts player using the given
-    /// model. It chooses the lowest card in the class of
-    /// equivalent cards with the highest probability. Ties go
-    /// to the first class, by suit and then rank.
+    /// Creates a repeatable, thread-safe Hearts player using
+    /// the given model.
     let createPlayer model =
+        let rng = Random.Shared
+        createPlayerImpl model rng
 
-        let act infoSet =
-            let strategy = getStrategy model infoSet
-            let equivClasses =
-                match infoSet.LegalActionType with
-                    | ActionType.Pass -> passClasses infoSet
-                    | ActionType.Play -> playClasses infoSet
-            equivClasses
-                |> Array.maxBy (
-                    List.sumBy (fun (i, _) -> strategy[i]))   // choose best class
-                |> List.head                                  // choose lowest card in best class
-                |> snd
-
-        { Act = act }
+    /// Creates a repeatable Hearts player using the given
+    /// model and RNG seed. This player is not thread-safe.
+    let createPlayerSeeded model seed =
+        let rng = SplitMixRandom(seed)
+        createPlayerImpl model rng
