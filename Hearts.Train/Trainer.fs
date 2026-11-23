@@ -20,7 +20,9 @@ module Trainer =
                 settings.NumHiddenLayers,
                 settings.DropoutRate,
                 TorchSharp.torch.CPU)
-        cpuModel.load_state_dict(model.state_dict()) |> ignore   // copies the weights across devices
+        model.state_dict()
+            |> cpuModel.load_state_dict
+            |> ignore
         cpuModel.eval()
 
             // run tournament using CPU model
