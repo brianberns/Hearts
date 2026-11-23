@@ -39,9 +39,9 @@ module Gpu =
         use model = Players.loadModelOn TorchSharp.torch.CUDA modelPath
         let player = Strategy.createPlayer model |> (if isScoped then scoped else id)
         printfn $"dispose scopes: {isScoped}"
-        let tournament inParallel =
+        let tournament _inParallel =
             let watch = Stopwatch.StartNew()
-            let rate = Tournament.run 0 inParallel numGames Claude.player player
+            let rate = Tournament.run 0 numGames Claude.player player
             rate, watch.Elapsed.TotalSeconds
         let report label (rate : float32) seconds =
             GC.Collect()

@@ -47,7 +47,7 @@ module Program =
             model.eval()
             let player = Strategy.createPlayer model
             let winRate =
-                Tournament.run 0 true numGames Claude.player player
+                Tournament.run 0 numGames Claude.player player
             printfn $"{Path.GetFileName(path)}: {winRate}"
 
     [<EntryPoint>]

@@ -291,20 +291,20 @@ let main argv =
             let kh = KillerHearts.CreatePlayer()
             let fixedClaude, quirkyClaude = Claude.playerWith true, Claude.playerWith false
             let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
-            report "Fixed Claude vs three quirky Claude:" (Tournament.run 0 true games quirkyClaude fixedClaude)
-            report "Quirky Claude vs three fixed Claude:" (Tournament.run 0 true games fixedClaude quirkyClaude)
-            report "Fixed Claude vs three Killer Hearts:" (Tournament.run 0 true games kh fixedClaude)
-            report "Quirky Claude vs three Killer Hearts:" (Tournament.run 0 true games kh quirkyClaude)
+            report "Fixed Claude vs three quirky Claude:" (Tournament.run 0 games quirkyClaude fixedClaude)
+            report "Quirky Claude vs three fixed Claude:" (Tournament.run 0 games fixedClaude quirkyClaude)
+            report "Fixed Claude vs three Killer Hearts:" (Tournament.run 0 games kh fixedClaude)
+            report "Quirky Claude vs three Killer Hearts:" (Tournament.run 0 games kh quirkyClaude)
             0
         | [| "daring"; games |] ->
             let games = int games
             let kh = KillerHearts.CreatePlayer()
             let cautious, bold = Claude.create true Killer.Pass.Cautious, Claude.create true Killer.Pass.Bold
             let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
-            report "Bold Claude vs three cautious Claude:" (Tournament.run 0 true games cautious bold)
-            report "Cautious Claude vs three bold Claude:" (Tournament.run 0 true games bold cautious)
-            report "Bold Claude vs three Killer Hearts:" (Tournament.run 0 true games kh bold)
-            report "Cautious Claude vs three Killer Hearts:" (Tournament.run 0 true games kh cautious)
+            report "Bold Claude vs three cautious Claude:" (Tournament.run 0 games cautious bold)
+            report "Cautious Claude vs three bold Claude:" (Tournament.run 0 games bold cautious)
+            report "Bold Claude vs three Killer Hearts:" (Tournament.run 0 games kh bold)
+            report "Cautious Claude vs three Killer Hearts:" (Tournament.run 0 games kh cautious)
             0
         | [| "moons"; games |] ->
             let moons, losing = countMoons (int games) (KillerHearts.CreatePlayer()) Claude.player
@@ -315,10 +315,10 @@ let main argv =
             let games = int games
             let kh = KillerHearts.CreatePlayer()
             let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
-            report "Claude vs three score-blind Claude:" (Tournament.run 0 true games scoreBlindClaude Claude.player)
-            report "Score-blind Claude vs three Claude:" (Tournament.run 0 true games Claude.player scoreBlindClaude)
-            report "Claude vs three score-aware Killer Hearts:" (Tournament.run 0 true games kh Claude.player)
-            report "Score-blind Claude vs three score-aware Killer Hearts:" (Tournament.run 0 true games kh scoreBlindClaude)
+            report "Claude vs three score-blind Claude:" (Tournament.run 0 games scoreBlindClaude Claude.player)
+            report "Score-blind Claude vs three Claude:" (Tournament.run 0 games Claude.player scoreBlindClaude)
+            report "Claude vs three score-aware Killer Hearts:" (Tournament.run 0 games kh Claude.player)
+            report "Score-blind Claude vs three score-aware Killer Hearts:" (Tournament.run 0 games kh scoreBlindClaude)
             for name, challenger in [ "Claude", Claude.player; "Score-blind Claude", scoreBlindClaude ] do
                 let moons, losing = countMoons games kh challenger
                 printfn $"{name} vs three Killer Hearts, {games} games: {moons} moons, {losing} of them lost the game"
@@ -346,15 +346,15 @@ let main argv =
             0
         | [| "smoke"; games |] ->
             let winRate =
-                Tournament.run 0 true (int games) Claude.player (KillerHearts.CreatePlayer())
+                Tournament.run 0 (int games) Claude.player (KillerHearts.CreatePlayer())
             printfn $"Killer Hearts vs three Claude heuristics: wins %.4f{winRate} of games (0.25 is even)"
             0
         | [| "gamescore"; games |] ->
             let aware = KillerHearts.CreatePlayer()
             let blind = KillerHearts.CreateScoreBlindPlayer()
-            let awareRate = Tournament.run 0 true (int games) blind aware
+            let awareRate = Tournament.run 0 (int games) blind aware
             printfn $"Score-aware Killer Hearts vs three score-blind: wins %.4f{awareRate} of games (0.25 is even)"
-            let blindRate = Tournament.run 0 true (int games) aware blind
+            let blindRate = Tournament.run 0 (int games) aware blind
             printfn $"Score-blind Killer Hearts vs three score-aware: wins %.4f{blindRate} of games (0.25 is even)"
             0
         | [| "agree"; deals |] ->

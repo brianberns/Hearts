@@ -106,7 +106,7 @@ module Tournament =
     /// Runs a deterministic tournament between two players
     /// using duplicate deals, answering the challenger's
     /// win rate.
-    let run rngSeed inParallel numGames champion challenger =
+    let run rngSeed numGames champion challenger =
 
         /// Puts challenger in the given seat.
         let createPlayerMap challengerSeat =
@@ -125,12 +125,8 @@ module Tournament =
             // count number of times challenger wins
         let nWins =
 
-            let init =
-                if inParallel then Array.Parallel.init
-                else Array.init
-
                 // rotate challenger through each seat for each seed
-            init numSeeds (fun iSeed ->
+            Array.Parallel.init numSeeds (fun iSeed ->
                 let seed = SplitMixRandom.GetSeed(rngSeed, iSeed)
                 Seat.cycle Seat.South
                     |> Seq.sumBy (fun challengerSeat ->

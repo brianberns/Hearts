@@ -17,7 +17,7 @@ module Phase0 =
         let prod, weak = Strategy.createPlayer production, Strategy.createPlayer weakened
         let report name champion challenger =
             let watch = Stopwatch.StartNew()
-            let rate = Tournament.run 0 true numGames champion challenger
+            let rate = Tournament.run 0 numGames champion challenger
             printfn $"%-48s{name} %.4f{rate}   (%.0f{watch.Elapsed.TotalMinutes} min)"
         printfn $"{numGames} games each, duplicate deals, arena rules (0.25 is even)"
         report "production vs three weakened:" weak prod
