@@ -2005,11 +2005,11 @@ partial class KhEngine
             }
             if (all_winners)
             {
-                if ((suit_with_HU == illegal_value))
+                // If suit_with_HU = illegal_value Then Call diagnose_and_halt("No suit with HU") patched: see ARENA_PATCHES
+                if ((suit_with_HU != illegal_value))
                 {
-                    diagnose_and_halt("No suit with HU");
+                    notice_board_cla(" leads with ", rank_abbrev[Playing_high_in[suit_with_HU]], suit_name[suit_with_HU]);
                 }
-                notice_board_cla(" leads with ", rank_abbrev[Playing_high_in[suit_with_HU]], suit_name[suit_with_HU]);
             }
         }
         
@@ -6145,7 +6145,7 @@ partial class KhEngine
             {
                 best_compute_parameters_related_to_leading_z = (((opps_void_in[best_compute_parameters_related_to_leading_suit_of_all_winners] < 2) & (suit_len[best_compute_parameters_related_to_leading_suit_of_all_winners] == 1)));
             }
-            if (((est_tr[hearts] > 0) & (LU[hearts] >= mini((double)(est_tr[hearts]), (double)(2)))))
+            if ((((est_tr[hearts] > 0) & (LU[hearts] >= mini((double)(est_tr[hearts]), (double)(2)))) & can_lead_H))  // patched: see ARENA_PATCHES
             {
                 best_lead_rank = Playing_low_in[hearts];
                 best_lead_suit = hearts;
@@ -6163,7 +6163,7 @@ partial class KhEngine
                 best_lead_suit = suit_of_outcard;
                 priority = 9;
             }
-            else if (((((pts_sit == player) & (Playing_HU[hearts] < 2)) & (Playing_suit_len_H > Playing_HU[hearts])) & (mode != Equivocate)))
+            else if ((((((pts_sit == player) & (Playing_HU[hearts] < 2)) & (Playing_suit_len_H > Playing_HU[hearts])) & (mode != Equivocate)) & can_lead_H))  // patched: see ARENA_PATCHES
             {
                 best_lead_rank = suit_card[hearts, Playing_HU[hearts]];  // fishing for sucker
                 best_lead_suit = hearts;

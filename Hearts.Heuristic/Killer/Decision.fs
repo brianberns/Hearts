@@ -1072,8 +1072,11 @@ type Decision(a : Analysis) =
                 lead (highIn a.ACaseSuit) a.ACaseSuit
             elif a.HnQS > 0 then bestLeadRank <- a.HnQS
         elif table.QSPlayed then
+                // Under the arena's rules, the Q♠ doesn't break hearts, so hearts may not be leadable here. Killer
+                // Hearts' two heart leads below assume they are; the CanLeadH guards (ARENA_PATCHES in the
+                // transpiler) keep them to its own play under its own rules, where QSPlayed implies CanLeadH.
             let z = suitOfAllWinners >= 0 && a.OppsVoidIn[suitOfAllWinners] < 2 && len suitOfAllWinners = 1
-            if estTr hearts > 0 && lu hearts >= min (estTr hearts) 2 then
+            if estTr hearts > 0 && lu hearts >= min (estTr hearts) 2 && a.CanLeadH then
                 lead (lowIn hearts) hearts
                 priority <- 10
             elif z && suitOfAllWinners <> hearts then
@@ -1082,7 +1085,7 @@ type Decision(a : Analysis) =
             elif useItOrLoseIt then
                 lead a.HighestOutcard[soo] soo
                 priority <- 9
-            elif a.PtsSit = me && hu hearts < 2 && lenH > hu hearts && mode <> Mode.Equivocate then
+            elif a.PtsSit = me && hu hearts < 2 && lenH > hu hearts && mode <> Mode.Equivocate && a.CanLeadH then
                 lead (card hearts (hu hearts)) hearts   // fishing for a sucker
             elif lenSS <= 2 && (a.EstOppsVoidIn[ss] < 2 || lenSS = lu ss)
                 && (ss <> hearts || (hu hearts = 0 && (a.DefLosers[hearts] > 0 || lenH = 1))) then

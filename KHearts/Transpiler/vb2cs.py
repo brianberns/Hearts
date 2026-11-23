@@ -40,6 +40,35 @@ SOURCES = [
 # condition beforehand, so the program now does what the source says.
 SOURCE_PATCHES = []
 
+# The arena's rules (std-1) differ from Killer Hearts': the Q♠ doesn't break hearts, so can_lead_H can be
+# false after QS_played. The first two lines lead a heart whenever the Q♠ has been played, assuming hearts are
+# then broken; the guard keeps them to Killer Hearts' play under its own rules, where QS_played implies
+# can_lead_H. The third is where a leader claims the remaining tricks after the Q♠ with the top hearts, but has
+# no suit it may lead to start: Killer Hearts halts, as under its own rules the leader always has one (hearts,
+# once the Q♠ is played). For the arena, the leader claims anyway, as through V7.03, and plays on with its
+# highest legal card (see Table.cs and table.rs). Not claiming instead leads to other lines that lead a heart.
+ARENA_PATCHES = [
+    ('Playing.bas',
+     'If est_tr(hearts) > 0 And LU(hearts) >= mini(est_tr(hearts), 2) Then',
+     "If est_tr(hearts) > 0 And LU(hearts) >= mini(est_tr(hearts), 2) And can_lead_H Then 'patched: see ARENA_PATCHES"),
+    ('Playing.bas',
+     'ElseIf pts_sit = player And HU(hearts) < 2 And suit_len_H > HU(hearts) And mode <> Equivocate Then',
+     'ElseIf pts_sit = player And HU(hearts) < 2 And suit_len_H > HU(hearts) And mode <> Equivocate And can_lead_H '
+     "Then 'patched: see ARENA_PATCHES"),
+    ('Playing.bas',
+     'If suit_with_HU = illegal_value Then Call diagnose_and_halt("No suit with HU")',
+     "'If suit_with_HU = illegal_value Then Call diagnose_and_halt(\"No suit with HU\") patched: see ARENA_PATCHES"),
+]
+
+# The C# port keeps the UI's no-op calls, so their arguments are still evaluated (the Rust port drops them).
+# After the third arena patch, the claim's notice indexes high_in and suit_name with suit_with_HU, which may be
+# illegal_value, so the notice is guarded too.
+CS_ARENA_PATCHES = [
+    ('Playing.bas',
+     'Call notice_board_cla(" leads with ", rank_abbrev(high_in(suit_with_HU)), _',
+     'If suit_with_HU <> illegal_value Then Call notice_board_cla(" leads with ", rank_abbrev(high_in(suit_with_HU)), _'),
+]
+
 # Playing.bas: only the best player is ported
 def playing_excluded(name):
     n = name.lower()
@@ -1671,6 +1700,7 @@ def module_fields(tr, mod):
 
 def main():
     src, outdir = sys.argv[1], sys.argv[2]
+    SOURCE_PATCHES.extend(ARENA_PATCHES + CS_ARENA_PATCHES)
     modules = [read_module(os.path.join(src, f), name, excl, incl) for f, name, excl, incl in SOURCES]
     tr = Translator(modules)
     os.makedirs(outdir, exist_ok=True)
