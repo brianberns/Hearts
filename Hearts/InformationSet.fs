@@ -12,6 +12,9 @@ type ActionType = Pass | Play
 /// information known only to that player.
 type InformationSet =
     {
+        /// Rules in effect.
+        Rules : Rules
+
         /// Player.
         Player : Seat
 
@@ -81,6 +84,7 @@ module InformationSet =
         let actionType =
             legalActionType outgoingPassOpt incomingPassOpt deal
         {
+            Rules = rules
             Player = player
             Hand = hand
             OutgoingPassOpt = outgoingPassOpt
