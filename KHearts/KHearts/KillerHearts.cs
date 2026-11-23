@@ -62,7 +62,6 @@ public static class KillerHearts
 
         var hand = infoSet.Hand.Select(ToKh).ToArray();
         var passed = Cards(infoSet.OutgoingPassOpt);
-        var received = Cards(infoSet.IncomingPassOpt);
 
         if (infoSet.LegalActionType.IsPass)
         {
@@ -73,6 +72,43 @@ public static class KillerHearts
             var next = pass.First(c => !passed.Contains(c));
             return FromKh(next);
         }
+
+        return FromKh(ReplayPlay(infoSet, gameScore).ComputePlay());
+    }
+
+    /// <summary>The engine's main choices for a pass, for checking the port (see KhEngine.BriefPass).</summary>
+    public static string TracePass(InformationSet infoSet, int[] gameScore)
+    {
+        var me = (int)infoSet.Player;
+        var passed = Cards(infoSet.OutgoingPassOpt);
+        int[] dealt = [.. infoSet.Hand.Select(ToKh), .. passed];
+        var engine = new KhEngine();
+        engine.StartObservedPassing(me, (int)infoSet.Deal.Dealer, (int)infoSet.Deal.ExchangeDirection, gameScore, dealt,
+            gameScore.All(s => s == 0));
+        var pass = engine.ComputePass();
+        return $"{engine.BriefPass()} pass={string.Join(" ", pass.Select(FromKh))}";
+    }
+
+    /// <summary>The engine's main choices for a play decision, for checking the port (see KhEngine.Brief).</summary>
+    public static string TracePlay(InformationSet infoSet, int[] gameScore)
+    {
+        var engine = ReplayPlay(infoSet, gameScore);
+        engine.ComputePlay();
+        return engine.Brief();
+    }
+
+    /// <summary>An engine that has replayed the deal so far, with the information set's player to play.</summary>
+    static KhEngine ReplayPlay(InformationSet infoSet, int[] gameScore)
+    {
+        var me = (int)infoSet.Player;
+        var deal = infoSet.Deal;
+        var dealer = (int)deal.Dealer;
+        var direction = (int)deal.ExchangeDirection;
+        var isFirstDeal = gameScore.All(s => s == 0);
+        var engine = new KhEngine();
+        var hand = infoSet.Hand.Select(ToKh).ToArray();
+        var passed = Cards(infoSet.OutgoingPassOpt);
+        var received = Cards(infoSet.IncomingPassOpt);
 
         // replay the deal so far, letting the engine decide each of the observer's earlier turns too
         var plays = Plays(deal).ToArray();
@@ -96,7 +132,7 @@ public static class KillerHearts
         }
         if (engine.CurrentPlayer != me)
             throw new InvalidOperationException($"Replay ends with {engine.CurrentPlayer} to play, not {me}");
-        return FromKh(engine.ComputePlay());
+        return engine;
     }
 
     /// <summary>Every card played in the deal so far, in order, with its player.</summary>

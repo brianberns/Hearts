@@ -95,7 +95,18 @@ module Select =
                     if suit <> spades || rank <> queen then ()
                     elif pQS > 0 then rank <- (at spades (pQS - 1))
                     else rank <- (at spades (pQS + 1))
-                else failwith "Killer Hearts never sluffs this way without a suit of best nonpoint"
+                elif a.QSInHand then
+                    rank <- queen
+                    suit <- spades
+                    if d.Mode = Mode.ShootTheMoon && lenS > 1 then
+                        rank <- a.LowIn[spades]
+                        if rank = queen then rank <- (at spades (pQS - 1))
+                elif lenS > 0 then
+                    rank <- hnQS
+                    suit <- spades
+                else
+                    rank <- a.HighIn[hearts]
+                    suit <- hearts
             | 18 ->
                 let mutable i = a.OffWinners[suitLed]
                 if i = a.LenSuitLed then i <- i - 1
@@ -162,6 +173,9 @@ module Select =
                     if hltW = 0 then (if fnv = 0 then hsl else lgtW)
                     elif hltW < hsl then hltW
                     else (at suitLed (a.PHltW + 1))
+            | 34 ->
+                suit <- spades
+                rank <- a.SecondHighIn[spades]
             | 35 ->
                 suit <- spades
                 rank <- a.SecondHighIn[spades]

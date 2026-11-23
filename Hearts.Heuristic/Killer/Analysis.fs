@@ -121,6 +121,22 @@ type Analysis(table : Table) =
     let mutable qsIsHU = 0
     let mutable followersNotVoid = none
     let mutable onlyHasH = none
+
+    /// Would the suspected Shooter's Shoot win the game, by Killer Hearts' own moon rule (Shooter's choice
+    /// of subtracting 26 or adding 26 to the others), even if only in a tie?
+    let mutable oppShootWinsGame = false
+    let mutable oppShootTiesForWin = false
+
+    /// Sets oppShootWinsGame and oppShootTiesForWin; it never clears them (compute_opp_Shoot_wins_game_and_
+    /// opp_Shoot_ties_for_win).
+    let computeOppShootWinsGame () =
+        let score = table.GameScore
+        let sbh = table.ScoreBetweenHands
+        if score[shooter] - 26 > sbh[1] then ()
+        elif score[shooter] = sbh[4] && sbh[3] + 26 >= 100 then oppShootWinsGame <- true
+        elif score[shooter] <= sbh[3] && sbh[4] + 26 >= 100 then oppShootWinsGame <- true
+        if oppShootWinsGame && score[shooter] - 26 = sbh[1] then oppShootTiesForWin <- true
+
     let mutable totalOffWinners = 0
     let mutable allSuitsCovered = true
     let mutable totalWinR = 0.0f
@@ -500,6 +516,9 @@ type Analysis(table : Table) =
     member _.AllWinnersType = allWinnersType
     member _.EarlyExit = earlyExit
     member _.OppHWinners = oppHWinners
+    member _.OppShootWinsGame with get () = oppShootWinsGame and set v = oppShootWinsGame <- v
+    member _.OppShootTiesForWin = oppShootTiesForWin
+    member this.ComputeOppShootWinsGame() = computeOppShootWinsGame ()
     member _.WinsAllH = winsAllH
     member _.HltQS = hltQS
     member _.HnQS = hnQS
@@ -576,7 +595,7 @@ type Analysis(table : Table) =
             probOppShoot <- true
 
         if tLeft <= 4 && pointsExposed >= 14 then endgame <- true
-        elif tLeft = 3 || table.ScoreInHand[me] >= 95 then endgame <- true
+        elif tLeft = 3 || table.ScoreInGame[me] >= 95 then endgame <- true
 
         // the seat's suits
         for s in allSuits do
@@ -757,7 +776,7 @@ type Analysis(table : Table) =
         // delayed inferences about Q♠
         let pnls = table.PNotLeadingS
         if table.QSPlayed || (ptsSit >= 0 && table.PointsPlayed >= 8) then ()
-        elif position > 0 && qsInHand && aks = 0 && suitLed <> spades && table.ScoreInHand[table.TrickLeader] = table.LowScore then
+        elif position > 0 && qsInHand && aks = 0 && suitLed <> spades && table.ScoreInGame[table.TrickLeader] = table.LowScore then
             opp.UpdateRun(-1, table.TrickLeader, 2, ace, spades, true)
         elif not sluffPts then ()
         elif me = pnls || pnls = none then ()
@@ -851,10 +870,16 @@ type Analysis(table : Table) =
         // whether an opponent is probably Shooting
         if possOppShoot then
             let cardLed = table.CardLed
+            let score = table.GameScore
+            let sbh = table.ScoreBetweenHands
+            computeOppShootWinsGame ()
             if position > 0 && soloOwner[suitLed] = shooter && shooter >= 0 && oppsHave[suitLed] = tLeft - 1 && hu[suitLed] > 0 then
                 probOppShoot <- false
             elif pointsExposed >= 15 then probOppShoot <- true
             elif pointsExposed >= 8 && pointsExposed < 13 then probOppShoot <- true
+            elif pointsExposed >= 3 && oppShootWinsGame && score[shooter] > sbh[1] then probOppShoot <- true
+            elif pointsExposed >= 6 && oppShootWinsGame && score[shooter] = sbh[1] && score[shooter] + pointsExposed > sbh[2] then
+                probOppShoot <- true   // the low scorer Shooting to win
             elif table.QSLedOnTrick
                 && (oppsHave[spades] > aks || aks = 0 || table.VoidInSuit[spades] + privateVoidInSuit[spades] = 3) then
                 probOppShoot <- true

@@ -4,7 +4,6 @@ open System
 
 /// Killer Hearts' decision after its analysis: the seat's score estimates, its likely trick winner,
 /// its mode of play, and the parameters for leading, following and sluffing that its scripts read.
-/// Game scores are zero throughout, as in a deal played on its own.
 type Decision(a : Analysis) =
 
     let table = a.Table
@@ -43,8 +42,16 @@ type Decision(a : Analysis) =
     let tatt = [| 0; 100; 99; 93; 89; 85; 80; 75; 70; 65; 60; 55; 51 |]
     let clng (x : float) = int (Math.Round(x, MidpointRounding.ToEven))
 
+    /// Game scores before the deal, by seat, and lowest first from index 1 (score, score_between_hands).
+    let score = table.GameScore
+    let sbh = table.ScoreBetweenHands
+
+    /// Killer Hearts' score arrays answer 0 for "no seat" (-1).
+    let scoreOf p = if p < 0 then 0 else score[p]
+
     // score estimates (set_im_scores)
     let imScore = Array.copy table.ImScore
+    let imScoreOf p = if p < 0 then 0 else imScore[p]
     let imScoreRank = Array.zeroCreate<int> 5
     let mutable lowScore = table.LowScore
     let mutable highScore = table.HighScore
@@ -68,6 +75,10 @@ type Decision(a : Analysis) =
     let oppTarget = Array.zeroCreate<bool> 4
     let mutable canHoldQS = false
     let mutable goShoot = false
+    let mutable offType = none
+    let mutable defType = Mode.NoMode
+    let shootHelper = Array.zeroCreate<bool> 4
+    let mutable shootHelpers = 0
     let mutable quitShoot = false
     let mutable relinquishQS = true
     let mutable modGorenCount = 0
@@ -129,11 +140,11 @@ type Decision(a : Analysis) =
     let mutable saveBestLeadRank = none
     let mutable saveBestLeadSuit = none
 
-    /// The seat's and opponents' score estimates: game scores (zero) plus points taken, and the trick's
+    /// The seat's and opponents' score estimates: game scores plus points taken, and the trick's
     /// points for its likely winner (set_im_scores).
     let setImScores () =
         for p in allSeats do
-            imScore[p] <- table.ScoreInHand[p] + (if position > 0 && p = likelyTWinner then table.PointsInTrick else 0)
+            imScore[p] <- table.ScoreInGame[p] + (if position > 0 && p = likelyTWinner then table.PointsInTrick else 0)
         let sorted = Array.sort imScore
         for i in 1 .. 4 do imScoreRank[i] <- sorted[i - 1]
         lowScore <- imScoreRank[1]
@@ -181,34 +192,54 @@ type Decision(a : Analysis) =
         let owners = opponents |> List.filter (fun p -> hcard >= 0 && opp[p, hcard, s] >= 0) |> List.length
         hcard, owners
 
-    /// Shoot-related parameters: whether to try for, or give up on, a Shoot (no seat helps a Shoot
-    /// from game scores of zero).
+    /// Shoot-related parameters: which opponents would help the seat Shoot, given the game score, and
+    /// whether to try for, or give up on, a Shoot (compute_Shoot_specific_parameters).
     let computeShootSpecificParameters () =
+        Array.fill shootHelper 0 4 false
         goShoot <- false
         quitShoot <- false
         relinquishQS <- true
+        shootHelpers <- 0
         if a.PtsSit <> PointsSit.unplayed && a.PtsSit <> me then ()
         else
+            // opponents for whom the seat's Shoot would do more good than harm
+            for p in opponents do
+                let helps =
+                    if not table.QSPlayed then   // Q♠ is unplayed or on the trick
+                        if score[p] = sbh[1] then
+                            sbh[1] - score[p] >= 20 && score[me] - 26 >= sbh[1] + 10
+                                && (score[me] < sbh[4] || score[me] < 100 - 25)
+                        else score[me] - 26 >= sbh[1]
+                    elif score[p] = sbh[1] then false
+                    elif score[p] >= 100 - 10 then true   // p cannot afford to stop the Shoot
+                    elif score[me] - 26 >= sbh[1] then true   // success makes no new low scorer
+                    elif score[me] + 25 >= 100 then true   // p loses if it stops the Shoot
+                    else score[me] >= 100 - 10   // p wants the seat's score down
+                shootHelper[p] <- helps
+                if helps then shootHelpers <- shootHelpers + 1
+
             if position = 0 then ()
             elif a.TotalOffWinners >= tLeft - 1 then relinquishQS <- false
             elif table.PointsPlayed = 13 then relinquishQS <- false
             elif a.WinsAllH >= 1 then relinquishQS <- false
             elif table.QSOnTrick then ()
             elif deficit >= 30 then relinquishQS <- false
-            elif lowScore = 0 && leadOver2ndLow >= 35 then relinquishQS <- false
-            elif qsInHand && (canHoldQS || 0 > lowScore) then relinquishQS <- false
+            elif score[me] = lowScore && leadOver2ndLow >= 35 then relinquishQS <- false
+            elif qsInHand && (canHoldQS || score[table.TrickWinner] > lowScore) then relinquishQS <- false
 
             let longSuit = a.LongSuit
             if longSuit = none then ()
             elif longSuit = hearts || hu longSuit = 0 || a.WinsAllH <= -12 then ()
-            elif soloOwner longSuit = none then goShoot <- true
+            elif soloOwner longSuit = none || shootHelper[soloOwner longSuit] then goShoot <- true
 
+            let helps p = p >= 0 && shootHelper[p]
             if not a.Sluffing then
                 // 1] leading the twelfth trick with Q♠ and a loser
                 if tLeft <> 2 then ()
                 elif a.PtsSit <> me || position > 0 || a.QSIsHU = 0 || a.TotalOffWinners <> 1 then ()
                 elif imScore[me] >= 96 then ()
                 elif table.PointsPlayed = 13 then ()
+                elif table.PointsPlayed = 12 && helps (soloOwner hearts) then ()
                 else
                     let sw =
                         if a.WeakShootSuit >= 0 then a.WeakShootSuit
@@ -218,16 +249,22 @@ type Decision(a : Analysis) =
                         else diamonds
                     let i = if sw = spades then lowIn spades else highIn sw
                     if sw = spades && oppsHave spades = 1 then ()
+                    elif sw = spades && ohr i spades = 1 && helps (soloOwner spades) then ()
                     elif sw = spades && a.OppsVoidIn[spades] <= 1 then ()
-                    elif soloOwner sw >= 0 then quitShoot <- true
-                    else quitShoot <- true   // no opponent who may hold the high card helps
+                    elif soloOwner sw >= 0 then
+                        if not shootHelper[soloOwner sw] then quitShoot <- true
+                    else
+                        let hcard, _ = oppOwnerOfHighCard sw
+                        let helpingOwners =
+                            opponents |> List.filter (fun p -> hcard >= 0 && opp[p, hcard, sw] >= 0 && shootHelper[p]) |> List.length
+                        if helpingOwners = 0 then quitShoot <- true
 
                 // 2] an unfriendly opponent holds the rest of a suit in which the Shooter has a loser
                 let wss = a.WeakShootSuit
                 if quitShoot || wss = none then ()
                 elif table.QSPlayed || soloOwner wss = none then ()
                 elif len wss > oppsHave wss then ()
-                else quitShoot <- true
+                elif not shootHelper[soloOwner wss] then quitShoot <- true
 
                 // 3] the opponent with only hearts left owns a suit with a stopper
                 if quitShoot || a.OnlyHasH = none then ()
@@ -241,11 +278,13 @@ type Decision(a : Analysis) =
                 elif table.QSPlayed || qsInHand then ()
                 elif a.ALiveSuit <> hearts && len a.ALiveSuit = tLeft then ()
                 elif table.PointsPlayed = 13 && a.SuitWithHU = spades then ()
+                elif table.PointsPlayed = 12 && lenH = 0 && helps (soloOwner hearts) then ()
+                elif lenH = tLeft && shootHelpers >= 2 then ()
                 else quitShoot <- true
 
                 // 5] Q♠ is on the trick, or is the seat's only card that can win a trick with a heart on it
                 if quitShoot || position = 0 then ()
-                elif table.PointsPlayed > 6 || table.PointsInTrick = 0 then ()
+                elif table.PointsPlayed > 6 || table.PointsInTrick = 0 || shootHelpers >= 2 then ()
                 elif table.QSOnTrick && not a.Sluffing && lsl < w then quitShoot <- true
                 elif suitLed = spades && qsInHand && queen > w && a.HnQS < w then quitShoot <- true
 
@@ -285,6 +324,7 @@ type Decision(a : Analysis) =
     let determineMode () =
         let numberOfOutcards = a.NumberOfOutcards
         let ptsSit = a.PtsSit
+        let pointsExposed = a.PointsExposed
         canHoldQS <-
             if not qsInHand || not spadesSafe then false
             elif a.CDHEntries = 0 then true
@@ -294,7 +334,7 @@ type Decision(a : Analysis) =
             elif position > 0 && imScore[me] > lowScore && imScore[likelyTWinner] + table.PointsInTrick + 13 >= 100 then true
             elif a.LiveSuits > 1 || position = 0 || (a.ALiveSuit >= 0 && likelyTWinner = soloOwner a.ALiveSuit) then false
             elif imScore[me] = lowScore then false
-            elif deficit <= 13 && highScore <= 75 then false
+            elif deficit <= 13 && highScore <= 100 - 25 then false
             elif trick >= 10 then false
             else a.EstOppsVoidIn[a.ALiveSuit] >= 2
 
@@ -304,15 +344,24 @@ type Decision(a : Analysis) =
 
         modGorenCount <- 0
         computeModifiedGorenCount ()
+
+        // the Goren count needed to Shoot: lower when opponents would help, or the seat needs a Shoot
         threshold <- 10000
         if ptsSit = PointsSit.unplayed || ptsSit = me then
-            threshold <- clng (float (25 * tatt[trick]) / 100.0)
+            threshold <-
+                if shootHelpers <= 1 then 25
+                elif shootHelpers = 2 then 22
+                else 19
+            if veryHighScore && score[me] - lowScore >= 20 then threshold <- threshold - 3
+            elif highScore >= 100 - 16 && score[me] - lowScore >= 26 then threshold <- threshold - 1
+            threshold <- clng (float (threshold * tatt[trick]) / 100.0)
         let lowLoserH = if a.WinsAllH < -10 then card hearts (hu hearts - 11 - a.WinsAllH) else 0
         thresholdMinor <- threshold * 90 / 100
 
         // whether the hand is strong enough to Shoot
         let winsAllH = a.WinsAllH
         let sluffing = a.Sluffing
+        let helps p = p >= 0 && shootHelper[p]
         let strongHand =
             if ptsSit <> PointsSit.unplayed && ptsSit <> me then false
             elif (sluffing || hsl < w) && table.PointsInTrick > 0 then false
@@ -322,25 +371,31 @@ type Decision(a : Analysis) =
             elif winsAllH < 0 && a.OnlyHasH >= 0 && lu hearts > 0 then false
             elif winsAllH >= 1 then true
             elif table.PointsPlayed = 13 && not table.QSPlayed then true
+            elif veryHighScore && modGorenCount >= threshold && shootHelpers >= 2 && lowIn hearts >= 6 then true
+            elif veryHighScore && modGorenCount >= threshold && shootHelpers >= 1 && lenH = 0 then true
             elif a.TotalOffWinners >= tLeft - 1 then true
             elif quitShoot then false
-            elif winsAllH < 0 && soloOwner hearts >= 0 then false
+            elif winsAllH < 0 && soloOwner hearts >= 0 && not shootHelper[soloOwner hearts] then false
             elif ohr (highIn hearts) hearts >= 6 then false
-            elif ohr (highIn hearts) hearts >= 2 && a.TotalOffWinners < 7 / 3 then false
-            elif ohr (secondHighIn hearts) hearts >= 1 + hu hearts then false
+            elif ohr (highIn hearts) hearts >= 2 && a.TotalOffWinners < (7 - shootHelpers) / 3 then false
+            elif ohr (secondHighIn hearts) hearts >= 1 + hu hearts && shootHelpers < 2 then false
             elif ohr (thirdHighIn hearts) hearts >= 4 + hu hearts then false
             elif qsInHand && position = 0 && trick >= 11 && a.Entries = 0 && oppsHave hearts >= 4 && a.WeakShootSuit >= 0 then false
             elif winsAllH = -12 && a.OppOwnsQS && (card hearts (hu hearts) < jack || lowLoserH < 6) then false
             elif lenH > 0 && lowIn hearts <= 7 && oppsHave hearts >= 2 * lenH then false
-            elif lenH <= 3 && lenH > 0 && oppsHave hearts >= 8 && lowIn hearts <= 4 then false
-            elif sluffing && lenH <= 3 && lenH > 0 && oppsHave hearts >= 8 && lowIn hearts <= 8 then false
-            elif winsAllH <= -13 then false
-            elif winsAllH <= -12 && not qsInHand && not veryHighScore && a.DefLosers[hearts] >= 2 then false
-            elif winsAllH <= -12 && table.QSOnTrick && a.HltW > 0 then false
+            elif lenH <= 3 && lenH > 0 && oppsHave hearts >= 8 && lowIn hearts <= 4 && shootHelpers < 2 then false
+            elif sluffing && lenH <= 3 && lenH > 0 && oppsHave hearts >= 8 && lowIn hearts <= 8 && shootHelpers < 2 then false
+            elif winsAllH <= -13 && (a.OppHWinners > hu hearts || shootHelpers < 2)
+                && (lowLoserH < 7 || score[me] < 100 - 25 || shootHelpers < 2) then false
+            elif winsAllH <= -12 && not qsInHand && not veryHighScore && a.DefLosers[hearts] >= 2
+                && (hu hearts = 0 || shootHelpers < 2) then false
+            elif winsAllH <= -12 && table.QSOnTrick && a.HltW > 0 && (score[me] < 100 - 10 || table.PointsPlayed < 10) then false
             elif goShoot then true
             elif table.PointsPlayed >= 11 && not table.QSPlayed then true
             elif modGorenCount >= threshold then true
             elif modGorenCount >= thresholdMinor && a.NumberOfVoids + a.NumberOfSingletons >= 2 then true
+            elif modGorenCount >= thresholdMinor && qsInHand && shootHelpers >= 2 then true
+            elif lenH > 0 && ohr (secondHighIn hearts) hearts < 1 + hu hearts && shootHelpers >= 2 then true
             elif winsAllH < -10 && lenH >= estTr hearts && oppWinners hearts = lenH then true
             elif winsAllH < -10 && lenH >= estTr hearts && lu hearts = 0 && table.PointsPlayed >= 13 - 2 * lenH then true
             elif ohr (highIn a.WeakShootSuit) a.WeakShootSuit <= 1 && a.TotalUnbeatables + len a.WeakShootSuit = tLeft then true
@@ -350,14 +405,20 @@ type Decision(a : Analysis) =
         // the offensive mode type: how strongly the hand can Shoot
         let totalWinR = float a.TotalWinR
         let tow = a.TotalOffWinners
+        let scoreSoloOwnerH = if soloOwner hearts >= 0 then score[soloOwner hearts] else none
         let p = if lenS > 0 then ohr (lowIn spades) spades else 20
         let off =
-            if not strongHand then none
+            if not strongHand || table.NoShoot then none
+            elif imScore[me] >= 100 then 10
             elif tow = tLeft then 10
             elif tow = tLeft - 1 then
                 if lenH > 0 && hu hearts = 0 && table.QSOnTrick && a.HltW > 0 then none else 9
             elif winsAllH >= 1 then 9
-            elif winsAllH = -11 && lenH >= estTr hearts && (table.QSPlayed || qsInHand || a.AKSInHand > 0) then 8
+            elif winsAllH = -11 && lenH >= estTr hearts && (table.QSPlayed || qsInHand || a.AKSInHand > 0) then
+                if hu hearts > 0 then 8
+                elif score[me] - 26 < sbh[1] && score[me] < sbh[4] && sbh[4] + 26 >= 100 then none   // the others won't let a Shoot win the game
+                elif score[me] - 26 < sbh[1] && scoreSoloOwnerH >= 0 && scoreSoloOwnerH <= sbh[1] + 5 then none   // the Shooter would become the low scorer
+                else 8
             elif table.PointsPlayed = 13 && not table.QSPlayed then 8
             elif totalWinR >= 0.8 then
                 if a.WeakShootSuit = none || oppWinners a.WeakShootSuit > 0 then 7
@@ -365,15 +426,20 @@ type Decision(a : Analysis) =
                 elif tow < tLeft + (winsAllH + 10) - 1 then 2
                 else 7
             elif winsAllH <= -1 && lenH >= estTr hearts && tow = offWinners hearts then
-                if hu hearts >= 2 && table.QSPlayed then 3 else 2
+                let t = if hu hearts > 0 && oppsHave hearts <= 2 && shootHelpers >= 2 then 3 else 2
+                if hu hearts >= 2 && table.QSPlayed then 3 else t
             elif winsAllH >= -11 && trick >= 8 && totalWinR >= 0.5 then 7
-            elif winsAllH >= -11 && trick <= 7 && tow >= tLeft - 3 && not table.QSPlayed then 2
-            elif winsAllH >= -11 && trick <= 7 && tow >= tLeft - 1 then 2
+            elif winsAllH >= -11 && trick <= 7 && tow >= tLeft - 3 && not table.QSPlayed then
+                if shootHelpers = 0 then 2 else 6
+            elif winsAllH >= -11 && trick <= 7 && tow >= tLeft - 1 then 6
             elif winsAllH >= -1 && a.OppOwnsQS && p = 1 && tow - offWinners spades + lenS = tLeft then 5
+            elif qsInHand && totalWinR >= 0.8 && deficit > 26 then 4
+            elif tow = 1 && a.QSIsHU = 1 && a.SuitsInHand = 2 && oppsHave a.SuitWithoutHU = 1 && shootHelpers >= 2 then 4
             elif winsAllH < -10 && table.PointsPlayed >= 13 - 2 * lenH then 2
             elif trick >= 8 && tow - a.QSIsHU >= 1 then 2
             elif trick <= 7 && tow - a.QSIsHU >= 2 then 1
             elif not a.OppOwnsQS && a.LongSuit >= 0 && a.LongSuit <> hearts then 1
+            elif shootHelpers >= 2 then 1
             else none
 
         // a point-free lead that shows a Shoot
@@ -401,32 +467,86 @@ type Decision(a : Analysis) =
             a.PossOppShoot <- true
             a.ProbOppShoot <- true
 
-        // whether to oppose a Shoot
-        if a.Shooter = none || veryHighScore then ()
-        elif deficit = 0 then opposeShoot <- true
-        elif a.Shooter = a.QSOwner && numberOfOutcards = 0 then ()
-        elif 0 > 0 - 26 then opposeShoot <- true
+        // whether the suspected Shooter's Shoot would win the game
+        if a.PossOppShoot then a.ComputeOppShootWinsGame()
+        else a.OppShootWinsGame <- false
+        let oppShootWinsGame = a.OppShootWinsGame
+        let shooter = a.Shooter
 
-        lastH <- a.Shooter >= 0 && lenH = 1 && a.CaseSuit[hearts]
+        // whether to oppose a Shoot
+        if shooter = none || veryHighScore then ()
+        elif oppShootWinsGame then opposeShoot <- true
+        elif deficit = 0 then   // the seat is the low scorer
+            if leadOver2ndLow >= 30 - table.PointsPlayed then opposeShoot <- true
+            elif scoreOf shooter - 26 < score[me] then opposeShoot <- true
+            elif highScore >= 100 && leadOver2ndLow > 26 - pointsExposed && (position = 0 || hsl < w) then opposeShoot <- true
+            elif imScoreOf shooter + 24 - pointsExposed >= 100 && 2 * leadOver2ndLow > 26 - pointsExposed
+                && (position = 0 || hsl < w) then
+                opposeShoot <- true
+            elif numberOfOutcards = 0 then ()
+            elif leadOver2ndLow <= 26 - pointsExposed && highScore >= 100 - 13 then ()
+            elif imScoreOf shooter < highScore || highScore - imScoreRank[3] < 20 then ()
+            elif table.QSPlayed then opposeShoot <- true
+            elif qsInHand && spadesSafe then opposeShoot <- true
+            elif a.OppOwnsQS && qsOwnerHasPlayed && a.QSOwnerCertainty >= 10 then opposeShoot <- true
+        elif scoreOf shooter + 25 >= 100 - 15 then ()   // the game is over, or nearly, if the Shoot fails
+        elif scoreOf shooter - 26 > score[me] then ()
+        elif shooter = a.QSOwner && numberOfOutcards = 0 then ()
+        elif sbh[1] > scoreOf shooter - 26 then opposeShoot <- true
+        elif (table.QSPlayed || shooter <> a.QSOwner) && scoreOf shooter - 26 < score[me] then opposeShoot <- true
+        elif deficit >= 35 then ()
+        elif canHoldQS then opposeShoot <- true
+        elif scoreOf shooter - 26 <= score[me] - 10 then opposeShoot <- true
+
+        lastH <- shooter >= 0 && lenH = 1 && a.CaseSuit[hearts]
 
         // the defensive mode type
+        let probOppShoot = a.ProbOppShoot
+        let z = probOppShoot && scoreOf shooter + 25 >= 100 - 8   // the game is over, or nearly, if the Shoot fails
         let mutable def =
             if imScore[me] = highScore && not opposeShoot then Mode.GetLowScorer
-            elif a.ProbOppShoot then
+            elif table.ScoreInGame[me] + table.PointsInTrick >= 100 then Mode.GetLowScorer
+            elif table.ScoreInGame[me] + table.PointsInTrick + 1 >= 100 && position > 0 && lgtW > 0 && suitLed = hearts then
+                Mode.GetLowScorer
+            elif oppShootWinsGame && probOppShoot then Mode.StopShoot   // everybody fights!
+            elif imScoreOf shooter >= 100 && imScore[me] > lowScore && not oppShootWinsGame then Mode.HelpShooter   // or the game is over
+            elif highScore >= 100 && a.PtsSit = PointsSit.split then
+                if deficit = 0 then Mode.BeLowScorer else Mode.ProtectHiScorer   // or the game is over
+            elif lowScore >= 100 - 15 then Mode.GetLowScorer
+            elif imScore[me] >= 100 - 10 then   // everyone's score is very high
+                if deficit = 0 then Mode.BeLowScorer else Mode.LieLow
+            elif veryHighScore || (qsInHand && imScore[me] + 13 >= 100 && numberOfOutcards <= 1) then
+                if deficit = 0 then Mode.BeLowScorer   // the seat can still be the low scorer
+                elif z then Mode.HelpShooter
+                elif qsInHand && a.Entries = 0 then Mode.LieLow
+                elif highScore < 100 - 10 then Mode.LieLow
+                elif highScore - table.PointsInTrick < 100 then Mode.ProtectHiScorer
+                else Mode.LieLow
+            elif probOppShoot then
                 if deficit = 0 then
                     if opposeShoot then Mode.StopShoot else Mode.BeLowScorer
-                elif a.Shooter = a.QSOwner && numberOfOutcards = 0 then Mode.LieLow
-                else Mode.StopShoot
+                elif z then Mode.HelpShooter
+                elif scoreOf shooter - 26 > lowScore then Mode.HelpShooter
+                elif shooter = a.QSOwner && numberOfOutcards = 0 then Mode.LieLow
+                else Mode.StopShoot   // the Shooter would be the new low scorer
             elif deficit = 0 then
-                if a.PossOppShoot && a.PointsExposed >= 9 && leadOver2ndLow >= 26 - a.PointsExposed then Mode.StopShoot
+                if a.PossOppShoot && pointsExposed >= 9 && leadOver2ndLow >= 26 - pointsExposed then Mode.StopShoot
                 else Mode.BeLowScorer
-            elif deficit < 10 && highScore < 80 then Mode.LieLow
+            elif deficit < 10 && highScore < 100 - 20 then Mode.LieLow
+            elif highScore + 26 - pointsExposed < 100 then Mode.GetLowScorer
+            elif deficit <= 3 && trick <= 6 then Mode.GetLowScorer
+            elif highScore < 100 - 10 then Mode.GetLowScorer
+            elif position = 0 then Mode.ProtectHiScorer
+            elif imScore[me] < 100 - 17 && table.PointsInTrick < 13 then Mode.ProtectHiScorer
+            elif highScore >= 100 && highScore - table.PointsInTrick < 100 then
+                if a.PtsSit = PointsSit.unplayed && imScore[table.TrickLeader] < highScore then Mode.ProtectHiScorer
+                else Mode.HelpShooter
             else Mode.GetLowScorer
         if def = Mode.LieLow then
             if not qsInHand then ()
             elif not spadesSafe then ()
             elif a.TotalDefLosers < 3 && a.Entries > 0 then ()
-            elif leadOver2ndLow >= 15 || highScore >= 85 || a.Entries = 0 then def <- Mode.GetLowScorer
+            elif leadOver2ndLow >= 15 || highScore >= 100 - 15 || a.Entries = 0 then def <- Mode.GetLowScorer
 
         // targets
         meTarget <-
@@ -437,36 +557,64 @@ type Decision(a : Analysis) =
             | Mode.StopShoot ->
                 opposeShoot <- true
                 a.ProbOppShoot <- true
-                // with game scores of zero, every opponent but the Shooter is a target
                 for p in opponents do
-                    if p <> a.Shooter then oppTarget[p] <- true
+                    if p = shooter then ()
+                    elif score[me] = lowScore then
+                        if not qsInHand || not spadesSafe then oppTarget[p] <- true
+                        elif score[p] <= sbh[2] + 4 then oppTarget[p] <- true
+                        elif score[p] = sbh[4] then oppTarget[p] <- true
+                    elif qsInHand && spadesSafe then
+                        if score[p] <= lowScore + 4 then oppTarget[p] <- true
+                    elif score[p] < 100 - table.PointsUnplayed then oppTarget[p] <- true
+                eatQS <-
+                    if table.QSPlayed && not table.QSOnTrick then false
+                    elif table.PointsPlayed < 10 && tLeft > 3 then false   // eat Q♠ only when urgent
+                    elif score[me] + 13 >= 100 then false   // eating Q♠ loses the game
+                    elif scoreOf shooter - 26 >= sbh[1] then false   // no new leader
+                    elif sbh[4] <= 25 then false
+                    elif score[me] = sbh[1] && leadOver2ndLow >= 14 then true
+                    elif oppShootWinsGame then true   // save the game
+                    else sbh[1] > scoreOf shooter - 13   // resist a new leader
             | Mode.GetLowScorer ->
                 if a.Entries <= numberOfOutcards then Array.fill oppTarget 0 4 false
                 let i =
                     if tLeft <= 2 && imScore[likelyTWinner] <= imScoreRank[2] then 10
                     elif deficit <= 10 && imScore[me] <= 50 then 4
                     elif highScore <= 50 then 4
+                    elif a.Entries <= numberOfOutcards then 0
+                    elif imScore[me] >= imScoreRank[3] then 5
                     else 0
                 for p in opponents do
                     if imScore[p] <= lowScore + i then oppTarget[p] <- true
                 if tLeft >= 7 then ()
-                elif leadOver2ndLow >= 26 || highScore >= 85 then ()
+                elif leadOver2ndLow >= 26 || highScore >= 100 - 15 then ()
                 elif a.Entries <= numberOfOutcards then ()
-                elif tLeft >= 5 && imScore[me] <> imScoreRank[2] && imScoreRank[2] < 100 - 26 + a.PointsExposed then
+                elif tLeft >= 5 && imScore[me] <> imScoreRank[2] && imScoreRank[2] < 100 - 26 + pointsExposed then
                     oppTarget[secondPlace] <- true
-                elif imScore[me] >= imScoreRank[3] && imScoreRank[3] >= 75 then ()
+                elif imScore[me] >= imScoreRank[3] && imScoreRank[3] >= 75 then oppTarget[secondPlace] <- true
                 else
                     for p in opponents do
-                        if imScore[p] <= lowScore + 10 && imScore[p] < 100 - 26 + a.PointsExposed then oppTarget[p] <- true
+                        if imScore[p] <= lowScore + 10 && imScore[p] < 100 - 26 + pointsExposed then oppTarget[p] <- true
             | Mode.BeLowScorer ->
                 for p in opponents do
                     if imScore[p] >= highScore - 5 then oppTarget[p] <- true
                     elif imScore[p] <= imScore[me] + 15 then oppTarget[p] <- true
+                    elif imScore[p] >= 100 - 13 then oppTarget[p] <- true
             | Mode.LieLow ->
                 for p in opponents do
-                    if imScore[p] < 100 - 26 + a.PointsExposed then oppTarget[p] <- true
+                    if imScore[p] < 100 - 26 + pointsExposed then oppTarget[p] <- true
+            | Mode.HelpShooter -> opposeShoot <- false
+            | Mode.ProtectHiScorer ->
+                if a.Entries <= numberOfOutcards then Array.fill oppTarget 0 4 false
+                meTarget <- false
+                for p in opponents do
+                    if imScore[p] < highScore && imScore[p] + 18 < 100 then oppTarget[p] <- true
+                opposeShoot <- false
             | _ -> ()
-        let numTargets = opponents |> List.filter (fun p -> oppTarget[p]) |> List.length
+        let mutable numTargets = opponents |> List.filter (fun p -> oppTarget[p]) |> List.length
+        if numTargets = 0 then
+            oppTarget[opp1] <- true   // arbitrary
+            numTargets <- 1
         aksOwnerIsTarget <-
             if a.OppWithAKS >= 0 then oppTarget[a.OppWithAKS]
             else a.AKS > 0 && numTargets = 3
@@ -479,29 +627,52 @@ type Decision(a : Analysis) =
             p <- ohr (card spades (a.AKSInHand + estTr spades - 1)) spades
 
         mode <-
-            if off = none then def
-            elif ptsSit = me && a.PointsExposed >= 14 && tLeft - tow <= 2 && a.WeakShootSuit >= 0
-                && soloOwner a.WeakShootSuit = none then
+            if ptsSit = me && imScore[me] >= 100 && not table.NoShoot then Mode.ShootTheMoon   // no choice but to continue
+            elif off = none && shootHelpers <= 1 then def
+            elif ptsSit = me && pointsExposed >= 14 && tLeft - tow <= 2 && a.WeakShootSuit >= 0 && not table.NoShoot
+                && (soloOwner a.WeakShootSuit = none || helps (soloOwner a.WeakShootSuit)) then
                 Mode.ShootTheMoon
             elif off >= 3 then Mode.ShootTheMoon
+            elif off = none then def
             elif imScore[me] = lowScore && leadOver2ndLow >= attic / 6 then Mode.BeLowScorer
             elif position > 0 then Mode.Equivocate
             elif oppTargetHasQS && p = 1 then def
             elif a.HighestOutcard[spades] = queen && aksOwnerIsTarget then def
             else Mode.Equivocate
-        if mode = Mode.Equivocate && (trick >= 11 || a.PointsExposed >= 17) then mode <- Mode.ShootTheMoon
+        if mode <> Mode.Equivocate then ()
+        elif trick >= 11 || pointsExposed >= 17 then mode <- Mode.ShootTheMoon
+        elif shootHelpers >= 2 && pointsExposed >= 13 then mode <- Mode.ShootTheMoon
+        elif deficit >= 50 && 100 - imScore[me] <= 15 then mode <- Mode.ShootTheMoon   // desperation!
 
+        offType <- off
+        defType <- def
         if mode = Mode.ShootTheMoon then shootTry <- me
         elif shootTry = none then ()
         elif table.PointsPlayed = 0 then shootTry <- none
 
     member _.Analysis = a
+
+    /// The seat's main choices, in the same form as Killer Hearts' KhEngine.Brief, for checking the port.
+    member _.Brief(sit : int) =
+        let seats (xs : 'T[]) = String.Join(",", xs)
+        let b (x : bool) = if x then "True" else "False"
+        String.Join(" ",
+            [|
+                $"mode={int mode} def={int defType} off={offType} sit={sit}"
+                $"Shooter={a.Shooter} poss={b a.PossOppShoot} prob={b a.ProbOppShoot} oppose={b opposeShoot} wins={b a.OppShootWinsGame} helpers={shootHelpers}"
+                $"im={seats imScore} low={lowScore} high={highScore} deficit={deficit} ltw={likelyTWinner} tgt={seats (Array.map b oppTarget)}"
+                $"hold={b canHoldQS} eat={b eatQS} take={b takePoints} safe={safeCard} sluff={suitToSluff}/{rankToSluff} lead={bestLeadSuit}/{bestLeadRank}"
+                $"thr={threshold} goren={modGorenCount} go={b goShoot} quit={b quitShoot} rel={b relinquishQS}"
+            |])
     member _.ImScore = imScore
     member _.LowScore = lowScore
     member _.HighScore = highScore
     member _.LeadOver2ndLow = leadOver2ndLow
     member _.Deficit = deficit
     member _.LowScorer = lowScorer
+    member _.HiScorer = hiScorer
+    member _.ShootHelper = shootHelper
+    member _.ShootHelpers = shootHelpers
     member _.LikelyTWinner = likelyTWinner
     member _.OppTarget = oppTarget
     member _.CanHoldQS = canHoldQS
@@ -580,6 +751,7 @@ type Decision(a : Analysis) =
                     elif table.TrickLeader = shooter && w <= 10 && table.SuitPulls[suitLed] <= 2 && i >= 2 && not table.QSOnTrick then opp1
                     elif w >= jack && suitLed = hearts then tw
                     elif fnv > 0 && i >= 6 then tw
+                    elif table.ScoreInGame[shooter] - a.PointsExposed - 26 > sbh[1] then tw   // the Shoot wouldn't make the Shooter the low scorer
                     elif fnv > 0 && i >= 3 then
                         if position = 1 && table.IsVoid[opp1, suitLed] && not table.IsVoid[opp2, suitLed] then opp1 else opp2
                     else tw
@@ -659,15 +831,22 @@ type Decision(a : Analysis) =
                 elif lu i > lu suitWithLU then suitWithLU <- i
                 elif lu i = lu suitWithLU && i = hearts then suitWithLU <- i
 
-        // power_suit: the non-HU suit with the strongest high card
+        // power_suit: the non-HU suit whose high card no opponent but a Shoot helper may beat
+        let mutable helped = none
         let rec findPower i =
             if i <= diamonds then
                 if len i = 0 || hu i > 0 || i = hearts then findPower (i + 1)
                 elif i = spades && not spadesSafe then findPower (i + 1)
                 else
-                    let _, owners = oppOwnerOfHighCard i
-                    if owners = 0 then powerSuit <- i else findPower (i + 1)
+                    let hcard, owners = oppOwnerOfHighCard i
+                    let helperOwners =
+                        opponents |> List.filter (fun p -> hcard >= 0 && opp[p, hcard, i] >= 0 && shootHelper[p]) |> List.length
+                    if owners = helperOwners then powerSuit <- i
+                    else
+                        if helperOwners > 0 then helped <- i
+                        findPower (i + 1)
         findPower spades
+        if powerSuit = none && helped >= 0 then powerSuit <- helped
         if powerSuit = none then
             let mutable j = 20
             for i in clubs .. diamonds do
@@ -1015,7 +1194,7 @@ type Decision(a : Analysis) =
     member this.FinishLeading() =
         saveBestLeadRank <- bestLeadRank
         saveBestLeadSuit <- bestLeadSuit
-        if mode = Mode.StopShoot || mode = Mode.Equivocate || mode = Mode.HelpShooter then
+        if mode = Mode.StopShoot || mode = Mode.Equivocate || mode = Mode.HelpShooter || mode = Mode.ProtectHiScorer then
             this.PerformEndgameAnalysisForLeading()
         elif mode = Mode.ShootTheMoon || manoAMano || not a.Endgame || specialLead >= 0 then ()
         else this.PerformEndgameAnalysisForLeading()
@@ -1029,7 +1208,9 @@ type Decision(a : Analysis) =
         let lowestImScore candidates =
             candidates |> List.fold (fun j i -> if j = none || imScore[i] < imScore[j] then i else j) none
         let mutable finished = false
-        if mode <> Mode.Equivocate && mode <> Mode.HelpShooter then
+        // protecting the high scorer, a lead in a suit only someone else holds is fine
+        if mode = Mode.ProtectHiScorer && manoAMano && imScoreOf (soloOwner bestLeadSuit) < highScore then finished <- true
+        if not finished && mode <> Mode.Equivocate && mode <> Mode.HelpShooter then
             // a lead that makes a target holding all winners take the trick
             this.PlayerReaches()
             this.ComputeOppWinsAll()
@@ -1204,8 +1385,25 @@ type Decision(a : Analysis) =
                     suits |> List.tryPick pick |> Option.map (fun (r, s) -> lead r s) |> Option.isSome
                 let rev = [ diamonds; clubs; hearts; spades ]
                 let leadable i = i <> hearts || a.CanLeadH
+                // with Q♠ and opponents who would help a Shoot, lead the lowest winner of a suit that wins
+                let helperLead =
+                    if qsInHand && shootHelpers >= 2 then
+                        bestLeadSuit <- none
+                        let j = if suitWithHU = hearts && hu spades > 0 then spades else suitWithHU
+                        let s =
+                            if suitWithHU >= clubs then suitWithHU
+                            elif j = spades && (pullSpades || a.CaseSuit[spades]) && (hu spades > 1 || highIn spades > queen) then spades
+                            elif suitWithHU = hearts && lenH = hu hearts then hearts
+                            else none
+                        if s >= 0 then
+                            lead (card s (hu s - 1)) s
+                            if bestLeadRank = queen && bestLeadSuit = spades then bestLeadRank <- card spades (a.PQS - 1)
+                            true
+                        else false
+                    else false
                 let done1 =
-                    tryLead (fun i ->
+                    helperLead
+                        || tryLead (fun i ->
                         if len i <= 1 || hu i <> 1 then None
                         elif not (leadable i) then None
                         elif oppsHave i <= 6 && (i <> spades || highIn spades <> queen) then Some (highIn i, i)
@@ -1251,6 +1449,127 @@ type Decision(a : Analysis) =
                     if bestLeadSuit <> spades || bestLeadRank <> queen then ()
                     elif a.AKSInHand > 0 then bestLeadRank <- card spades (a.PQS - 1)
                 else lead saveBestLeadRank saveBestLeadSuit
+
+        elif mode = Mode.HelpShooter then
+            let shooter = a.Shooter
+            let leadable i = len i > 0 && len i <> hu i && (i <> hearts || a.CanLeadH)
+            // a suit that reaches the Shooter for sure, else one the Shooter may hold
+            let mutable j = none
+            let mutable k = none
+            for i in allSuits do
+                if len i = 0 || opp.SuitLenPoss[shooter, i] = 0 then ()
+                elif len i = hu i then ()
+                elif i = spades && not table.QSPlayed && not pullSpades then ()
+                elif i = hearts && not a.CanLeadH then ()
+                elif a.HigherRanks(a.OppHighIn[shooter, i], i) = 0 then
+                    k <- i
+                    if opp.SuitLenInf[shooter, i] > 0 then j <- i
+            if j >= 0 then bestLeadSuit <- j
+            elif k >= 0 then bestLeadSuit <- k
+            else
+                // the suit in which the low card has the most higher cards out, one the Shooter isn't void in
+                let mutable most = none
+                for i in allSuits do
+                    if len i = 0 || table.IsVoid[shooter, i] then ()
+                    elif not (leadable i) then ()
+                    elif i = spades && lenS = 1 && lowIn spades = queen then ()
+                    else
+                        let l = ohr (lowIn i) i
+                        if l > most || (l = most && l > 0) then
+                            most <- l
+                            j <- i
+                if j >= 0 then bestLeadSuit <- j
+                else
+                    // the suit the low scorer is void in in which the Shooter may hold the most
+                    let mutable most = 0
+                    for i in allSuits do
+                        if len i = 0 || not table.IsVoid[lowScorer, i] then ()
+                        elif not (leadable i) then ()
+                        elif i = spades && lenS = 1 && lowIn spades = queen then ()
+                        else
+                            let l = opp.SuitLenPoss[shooter, i]
+                            if l > most || (l = most && l > 0) then
+                                most <- l
+                                j <- i
+                    if j >= 0 then bestLeadSuit <- j
+            bestLeadRank <- lowIn bestLeadSuit
+        elif mode = Mode.ProtectHiScorer then
+            let removeHiScorers () =
+                this.PlayerReaches()
+                this.RemovePlayer(true, hiScorer)
+                if highScore = imScoreRank[3] then this.RemovePlayer(true, thirdPlace)
+            // the low card of a suit solution, skipping a lone low Q♠
+            let solutionLow () =
+                if oppReachCount > 0 then
+                    let mutable i = this.SuitSolution()
+                    let mutable r = lowIn i
+                    if i = spades && r = queen && oppReachCount > 1 then
+                        i <- this.SuitSolution()
+                        r <- lowIn i
+                    if i <> spades || r <> queen then Some (i, r) else None
+                else None
+            removeHiScorers ()
+            this.ReachedPlayerSuits(true, false, hiScorer)
+            // a lead the high scorer is void in, of a suit with an unbeatable low card
+            let mutable found = false
+            for _ in 1 .. oppReachCount do
+                if not found && lu (this.SuitSolution()) > 0 then
+                    let j = solutionDelivered
+                    if j <> bestLeadSuit || not manoAMano then lead (lowIn j) j
+                    found <- true
+            if not found then
+                this.ResetSuitSolution()
+                match solutionLow () with
+                    | Some (i, r) -> lead r i   // a low lead the high scorer is void in
+                    | None ->
+                        // a lead that reaches anyone but the high scorer
+                        removeHiScorers ()
+                        match solutionLow () with
+                            | Some (i, r) -> lead r i
+                            | None ->
+                                if olr bestLeadRank bestLeadSuit <> 0 then ()   // the lead isn't unbeatable
+                                elif soloOwner bestLeadSuit = none then ()
+                                elif imScore[soloOwner bestLeadSuit] < highScore then ()
+                                else
+                                    // the high scorer alone holds the suit: lead the next riskier suit
+                                    let mutable z = false
+                                    let mutable stop = false
+                                    for n in 1 .. numberOfLeadableSuits do
+                                        if not stop then
+                                            bestLeadSuit <- riskRankOfSuit[n]
+                                            bestLeadRank <- lowIn bestLeadSuit
+                                            if bestLeadSuit = spades && bestLeadRank = queen then bestLeadRank <- highIn spades
+                                            elif lu bestLeadSuit >= 2 then ()
+                                            elif a.EstOppsVoidIn[bestLeadSuit] = 0 || table.QSPlayed then
+                                                match suitCards[bestLeadSuit] |> Array.tryFind (fun r -> 3 * ohr r bestLeadSuit >= 5 * olr r bestLeadSuit) with
+                                                    | Some r -> bestLeadRank <- r
+                                                    | None -> ()
+                                            if bestLeadSuit = spades && bestLeadRank = queen && imScore[me] + 19 >= 100
+                                                && (oppsHave spades = 0 || olr queen spades > 0) then
+                                                z <- true
+                                            elif soloOwner bestLeadSuit = none then stop <- true
+                                            elif imScore[soloOwner bestLeadSuit] < highScore then stop <- true
+                                    if not stop then
+                                        // every suit is mano a mano with the protectee, or Q♠ is chosen to lead
+                                        bestLeadSuit <- saveBestLeadSuit
+                                        bestLeadRank <- highIn bestLeadSuit
+                                        if not eatQS && oppsHave bestLeadSuit = 1 && lu bestLeadSuit > 0 then
+                                            bestLeadRank <- lowIn bestLeadSuit
+                                        if bestLeadSuit <> spades || table.QSPlayed then ()
+                                        elif a.OppOwnsQS then
+                                            if imScoreOf qsOwner + 14 < 100 then bestLeadRank <- lowIn spades   // pull Q♠ from the protectee
+                                            elif imScore[me] + 14 >= 100 then bestLeadRank <- lowIn spades
+                                            elif bestLeadRank >= king || oppsHave spades > 1 then ()
+                                            elif numberOfLeadableSuits > 1 then
+                                                match [ 1 .. numberOfLeadableSuits ] |> List.tryFind (fun n -> riskRankOfSuit[n] <> spades) with
+                                                    | Some n ->
+                                                        bestLeadSuit <- riskRankOfSuit[n]
+                                                        bestLeadRank <- highIn bestLeadSuit
+                                                    | None -> ()
+                                        elif z then failwith "Shouldn't lead QS"
+                                        elif oppsHave spades > a.AKS then ()
+                                        elif (soloOwner spades >= 0 && imScore[soloOwner spades] + 14 < 100) || imScore[me] + 14 >= 100 then
+                                            bestLeadRank <- queen
 
     // ---- reach: which opponent a lead in each suit makes win the trick ----
 
@@ -1497,6 +1816,8 @@ type Decision(a : Analysis) =
         elif a.Shooter >= 0 && not a.PossOppShoot then ()
         elif table.QSOnTrick || hsl < w || veryHighScore then ()
         elif a.TotalDefLosers = 0 && table.PointsPlayed <= 21 then ()
+        elif mode = Mode.BeLowScorer && leadOver2ndLow <= pit && score[likelyTWinner] - 26 > score[me] then ()
+        elif mode = Mode.HelpShooter then ()
         elif suitLed <> hearts then takePoints <- true
         elif not likelyTWinnerIsNonShootingOpp && a.ProbOppShoot then takePoints <- true
         elif not likelyTWinnerIsNonShootingOpp && mode = Mode.BeLowScorer && leadOver2ndLow >= 20 && opposeShoot then takePoints <- true
@@ -1556,6 +1877,13 @@ type Decision(a : Analysis) =
         let set c = safeCard <- c
         if a.PointsExposed = 26 && pit > 0 then ()
         elif a.CaseSuit[suitLed] then set lsl
+        elif imScore[me] >= 100 - expectedHOnTrick then
+            // the hearts likely on the trick would end the game: lose it
+            if hltW > 0 then set hltW
+            elif suitLed = spades && lsl = queen then set (a.SecondLowIn[spades])
+            elif fnv > 0 then set lsl
+            elif suitLed = spades && hsl = queen then set (secondHighIn spades)
+            else set hsl
         elif table.QSOnTrick || tLeft <= 2 then ()
         elif suitLed = spades && qsInHand && lenS = 2 then set hnQS
         elif suitLed = hearts && table.QSPlayed && position = 3 && hltW > 0 && pit > lenH - 2 + opps hearts then set hltW
@@ -1720,7 +2048,8 @@ type Decision(a : Analysis) =
         if safeCard = hsl || suitLed <= hearts || position = 1 || table.QSOnTrick then ()
         elif lenSL > 4 + table.Sluffs || lenSL + opps suitLed + position - table.Sluffs < 13 then ()
         elif safeCard < w && olr safeCard suitLed = olr hsl suitLed then ()
-        elif not qsOwnerHasPlayed && opp.IsVoid(qsOwner, suitLed) then ()
+        elif not qsOwnerHasPlayed && opp.IsVoid(qsOwner, suitLed)
+            && (imScore[me] < 100 - 13 || imScoreOf qsOwner = lowScore || imScore[me] = lowScore) then ()
         elif pit = 1 && ptsSit = PointsSit.unplayed then set hsl
         elif pit >= 1 && pit <= 2 && ptsSit >= 0 then set hsl
         elif a.NumberLTW <= 2 then set hsl
@@ -1921,6 +2250,7 @@ type Decision(a : Analysis) =
             if a.SuitStopper[s] && len s > estTr s then
                 rankToSluff <- secondHighIn s
                 if rankToSluff = queen && s = spades then rankToSluff <- a.HnQS
+                elif imScore[me] >= 100 - 4 then rankToSluff <- highIn s   // too near 100 to keep a stopper
         elif s = hearts then
             if not a.SuitStopper[hearts] || veryHighScore then
                 if lenH >= estTr hearts then rankToSluff <- secondHighIn hearts
@@ -2029,14 +2359,128 @@ type Decision(a : Analysis) =
                     elif highIn spades = queen then rankToSluff <- secondHighIn spades
                     else rankToSluff <- suitCards[spades][a.PQS - 1]
                 elif not qsInHand then
-                    rankToSluff <- lowIn sss
-                    suitToSluff <- sss
+                    if eatQS && (sss <> spades || highIn sss >= king) then
+                        rankToSluff <- highIn hearts
+                        suitToSluff <- hearts
+                    else
+                        rankToSluff <- lowIn sss
+                        suitToSluff <- sss
                 elif lenS > 1 then
                     rankToSluff <- if highIn spades = queen then secondHighIn spades else highIn spades
                     suitToSluff <- spades
+                elif eatQS && (a.PointsExposed = 25 || sss = spades) then
+                    if lenH > 0 then
+                        rankToSluff <- highIn hearts
+                        suitToSluff <- hearts
+                    else
+                        rankToSluff <- highIn sss
+                        suitToSluff <- sss
                 else
                     rankToSluff <- queen
                     suitToSluff <- spades
+        elif mode = Mode.HelpShooter then
+            let shooter = a.Shooter
+            // the suit whose high card has the most lower cards out, against the most higher
+            let bestByRanks exclude =
+                let mutable k = -1
+                let mutable l = none
+                for i in allSuits do
+                    if not (exclude i) then
+                        let j = olr (highIn i) i - ohr (highIn i) i + 13
+                        if j > k then
+                            k <- j
+                            l <- i
+                l
+            let firstHeld () = allSuits |> List.findBack (fun i -> suitLen[i] > 0)
+            if likelyTWinner <> shooter then
+                // the trick goes to a seat other than the Shooter: sluff a high card the Shooter would have to beat
+                let l =
+                    bestByRanks (fun i ->
+                        suitLen[i] = 0 || a.CaseSuit[i] || i = hearts || (i = spades && not sStillSafe)
+                            || opp.IsVoid(shooter, i))
+                if l >= 0 then
+                    suitToSluff <- l
+                    rankToSluff <- highIn l
+                    if l = spades && rankToSluff = queen then rankToSluff <- a.HnQS
+                elif a.ACaseSuit >= clubs then
+                    suitToSluff <- a.ACaseSuit
+                    rankToSluff <- highIn a.ACaseSuit
+                elif a.ACaseSuit = spades && (lenS > 1 || not qsInHand) then
+                    suitToSluff <- spades
+                    rankToSluff <- a.HnQS
+                elif lenS > 1 then
+                    suitToSluff <- spades
+                    rankToSluff <- a.HnQS
+                elif qsInHand && lenH = tLeft - 1 then
+                    suitToSluff <- spades
+                    rankToSluff <- queen
+                elif lenH = tLeft then
+                    suitToSluff <- hearts
+                    rankToSluff <- highIn hearts
+                else
+                    suitToSluff <- firstHeld ()
+                    rankToSluff <- highIn suitToSluff
+            elif qsInHand then ()   // the script handles Q♠
+            else
+                // the Shooter takes the trick: sluff the points, or a stopper the Shooter would have to beat
+                let mutable l =
+                    if a.OppPtCards = 0 && lenH > 0 && a.EstOppsVoidIn[suitLed] = 2 && oppsHave suitLed + 1 >= lenH then
+                        hearts   // the seat has the only points left
+                    elif shootStopperSuit >= 0 then shootStopperSuit
+                    else
+                        allSuits |> List.fold (fun l i -> if soloOwner i = shooter && a.SuitStopper[i] then i else l) none
+                if l = none && lenH > 0 then l <- hearts
+                if l = none then
+                    l <- bestByRanks (fun i -> suitLen[i] = 0 || a.CaseSuit[i] || table.IsVoid[shooter, i])
+                suitToSluff <-
+                    if l >= 0 then l
+                    elif a.ACaseSuit >= 0 then a.ACaseSuit
+                    else firstHeld ()
+                rankToSluff <- highIn suitToSluff
+        elif mode = Mode.ProtectHiScorer then
+            if suitToSluff <> hearts || imScore[likelyTWinner] <> highScore then ()
+            else
+                // the high scorer would take a heart: sluff a non-point card instead
+                let mutable keepHeart = false
+                if a.DefSuits[0] >= 2 && a.DefSuits[2] <> hearts && (a.DefSuits[2] <> spades || lenS > 1 || not qsInHand) then
+                    suitToSluff <- a.DefSuits[2]
+                else
+                    let mutable k = 0
+                    let mutable l = 20
+                    let mutable n = 0
+                    let mutable stop = false
+                    for i in allSuits do
+                        let m = suitLen[i]
+                        if not stop && m > 0 && not a.CaseSuit[i] && m > lu i && i <> hearts then
+                            let p = a.DefWinners[i]
+                            if i <> spades || table.QSPlayed then
+                                let j = olr (lowIn i) i
+                                if p > n || (p = n && j > k) || (p = n && j = k && m < l) then
+                                    k <- j
+                                    l <- m
+                                    n <- p
+                                    suitToSluff <- i
+                            elif i = spades && not spadesSafe && a.HnQS > queen && not qsInHand then
+                                suitToSluff <- spades   // a high-priority sluff
+                                stop <- true
+                    if suitToSluff <> hearts then ()
+                    elif lenS > 0 && not qsInHand then suitToSluff <- spades
+                    elif lenS > 1 && qsInHand && sStillSafe then suitToSluff <- spades
+                    elif a.ACaseSuit >= clubs then suitToSluff <- a.ACaseSuit
+                    elif suitLen[diamonds] > 0 then suitToSluff <- diamonds
+                    elif suitLen[clubs] > 0 then suitToSluff <- clubs
+                    elif lenS = 1 && qsInHand then keepHeart <- true
+                    elif lenS > 0 then suitToSluff <- spades
+                    else keepHeart <- true
+                if not keepHeart then
+                    let s = suitToSluff
+                    rankToSluff <- highIn s
+                    if len s = 1 then ()
+                    elif rankToSluff = queen && s = spades then rankToSluff <- a.HnQS
+                    elif a.PtsSit <> PointsSit.unplayed then ()
+                    elif len s > estTr s then
+                        rankToSluff <- secondHighIn s
+                        if rankToSluff = queen && s = spades then rankToSluff <- a.HnQS
 
     /// The opponent who will probably have to take Q♠ from this seat (QS_poison).
     member this.ComputeQSPoison() =

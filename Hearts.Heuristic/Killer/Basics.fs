@@ -87,6 +87,13 @@ module Info =
     /// The seat may hold the card: it is known or inferred to, or nothing is known.
     let mayHold code = code >= 1024 || code = 0
 
+/// Game scores as Killer Hearts expects them: none 100 or more before a deal. A game that continues
+/// after a tie at 100 or more (Rules.arena) would otherwise be out of Killer Hearts' range, so the scores
+/// are shifted down until the highest is 99, keeping their differences (as the arena bot does).
+let killerScores (scores : int[]) =
+    let shift = max (Array.max scores - 99) 0
+    scores |> Array.map (fun s -> min 99 (max 0 (s - shift)))
+
 /// Sorts four values ascending, as Killer Hearts' indirect_sort does; index 0 is lowest.
 let sortedScores (scores : int[]) = Array.sort scores
 

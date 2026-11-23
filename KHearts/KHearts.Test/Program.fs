@@ -164,9 +164,128 @@ let agreeWithFSharpPort (kh : Player) (deal : OpenDeal) =
             | None -> loop deal counts
     loop deal { PassAgree = 0; PassDiffer = 0; PlayAgree = 0; PlayDiffer = 0 }
 
+/// Plays whole games under arena rules with score-aware Killer Hearts in every seat, and counts how often
+/// the F# port of Killer Hearts, which sees the same game score, chooses the same card. Answers the counts
+/// and the first few information sets where the two differ.
+let agreeWithFSharpPortInGames numGames =
+    let kh = KillerHearts.CreatePlayer()
+    let passAgree, passDiffer, playAgree, playDiffer = ref 0, ref 0, ref 0, ref 0
+    let mismatches = Collections.Concurrent.ConcurrentQueue<InformationSet * Card * Card * string>()
+    let player =
+        let act (infoSet : InformationSet) =
+            let action = kh.Act infoSet
+            let port, agree, differ =
+                match infoSet.LegalActionType with
+                    | ActionType.Pass -> Killer.Pass.pass Killer.Pass.Bold infoSet, passAgree, passDiffer
+                    | ActionType.Play -> Killer.Play.play infoSet, playAgree, playDiffer
+            if port = action then Threading.Interlocked.Increment(&agree.contents) |> ignore
+            else
+                Threading.Interlocked.Increment(&differ.contents) |> ignore
+                if mismatches.Count < 1000 then
+                    let trace =
+                        match infoSet.LegalActionType with
+                            | ActionType.Play ->
+                                let score = KillerHearts.EngineScores(infoSet.GameScore.Points)
+                                $"
+    KH:   {KillerHearts.TracePlay(infoSet, score)}
+    port: {Killer.Play.lastExplanation ()}"
+                            | ActionType.Pass ->
+                                let score = KillerHearts.EngineScores(infoSet.GameScore.Points)
+                                $"
+    KH:   {KillerHearts.TracePass(infoSet, score)}
+    port: {Killer.Pass.lastExplanation ()}"
+                    mismatches.Enqueue(infoSet, action, port, trace)
+            action
+        { Act = act }
+    let playerMap = Enum.getValues<Seat> |> Seq.map (fun seat -> seat, player) |> Map
+    Array.Parallel.init numGames (fun iGame ->
+        let rng = SplitMixRandom(SplitMixRandom.GetSeed(0, iGame))
+        Game.playGame Rules.arena rng playerMap (enum<Seat> (iGame % Seat.numSeats)))
+        |> ignore
+    { PassAgree = passAgree.Value; PassDiffer = passDiffer.Value; PlayAgree = playAgree.Value; PlayDiffer = playDiffer.Value },
+    Seq.toArray mismatches
+
+/// Describes a decision where the F# port differs from Killer Hearts.
+let describeMismatch (infoSet : InformationSet, action : Card, port : Card, trace : string) =
+    let deal = infoSet.Deal
+    let cards (cs : seq<Card>) = cs |> Seq.map string |> String.concat " "
+    let tricks = deal.CompletedTricks.Length + 1
+    let score = infoSet.GameScore.Points |> Seq.map string |> String.concat ","
+    $"{infoSet.LegalActionType} seat {infoSet.Player} score {score} "
+        + $"dealer {deal.Dealer} dir {deal.ExchangeDirection} trick {tricks}: KH {action}, port {port}; hand {cards infoSet.Hand}{trace}"
+
+/// Claude as it was before it saw the game score: Killer Hearts' play as if every score were zero, under
+/// Killer Hearts' own moon rule, shooting from the cautious pass whatever the score.
+let scoreBlindClaude =
+    let blind (infoSet : InformationSet) = { infoSet with GameScore = Score.zero }
+    let act (infoSet : InformationSet) =
+        match infoSet.LegalActionType with
+            | ActionType.Pass -> Killer.Pass.pass Killer.Pass.Cautious (blind infoSet)
+            | ActionType.Play -> Killer.Play.play (blind infoSet)
+    { Act = act }
+
+/// Plays whole games under arena rules with the given challenger at South and the given champion
+/// elsewhere, and counts the challenger's moon shots, and those that lost it the game.
+let countMoons numGames (champion : Player) (challenger : Player) =
+    let rules = Rules.arena
+    let playerMap =
+        Enum.getValues<Seat> |> Seq.map (fun seat -> seat, (if seat = Seat.South then challenger else champion)) |> Map
+    let results =
+        Array.Parallel.init numGames (fun iGame ->
+            let rng = SplitMixRandom(SplitMixRandom.GetSeed(1, iGame))
+            let rec playDeal game =
+                let infoSet = Game.currentInfoSet rules game
+                let action =
+                    match Seq.tryExactlyOne infoSet.LegalActions with
+                        | Some action -> action
+                        | None -> playerMap[infoSet.Player].Act infoSet
+                let game = Game.addAction infoSet.LegalActionType action game
+                match Game.tryUpdateScore rules.MoonShotScoring game with
+                    | Some game -> game
+                    | None -> playDeal game
+            let rec loop (game : Game) moons losing =
+                let before = game.Score.Points
+                let game = playDeal game
+                let delta = Array.map2 (-) game.Score.Points before
+                let moon = delta[int Seat.South] = 0 && delta |> Array.sum = 3 * ClosedDeal.numPointsPerDeal
+                let winners = GameScore.findGameWinners rules.TieGame game.Score
+                let moons = if moon then moons + 1 else moons
+                let losing = if moon && not winners.IsEmpty && not (winners.Contains Seat.South) then losing + 1 else losing
+                if not winners.IsEmpty then moons, losing
+                else
+                    let deal =
+                        let dealer = Seat.incr 1 game.Deal.ClosedDeal.Dealer
+                        let dir = ExchangeDirection.next game.Deal.ClosedDeal.ExchangeDirection
+                        Deck.shuffle rng |> OpenDeal.fromDeck dealer dir
+                    loop (Game.create deal game.Score) moons losing
+            let deal = Deck.shuffle rng |> OpenDeal.fromDeck (enum<Seat> (iGame % Seat.numSeats)) ExchangeDirection.Left
+            loop (Game.createFirst deal) 0 0)
+    results |> Array.sumBy fst, results |> Array.sumBy snd
+
 [<EntryPoint>]
 let main argv =
     match argv with
+        | [| "claude"; games |] ->
+            let games = int games
+            let kh = KillerHearts.CreatePlayer()
+            let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
+            report "Claude vs three score-blind Claude:" (Tournament.run 0 true games scoreBlindClaude Claude.player)
+            report "Score-blind Claude vs three Claude:" (Tournament.run 0 true games Claude.player scoreBlindClaude)
+            report "Claude vs three score-aware Killer Hearts:" (Tournament.run 0 true games kh Claude.player)
+            report "Score-blind Claude vs three score-aware Killer Hearts:" (Tournament.run 0 true games kh scoreBlindClaude)
+            for name, challenger in [ "Claude", Claude.player; "Score-blind Claude", scoreBlindClaude ] do
+                let moons, losing = countMoons games kh challenger
+                printfn $"{name} vs three Killer Hearts, {games} games: {moons} moons, {losing} of them lost the game"
+            0
+        | [| "fsgames"; games |] | [| "fsgames"; games; _ |] ->
+            let counts, mismatches = agreeWithFSharpPortInGames (int games)
+            let report name agree differ =
+                printfn $"{agree + differ} {name}: the F# port agrees in {agree} (%.4f{100.0 * float agree / float (agree + differ)}%%)"
+            report "passes" counts.PassAgree counts.PassDiffer
+            report "play decisions" counts.PlayAgree counts.PlayDiffer
+            let shown = if argv.Length > 2 then int argv[2] else 10
+            for m in Seq.truncate shown mismatches do printfn "  %s" (describeMismatch m)
+            0
         | [| "fsport"; deals |] ->
             let kh = KillerHearts.CreatePlayer()
             let results =

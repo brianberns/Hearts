@@ -32,4 +32,18 @@ public partial class KhEngine
             Playing_suit_len_S, opp_owns_QS, pts_sit, def_suits[0], entries, live_suits, trick, seq, sluff_pts, can_hold_QS,
             a_live_suit, suit_is_live[spades], suit_is_live[hearts], suit_is_live[clubs], suit_is_live[diamonds], QS_played,
             Playing_suit_len_H, entries_clipped);
-}
+
+    /// <summary>The engine's main choices on its last play decision, in the same form as the F# port's Brief.</summary>
+    public string Brief()
+    {
+        string Seats<T>(VbArray<T> a) => string.Join(",", Enumerable.Range(player_west, 4).Select(p => a[p]));
+        return string.Join(" ",
+            $"mode={mode} def={best_determine_mode_mode_type[best_determine_mode_def]} off={best_determine_mode_mode_type[best_determine_mode_off]} sit={sit}",
+            $"Shooter={Shooter} poss={poss_opp_Shoot} prob={prob_opp_Shoot} oppose={oppose_Shoot} wins={opp_Shoot_wins_game} helpers={Playing_Shoot_helpers}",
+            $"im={Seats(im_score)} low={low_score} high={high_score} deficit={deficit} ltw={likely_T_winner} tgt={Seats(opp_target)}",
+            $"hold={can_hold_QS} eat={eat_QS} take={take_points} safe={safe_card} sluff={suit_to_sluff}/{rank_to_sluff} lead={best_lead_suit}/{best_lead_rank}",
+            $"thr={Playing_threshold} goren={mod_Goren_count} go={go_Shoot} quit={quit_Shoot} rel={relinquish_QS}");
+    }
+    /// <summary>The engine's main choices on its last pass, in the same form as the F# port's pass explanation.</summary>
+    public string BriefPass() =>
+        $"kind={kind_of_pass} thr={Passing_threshold} helpers={Passing_Shoot_helpers} deficit={deficit} low={low_score}/{low_scorer} second={second_lowest_score} high={Passing_high_score} target={pass_recvr_is_target} single={CD_singleton_passed}";}

@@ -16,6 +16,7 @@ module Scripts =
         let canLeadH = a.CanLeadH
         let wss = a.WeakShootSuit
         let z = wss >= 0 && a.OppsLowerRanks[a.SuitCards[wss][hu[wss]], wss] >= 2
+        let helpers = d.ShootHelpers
         let mutable sit = 0
         if t.Seq = 0 then
             sit <- 15
@@ -28,6 +29,7 @@ module Scripts =
                 elif hu[spades] > 0 then d.SuitWithHU <- spades
                 elif lenH = a.TLeft - 1 && a.QSInHand then sit <- 2
                 else sit <- 20
+            elif a.WinsAllH <= -11 && hu[hearts] > 0 && helpers >= 2 && canLeadH then d.SuitWithHU <- hearts
             elif a.WinsAllH = -11 && hu[hearts] < a.EstTr[hearts] - 1 && canLeadH then sit <- 29
             elif t.QSPlayed then
                 if a.WinsAllH = 2 then d.SuitWithHU <- hearts
@@ -40,8 +42,13 @@ module Scripts =
                     elif hu[spades] > 0 && a.HighIn[spades] >= king then d.SuitWithHU <- spades
                     elif hu[spades] = 0 && a.OppsHave[spades] = 1 && canLeadH then d.SuitWithHU <- hearts
                     else sit <- 2
+                elif swh >= clubs && helpers >= 2 then ()
+                elif swh = spades && helpers >= 2 && (d.PullSpades || a.CaseSuit[spades])
+                    && (hu[spades] > 1 || a.HighIn[spades] > queen || t.PointsPlayed >= 10) then ()
                 elif a.PointsExposed >= 10 && swh >= 0 && a.Table.Trick >= 11 && a.EstTr[swh] - a.OffWinners[swh] <= 1 then
                     if swh = spades && a.HighIn[spades] = queen && hu[spades] = 1 then sit <- 20
+                elif swh = hearts && canLeadH && helpers >= 2 then ()
+                elif hu[hearts] > 0 && canLeadH && helpers >= 2 then d.SuitWithHU <- hearts
                 elif hu[spades] = 0 && swh >= hearts then ()
                 elif hu[spades] = 0 && a.TotalOffWinners + lenS = a.TLeft && lenS >= 3 then sit <- 25
                 elif wss >= 0 && t.SuitPulls[wss] = 0 && (wss <> spades || lenS > 1) then sit <- 32
@@ -51,6 +58,8 @@ module Scripts =
                 elif swh = hearts && canLeadH then ()
                 elif swh = spades && d.ImScore[a.Me] >= 93 then ()
                 elif lenS = 1 && lenH = 0 then sit <- 20
+                elif a.SoloOwner[hearts] >= 0 && d.ShootHelper[a.SoloOwner[hearts]] then sit <- 2
+                elif helpers >= 2 && a.SoloOwner[hearts] < 0 then sit <- 2
                 elif d.ImScore[a.Me] >= 93 then sit <- 2
                 elif t.PointsPlayed = 13 || a.WinsAllH = 1 then sit <- 2
                 elif lenH > 0 && canLeadH then sit <- 6
@@ -76,7 +85,7 @@ module Scripts =
                 elif a.QSInHand then
                     if suitLed <> spades then 28
                     elif queen > w && (t.PointsPlayed = 13 || a.WinsAllH >= 1) then 2
-                    elif queen > w && t.PointsPlayed = 12 && a.SoloOwner[spades] = t.TrickLeader then 2
+                    elif queen > w && t.PointsPlayed = 12 && a.SoloOwner[spades] = t.TrickLeader then 11
                     elif queen > w && hu[spades] <= a.PQS && a.TotalOffWinners = a.TLeft then 2
                     elif queen > w && a.WinsAllH = -11 && lenH >= a.EstTr[hearts] then
                         if a.FollowersNotVoid = 3 - t.Seq && t.PointsInTrick = 0 then 11
@@ -89,7 +98,9 @@ module Scripts =
                     else 11
                 elif t.QSPlayed then 28
                 elif suitLed = spades && lgtW >= king && not d.QSOwnerHasPlayed then
-                    if a.PointsExposed = 13 || a.WinsAllH >= 1 || a.TotalOffWinners >= a.TLeft - 1 then 28 else 11
+                    if a.PointsExposed = 13 || a.WinsAllH >= 1 || a.TotalOffWinners >= a.TLeft - 1 then 28
+                    elif d.ShootHelpers >= 2 then 28
+                    else 11
                 elif t.Seq = 1 && hsl > w && a.OppsHave[suitLed] <= 3 then 4
                 elif t.PointsInTrick > 0 then 28
                 elif a.TotalOffWinners >= a.TLeft - 2 then 28
@@ -121,12 +132,18 @@ module Scripts =
         elif a.LenSuitLed > 0 then
             let hsl, lsl, lgtW = d.Hsl, d.Lsl, d.LgtW
             if suitLed = spades && not t.QSPlayed then
+                let eat = d.EatQS
                 if a.QSInHand then
-                    if not d.EatQS && w < a.HnQS && t.TrickWinner = shooter && a.NumberOfOutcards > 0 then 31
+                    if not eat && w < a.HnQS && t.TrickWinner = shooter && a.NumberOfOutcards > 0 then 31
+                    elif eat && w < queen && t.TrickWinner = shooter then 2
+                    elif eat && a.PQS < a.HU[spades] && w < queen && not nonShooter then 2
                     elif w < queen then 7
+                    elif eat && not nonShooter then 7
                     elif not d.CanHoldQS || nonShooter then 2
                     else 7
                 elif hsl > w && d.QSOwnerHasPlayed then 4
+                // Killer Hearts' And here is bitwise, so A♠/K♠ in hand counts as true
+                elif eat && a.AKSInHand > 0 && not d.QSOwnerHasPlayed && a.QSOwner >= 0 && a.QSOwner <> shooter then 4
                 elif a.HltQS > w then 1
                 else 22
             elif t.QSOnTrick then
@@ -134,6 +151,8 @@ module Scripts =
                 if lgtW > 0 && not nonShooter
                     && ((suitLed <> hearts && t.PointsPlayed = 26 - pit)
                         || (suitLed = hearts && t.PointsPlayed >= 26 - pit - a.FollowersNotVoid)) then 5
+                elif d.EatQS && lgtW > 0 && t.TrickWinner = shooter then 5
+                elif d.EatQS && hsl > w && not nonShooter then 4
                 else 33
             elif lsl > w then 4
             elif lgtW > 0 then (if t.TrickLeader <> shooter then 3 else 5)
@@ -232,7 +251,8 @@ module Scripts =
                 let shooterTakes = lts = a.Shooter
                 match mode with
                     | Mode.GetLowScorer ->
-                        if shooterTakes && a.SuitStopper[suitLed] && a.SecondHighIn[suitLed] < w then 22
+                        if d.ImScore[a.Me] >= 100 - 15 then 3
+                        elif shooterTakes && a.SuitStopper[suitLed] && a.SecondHighIn[suitLed] < w then 22
                         elif t.QSOnTrick then 13
                         elif lts = d.QSPoison && lgtW > 0 && a.NumberOfOutcards > 0 then 5
                         elif d.TakePoints && d.QSOwnerHasPlayed && suitLed <> hearts then 4
@@ -258,6 +278,7 @@ module Scripts =
         elif not qs then 14
         elif d.OppTarget[d.LikelyTWinner] then 2
         elif mode = Mode.BeLowScorer then (if not d.CanHoldQS then 2 else 14)
+        elif d.ImScore[d.LikelyTWinner] + t.PointsInTrick + 13 >= 100 then 14   // Q♠ would end the game
         elif not d.CanHoldQS then 2
         else 14
 
@@ -273,7 +294,7 @@ module Scripts =
             else 12
         elif a.LenSuitLed > 0 then
             let hsl, lgtW = d.Hsl, d.LgtW
-            if a.QSInHand && w >= king && suitLed = spades && not d.CanHoldQS && (lenS = 2 || 0 = d.LowScore) then 2
+            if a.QSInHand && w >= king && suitLed = spades && not d.CanHoldQS && (lenS = 2 || t.GameScore[t.TrickWinner] = d.LowScore) then 2
             elif t.QSOnTrick then 18
             elif hsl < w then
                 if suitLed <> spades || d.SpadesSafe then 27
@@ -302,6 +323,81 @@ module Scripts =
             elif a.SuitLen[diamonds] > 0 then d.SuitOfBestNonpoint <- diamonds
             17
 
+    /// The situation for a seat helping another seat Shoot, because the Shoot's success would help it or
+    /// do it no harm (best_script_for_helping_Shooter).
+    let private helping (d : Decision) (a : Analysis) =
+        let t = a.Table
+        let w = t.W
+        let suitLed = t.SuitLed
+        let lts = d.LikelyTWinner
+        if t.Seq = 0 then 12
+        elif a.LenSuitLed > 0 then
+            if t.TrickWinner = a.Shooter then
+                if suitLed <> spades then 3
+                elif a.QSInHand && w > queen then 2
+                elif a.HltW > 0 then 3
+                else 1
+            elif d.ImScore[lts] = d.LowScore && a.OppShooterHasPlayed && (d.QSOwnerHasPlayed || a.QSInHand) then
+                if suitLed <> spades then 4
+                elif w > queen && a.QSInHand && d.Deficit <= 13 then 2
+                elif d.Hsl <> queen then 4
+                elif d.LgtW > 0 then 21
+                else 13
+            else 13
+        elif lts <> a.Shooter then 14
+        elif a.QSInHand then 2
+        elif d.SuitToSluff = hearts then 6
+        else 14
+
+    /// The situation for a seat, neither the low scorer nor the high scorer, taking points it otherwise
+    /// would not, so that the high scorer, close to going out, does not end the game
+    /// (best_script_for_protecting_hi_scorer).
+    let private protecting (d : Decision) (a : Analysis) =
+        let t = a.Table
+        let w = t.W
+        let suitLed = t.SuitLed
+        let lts = d.LikelyTWinner
+        let qs = a.QSInHand
+        let hiScorer = d.HiScorer
+        if t.Seq = 0 then
+            if qs && a.HighestOutcard[spades] >= queen && d.AKSOwnerIsTarget then 2
+            elif qs && a.HighestOutcard[spades] >= queen && not d.CanHoldQS
+                && ((a.OppWithAKS >= 0 && a.OppWithAKS <> hiScorer) || a.Opp.IsVoid(hiScorer, spades)) then 2
+            elif d.Priority > 0 then 12
+            elif t.QSPlayed || not d.PullSpades then 12
+            elif qs && a.HnQS > 0 && a.LU[spades] < 2 then 1
+            elif hiScorer = t.PNotLeadingS then 12
+            elif d.OppTargetHasQS then 1
+            else 12
+        elif a.LenSuitLed > 0 then
+            let lgtW = d.LgtW
+            let ltsHigh = d.ImScore[lts] = d.HighScore
+            let pit = t.PointsInTrick
+            if ltsHigh && pit > 0 && lgtW > 0 && suitLed <> spades then 5   // take the points the high scorer would take
+            elif ltsHigh && t.QSOnTrick && t.PlayerPlayedQS = lts && t.PointsPlayed = 0 && suitLed = spades
+                && t.SuitPulls[spades] = 1 then
+                13   // the high scorer may be Shooting
+            elif ltsHigh && pit > 0 && lgtW > 0 && suitLed = spades
+                && (lgtW <= jack || qs || d.QSOwnerHasPlayed || d.ImScore[lts] + pit >= 100) then
+                5
+            elif d.ImScore[lts] >= 100 && suitLed = spades && qs && queen > w then 5
+            elif suitLed = spades && not t.QSPlayed then
+                if qs then
+                    if w > queen && not d.OppTarget[lts] && d.ImScore[lts] + 13 >= 100 then 11
+                    elif w > queen && (d.OppTarget[lts] || (not d.CanHoldQS && d.ImScore[lts] <> d.HighScore)) then 2
+                    elif d.TakePoints && a.NumberOfOutcards > 1 && lgtW > 0 && (d.SpadesSafe || a.HnQS > lgtW) then
+                        if a.FollowersNotVoid > 0 && (a.HU[spades] >= 2 || d.SpadesSafe) then 25 else 16
+                    else 13
+                else defaultArg (followSpadesWithoutQS d a) 13
+            elif suitLed = hearts && lts = a.Shooter && a.SuitStopper[hearts] && a.SecondHighIn[hearts] < w then 22
+            elif t.QSOnTrick then 13
+            elif lts = d.QSPoison && lgtW > 0 && a.NumberOfOutcards > 0 then 5
+            elif d.TakePoints && d.QSOwnerHasPlayed && suitLed <> hearts then 4
+            else 13
+        elif not qs then 14
+        elif d.OppTarget[lts] || (not d.CanHoldQS && d.ImScore[lts] <> d.HighScore && d.ImScore[lts] < 85) then 2
+        else 14
+
     /// The situation for the seat's mode.
     let situation (d : Decision) =
         let a = d.Analysis
@@ -310,4 +406,6 @@ module Scripts =
             | Mode.StopShoot -> stopping d a
             | Mode.GetLowScorer | Mode.BeLowScorer | Mode.LieLow -> keepingLow d a
             | Mode.Equivocate -> equivocating d a
-            | mode -> failwith $"Killer Hearts chooses {mode} only from game scores, which are zero here"
+            | Mode.HelpShooter -> helping d a
+            | Mode.ProtectHiScorer -> protecting d a
+            | mode -> failwith $"Unexpected mode {mode}"

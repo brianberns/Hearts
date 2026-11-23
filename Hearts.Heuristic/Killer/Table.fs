@@ -30,15 +30,26 @@ type Memory =
 /// A table is built by replaying a deal, one play at a time. Only the methods here change it, apart
 /// from what the seat's own decisions leave behind (its mode, score estimates and Shoot suspicions),
 /// which the seat records with Remember.
+///
+/// The game score is each seat's score before the deal, by seat, none of them 100 or more (see
+/// killerScores).
 [<AllowNullLiteral>]
-type Table(me : KSeat, dealer : KSeat, passDirection : int, held : KCard[], passed : KCard[], received : KCard[],
-           playedBy : KSeat -> KCard[]) =
+type Table(me : KSeat, dealer : KSeat, passDirection : int, gameScore : int[], held : KCard[], passed : KCard[],
+           received : KCard[], playedBy : KSeat -> KCard[]) =
 
     let cardsPlayed = Array2D.zeroCreate<bool> 15 4
     let countPlayed = Array.zeroCreate<int> 4
     let hand = Array2D.zeroCreate<bool> 15 4
     let playerHasPlayed = Array.zeroCreate<bool> 4
     let scoreInHand = Array.zeroCreate<int> 4
+
+    /// Game scores before the deal, lowest first, from index 1 (low) to 4 (high), as Killer Hearts'
+    /// score_between_hands.
+    let scoreBetweenHands = Array.append [| 0 |] (Array.sort gameScore)
+
+    /// Each seat's game score plus the points it has taken in the deal, before the current trick
+    /// (score_in_game).
+    let scoreInGame = Array.copy gameScore
     let tricksWonBy = Array.zeroCreate<int> 4
     let imScore = Array.zeroCreate<int> 4
     let pubLowestUnplayed = Array.create 4 2
@@ -213,9 +224,16 @@ type Table(me : KSeat, dealer : KSeat, passDirection : int, held : KCard[], pass
                 elif imScore[p] >= 100 - 13 then true
                 else imScore[p] <= low + 10
 
-        // whether the public believes the player helps a Shooter: never, for a Shoot would not win
-        // the game from game scores of zero
-        pubHelpShooter <- false
+        // whether the public believes the player helps the seat holding every point to Shoot
+        let low = scoreBetweenHands[1]
+        pubHelpShooter <-
+            if pointsSit < 0 || player = pointsSit then false
+            elif gameScore[player] = 100 - 1 then true
+            elif gameScore[pointsSit] - 26 < low then false
+            elif gameScore[player] > low then true
+            elif scoreBetweenHands[2] - low >= 30 - pointsPlayed then false
+            elif gameScore[pointsSit] = scoreBetweenHands[4] && scoreBetweenHands[4] - scoreBetweenHands[3] >= 8 then false
+            else true
 
     let updateVoidRecordsAndOtherParameters (card : KCard) =
         let mutable newVoid = false
@@ -436,7 +454,8 @@ type Table(me : KSeat, dealer : KSeat, passDirection : int, held : KCard[], pass
         scoreInHand[trickWinner] <- scoreInHand[trickWinner] + pointsInTrick
         pointsPlayed <- pointsPlayed + pointsInTrick
         pointsUnplayed <- pointsUnplayed - pointsInTrick
-        lowScore <- Array.min scoreInHand
+        for p in allSeats do scoreInGame[p] <- gameScore[p] + scoreInHand[p]
+        lowScore <- Array.min scoreInGame
         trickLeader <- trickWinner
         tricksWonBy[trickWinner] <- tricksWonBy[trickWinner] + 1
         sluffPts <- true
@@ -459,11 +478,13 @@ type Table(me : KSeat, dealer : KSeat, passDirection : int, held : KCard[], pass
                 for s in allSuits do
                     if received |> Array.filter (fun c -> c.Suit = s) |> Array.length = 3 then
                         updatePrivateInfo 519 me source 2 ace s
-                for c in received do
-                    if c.Rank <= 5 && c.Suit <> spades then
-                        updatePrivateInfo 519 me source 2 ace c.Suit       // a low card: void in its suit
-                    elif c.Suit = clubs || c.Suit = diamonds then
-                        updatePrivateInfo 519 me source (c.Rank + 1) ace c.Suit   // nothing higher
+                // a passer near the low score passes its worst cards
+                if gameScore[source] - scoreBetweenHands[1] <= 10 then
+                    for c in received do
+                        if c.Rank <= 5 && c.Suit <> spades then
+                            updatePrivateInfo 519 me source 2 ace c.Suit       // a low card: void in its suit
+                        elif c.Suit = clubs || c.Suit = diamonds then
+                            updatePrivateInfo 519 me source (c.Rank + 1) ace c.Suit   // nothing higher
 
         trickLeader <-
             if held |> Array.exists (fun c -> c.Rank = 2 && c.Suit = clubs) then me
@@ -512,6 +533,9 @@ type Table(me : KSeat, dealer : KSeat, passDirection : int, held : KCard[], pass
             for r in 0 .. 14 do
                 for s in 0 .. 3 do privateInfo[p, r, s] <- memory.PrivateInfo[p, r, s]
 
+    /// Never try to Shoot (not Killer Hearts': see Claude.fs). Set before replaying a deal.
+    member val NoShoot = false with get, set
+
     member _.Me = me
     member _.Dealer = dealer
     member _.PassDirection = passDirection
@@ -545,6 +569,9 @@ type Table(me : KSeat, dealer : KSeat, passDirection : int, held : KCard[], pass
     member _.SluffPts = sluffPts
     member _.TwoCLeads = twoCLeads
     member _.ScoreInHand = scoreInHand
+    member _.ScoreInGame = scoreInGame
+    member _.GameScore = gameScore
+    member _.ScoreBetweenHands = scoreBetweenHands
     member _.TricksWonBy = tricksWonBy
     member _.ImScore = imScore
     member _.LowScore = lowScore

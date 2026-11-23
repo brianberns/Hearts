@@ -51,6 +51,12 @@ module Play =
         | Forced
         | Scripted of Mode * sit : int
 
+    /// Each thread's last decision's main choices, for checking the port (see Decision.Brief).
+    let private lastBrief = new System.Threading.ThreadLocal<string>(fun () -> "")
+
+    /// This thread's last decision's main choices, for checking the port (see Decision.Brief).
+    let lastExplanation () = lastBrief.Value
+
     /// The seat's card at the table, how it was chosen, and what the decision leaves behind.
     let decide (t : Table) : KCard * Path * Memory =
         let memory = memoryOf t
@@ -89,15 +95,17 @@ module Play =
                             ProbOppShoot = a.ProbOppShoot
                             ShootTry = d.ShootTry }
                     let sit = Scripts.situation d
+                    lastBrief.Value <- d.Brief(sit)
                     let card = Select.card d sit
                     let path = Scripted (d.Mode, sit)
                     card, path, decided
 
     /// The table for a seat's view of a deal, replayed with the seat's own decisions at its turns.
-    let replay (me : KSeat) (dealer : KSeat) (direction : int) (held : KCard[]) (passed : KCard[]) (received : KCard[])
+    let replay (noShoot : bool) (me : KSeat) (dealer : KSeat) (direction : int) (gameScore : int[]) (held : KCard[]) (passed : KCard[]) (received : KCard[])
                (plays : (KSeat * KCard) list) =
         let playedBy p = plays |> List.filter (fst >> (=) p) |> List.map snd |> List.toArray
-        let t = Table(me, dealer, direction, held, passed, received, playedBy)
+        let t = Table(me, dealer, direction, gameScore, held, passed, received, playedBy)
+        t.NoShoot <- noShoot
         for seat, card in plays do
             if seat = me then
                 let _, _, memory = decide t
@@ -117,10 +125,10 @@ module Play =
             for i, card in List.indexed (List.rev trick.Cards) ->
                 (leader + i) % 4, KCard.Of card ]
 
-    /// Killer Hearts' card for the information set. Like Killer Hearts' own table, it replays the deal
-    /// from the seat's point of view, deciding again at each of the seat's earlier turns, for those
-    /// decisions leave behind what the seat suspects of a Shoot, among other things.
-    let play (infoSet : InformationSet) =
+    /// Killer Hearts' card for the information set, never trying to Shoot if so told. Like Killer Hearts'
+    /// own table, it replays the deal from the seat's point of view, deciding again at each of the seat's
+    /// earlier turns, for those decisions leave behind what the seat suspects of a Shoot, among other things.
+    let playWith (noShoot : bool) (infoSet : InformationSet) =
         let me = int infoSet.Player
         let plays = plays infoSet.Deal
         let mine = plays |> List.filter (fst >> (=) me) |> List.map snd
@@ -129,7 +137,10 @@ module Play =
             passOpt |> Option.map (Seq.map KCard.Of >> Seq.toArray) |> Option.defaultValue [||]
         let deal = infoSet.Deal
         let t =
-            replay me (int deal.Dealer) (int deal.ExchangeDirection) held
+            replay noShoot me (int deal.Dealer) (int deal.ExchangeDirection) (killerScores infoSet.GameScore.Points) held
                 (cards infoSet.OutgoingPassOpt) (cards infoSet.IncomingPassOpt) plays
         let card, _, _ = decide t
         card.ToCard()
+
+    /// Killer Hearts' card for the information set.
+    let play infoSet = playWith false infoSet
