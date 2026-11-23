@@ -110,26 +110,46 @@ type SplitMixRandom(seed : uint64) =
 
 module Tournament =
 
+    /// Creates a player.
+    let private createPlayer rotationSeed offset makePlayer =
+        let seed =
+            SplitMixRandom.GetChildSeed(rotationSeed, offset)
+        makePlayer seed
+
+    /// Puts challenger in the given seat.
+    let private createPlayerMap champion challenger challengerSeat =
+        Enum.getValues<Seat>
+            |> Seq.map (fun seat ->
+                let player =
+                    if seat = challengerSeat then challenger
+                    else champion
+                seat, player)
+            |> Map
+
+    /// Runs a rotation with the given player factories.
+    let private runRotation rngSeed makeChampion makeChallenger iRotation =
+
+            // make players
+        let rotationSeed = SplitMixRandom.GetSeed(rngSeed, iRotation)
+        let champion = createPlayer rotationSeed 0 makeChampion
+        let challenger = createPlayer rotationSeed 1 makeChallenger
+
+            // rotate challenger through each seat
+        Seat.cycle Seat.South
+            |> Seq.sumBy (fun challengerSeat ->
+                let playerMap =
+                    createPlayerMap champion challenger challengerSeat
+                let rng = SplitMixRandom(rotationSeed)                   // restart RNG for duplicate deals
+                let isWinner =
+                    Game.playGame Rules.arena rng playerMap Seat.South   // players rotate seats, so first dealer can be constant
+                        |> GameScore.findGameWinners Rules.arena.TieGame
+                        |> Set.contains challengerSeat
+                if isWinner then 1 else 0)
+
     /// Runs a deterministic tournament between two players
     /// using duplicate deals, answering the challenger's
     /// win rate.
     let runSeeded rngSeed numGames makeChampion makeChallenger =
-
-        /// Creates a player.
-        let createPlayer rotationSeed offset makePlayer =
-            let seed =
-                SplitMixRandom.GetChildSeed(rotationSeed, offset)
-            makePlayer seed
-
-        /// Puts challenger in the given seat.
-        let createPlayerMap champion challenger challengerSeat =
-            Enum.getValues<Seat>
-                |> Seq.map (fun seat ->
-                    let player =
-                        if seat = challengerSeat then challenger
-                        else champion
-                    seat, player)
-                |> Map
 
             // determine number of rotations needed
         let numRotations = numGames / Seat.numSeats
@@ -137,25 +157,11 @@ module Tournament =
 
             // count number of times challenger wins
         let nWins =
-
-                // rotate challenger through each seat
-            Array.Parallel.init numRotations (fun iRotation ->
-                let rotationSeed = SplitMixRandom.GetSeed(rngSeed, iRotation)
-                let champion = createPlayer rotationSeed 0 makeChampion
-                let challenger = createPlayer rotationSeed 1 makeChallenger
-                Seat.cycle Seat.South
-                    |> Seq.sumBy (fun challengerSeat ->
-                        let playerMap =
-                            createPlayerMap champion challenger challengerSeat
-                        let rng = SplitMixRandom(rotationSeed)                   // restart RNG for duplicate deals
-                        let isWinner =
-                            Game.playGame Rules.arena rng playerMap Seat.South   // players rotate seats, so first dealer can be constant
-                                |> GameScore.findGameWinners Rules.arena.TieGame
-                                |> Set.contains challengerSeat
-                        if isWinner then 1 else 0))
+            Array.Parallel.init numRotations (
+                runRotation rngSeed makeChampion makeChallenger)
                 |> Array.sum
 
-            // compute results
+            // compute challenger win rate
         let numGames = numRotations * Seat.numSeats
         float32 nWins / float32 numGames
 
