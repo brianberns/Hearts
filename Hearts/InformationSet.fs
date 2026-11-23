@@ -101,3 +101,16 @@ type Player =
         /// Chooses an action in the given information set.
         Act : InformationSet -> Card
     }
+
+module Player =
+
+    /// Takes an action in the given information set.
+    let act infoSet player =
+        match Seq.tryExactlyOne infoSet.LegalActions with
+            | Some action ->
+                assert(player.Act infoSet = action)
+                action
+            | None ->
+                let action = player.Act infoSet
+                assert(Array.contains action infoSet.LegalActions)
+                action

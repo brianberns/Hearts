@@ -116,9 +116,7 @@ module Game =
             let game =
                 let infoSet = currentInfoSet rules game
                 let action =
-                    match Seq.tryExactlyOne infoSet.LegalActions with
-                        | Some action -> action
-                        | None -> playerMap[infoSet.Player].Act infoSet
+                    Player.act infoSet playerMap[infoSet.Player]
                 addAction rules infoSet.LegalActionType action game
 
                 // deal is over?
