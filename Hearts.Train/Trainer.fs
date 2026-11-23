@@ -13,7 +13,7 @@ module Trainer =
     /// standard.
     let private evaluate settings iteration model =
 
-        let payoff =
+        let winRate =
             Tournament.run
                 0
                 false             // avoid cross-thread TorchSharp problems (memory leaks, toFloat crash)
@@ -22,9 +22,9 @@ module Trainer =
                 (Strategy.createPlayer model)
 
         if settings.Verbose then
-            printfn $"Tournament payoff: %0.5f{payoff}"
+            printfn $"Tournament win rate: %0.5f{winRate}"
         settings.Writer.add_scalar(
-            $"advantage tournament", payoff, iteration)
+            $"tournament win rate", winRate, iteration)
 
     /// Uses stored samples to train a new model.
     let trainModel settings (sampleStores : AdvantageSampleStoreGroup) =

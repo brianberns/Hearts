@@ -46,9 +46,9 @@ module Program =
             model.load(path : string) |> ignore
             model.eval()
             let player = Strategy.createPlayer model
-            let payoff =
+            let winRate =
                 Tournament.run 0 true numGames Claude.player player
-            printfn $"{Path.GetFileName(path)}: {payoff}"
+            printfn $"{Path.GetFileName(path)}: {winRate}"
 
     [<EntryPoint>]
     let main argv =

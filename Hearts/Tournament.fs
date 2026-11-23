@@ -104,7 +104,8 @@ type SplitMixRandom(seed : uint64) =
 module Tournament =
 
     /// Runs a deterministic tournament between two players
-    /// using duplicate deals.
+    /// using duplicate deals, answering the challenger's
+    /// win rate.
     let run rngSeed inParallel numGames champion challenger =
 
         /// Puts challenger in the given seat.
@@ -119,6 +120,7 @@ module Tournament =
 
             // determine number of seeds needed
         let numSeeds = numGames / Seat.numSeats
+        assert(numSeeds > 0)
 
             // count number of times challenger wins
         let nWins =
