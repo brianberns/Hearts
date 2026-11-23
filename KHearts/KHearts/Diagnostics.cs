@@ -42,7 +42,19 @@ public partial class KhEngine
             $"Shooter={Shooter} poss={poss_opp_Shoot} prob={prob_opp_Shoot} oppose={oppose_Shoot} wins={opp_Shoot_wins_game} helpers={Playing_Shoot_helpers}",
             $"im={Seats(im_score)} low={low_score} high={high_score} deficit={deficit} ltw={likely_T_winner} tgt={Seats(opp_target)}",
             $"hold={can_hold_QS} eat={eat_QS} take={take_points} safe={safe_card} sluff={suit_to_sluff}/{rank_to_sluff} lead={best_lead_suit}/{best_lead_rank}",
-            $"thr={Playing_threshold} goren={mod_Goren_count} go={go_Shoot} quit={quit_Shoot} rel={relinquish_QS}");
+            $"thr={Playing_threshold} goren={mod_Goren_count} go={go_Shoot} quit={quit_Shoot} rel={relinquish_QS}",
+            LeadDetail());
+    }
+
+    /// <summary>The leading computation's main intermediate results, in the same form as the F# port's LeadDetail.</summary>
+    string LeadDetail()
+    {
+        string Suits(VbArray<int> a) => string.Join(",", Enumerable.Range(spades, 4).Select(s => a[s]));
+        var order = string.Join(",", Enumerable.Range(1, number_of_leadable_suits).Select(i => risk_rank_of_suit[i]));
+        return string.Join(" ",
+            $"\n      len={Suits(suit_len)} HU={Suits(Playing_HU)} LU={Suits(LU)} est={Suits(est_tr)} opps={Suits(opps_have)}",
+            $"\n      safe={spades_safe} pull={pull_spades} wlu={suit_with_LU} power={power_suit} lowrisk={suit_of_lowest_risk}",
+            $"risk={Suits(best_compute_parameters_related_to_leading_risk_rank)} order={order} ss={suit_smallest}/{len_ss} snal={suit_not_all_losers} pri={priority}");
     }
     /// <summary>The engine's main choices on its last pass, in the same form as the F# port's pass explanation.</summary>
     public string BriefPass() =>
