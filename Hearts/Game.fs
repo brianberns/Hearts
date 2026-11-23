@@ -49,15 +49,15 @@ module Game =
 
     /// Plays the given card in the given game. Score of the game
     /// is not updated, even if points are taken.
-    let addPlay card game =
-        let deal = OpenDeal.addPlay card game.Deal
+    let addPlay rules card game =
+        let deal = OpenDeal.addPlay rules card game.Deal
         { game with Deal = deal }
 
     /// Takes the given action in the given game's current deal.
     /// Score of the game is not updated, even if points are taken.
-    let addAction actionType action game =
+    let addAction rules actionType action game =
         let deal =
-            OpenDeal.addAction actionType action game.Deal
+            OpenDeal.addAction rules actionType action game.Deal
         { game with Deal = deal }
 
     /// Adds the given deal score to the given game.
@@ -119,7 +119,7 @@ module Game =
                     match Seq.tryExactlyOne infoSet.LegalActions with
                         | Some action -> action
                         | None -> playerMap[infoSet.Player].Act infoSet
-                addAction infoSet.LegalActionType action game
+                addAction rules infoSet.LegalActionType action game
 
                 // deal is over?
             match tryUpdateScore rules.MoonShotScoring game with

@@ -83,6 +83,9 @@ module Node =
 
 module Traverse =
 
+    /// Train for Hearts Arena.
+    let private rules = Rules.arena
+
     /// Evaluates the utility of the given deal.
     let traverse settings iter deal (rng : Random) =
 
@@ -102,7 +105,7 @@ module Traverse =
             let infoSet =
                 deal
                     |> Game.createFirst                               // as if this is the first deal of a game
-                    |> Game.currentInfoSet Rules.arena
+                    |> Game.currentInfoSet rules
             let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
                 addLoop deal depth
@@ -121,7 +124,7 @@ module Traverse =
 
         /// Adds the given action to the given deal and loops.
         and addLoop deal depth actionType action =
-            let deal = OpenDeal.addAction actionType action deal
+            let deal = OpenDeal.addAction rules actionType action deal
             loop deal depth
 
         /// Gets the full utility of the given info set.

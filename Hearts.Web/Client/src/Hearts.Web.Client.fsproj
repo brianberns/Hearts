@@ -17,10 +17,10 @@
     <Compile Include="..\..\..\PlayingCards\PlayingCards\Hand.fs" />
     <Compile Include="..\..\..\Hearts\Prelude.fs" Link="HeartsPrelude.fs" />
     <Compile Include="..\..\..\Hearts\Seat.fs" />
+    <Compile Include="..\..\..\Hearts\Rules.fs" />
     <Compile Include="..\..\..\Hearts\Trick.fs" />
     <Compile Include="..\..\..\Hearts\Score.fs" />
     <Compile Include="..\..\..\Hearts\ExchangeDirection.fs" />
-    <Compile Include="..\..\..\Hearts\Rules.fs" />
     <Compile Include="..\..\..\Hearts\ClosedDeal.fs" />
     <Compile Include="..\..\..\Hearts\Pass.fs" />
     <Compile Include="..\..\..\Hearts\GameScore.fs" />

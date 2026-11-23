@@ -1,5 +1,14 @@
 namespace Hearts
 
+/// What breaks hearts.
+type HeartsBreakRule =
+
+    /// Only hearts break hearts.
+    | HeartsOnly
+
+    /// Q♠ also breaks hearts.
+    | QueenOfSpadesBreaksHearts
+
 /// How a moon shot affects players' scores.
 type MoonShotScoringRule =
 
@@ -26,6 +35,9 @@ type TieGameRule =
 /// Rule variations.
 type Rules =
     {
+        /// What breaks hearts.
+        HeartsBreak : HeartsBreakRule
+
         /// How a moon shot affects players' scores.
         MoonShotScoring : MoonShotScoringRule
 
@@ -38,6 +50,7 @@ module Rules =
     /// Our standard rules.
     let standard =
         {
+            HeartsBreak = QueenOfSpadesBreaksHearts
             MoonShotScoring = AllowSubtraction
             TieGame = MultipleWinners
         }
@@ -46,6 +59,7 @@ module Rules =
     /// https://hearts-arena.snowfrog.dev/guide/rules
     let arena =
         {
+            HeartsBreak = HeartsOnly
             MoonShotScoring = AlwaysAddToOthers
             TieGame = KeepPlaying
         }

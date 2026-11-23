@@ -192,12 +192,12 @@ module OpenDeal =
         else deal
 
     /// Plays the given card on the given deal.
-    let addPlay card deal =
+    let addPlay rules card deal =
         {
             deal with
                 ClosedDeal =
                     deal.ClosedDeal
-                        |> ClosedDeal.addPlay card
+                        |> ClosedDeal.addPlay rules card
                 UnplayedCardMap =
                     let seat = deal.ClosedDeal |> ClosedDeal.currentPlayer
                     let unplayedCards = deal.UnplayedCardMap[seat]
@@ -207,10 +207,10 @@ module OpenDeal =
         }
 
     /// Takes the given action in the given deal.
-    let addAction actionType action deal =
+    let addAction rules actionType action deal =
         match actionType with
             | ActionType.Pass -> addPass action deal
-            | ActionType.Play -> addPlay action deal
+            | ActionType.Play -> addPlay rules action deal
 
     /// Determines the inevitable additional score of the given deal,
     /// if possible.

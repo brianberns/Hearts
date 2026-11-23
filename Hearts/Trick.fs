@@ -4,12 +4,21 @@ open PlayingCards
 
 module Card =
 
+    /// Q♠.
+    let queenOfSpades =
+        Card.create Rank.Queen Suit.Spades
+
     /// Point value of the given card.
     let pointValue (card : Card) =
-        match card.Rank, card.Suit with
-            | _, Suit.Hearts -> 1
-            | Rank.Queen, Suit.Spades -> Rank.numRanks
-            | _ -> 0
+        if card.Suit = Suit.Hearts then 1
+        elif card = queenOfSpades then Rank.numRanks
+        else 0
+
+    /// Does the given card break hearts?
+    let breaksHearts heartBreakRule (card : Card) =
+        card.Suit = Suit.Hearts
+            || (heartBreakRule = QueenOfSpadesBreaksHearts
+                && card = queenOfSpades)
 
 /// One card played by each player in turn during a deal.
 type Trick =

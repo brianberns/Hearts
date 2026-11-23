@@ -156,7 +156,7 @@ module ClosedDeal =
         deal.CompletedTricks.Length = numCardsPerHand
 
     /// Plays the given card on the given deal.
-    let addPlay (card : Card) deal =
+    let addPlay rules (card : Card) deal =
         assert(isComplete deal |> not)
 
             // play card on current trick
@@ -196,9 +196,8 @@ module ClosedDeal =
 
             // hearts broken?
         let heartsBroken =
-            if deal.HeartsBroken
-                || Card.pointValue card > 0 then true   // Q♠ also breaks hearts
-            else false
+            deal.HeartsBroken
+                || Card.breaksHearts rules.HeartsBreak card
 
             // player is void in suit led?
         let voids =

@@ -82,7 +82,8 @@ module Playout =
             console.log($"{Seat.toString seat} plays {card}")
 
                 // play the card
-            let deal = OpenDeal.addPlay card context.Game.Deal
+            let deal =
+                OpenDeal.addPlay Rules.standard card context.Game.Deal
             do! context.AnimCardPlay cardView
                 |> Animation.run
             DealView.displayStatus deal

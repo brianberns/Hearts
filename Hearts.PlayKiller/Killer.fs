@@ -215,7 +215,7 @@ module Killer =
                 {
                     state with
                         DealOpt =
-                            deal |> OpenDeal.addPlay card |> Some
+                            deal |> OpenDeal.addPlay Rules.standard card |> Some
                 }
 
             | _ -> failwith "Unexpected"

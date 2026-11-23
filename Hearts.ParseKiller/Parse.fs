@@ -220,7 +220,7 @@ module Playout =
         (deal, plays)
             ||> Seq.fold (fun deal (seat, card) ->
                 assert(OpenDeal.currentPlayer deal = seat)
-                OpenDeal.addPlay card deal)
+                OpenDeal.addPlay Rules.standard card deal)
 
     let parseAndApply deal =
         parse {

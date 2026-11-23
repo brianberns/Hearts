@@ -83,7 +83,7 @@ let agreeOnDeal (deal : OpenDeal) =
                     if infoSet.LegalActions.Length > 1 then
                         if adapter = card then agree <- agree + 1 else differ <- differ + 1
                     table.ApplyPlay(KillerHearts.ToKh card)
-                    loop (OpenDeal.addPlay card deal) passQueue
+                    loop (OpenDeal.addPlay Rules.standard card deal) passQueue
     loop deal []
     agree, differ, claims, passDiffer
 
@@ -128,7 +128,7 @@ let referenceDeal (rng : Random) (writer : IO.TextWriter) (deal : OpenDeal) =
                     let card = table.ComputePlay()
                     writer.WriteLine($"X {seat} {card} {answer} {infoSet.LegalActions.Length}")
                     table.ApplyPlay(card)
-                    loop (OpenDeal.addPlay (KillerHearts.FromKh card) deal) passQueue
+                    loop (OpenDeal.addPlay Rules.standard (KillerHearts.FromKh card) deal) passQueue
     loop deal []
 
 /// How often the F# port of Killer Hearts chooses the same card as the one-seat player.
@@ -158,7 +158,7 @@ let agreeWithFSharpPort (kh : Player) (deal : OpenDeal) =
                     if Killer.Play.play infoSet = action then { counts with PlayAgree = counts.PlayAgree + 1 }
                     else { counts with PlayDiffer = counts.PlayDiffer + 1 }
                 | _ -> counts
-        let deal = OpenDeal.addAction infoSet.LegalActionType action deal
+        let deal = OpenDeal.addAction infoSet.Rules infoSet.LegalActionType action deal
         match Game.tryUpdateScore Rules.arena.MoonShotScoring (Game.createFirst deal) with
             | Some _ -> counts
             | None -> loop deal counts
@@ -241,7 +241,7 @@ let countMoons numGames (champion : Player) (challenger : Player) =
                     match Seq.tryExactlyOne infoSet.LegalActions with
                         | Some action -> action
                         | None -> playerMap[infoSet.Player].Act infoSet
-                let game = Game.addAction infoSet.LegalActionType action game
+                let game = Game.addAction rules infoSet.LegalActionType action game
                 match Game.tryUpdateScore rules.MoonShotScoring game with
                     | Some game -> game
                     | None -> playDeal game
