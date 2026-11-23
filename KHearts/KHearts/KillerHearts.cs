@@ -12,15 +12,32 @@ namespace KHearts;
 public static class KillerHearts
 {
     /// <summary>
-    /// Creates a player that knows the game score before each deal. Killer Hearts plays differently
-    /// depending on the game score, so supply it when playing whole games.
+    /// Creates a player that sees the game score given by the function before each deal. Killer Hearts
+    /// plays differently depending on the game score.
     /// </summary>
     public static Player CreatePlayer(Func<InformationSet, Score> getGameScore) =>
         new(FuncConvert.FromFunc<InformationSet, Card>(infoSet =>
             Act(infoSet, getGameScore(infoSet).Points)));
 
-    /// <summary>Creates a player that treats every deal as the first deal of a game.</summary>
+    /// <summary>
+    /// Creates a player that sees the information set's game score, as the arena bot does (see EngineScores).
+    /// </summary>
     public static Player CreatePlayer() =>
+        CreatePlayer(infoSet => new Score(EngineScores(infoSet.GameScore.Points)));
+
+    /// <summary>
+    /// Scores as Killer Hearts expects them: none 100 or more before a deal. A game that continues after a
+    /// tie at 100 or more (Rules.arena) would otherwise overflow the engine's score arrays, so scores are
+    /// shifted down until the highest is 99. The same as engine_scores in the arena bot.
+    /// </summary>
+    public static int[] EngineScores(int[] scores)
+    {
+        var shift = Math.Max(scores.Max() - 99, 0);
+        return [.. scores.Select(s => Math.Clamp(s - shift, 0, 99))];
+    }
+
+    /// <summary>Creates a player that ignores the game score, treating every deal as the first deal of a game.</summary>
+    public static Player CreateScoreBlindPlayer() =>
         CreatePlayer(_ => new Score(new int[4]));
 
     /// <summary>Chooses an action in the given information set, given the game score before the deal.</summary>

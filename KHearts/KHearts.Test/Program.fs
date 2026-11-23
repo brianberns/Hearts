@@ -1,6 +1,8 @@
 /// Checks of the Killer Hearts port.
 ///
 ///    smoke <games>    plays Killer Hearts against three Claude heuristics in Hearts' own tournament
+///    gamescore <games>
+///                     plays Killer Hearts that sees the game score against three that don't, and vice versa
 ///    agree <deals>    compares the one-seat player with the exact four-seat table, decision by decision
 ///    fsport <deals>   compares the F# port of Killer Hearts (Hearts.Heuristic/Killer) with the
 ///                     one-seat player, at every pass and play decision of Killer Hearts self-play
@@ -182,6 +184,14 @@ let main argv =
                 Tournament.run 0 true (int games) Claude.player (KillerHearts.CreatePlayer())
             printfn $"Killer Hearts vs three Claude heuristics: wins %.4f{winRate} of games (0.25 is even)"
             0
+        | [| "gamescore"; games |] ->
+            let aware = KillerHearts.CreatePlayer()
+            let blind = KillerHearts.CreateScoreBlindPlayer()
+            let awareRate = Tournament.run 0 true (int games) blind aware
+            printfn $"Score-aware Killer Hearts vs three score-blind: wins %.4f{awareRate} of games (0.25 is even)"
+            let blindRate = Tournament.run 0 true (int games) aware blind
+            printfn $"Score-blind Killer Hearts vs three score-aware: wins %.4f{blindRate} of games (0.25 is even)"
+            0
         | [| "agree"; deals |] ->
             let results =
                 generateDeals (Random(0))
@@ -230,5 +240,5 @@ let main argv =
             for n in tally.Notes do printfn "  %s" n
             0
         | _ ->
-            eprintfn "usage: KHearts.Test smoke <games> | agree <deals> | fsport <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | reference <deals> <file> | features <transcript> <csv>"
+            eprintfn "usage: KHearts.Test smoke <games> | gamescore <games> | agree <deals> | fsport <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | reference <deals> <file> | features <transcript> <csv>"
             1
