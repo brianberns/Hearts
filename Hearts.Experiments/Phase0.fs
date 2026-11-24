@@ -14,15 +14,17 @@ module Phase0 =
     let run productionPath weakenedPath numGames =
         use production = Players.loadModel productionPath
         use weakened = Players.loadModel weakenedPath
-        let prod, weak = Strategy.createPlayer production, Strategy.createPlayer weakened
-        let report name champion challenger =
+        let prod, weak = Strategy.createPlayerSeeded production, Strategy.createPlayerSeeded weakened
+        let claude _ = Claude.player
+        let guarded makePlayer seed = Players.guarded (makePlayer seed)
+        let report name makeChampion makeChallenger =
             let watch = Stopwatch.StartNew()
-            let rate = Tournament.run 0 numGames champion challenger
+            let rate = Tournament.runSeeded 0 numGames makeChampion makeChallenger
             printfn $"%-48s{name} %.4f{rate}   (%.0f{watch.Elapsed.TotalMinutes} min)"
         printfn $"{numGames} games each, duplicate deals, arena rules (0.25 is even)"
         report "production vs three weakened:" weak prod
         report "weakened vs three production:" prod weak
-        report "production vs three Claude:" Claude.player prod
-        report "weakened vs three Claude:" Claude.player weak
-        report "guarded production vs three Claude:" Claude.player (Players.guarded prod)
-        report "guarded weakened vs three Claude:" Claude.player (Players.guarded weak)
+        report "production vs three Claude:" claude prod
+        report "weakened vs three Claude:" claude weak
+        report "guarded production vs three Claude:" claude (guarded prod)
+        report "guarded weakened vs three Claude:" claude (guarded weak)

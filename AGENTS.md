@@ -50,17 +50,22 @@ the projects that replay its games or talk to the original program (`KHearts.Tes
 
 ## Players and tournaments
 
-- `Tournament.run rngSeed numGames champion challenger` plays whole games with duplicate deals: each
-  deal is played four times, with the challenger in each seat against three champions. It answers the
-  challenger's game win rate (outright wins only, as the arena rates them), so 0.25 is even. (The
-  README's "2v2 tournament" predates this.) It always
-  runs in parallel, so players must be thread-safe.
+- `Tournament.runSeeded rngSeed numGames makeChampion makeChallenger` plays whole games with duplicate
+  deals. Each rotation is one deal sequence played four times, with the challenger in each seat against
+  three champions. It answers the challenger's game win rate (outright wins only, as the arena rates
+  them), so 0.25 is even. (The README's "2v2 tournament" predates this.) Rotations run in parallel; at
+  the start of each, `makeChampion` and `makeChallenger` are called with seeds of their own
+  (`SplitMixRandom.GetChildSeed`, apart from the deal's stream), and the two players serve all four
+  games of the rotation, the champion in three seats at once. So a tournament repeats exactly for a
+  given `rngSeed`, and players need not be thread-safe, but must keep no state across games other than
+  their random numbers. `Tournament.run` is the same for players that need no seed.
 - `Game.playGame` asserts (in Debug builds) that every action a player returns is legal. Run a Debug
   build to check a new player for illegal plays; Release builds skip the check.
-- `Strategy.createPlayer` is the deterministic model player: the most probable class of equivalent
-  cards, playing its lowest card. `Strategy.createRandomPlayer` samples the strategy with
-  `Random.Shared`. Sampling wins: on 10,000 games each, deterministic vs three sampling scored 0.2363,
-  and sampling vs three deterministic 0.2610.
+- `Strategy.createPlayerSeeded model seed` samples the model's strategy with a `SplitMixRandom`: use it
+  in tournaments. `Strategy.createPlayer` samples with `Random.Shared`, so it is thread-safe but not
+  repeatable: for the web app and other one-off play. Sampling beat a deterministic player (the most
+  probable class of equivalent cards; removed in 2463804) by about a point: 0.2610 vs 0.2363 head to
+  head, on 10,000 games each.
 - **Model inference** on the CPU is thread-safe and gives identical results in parallel. Throughput
   stops improving at about 8 threads. The GPU also works from many threads (no crash, identical
   results), but holds about 3 GB more for the life of the process and is no faster for tournaments, so
@@ -78,13 +83,15 @@ the projects that replay its games or talk to the original program (`KHearts.Tes
   `UnbreakHearts` after each Q♠ under `HeartsOnly`.
 - `Hearts.Heuristic/Killer/` is a hand port of the same engine to F#, exact against the C# engine.
   `Options.faithful` is Killer Hearts exactly; the other options depart from it (no Shoot, quirk
-  fixes, shoot and lie-low threshold shifts).
+  fixes, a shift in the strength needed to Shoot).
 - **Claude** (`Claude.fs`) is the strongest heuristic player and the benchmark for model training: the
-  F# port with its quirks fixed, its bold pass, and the arena's moon rule (it never shoots when a moon
-  would lose the game, and breaks up its own moon then). Against three Killer Hearts it wins about
+  F# port with its quirks fixed, its bold pass, the arena's moon rule (it never shoots when a moon
+  would lose the game, and breaks up its own moon then), and a readier Shoot when it trails the low
+  score by 10 or more (`trailingShootShift`, worth about +0.004). Against three Killer Hearts it wins about
   0.25 under arena rules.
 - **The Hearts Arena Killer Hearts bot stays faithful** to the original program, quirks and all,
-  changing only what the arena's rules require. Improvements go into Claude.fs.
+  changing only what the arena's rules require. The ports follow V7.1; the VB source is now V7.2, which
+  fixes five quirks exactly as `FixQuirks` does. Improvements go into Claude.fs.
 
 ### Checking the port
 
@@ -109,8 +116,10 @@ program through its Host-Client feature.
 - `bench` times the model and checks that it plays the same in parallel as sequentially.
 - `phase0` compares the production and weakened models with each other and with Claude.
 - `gpu` stress-tests TorchSharp inference on the GPU from many threads.
-- `determinism` compares the deterministic and sampling model players.
-- `tune` compares variations of Claude against three Claude and three Killer Hearts.
+- `benchmark <model> <seed> <games>` runs the benchmarks for model training: Claude vs three Killer
+  Hearts, and the model vs three Claude.
+- `tune <seed> <games> [variation ...]` compares variations of Claude (`Tune.variations`) against three
+  Claude and three Killer Hearts. Confirm a winner on a fresh seed before adopting it.
 
 A difference of 0.01 in win rate needs about 10,000 games to see, and 40,000 to trust.
 

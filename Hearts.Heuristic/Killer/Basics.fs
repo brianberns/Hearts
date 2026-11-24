@@ -95,12 +95,16 @@ type Options =
 
         /// Fix what look like slips in Killer Hearts' code (see FixQuirks uses).
         FixQuirks : bool
+
+        /// Added to the strength needed to try to Shoot, when passing and playing: below 0 tries more
+        /// readily, above 0 less.
+        ShootShift : int
     }
 
 module Options =
 
     /// Killer Hearts, exactly.
-    let faithful = { NoShoot = false; FixQuirks = false }
+    let faithful = { NoShoot = false; FixQuirks = false; ShootShift = 0 }
 
 /// Game scores as Killer Hearts expects them: none 100 or more before a deal. A game that continues
 /// after a tie at 100 or more (Rules.arena) would otherwise be out of Killer Hearts' range, so the scores

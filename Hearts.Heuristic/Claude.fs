@@ -21,6 +21,8 @@ open Hearts
 ///   below the Shooter, so then the player neither passes nor plays to Shoot, but plays one of its
 ///   defensive modes instead, which avoid taking points; and once it has taken every point played so
 ///   far, it hands an opponent a point when it can (see breakMoon).
+/// - Shooting more readily when behind: it needs less strength to try to Shoot when it trails the low
+///   score by 10 or more (see trailingShootShift).
 /// - Quirks: it fixes four slips in Killer Hearts' code that the exact port keeps (see Options.FixQuirks).
 ///   They come up rarely, and fixing them makes no measurable difference.
 module Claude =
@@ -84,11 +86,26 @@ module Claude =
                         legal
                             |> Array.sortByDescending (fun card -> higherOut card, (if card.Suit = Suit.Hearts then 1 else 0), -int card.Rank)
                             |> Array.tryHead
-    /// Claude, fixing Killer Hearts' quirks or not, and passing to Shoot at the given daring.
-    let create fixQuirks daring =
+    /// How far the information set's player trails the game's low score.
+    let deficit (infoSet : InformationSet) =
+        let points = infoSet.GameScore.Points
+        points[int infoSet.Player] - Array.min points
+
+    /// The shift in the strength Claude needs to try to Shoot (see Options.ShootShift): 6 less when it
+    /// trails the low score by 10 or more. Under the arena's rule a moon adds 26 to every opponent, so it
+    /// is the trailing player's best way back. (Tested: shifts of 4 to 6 from a deficit of 5 to 10 did
+    /// best, about +0.004 game win rate against both Claude and Killer Hearts; shifting at every score,
+    /// either way, did worse.)
+    let trailingShootShift infoSet = if deficit infoSet >= 10 then -6 else 0
+
+    /// Claude, fixing Killer Hearts' quirks or not, passing to Shoot at the given daring, and shifting the
+    /// strength it needs to try to Shoot by the given function of the information set (see
+    /// Options.ShootShift).
+    let createWith fixQuirks daring (shootShift : InformationSet -> int) =
         let act (infoSet : InformationSet) =
             let noShoot = shootLoses infoSet
-            let options : Killer.Basics.Options = { NoShoot = noShoot; FixQuirks = fixQuirks }
+            let options : Killer.Basics.Options =
+                { NoShoot = noShoot; FixQuirks = fixQuirks; ShootShift = shootShift infoSet }
             match infoSet.LegalActionType with
                 | ActionType.Pass ->
                     let daring = if noShoot then Killer.Pass.Never else daring
@@ -98,6 +115,9 @@ module Claude =
                     if noShoot then defaultArg (breakMoon infoSet) card
                     else card
         { Act = act }
+
+    /// Claude, fixing Killer Hearts' quirks or not, and passing to Shoot at the given daring.
+    let create fixQuirks daring = createWith fixQuirks daring trailingShootShift
 
     /// Claude, fixing Killer Hearts' quirks or not.
     let playerWith fixQuirks = create fixQuirks Killer.Pass.Bold

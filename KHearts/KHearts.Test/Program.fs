@@ -407,5 +407,5 @@ let main argv =
             for n in tally.Notes do printfn "  %s" n
             0
         | _ ->
-            eprintfn "usage: KHearts.Test smoke <games> | gamescore <games> | agree <deals> | fsport <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | reference <deals> <file> | features <transcript> <csv>"
+            eprintfn "usage: KHearts.Test fsport <deals> | fsgames <games> [shown] | claude <games> | quirks <games> | daring <games> | moons <games> | smoke <games> | gamescore <games> | agree <deals> | client <shared file> <transcript> kh|random | replay <transcript> [deal to trace] | reference <deals> <file> | features <transcript> <csv>"
             1

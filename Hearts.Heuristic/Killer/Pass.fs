@@ -53,7 +53,7 @@ module Pass =
             Threshold : int
         }
 
-    let private createScores (score : int[]) (me : KSeat) (direction : int) =
+    let private createScores (shootShift : int) (score : int[]) (me : KSeat) (direction : int) =
         let receiver = passTarget direction me
         let mutable low, second, high, lowScorer = 200, 0, -200, none
         let mutable p = me
@@ -78,7 +78,7 @@ module Pass =
         let threshold =
             let t = if helpers <= 1 then 24 elif helpers = 2 then 21 else 18
             let t = if ceiling <= 34 && deficit >= 15 then t - (34 - ceiling) * (deficit + 20) / 398 else t
-            t - 3 * deficit / 65
+            t - 3 * deficit / 65 + shootShift
         {
             Score = score
             Me = me
@@ -750,7 +750,7 @@ module Pass =
     /// strong enough to try at the given daring; else its pass to stick the low scorer, if the seat
     /// sits right; else its pass to lie low (best_determine_kind_of_pass_to_make, determine_best_pass).
     let private chooseFor (options : Options) (daring : Daring) (score : int[]) (me : KSeat) (dealt : Card[]) (direction : ExchangeDirection) =
-        let scores = createScores score me (int direction)
+        let scores = createScores options.ShootShift score me (int direction)
 
             // trial pass to shoot
         let shootPass, shootRest, shootSingleton =

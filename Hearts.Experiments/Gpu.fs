@@ -37,11 +37,11 @@ module Gpu =
     let run modelPath numGames numRounds isScoped =
         printfn $"CUDA available: {TorchSharp.torch.cuda.is_available ()}, {Environment.ProcessorCount} cores"
         use model = Players.loadModelOn TorchSharp.torch.CUDA modelPath
-        let player = Strategy.createPlayer model |> (if isScoped then scoped else id)
+        let makePlayer seed = Strategy.createPlayerSeeded model seed |> (if isScoped then scoped else id)
         printfn $"dispose scopes: {isScoped}"
         let tournament () =
             let watch = Stopwatch.StartNew()
-            let rate = Tournament.run 0 numGames Claude.player player
+            let rate = Tournament.runSeeded 0 numGames (fun _ -> Claude.player) makePlayer
             rate, watch.Elapsed.TotalSeconds
         let report round (rate : float32) seconds =
             GC.Collect()

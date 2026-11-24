@@ -11,7 +11,8 @@
     <Compile Include="Bench.fs" />
     <Compile Include="Phase0.fs" />
     <Compile Include="Gpu.fs" />
-    <Compile Include="Determinism.fs" />
+    <Compile Include="Tune.fs" />
+    <Compile Include="Benchmark.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

@@ -356,6 +356,7 @@ type Decision(a : Analysis) =
                 else 19
             if veryHighScore && score[me] - lowScore >= 20 then threshold <- threshold - 3
             elif highScore >= 100 - 16 && score[me] - lowScore >= 26 then threshold <- threshold - 1
+            threshold <- threshold + table.Options.ShootShift
             threshold <- clng (float (threshold * tatt[trick]) / 100.0)
         let lowLoserH = if a.WinsAllH < -10 then card hearts (hu hearts - 11 - a.WinsAllH) else 0
         thresholdMinor <- threshold * 90 / 100
