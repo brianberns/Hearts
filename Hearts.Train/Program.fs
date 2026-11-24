@@ -39,13 +39,20 @@ module Program =
                 .GetFiles("*.bin")
                 |> Array.map (
                     _.FullName >> AdvantageSampleStore.openRead)
-        if settings.Verbose then
-            printfn "Sample stores:"
-            for store in sampleStores do
-                printfn $"   {Path.GetFileName(store.Path)}: {store.Count} samples"
 
-            // train model
-        Trainer.trainModel settings { Stores = sampleStores }
+        if sampleStores.Length > 0 then
+
+                // log input
+            if settings.Verbose then
+                printfn "Sample stores:"
+                for store in sampleStores do
+                    printfn $"   {Path.GetFileName(store.Path)}: {store.Count} samples"
+
+                // train model
+            Trainer.trainModel settings { Stores = sampleStores }
+
+        elif settings.Verbose then
+            printfn "No sample stores found"
 
     Console.OutputEncoding <- Encoding.UTF8
     run ()
