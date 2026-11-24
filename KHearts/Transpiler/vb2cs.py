@@ -98,6 +98,8 @@ HANDWRITTEN = {
     'diagnose_and_halt': (None, ['string'], [False]),
     'capture_snapshot': (None, ['string'], [False]),
     'print_instantaneous_data': (None, [], []),
+    'v8_no_shoot': ('bool', [], []),                 # Killer Hearts V8, in vb2rs.py's V8_PATCHES only
+    'v8_shoot_shift': ('int', [], []),
     'PlaySoundX': (None, ['string'], [False]),
     'turn_off_sound': (None, [], []),
 }
@@ -677,14 +679,14 @@ class Module:
 def read_module(path, modname, excluded, included):
     with open(path, encoding='cp1252') as f:
         lines = f.readlines()
-    for file, original, replacement in SOURCE_PATCHES:
+    for file, original, replacement, *every in SOURCE_PATCHES:   # every: patch each matching line, not just one
         if file != os.path.basename(path):
             continue
         hits = [k for k, l in enumerate(lines) if l.strip() == original]
-        if len(hits) != 1:
+        if len(hits) != 1 and not (every and hits):
             raise ValueError(f'{file}: patch matches {len(hits)} lines: {original}')
-        k = hits[0]
-        lines[k] = lines[k][:len(lines[k]) - len(lines[k].lstrip())] + replacement + '\n'
+        for k in hits:
+            lines[k] = lines[k][:len(lines[k]) - len(lines[k].lstrip())] + replacement + '\n'
     first = 0
     if path.lower().endswith('.frm'):
         first = next(k for k, l in enumerate(lines) if l.startswith('Option Explicit'))

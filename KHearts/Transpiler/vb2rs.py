@@ -43,6 +43,34 @@ ALLOWS = ('non_snake_case, non_upper_case_globals, non_camel_case_types, unused_
 
 # ARENA_PATCHES (in vb2cs.py) guard three lines for the arena's rules.
 
+# Killer Hearts V8 is V7.2 plus what Killer.fs in brianberns/Hearts adds inside the engine (see Options
+# there): when a Shoot would lose the game (v8_no_shoot), it neither passes nor plays to Shoot; and it needs
+# v8_shoot_shift more strength to try to Shoot, in the pass and in play. Both are hand-written (utilities.rs),
+# set by the bot before each decision. The second copy of 'If Not strong_hand' is in btr_ code, which isn't
+# translated.
+V8_PATCHES = [
+    ('Playing.bas',
+     "If pts_sit = player And im_score(player) >= final_score Then 'preemptive",
+     "If pts_sit = player And im_score(player) >= final_score And Not v8_no_shoot() Then 'preemptive; patched: "
+     "see V8_PATCHES"),
+    ('Playing.bas',
+     'ElseIf pts_sit = player And points_exposed >= 14 And T_left - total_off_winners <= 2 And (weak_Shoot_suit >= 0 And _',
+     'ElseIf pts_sit = player And points_exposed >= 14 And Not v8_no_shoot() And T_left - total_off_winners <= 2 And '
+     '(weak_Shoot_suit >= 0 And _'),
+    ('Playing.bas',
+     'If Not strong_hand Then',
+     "If Not strong_hand Or v8_no_shoot() Then 'patched: see V8_PATCHES", 'every'),
+    ('Playing.bas',
+     'threshold = (threshold * tatt(trick)) / 100',
+     "threshold = ((threshold + v8_shoot_shift()) * tatt(trick)) / 100 'patched: see V8_PATCHES"),
+    ('Passing.bas',
+     'threshold = threshold - (3 * deficit) \\ 65',
+     "threshold = threshold - (3 * deficit) \\ 65 + v8_shoot_shift() 'patched: see V8_PATCHES"),
+    ('Passing.bas',
+     "CD_singleton_passed = 0                         'V7.2: forget any CD singleton of the pro tem pass",
+     "CD_singleton_passed = 0: If v8_no_shoot() Then kind_of_pass = illegal_value 'V7.2; V8: see V8_PATCHES"),
+]
+
 
 def rs_name(cs_name):
     n = cs_name.lstrip('@')
@@ -433,6 +461,8 @@ class RsGen:
         if low == 'get_rank_and_suit_from_index':
             return self.call_with('get_rank_and_suit_from_index', ['int'] * 3, [False, True, True], args, None,
                                   method=False)
+        if low in ('v8_no_shoot', 'v8_shoot_shift'):
+            return E(f'{low}()', 'bool' if low == 'v8_no_shoot' else 'int', False)
         if low == 'diagnose_and_halt':
             x = self.ex(args[0])
             return E(f'vb::halt({as_str(x)})', None, True)
@@ -794,7 +824,7 @@ HEADER = [
 
 def main():
     src, outdir = sys.argv[1], sys.argv[2]
-    vb.SOURCE_PATCHES.extend(vb.ARENA_PATCHES)
+    vb.SOURCE_PATCHES.extend(vb.ARENA_PATCHES + V8_PATCHES)
     modules = [vb.read_module(os.path.join(src, f), name, excl, incl) for f, name, excl, incl in SOURCES]
     tr = vb.Translator(modules)
     os.makedirs(outdir, exist_ok=True)
