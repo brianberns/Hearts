@@ -167,7 +167,7 @@ module Tournament =
 
     /// Runs a deterministic tournament between two players
     /// using duplicate deals, answering the challenger's
-    /// win rate.
+    /// win rate. The players must be thread-safe.
     let run rngSeed numGames champion challenger =
         runSeeded
             rngSeed numGames
