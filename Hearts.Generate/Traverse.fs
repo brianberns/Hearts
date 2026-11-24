@@ -83,7 +83,7 @@ module Node =
 
 module Traverse =
 
-    /// Train for Hearts Arena.
+    /// Generate for Hearts Arena.
     let private rules = Rules.arena
 
     /// Evaluates the utility of the given deal.
