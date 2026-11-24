@@ -12,4 +12,4 @@ module Program =
     let stopwatch = Stopwatch.StartNew()
     let winRate = Tournament.run 0 numGames champion challenger
     printfn $"Challenger win rate: {winRate}"
-    printfn $"Duration (sec.): {float stopwatch.ElapsedMilliseconds / 1000.0}"
+    printfn $"Duration: {float stopwatch.ElapsedMilliseconds / 1000.0} seconds"
