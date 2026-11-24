@@ -1,7 +1,7 @@
 /// Killer Hearts' vocabulary: seats, suits and ranks as small integers, in Killer Hearts' own orders,
 /// for its iteration order decides many ties.
 [<AutoOpen>]
-module Hearts.Heuristic.Killer.Basics
+module Hearts.Heuristic.KillerEngine.Basics
 
 open PlayingCards
 
@@ -87,7 +87,7 @@ module Info =
     /// The seat may hold the card: it is known or inferred to, or nothing is known.
     let mayHold code = code >= 1024 || code = 0
 
-/// Ways Claude departs from Killer Hearts. Killer Hearts' own play has every option off.
+/// Ways Killer Hearts V8 (Killer.fs) departs from Killer Hearts V7.1. Killer Hearts' own play has every option off.
 type Options =
     {
         /// Never try to Shoot.

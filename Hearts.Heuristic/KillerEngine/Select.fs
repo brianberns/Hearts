@@ -1,4 +1,4 @@
-namespace Hearts.Heuristic.Killer
+namespace Hearts.Heuristic.KillerEngine
 
 /// The card for Killer Hearts' situation (select_best_card_for_situation).
 module Select =

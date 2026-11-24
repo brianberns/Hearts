@@ -1,4 +1,4 @@
-namespace Hearts.Heuristic.Killer
+namespace Hearts.Heuristic.KillerEngine
 
 /// How a decision ended before Killer Hearts' scripts ran.
 type EarlyExit =

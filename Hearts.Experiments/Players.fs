@@ -18,12 +18,12 @@ module Players =
     let loadModel path = loadModelOn TorchSharp.torch.CPU path
 
     /// The given player, guarded against Shoots that lose the game: when a Shoot would lose under the
-    /// rules, and the player has taken every point so far, it plays Claude's card to hand an opponent a
-    /// point (see Claude.shootLoses and Claude.breakMoon).
+    /// rules, and the player has taken every point so far, it plays Killer's card to hand an opponent a
+    /// point (see Killer.shootLoses and Killer.breakMoon).
     let guarded (player : Player) =
         let act (infoSet : InformationSet) =
             match infoSet.LegalActionType with
-                | ActionType.Play when Claude.shootLoses infoSet ->
-                    Claude.breakMoon infoSet |> Option.defaultWith (fun () -> player.Act infoSet)
+                | ActionType.Play when Killer.shootLoses infoSet ->
+                    Killer.breakMoon infoSet |> Option.defaultWith (fun () -> player.Act infoSet)
                 | _ -> player.Act infoSet
         { Act = act }

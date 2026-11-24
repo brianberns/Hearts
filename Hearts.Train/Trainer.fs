@@ -30,7 +30,7 @@ module Trainer =
             Tournament.runSeeded
                 0
                 settings.NumEvaluationGames
-                (fun _ -> Claude.player)
+                (fun _ -> Killer.player)
                 (Strategy.createPlayerSeeded cpuModel)
 
             // log results

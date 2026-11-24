@@ -5,7 +5,7 @@ open System.Diagnostics
 open Hearts
 open Hearts.Heuristic
 
-/// Variations of Claude, each against three of the current Claude and three Killer Hearts (the exact
+/// Variations of Killer Hearts V8, each against three of the current V8 and three Killer Hearts V7.1 (the exact
 /// F# port, seeing the game score), by game wins under arena rules.
 module Tune =
 
@@ -13,20 +13,20 @@ module Tune =
     let killerHearts =
         let act (infoSet : InformationSet) =
             match infoSet.LegalActionType with
-                | ActionType.Pass -> Killer.Pass.pass Killer.Pass.Bold infoSet
-                | ActionType.Play -> Killer.Play.play infoSet
+                | ActionType.Pass -> KillerEngine.Pass.pass KillerEngine.Pass.Bold infoSet
+                | ActionType.Play -> KillerEngine.Play.play infoSet
         { Act = act }
 
-    /// Claude with the given shift in the strength it needs to Shoot.
-    let shifted shift = Claude.createWith true Killer.Pass.Bold shift
+    /// Killer Hearts V8 with the given shift in the strength it needs to Shoot.
+    let shifted shift = Killer.createWith true KillerEngine.Pass.Bold shift
 
     /// How far the information set's player trails the game's low score.
-    let private deficit = Claude.deficit
+    let private deficit = Killer.deficit
 
     /// The variations, by name.
     let variations =
         [
-            "no shift", shifted (fun _ -> 0)   // Claude before trailingShootShift
+            "no shift", shifted (fun _ -> 0)   // V8 before trailingShootShift
             "shift -4", shifted (fun _ -> -4)
             "shift -2", shifted (fun _ -> -2)
             "shift +2", shifted (fun _ -> 2)
@@ -51,8 +51,8 @@ module Tune =
             let rate = Tournament.run rngSeed numGames champion challenger
             printfn $"%-36s{name} %.4f{rate}   (%.0f{watch.Elapsed.TotalMinutes} min)"
         printfn $"{numGames} games each, seed {rngSeed}, duplicate deals, arena rules (0.25 is even)"
-        report "Claude vs three Killer Hearts:" killerHearts Claude.player
+        report "V8 vs three Killer Hearts V7.1:" killerHearts Killer.player
         for name, player in variations do
             if names.IsEmpty || List.contains name names then
-                report $"{name} vs three Claude:" Claude.player player
+                report $"{name} vs three V8:" Killer.player player
                 report $"{name} vs three Killer Hearts:" killerHearts player

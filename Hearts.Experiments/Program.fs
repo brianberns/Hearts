@@ -1,17 +1,17 @@
 /// Experiments with Hearts players.
 ///
 ///    bench <model> <games> [torch threads]
-///        times the model, model at South vs three Claude, at 1, 2, 4, 8 and all cores' threads, and checks
+///        times the model, model at South vs three Killer, at 1, 2, 4, 8 and all cores' threads, and checks
 ///        that it plays the same in parallel as sequentially
 ///    phase0 <production model> <weakened model> <games>
-///        the two models against each other and against Claude, by game wins under arena rules
+///        the two models against each other and against Killer, by game wins under arena rules
 ///    gpu <model> <games> <rounds> [scoped]
 ///        rounds of tournaments on the GPU, checking for crashes, results that differ from round 1,
 ///        and memory growth; "scoped" puts each decision in a dispose scope
 ///    benchmark <model> <seed> <games>
-///        the benchmarks for model training: Claude vs three Killer Hearts, and the model vs three Claude
+///        the benchmarks for model training: Killer Hearts V8 vs three V7.1, and the model vs three V8
 ///    tune <seed> <games> [variation ...]
-///        variations of Claude (see Tune.variations), each vs three Claude and three Killer Hearts
+///        variations of Killer Hearts V8 (see Tune.variations), each vs three V8 and three V7.1
 module Hearts.Experiments.Program
 
 open System

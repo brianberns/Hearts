@@ -3,15 +3,15 @@ namespace Hearts.Heuristic
 open PlayingCards
 open Hearts
 
-/// A rule-based Hearts player that plays like Killer Hearts, Gerald Berns' Hearts program, at the game
-/// score, under the information set's rules.
+/// Killer Hearts V8: Gerald Berns' rule-based Hearts program, after its last VB6 version (V7.2), playing
+/// at the game score under the information set's rules.
 ///
-/// - Passing: Killer Hearts' pass (see Killer/Pass.fs). It passes to shoot the moon when the hand left
+/// - Passing: Killer Hearts' pass (see KillerEngine/Pass.fs). It passes to shoot the moon when the hand left
 ///   after a trial pass to shoot is strong enough, by a threshold that falls when opponents would help a
 ///   Shoot or the player trails far enough to need one; otherwise it passes to stick the low scorer or
 ///   to lie low, as the game score suggests. (At zero game scores a more cautious pass did better, but
-///   with real scores this bolder one wins more games, against Claude and Killer Hearts alike.)
-/// - Playing: Killer Hearts' play, ported exactly (see Killer/). It infers what each opponent holds,
+///   with real scores this bolder one wins more games.)
+/// - Playing: Killer Hearts' play, ported exactly (see KillerEngine/). It infers what each opponent holds,
 ///   watches for a Shoot, chooses a mode of play from the game score and the deal (shoot, stop a Shoot,
 ///   help a Shoot, get the low scorer, protect the high scorer, lie low, ...), and picks the card its
 ///   script for that mode calls for.
@@ -23,9 +23,9 @@ open Hearts
 ///   far, it hands an opponent a point when it can (see breakMoon).
 /// - Shooting more readily when behind: it needs less strength to try to Shoot when it trails the low
 ///   score by 10 or more (see trailingShootShift).
-/// - Quirks: it fixes four slips in Killer Hearts' code that the exact port keeps (see Options.FixQuirks).
-///   They come up rarely, and fixing them makes no measurable difference.
-module Claude =
+/// - Quirks: it fixes the slips in Killer Hearts' code that V7.2 fixed (see Options.FixQuirks). They come
+///   up rarely, and fixing them makes no measurable difference.
+module Killer =
 
     /// Would a Shoot by the information set's player end the game with someone else winning it, under the
     /// information set's rules?
@@ -86,40 +86,42 @@ module Claude =
                         legal
                             |> Array.sortByDescending (fun card -> higherOut card, (if card.Suit = Suit.Hearts then 1 else 0), -int card.Rank)
                             |> Array.tryHead
+
     /// How far the information set's player trails the game's low score.
     let deficit (infoSet : InformationSet) =
         let points = infoSet.GameScore.Points
         points[int infoSet.Player] - Array.min points
 
-    /// The shift in the strength Claude needs to try to Shoot (see Options.ShootShift): 6 less when it
+    /// The shift in the strength Killer Hearts V8 needs to try to Shoot (see Options.ShootShift): 6 less when it
     /// trails the low score by 10 or more. Under the arena's rule a moon adds 26 to every opponent, so it
     /// is the trailing player's best way back. (Tested: shifts of 4 to 6 from a deficit of 5 to 10 did
-    /// best, about +0.004 game win rate against both Claude and Killer Hearts; shifting at every score,
+    /// best, about +0.004 game win rate against both itself without the shift and Killer Hearts V7.1; shifting at every score,
     /// either way, did worse.)
     let trailingShootShift infoSet = if deficit infoSet >= 10 then -6 else 0
 
-    /// Claude, fixing Killer Hearts' quirks or not, passing to Shoot at the given daring, and shifting the
+    /// Killer Hearts V8, fixing Killer Hearts' quirks or not, passing to Shoot at the given daring, and shifting the
     /// strength it needs to try to Shoot by the given function of the information set (see
     /// Options.ShootShift).
     let createWith fixQuirks daring (shootShift : InformationSet -> int) =
         let act (infoSet : InformationSet) =
             let noShoot = shootLoses infoSet
-            let options : Killer.Basics.Options =
+            let options : KillerEngine.Basics.Options =
                 { NoShoot = noShoot; FixQuirks = fixQuirks; ShootShift = shootShift infoSet }
             match infoSet.LegalActionType with
                 | ActionType.Pass ->
-                    let daring = if noShoot then Killer.Pass.Never else daring
-                    Killer.Pass.passWith options daring infoSet
+                    let daring = if noShoot then KillerEngine.Pass.Never else daring
+                    KillerEngine.Pass.passWith options daring infoSet
                 | ActionType.Play ->
-                    let card = Killer.Play.playWith options infoSet
+                    let card = KillerEngine.Play.playWith options infoSet
                     if noShoot then defaultArg (breakMoon infoSet) card
                     else card
         { Act = act }
 
-    /// Claude, fixing Killer Hearts' quirks or not, and passing to Shoot at the given daring.
+    /// Killer Hearts V8, fixing Killer Hearts' quirks or not, and passing to Shoot at the given daring.
     let create fixQuirks daring = createWith fixQuirks daring trailingShootShift
 
-    /// Claude, fixing Killer Hearts' quirks or not.
-    let playerWith fixQuirks = create fixQuirks Killer.Pass.Bold
+    /// Killer Hearts V8, fixing Killer Hearts' quirks or not.
+    let playerWith fixQuirks = create fixQuirks KillerEngine.Pass.Bold
 
-    let player = create true Killer.Pass.Bold
+    /// Killer Hearts V8.
+    let player = create true KillerEngine.Pass.Bold

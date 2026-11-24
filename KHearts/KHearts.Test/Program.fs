@@ -152,10 +152,10 @@ let agreeWithFSharpPort (kh : Player) (deal : OpenDeal) =
         let counts =
             match infoSet.LegalActionType with
                 | ActionType.Pass ->
-                    if Killer.Pass.pass Killer.Pass.Bold infoSet = action then { counts with PassAgree = counts.PassAgree + 1 }
+                    if KillerEngine.Pass.pass KillerEngine.Pass.Bold infoSet = action then { counts with PassAgree = counts.PassAgree + 1 }
                     else { counts with PassDiffer = counts.PassDiffer + 1 }
                 | ActionType.Play when infoSet.LegalActions.Length > 1 ->
-                    if Killer.Play.play infoSet = action then { counts with PlayAgree = counts.PlayAgree + 1 }
+                    if KillerEngine.Play.play infoSet = action then { counts with PlayAgree = counts.PlayAgree + 1 }
                     else { counts with PlayDiffer = counts.PlayDiffer + 1 }
                 | _ -> counts
         let deal = OpenDeal.addAction infoSet.Rules infoSet.LegalActionType action deal
@@ -176,8 +176,8 @@ let agreeWithFSharpPortInGames numGames =
             let action = kh.Act infoSet
             let port, agree, differ =
                 match infoSet.LegalActionType with
-                    | ActionType.Pass -> Killer.Pass.pass Killer.Pass.Bold infoSet, passAgree, passDiffer
-                    | ActionType.Play -> Killer.Play.play infoSet, playAgree, playDiffer
+                    | ActionType.Pass -> KillerEngine.Pass.pass KillerEngine.Pass.Bold infoSet, passAgree, passDiffer
+                    | ActionType.Play -> KillerEngine.Play.play infoSet, playAgree, playDiffer
             if port = action then Threading.Interlocked.Increment(&agree.contents) |> ignore
             else
                 Threading.Interlocked.Increment(&differ.contents) |> ignore
@@ -188,12 +188,12 @@ let agreeWithFSharpPortInGames numGames =
                                 let score = KillerHearts.EngineScores(infoSet.GameScore.Points)
                                 $"
     KH:   {KillerHearts.TracePlay(infoSet, score)}
-    port: {Killer.Play.lastExplanation ()}"
+    port: {KillerEngine.Play.lastExplanation ()}"
                             | ActionType.Pass ->
                                 let score = KillerHearts.EngineScores(infoSet.GameScore.Points)
                                 $"
     KH:   {KillerHearts.TracePass(infoSet, score)}
-    port: {Killer.Pass.lastExplanation ()}"
+    port: {KillerEngine.Pass.lastExplanation ()}"
                     mismatches.Enqueue(infoSet, action, port, trace)
             action
         { Act = act }
@@ -222,8 +222,8 @@ let scoreBlindClaude =
     let blind (infoSet : InformationSet) = { infoSet with GameScore = Score.zero }
     let act (infoSet : InformationSet) =
         match infoSet.LegalActionType with
-            | ActionType.Pass -> Killer.Pass.pass Killer.Pass.Cautious (blind infoSet)
-            | ActionType.Play -> Killer.Play.play (blind infoSet)
+            | ActionType.Pass -> KillerEngine.Pass.pass KillerEngine.Pass.Cautious (blind infoSet)
+            | ActionType.Play -> KillerEngine.Play.play (blind infoSet)
     { Act = act }
 
 /// Plays whole games under arena rules with the given challenger at South and the given champion
@@ -291,7 +291,7 @@ let main argv =
         | [| "quirks"; games |] ->
             let games = int games
             let kh = KillerHearts.CreatePlayer()
-            let fixedClaude, quirkyClaude = Claude.playerWith true, Claude.playerWith false
+            let fixedClaude, quirkyClaude = Killer.playerWith true, Killer.playerWith false
             let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
             report "Fixed Claude vs three quirky Claude:" (Tournament.run 0 games quirkyClaude fixedClaude)
             report "Quirky Claude vs three fixed Claude:" (Tournament.run 0 games fixedClaude quirkyClaude)
@@ -301,7 +301,7 @@ let main argv =
         | [| "daring"; games |] ->
             let games = int games
             let kh = KillerHearts.CreatePlayer()
-            let cautious, bold = Claude.create true Killer.Pass.Cautious, Claude.create true Killer.Pass.Bold
+            let cautious, bold = Killer.create true KillerEngine.Pass.Cautious, Killer.create true KillerEngine.Pass.Bold
             let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
             report "Bold Claude vs three cautious Claude:" (Tournament.run 0 games cautious bold)
             report "Cautious Claude vs three bold Claude:" (Tournament.run 0 games bold cautious)
@@ -309,7 +309,7 @@ let main argv =
             report "Cautious Claude vs three Killer Hearts:" (Tournament.run 0 games kh cautious)
             0
         | [| "moons"; games |] ->
-            let moons, losing = countMoons (int games) (KillerHearts.CreatePlayer()) Claude.player
+            let moons, losing = countMoons (int games) (KillerHearts.CreatePlayer()) Killer.player
             printfn $"Claude vs three Killer Hearts, {games} games: {moons} moons, {losing} of them lost the game"
             for s in losingMoons do printfn "%s" s
             0
@@ -317,11 +317,11 @@ let main argv =
             let games = int games
             let kh = KillerHearts.CreatePlayer()
             let report name (rate : float32) = printfn $"%-58s{name} %.4f{rate}"
-            report "Claude vs three score-blind Claude:" (Tournament.run 0 games scoreBlindClaude Claude.player)
-            report "Score-blind Claude vs three Claude:" (Tournament.run 0 games Claude.player scoreBlindClaude)
-            report "Claude vs three score-aware Killer Hearts:" (Tournament.run 0 games kh Claude.player)
+            report "Claude vs three score-blind Claude:" (Tournament.run 0 games scoreBlindClaude Killer.player)
+            report "Score-blind Claude vs three Claude:" (Tournament.run 0 games Killer.player scoreBlindClaude)
+            report "Claude vs three score-aware Killer Hearts:" (Tournament.run 0 games kh Killer.player)
             report "Score-blind Claude vs three score-aware Killer Hearts:" (Tournament.run 0 games kh scoreBlindClaude)
-            for name, challenger in [ "Claude", Claude.player; "Score-blind Claude", scoreBlindClaude ] do
+            for name, challenger in [ "Claude", Killer.player; "Score-blind Claude", scoreBlindClaude ] do
                 let moons, losing = countMoons games kh challenger
                 printfn $"{name} vs three Killer Hearts, {games} games: {moons} moons, {losing} of them lost the game"
             0
@@ -348,7 +348,7 @@ let main argv =
             0
         | [| "smoke"; games |] ->
             let winRate =
-                Tournament.run 0 (int games) Claude.player (KillerHearts.CreatePlayer())
+                Tournament.run 0 (int games) Killer.player (KillerHearts.CreatePlayer())
             printfn $"Killer Hearts vs three Claude heuristics: wins %.4f{winRate} of games (0.25 is even)"
             0
         | [| "gamescore"; games |] ->

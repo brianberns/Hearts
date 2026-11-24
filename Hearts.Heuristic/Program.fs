@@ -4,6 +4,6 @@ open Hearts
 
 module Program =
     let numGames = 2000
-    let claudeWinRate =
-        Tournament.run 0 numGames Gemini.player Claude.player
-    printfn $"Claude win rate: {-claudeWinRate}"
+    let killerWinRate =
+        Tournament.run 0 numGames Gemini.player Killer.player
+    printfn $"Killer win rate: {-killerWinRate}"

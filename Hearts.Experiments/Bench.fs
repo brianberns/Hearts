@@ -15,7 +15,7 @@ open Hearts.Model
 /// strategies in parallel as sequentially.
 module Bench =
 
-    /// Plays the given number of games, the model at South against three Claude, at the given degree of
+    /// Plays the given number of games, the model at South against three Killer, at the given degree of
     /// parallelism (1 for sequential), and answers the final scores and the model's strategy at each info set.
     let private play (model : AdvantageModel) numGames degree =
         let strategies = ConcurrentDictionary<InformationSet, float32[]>(HashIdentity.Structural)
@@ -34,7 +34,7 @@ module Bench =
             { Act = act }
         let playerMap =
             Enum.getValues<Seat>
-                |> Seq.map (fun seat -> seat, (if seat = Seat.South then player else Claude.player))
+                |> Seq.map (fun seat -> seat, (if seat = Seat.South then player else Killer.player))
                 |> Map
         let playOne iGame =
             let rng = SplitMixRandom(SplitMixRandom.GetSeed(0, iGame))

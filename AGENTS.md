@@ -8,8 +8,8 @@ two disagree, the code is right, and this file should be fixed.
 
 - **Who owns what.** Brian writes the core code: `PlayingCards`, `Hearts`, `Hearts.Model`,
   `Hearts.Learn`, `Hearts.Generate`, `Hearts.Train`, `Hearts.PlayModel`, `Hearts.Web` and the README.
-  Agents propose changes to these in chat rather than making them. Agents own Claude.fs and the Killer
-  Hearts port in `Hearts.Heuristic`, `KHearts` (including `KHearts.Test` and the transpiler),
+  Agents propose changes to these in chat rather than making them. Agents own `Hearts.Heuristic`'s
+  Killer.fs and KillerEngine, `KHearts` (including `KHearts.Test` and the transpiler),
   `Hearts.PlayKiller`, `Hearts.ParseKiller`, `Hearts.Experiments`, `SplitMixRandom`, and this file,
   and keep them building against Brian's changes.
 - **Separate checkouts.** Brian develops in his own clone; code moves between him and an agent only
@@ -81,17 +81,18 @@ the projects that replay its games or talk to the original program (`KHearts.Tes
 - `ARENA_PATCHES` in `vb2cs.py` change three lines of the original for the arena's hearts-only rule;
   under Killer Hearts' own rules they make no difference. The adapter (`KillerHearts.cs`) also calls
   `UnbreakHearts` after each Q♠ under `HeartsOnly`.
-- `Hearts.Heuristic/Killer/` is a hand port of the same engine to F#, exact against the C# engine.
+- `Hearts.Heuristic/KillerEngine/` is a hand port of the same engine to F#, exact against the C# engine.
   `Options.faithful` is Killer Hearts exactly; the other options depart from it (no Shoot, quirk
   fixes, a shift in the strength needed to Shoot).
-- **Claude** (`Claude.fs`) is the strongest heuristic player and the benchmark for model training: the
-  F# port with its quirks fixed, its bold pass, the arena's moon rule (it never shoots when a moon
+- **Killer Hearts V8** (`Killer.fs`, module `Killer`; until 2026-11-23 `Claude.fs`) is the strongest
+  heuristic player and the benchmark for model training: the F# port with its quirks fixed, its bold pass, the arena's moon rule (it never shoots when a moon
   would lose the game, and breaks up its own moon then), and a readier Shoot when it trails the low
   score by 10 or more (`trailingShootShift`, worth about +0.004). Against three Killer Hearts it wins about
   0.25 under arena rules.
 - **The Hearts Arena Killer Hearts bot stays faithful** to the original program, quirks and all,
   changing only what the arena's rules require. The ports follow V7.1; the VB source is now V7.2, which
-  fixes five quirks exactly as `FixQuirks` does. Improvements go into Claude.fs.
+  fixes five quirks exactly as `FixQuirks` does. Killer Hearts V8 replaces it there
+  as a new version of the same bot.
 
 ### Checking the port
 
@@ -102,7 +103,7 @@ After any change to the port, the C# engine, or the core rules, run `KHearts.Tes
 - `fsgames <games> [shown]`: the F# port against the C# engine in whole arena games, at real game
   scores. Must be 100%. Mismatches print both engines' traces (`Brief`, `LeadDetail`), which
   usually show where the two part ways.
-- `claude <games>`: Claude against score-blind Claude and Killer Hearts, with moon counts. Running it
+- `claude <games>`: Killer Hearts V8 against a score-blind version of itself and V7.1, with moon counts. Running it
   as a Debug build also checks for illegal plays.
 
 Other modes: `quirks`, `daring`, `moons`, `smoke`, `gamescore`, `agree` (against the one-seat
@@ -114,17 +115,20 @@ program through its Host-Client feature.
 `Hearts.Experiments` holds one-off measurements; its `Program.fs` lists the modes:
 
 - `bench` times the model and checks that it plays the same in parallel as sequentially.
-- `phase0` compares the production and weakened models with each other and with Claude.
+- `phase0` compares the production and weakened models with each other and with Killer Hearts V8.
 - `gpu` stress-tests TorchSharp inference on the GPU from many threads.
-- `benchmark <model> <seed> <games>` runs the benchmarks for model training: Claude vs three Killer
-  Hearts, and the model vs three Claude.
-- `tune <seed> <games> [variation ...]` compares variations of Claude (`Tune.variations`) against three
-  Claude and three Killer Hearts. Confirm a winner on a fresh seed before adopting it.
+- `benchmark <model> <seed> <games>` runs the benchmarks for model training: Killer Hearts V8 vs three
+  V7.1, and the model vs three V8.
+- `tune <seed> <games> [variation ...]` compares variations of Killer Hearts V8 (`Tune.variations`)
+  against three V8 and three V7.1. Confirm a winner on a fresh seed before adopting it.
 
 A difference of 0.01 in win rate needs about 10,000 games to see, and 40,000 to trust.
 
 ## Hearts Arena
 
 The model and Killer Hearts play on Hearts Arena (<https://hearts-arena.snowfrog.dev>), whose games
-are public. The bots live in a separate repository. Never print or commit the arena key
+are public. The bots live in a separate repository,
+`HeartsArenaBot`, next to this one: the model bot (Rust) at its root, and the Killer Hearts bot in
+`khearts/` (Rust generated from the VB source by `KHearts/Transpiler/vb2rs.py`), each with its tests
+and the scripts that play whole games in the arena's runner through WSL. Never print or commit the arena key
 (`HEARTS_ARENA_KEY`). The production model's weights are not on the arena: only a weakened model is.

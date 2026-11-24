@@ -1,4 +1,4 @@
-namespace Hearts.Heuristic.Killer
+namespace Hearts.Heuristic.KillerEngine
 
 open PlayingCards
 open Hearts
@@ -730,7 +730,7 @@ module Pass =
         /// at zero game scores, but worse with real ones.
         | Cautious
 
-        /// Never (not Killer Hearts': see Claude.fs).
+        /// Never (not Killer Hearts V7.1's: see Killer.fs).
         | Never
 
     /// Each thread's last pass's main choices, for checking the port.

@@ -41,7 +41,7 @@ module Gpu =
         printfn $"dispose scopes: {isScoped}"
         let tournament () =
             let watch = Stopwatch.StartNew()
-            let rate = Tournament.runSeeded 0 numGames (fun _ -> Claude.player) makePlayer
+            let rate = Tournament.runSeeded 0 numGames (fun _ -> Killer.player) makePlayer
             rate, watch.Elapsed.TotalSeconds
         let report round (rate : float32) seconds =
             GC.Collect()

@@ -1,4 +1,4 @@
-namespace Hearts.Heuristic.Killer
+namespace Hearts.Heuristic.KillerEngine
 
 /// Killer Hearts' model of the opponents' hands (its opp_hands), from one seat's point of view. Each
 /// cell says whether an opponent holds a card:

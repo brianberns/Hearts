@@ -1,4 +1,4 @@
-namespace Hearts.Heuristic.Killer
+namespace Hearts.Heuristic.KillerEngine
 
 open PlayingCards
 open Hearts

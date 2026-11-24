@@ -49,7 +49,7 @@ module Program =
                 Tournament.runSeeded
                     0
                     numGames
-                    (fun _ -> Claude.player)
+                    (fun _ -> Killer.player)
                     (Strategy.createPlayerSeeded model)
             printfn $"{Path.GetFileName(path)}: {winRate}"
 

@@ -6,8 +6,8 @@ open Hearts
 open Hearts.Heuristic
 open Hearts.Model
 
-/// The benchmarks for model training, by game wins under arena rules: Claude against three Killer Hearts,
-/// and the given model against three Claude.
+/// The benchmarks for model training, by game wins under arena rules: Killer Hearts V8 against three V7.1,
+/// and the given model against three V8.
 module Benchmark =
 
     /// Runs the benchmarks on the deals of the given seed.
@@ -18,5 +18,5 @@ module Benchmark =
             let rate = Tournament.runSeeded rngSeed numGames makeChampion makeChallenger
             printfn $"%-36s{name} %.4f{rate}   (%.0f{watch.Elapsed.TotalMinutes} min)"
         printfn $"{System.IO.Path.GetFileName modelPath}, {numGames} games each, seed {rngSeed}, duplicate deals, arena rules (0.25 is even)"
-        report "Claude vs three Killer Hearts:" (fun _ -> Tune.killerHearts) (fun _ -> Claude.player)
-        report "model vs three Claude:" (fun _ -> Claude.player) (Strategy.createPlayerSeeded model)
+        report "V8 vs three Killer Hearts V7.1:" (fun _ -> Tune.killerHearts) (fun _ -> Killer.player)
+        report "model vs three Killer Hearts V8:" (fun _ -> Killer.player) (Strategy.createPlayerSeeded model)

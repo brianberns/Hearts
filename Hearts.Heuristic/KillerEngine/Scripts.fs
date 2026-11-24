@@ -1,4 +1,4 @@
-namespace Hearts.Heuristic.Killer
+namespace Hearts.Heuristic.KillerEngine
 
 /// Killer Hearts' scripts: for each mode, the situation (sit) that names how to choose a card, and the
 /// card each situation chooses (select_best_card_for_situation).
