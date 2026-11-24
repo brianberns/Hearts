@@ -538,9 +538,8 @@ type Table(me : KSeat, dealer : KSeat, passDirection : int, gameScore : int[], h
     member _.UnbreakHearts() = if countPlayed[hearts] = 0 then canLeadH <- false
 
     /// How to depart from Killer Hearts, if at all. Set before replaying a deal.
-    member val Options = Options.faithful with get, set
+    member val Options = Options.v72 with get, set
     member t.NoShoot = t.Options.NoShoot
-    member t.FixQuirks = t.Options.FixQuirks
 
     member _.Me = me
     member _.Dealer = dealer

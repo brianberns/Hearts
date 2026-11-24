@@ -23,8 +23,8 @@ open Hearts
 ///   far, it hands an opponent a point when it can (see breakMoon).
 /// - Shooting more readily when behind: it needs less strength to try to Shoot when it trails the low
 ///   score by 10 or more (see trailingShootShift).
-/// - Quirks: it fixes the slips in Killer Hearts' code that V7.2 fixed (see Options.FixQuirks). They come
-///   up rarely, and fixing them makes no measurable difference.
+/// - Quirks: it plays V7.2, which fixed five slips in V7.1's code. They came up rarely, and fixing them
+///   made no measurable difference.
 module Killer =
 
     /// Would a Shoot by the information set's player end the game with someone else winning it, under the
@@ -95,21 +95,20 @@ module Killer =
     /// The shift in the strength Killer Hearts V8 needs to try to Shoot (see Options.ShootShift): 6 less when it
     /// trails the low score by 10 or more. Under the arena's rule a moon adds 26 to every opponent, so it
     /// is the trailing player's best way back. (Tested: shifts of 4 to 6 from a deficit of 5 to 10 did
-    /// best, about +0.004 game win rate against both itself without the shift and Killer Hearts V7.1; shifting at every score,
-    /// either way, did worse.)
+    /// best, about +0.004 game win rate against both itself without the shift and Killer Hearts V7.1;
+    /// shifting at every score, either way, did worse.)
     let trailingShootShift infoSet = if deficit infoSet >= 10 then -6 else 0
 
-    /// Killer Hearts V8, fixing Killer Hearts' quirks or not, passing to Shoot at the given daring, and shifting the
-    /// strength it needs to try to Shoot by the given function of the information set (see
-    /// Options.ShootShift).
-    let createWith fixQuirks daring (shootShift : InformationSet -> int) =
+    /// Killer Hearts V8, shifting the strength it needs to try to Shoot by the given function of the
+    /// information set (see Options.ShootShift).
+    let createWith (shootShift : InformationSet -> int) =
         let act (infoSet : InformationSet) =
             let noShoot = shootLoses infoSet
             let options : KillerEngine.Basics.Options =
-                { NoShoot = noShoot; FixQuirks = fixQuirks; ShootShift = shootShift infoSet }
+                { NoShoot = noShoot; ShootShift = shootShift infoSet }
             match infoSet.LegalActionType with
                 | ActionType.Pass ->
-                    let daring = if noShoot then KillerEngine.Pass.Never else daring
+                    let daring = if noShoot then KillerEngine.Pass.Never else KillerEngine.Pass.Bold
                     KillerEngine.Pass.passWith options daring infoSet
                 | ActionType.Play ->
                     let card = KillerEngine.Play.playWith options infoSet
@@ -117,11 +116,5 @@ module Killer =
                     else card
         { Act = act }
 
-    /// Killer Hearts V8, fixing Killer Hearts' quirks or not, and passing to Shoot at the given daring.
-    let create fixQuirks daring = createWith fixQuirks daring trailingShootShift
-
-    /// Killer Hearts V8, fixing Killer Hearts' quirks or not.
-    let playerWith fixQuirks = create fixQuirks KillerEngine.Pass.Bold
-
     /// Killer Hearts V8.
-    let player = create true KillerEngine.Pass.Bold
+    let player = createWith trailingShootShift

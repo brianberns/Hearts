@@ -87,14 +87,11 @@ module Info =
     /// The seat may hold the card: it is known or inferred to, or nothing is known.
     let mayHold code = code >= 1024 || code = 0
 
-/// Ways Killer Hearts V8 (Killer.fs) departs from Killer Hearts V7.1. Killer Hearts' own play has every option off.
+/// Ways Killer Hearts V8 (Killer.fs) departs from Killer Hearts V7.2, inside the engine.
 type Options =
     {
         /// Never try to Shoot.
         NoShoot : bool
-
-        /// Fix what look like slips in Killer Hearts' code (see FixQuirks uses).
-        FixQuirks : bool
 
         /// Added to the strength needed to try to Shoot, when passing and playing: below 0 tries more
         /// readily, above 0 less.
@@ -103,8 +100,8 @@ type Options =
 
 module Options =
 
-    /// Killer Hearts, exactly.
-    let faithful = { NoShoot = false; FixQuirks = false; ShootShift = 0 }
+    /// Killer Hearts V7.2, exactly.
+    let v72 = { NoShoot = false; ShootShift = 0 }
 
 /// Game scores as Killer Hearts expects them: none 100 or more before a deal. A game that continues
 /// after a tie at 100 or more (Rules.arena) would otherwise be out of Killer Hearts' range, so the scores

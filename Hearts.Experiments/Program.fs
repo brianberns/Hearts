@@ -9,9 +9,9 @@
 ///        rounds of tournaments on the GPU, checking for crashes, results that differ from round 1,
 ///        and memory growth; "scoped" puts each decision in a dispose scope
 ///    benchmark <model> <seed> <games>
-///        the benchmarks for model training: Killer Hearts V8 vs three V7.1, and the model vs three V8
+///        the benchmark for model training: the model vs three Killer Hearts V8
 ///    tune <seed> <games> [variation ...]
-///        variations of Killer Hearts V8 (see Tune.variations), each vs three V8 and three V7.1
+///        variations of Killer Hearts V8 (see Tune.variations), each vs three V8
 module Hearts.Experiments.Program
 
 open System

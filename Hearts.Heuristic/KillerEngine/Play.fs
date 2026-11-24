@@ -143,6 +143,3 @@ module Play =
                 (cards infoSet.OutgoingPassOpt) (cards infoSet.IncomingPassOpt) plays
         let card, _, _ = decide t
         card.ToCard()
-
-    /// Killer Hearts' card for the information set.
-    let play infoSet = playWith Options.faithful infoSet

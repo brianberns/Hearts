@@ -463,7 +463,7 @@ module Pass =
 
         /// A chooser of the next card to pass, by the first rule that applies, with whether it's a club or
         /// diamond singleton. It remembers whether it has passed Q♠ across the three cards.
-        let create (fixQuirks : bool) (scores : Scores) (dealtHasQS : bool) =
+        let create (scores : Scores) (dealtHasQS : bool) =
 
             // pass Q♠ to the opponent sitting behind the low scorer: 0 no, 1 if opportune, 2 passed
             let mutable toBetterSeat =
@@ -540,9 +540,9 @@ module Pass =
 
                             // voids, high hearts, and the high cards of a suit with low ones
                         singleton (fun () ->
-                            // Killer Hearts tests low_in(CD_by_len(1) >= 5), the low spade, for low_in(CD_by_len(1)) >= 5
+                            // V7.2; V7.1 tested low_in(CD_by_len(1) >= 5), the low spade
                             match minorOfLength 1 with
-                                | Some s when (if fixQuirks then low s >= 5 else low Suit.Spades <> 0) -> card s 0
+                                | Some s when low s >= 5 -> card s 0
                                 | _ -> None)
                         singleton (fun () ->
                             match minorOfLength 1 with
@@ -726,11 +726,7 @@ module Pass =
         /// to try.
         | Bold
 
-        /// Only when the hand left after a pass to shoot has winners everywhere. This did better than Bold
-        /// at zero game scores, but worse with real ones.
-        | Cautious
-
-        /// Never (not Killer Hearts V7.1's: see Killer.fs).
+        /// Never (not Killer Hearts V7.2's: see Killer.fs).
         | Never
 
     /// Each thread's last pass's main choices, for checking the port.
@@ -758,10 +754,9 @@ module Pass =
         let isStrongEnough =
             match daring with
                 | Bold -> isStrongForShooting scores
-                | Cautious -> hasWinnersEverywhere
                 | Never -> fun _ -> false
-            // Killer Hearts tests its spades after the trial pass, which it doesn't recompute for the dealt hand
-        let trialSpades = (createShape (if options.FixQuirks then dealt else shootRest)).Cards[Suit.Spades]
+            // the dealt hand's spades (V7.2; V7.1 tested the hand left after the trial pass)
+        let trialSpades = (createShape dealt).Cards[Suit.Spades]
         let trialHoldsQS = trialSpades |> Array.exists (fun c -> rankOf c = queen)
         let kind =
             if isStrongEnough (createShape shootRest) then ToShoot
@@ -776,15 +771,11 @@ module Pass =
         let passed, rest, singletonStep =
             match kind with
                 | ToShoot -> shootPass, shootRest, shootSingleton
-                | ToGetLowScorer -> passThree (GetLowScorerRules.create options.FixQuirks scores trialHoldsQS) dealt direction
+                | ToGetLowScorer -> passThree (GetLowScorerRules.create scores trialHoldsQS) dealt direction
                 | ToLieLow -> passThree (LieLowRules.chooseNext scores) dealt direction
-
-            // Killer Hearts doesn't reset its record of a passed club or diamond singleton after the trial pass
         let kindNumber = match kind with ToShoot -> 1 | ToGetLowScorer -> 3 | ToLieLow -> 5
         lastBrief.Value <-
             $"kind={kindNumber} thr={scores.Threshold} helpers={scores.ShootHelpers} deficit={scores.Deficit} low={scores.LowScore}/{scores.LowScorer} second={scores.SecondLowestScore} high={scores.HighScore} target={scores.ReceiverIsTarget} single={defaultArg singletonStep 0}"
-        let singletonStep =
-            if singletonStep.IsSome || options.FixQuirks then singletonStep else shootSingleton
 
             // with a hand strong enough to Shoot later, keep the higher club or diamond singleton
         let shape = createShape rest
@@ -817,5 +808,3 @@ module Pass =
         chooseFor options daring score (int infoSet.Player) dealt infoSet.Deal.ExchangeDirection
             |> List.find (passed.Contains >> not)
 
-    /// Killer Hearts' next card to pass for the information set, at the given daring.
-    let pass daring infoSet = passWith Options.faithful daring infoSet

@@ -9,14 +9,13 @@ two disagree, the code is right, and this file should be fixed.
 - **Who owns what.** Brian writes the core code: `PlayingCards`, `Hearts`, `Hearts.Model`,
   `Hearts.Learn`, `Hearts.Generate`, `Hearts.Train`, `Hearts.PlayModel`, `Hearts.Web` and the README.
   Agents propose changes to these in chat rather than making them. Agents own `Hearts.Heuristic`'s
-  Killer.fs and KillerEngine, `KHearts` (including `KHearts.Test` and the transpiler),
-  `Hearts.PlayKiller`, `Hearts.ParseKiller`, `Hearts.Experiments`, `SplitMixRandom`, and this file,
-  and keep them building against Brian's changes.
+  Killer.fs and KillerEngine, `Hearts.Experiments`, `SplitMixRandom`, the HeartsArenaBot repository
+  (see Hearts Arena, below), and this file, and keep them building against Brian's changes.
 - **Separate checkouts.** Brian develops in his own clone; code moves between him and an agent only
   through git. Pull before work that depends on his latest changes. Commit and push only when asked.
 - **Style.** F#, written in a pure functional style where practical (folds rather than mutation).
-  The Killer Hearts port is the exception: it follows the VB6 original's imperative structure, so it can
-  be checked line by line against it.
+  The Killer Hearts engine is the exception: it follows the VB6 original's imperative structure, as
+  its Rust twin in HeartsArenaBot does, so the two can be compared line by line.
 - **Windows.** Run Python as `py`, not `python`.
 - **Everything must stay in `Hearts.slnx`**, so that a change that breaks a project shows up in the
   solution build.
@@ -43,10 +42,8 @@ two disagree, the code is right, and this file should be fixed.
 | Tie for low at 100 or more | every tied player wins | play continues |
 
 `Rules.arena` is Hearts Arena's `std-1` (<https://hearts-arena.snowfrog.dev/guide/rules>), and is what
-`Tournament`, `Hearts.Generate` and the experiments use. Killer Hearts itself plays `Rules.standard`, so
-the projects that replay its games or talk to the original program (`KHearts.Test`'s exact-table modes,
-`Hearts.PlayKiller`, `Hearts.ParseKiller`) and the web app use that. Results recorded before 2026-11-23
-(commit 10f0996) used the Q♠-breaks-hearts rule even under `Rules.arena`.
+`Tournament`, `Hearts.Generate` and the experiments use. The web app uses `Rules.standard`. Results
+recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule even under `Rules.arena`.
 
 ## Players and tournaments
 
@@ -73,42 +70,20 @@ the projects that replay its games or talk to the original program (`KHearts.Tes
 
 ## Heuristic players (`Hearts.Heuristic`)
 
-- **Killer Hearts** is Gerald Berns' VB6 program. Its source lives in a separate repository (a sibling
-  folder named `KHearts`). `KHearts/Transpiler/vb2cs.py` translates its playing engine to C#
-  (`KHearts/KHearts/Generated/*.g.cs`, never edited by hand: change the translator and regenerate with
-  `py KHearts/Transpiler/vb2cs.py <KHearts source folder> KHearts/KHearts/Generated`). `vb2rs.py`
-  translates it to Rust for the Hearts Arena bot, in a separate repository.
-- `ARENA_PATCHES` in `vb2cs.py` change three lines of the original for the arena's hearts-only rule;
-  under Killer Hearts' own rules they make no difference. The adapter (`KillerHearts.cs`) also calls
-  `UnbreakHearts` after each Q♠ under `HeartsOnly`.
-- `Hearts.Heuristic/KillerEngine/` is a hand port of the same engine to F#, exact against the C# engine.
-  `Options.faithful` is Killer Hearts exactly; the other options depart from it (no Shoot, quirk
-  fixes, a shift in the strength needed to Shoot).
 - **Killer Hearts V8** (`Killer.fs`, module `Killer`; until 2026-11-23 `Claude.fs`) is the strongest
-  heuristic player and the benchmark for model training: the F# port with its quirks fixed, its bold pass, the arena's moon rule (it never shoots when a moon
-  would lose the game, and breaks up its own moon then), and a readier Shoot when it trails the low
-  score by 10 or more (`trailingShootShift`, worth about +0.004). Against three Killer Hearts it wins about
-  0.25 under arena rules.
-- **The Hearts Arena Killer Hearts bot stays faithful** to the original program, quirks and all,
-  changing only what the arena's rules require. The ports follow V7.1; the VB source is now V7.2, which
-  fixes five quirks exactly as `FixQuirks` does. Killer Hearts V8 replaces it there
-  as a new version of the same bot.
-
-### Checking the port
-
-After any change to the port, the C# engine, or the core rules, run `KHearts.Test` (Release):
-
-- `fsport <deals>`: the F# port against the C# exact table, under Killer Hearts' own rules. Must be
-  100% for both passes and plays.
-- `fsgames <games> [shown]`: the F# port against the C# engine in whole arena games, at real game
-  scores. Must be 100%. Mismatches print both engines' traces (`Brief`, `LeadDetail`), which
-  usually show where the two part ways.
-- `claude <games>`: Killer Hearts V8 against a score-blind version of itself and V7.1, with moon counts. Running it
-  as a Debug build also checks for illegal plays.
-
-Other modes: `quirks`, `daring`, `moons`, `smoke`, `gamescore`, `agree` (against the one-seat
-adapter), `reference`, `features`, and `client` / `replay`, which drive or replay the original Windows
-program through its Host-Client feature.
+  heuristic player and the benchmark for model training. Killer Hearts is Gerald Berns' VB6 program,
+  whose last version, V7.2, is in a separate repository (a sibling folder named `KHearts`). V8 is V7.2
+  plus the arena's moon rule (it never passes or plays to Shoot when a Shoot would lose the game, and
+  then breaks up its own moon: `shootLoses`, `breakMoon`) and a readier Shoot when it trails the low
+  score by 10 or more (`trailingShootShift`, worth about +0.004 game win rate).
+- `KillerEngine/` is V7.2's engine, ported to F# by hand. `Options` holds what V8 changes inside it
+  (`NoShoot`, `ShootShift`); `Options.v72` is V7.2 exactly. The port was checked against a C# engine
+  translated from the VB6 source, now retired with the rest of the old Killer Hearts tooling (C#
+  engine, `KHearts.Test`, `Hearts.PlayKiller`, `Hearts.ParseKiller` and the translator; see the commit
+  that removed them).
+- **Hearts Arena runs the same V8 in Rust** (HeartsArenaBot's `khearts/`). After any change to
+  Killer.fs or KillerEngine, make the same change there and run its reference test (below), which
+  must agree on every pass and play.
 
 ## Experiments (`Hearts.Experiments`)
 
@@ -117,18 +92,25 @@ program through its Host-Client feature.
 - `bench` times the model and checks that it plays the same in parallel as sequentially.
 - `phase0` compares the production and weakened models with each other and with Killer Hearts V8.
 - `gpu` stress-tests TorchSharp inference on the GPU from many threads.
-- `benchmark <model> <seed> <games>` runs the benchmarks for model training: Killer Hearts V8 vs three
-  V7.1, and the model vs three V8.
+- `benchmark <model> <seed> <games>` runs the benchmark for model training: the model vs three Killer
+  Hearts V8.
 - `tune <seed> <games> [variation ...]` compares variations of Killer Hearts V8 (`Tune.variations`)
-  against three V8 and three V7.1. Confirm a winner on a fresh seed before adopting it.
+  against three V8. Confirm a winner on a fresh seed before adopting it.
 
 A difference of 0.01 in win rate needs about 10,000 games to see, and 40,000 to trust.
 
 ## Hearts Arena
 
-The model and Killer Hearts play on Hearts Arena (<https://hearts-arena.snowfrog.dev>), whose games
-are public. The bots live in a separate repository,
-`HeartsArenaBot`, next to this one: the model bot (Rust) at its root, and the Killer Hearts bot in
-`khearts/` (Rust generated from the VB source by `KHearts/Transpiler/vb2rs.py`), each with its tests
-and the scripts that play whole games in the arena's runner through WSL. Never print or commit the arena key
-(`HEARTS_ARENA_KEY`). The production model's weights are not on the arena: only a weakened model is.
+The model and Killer Hearts V8 play on Hearts Arena (<https://hearts-arena.snowfrog.dev>), whose games
+are public. The bots live in a separate repository, `HeartsArenaBot`, next to this one:
+
+- the model bot (Rust) at its root, with `tools/Reference`, which writes the F# engine's decisions for
+  its differential test;
+- the Killer Hearts V8 bot in `khearts/`: Rust first generated from the VB6 source, plus `v8.rs`. Its
+  `tools/Reference` plays whole arena games with Killer.fs and writes one seat's view as the arena would
+  send it; `tests/reference.rs` replays them through the bot and must agree on every pass and play;
+- `scripts/local-games.sh`, which plays whole games on the arena's own runner through WSL (the kit lives
+  at `~/hearts-arena/hearts-arena-kit` in WSL).
+
+Never print or commit the arena key (`HEARTS_ARENA_KEY`). The production model's weights are not on the
+arena: only a weakened model is.
