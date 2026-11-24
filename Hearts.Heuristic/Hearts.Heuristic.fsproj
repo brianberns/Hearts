@@ -6,6 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Random.fs" />
+    <Compile Include="Gemini.fs" />
     <Compile Include="KillerEngine/Basics.fs" />
     <Compile Include="KillerEngine/Table.fs" />
     <Compile Include="KillerEngine/OppHands.fs" />
@@ -16,7 +18,6 @@
     <Compile Include="KillerEngine/Play.fs" />
     <Compile Include="KillerEngine/Pass.fs" />
     <Compile Include="Killer.fs" />
-    <Compile Include="Gemini.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
