@@ -94,6 +94,14 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
 - `gpu` stress-tests TorchSharp inference on the GPU from many threads.
 - `benchmark <model> <seed> <games>` runs the benchmark for model training: the model vs three Killer
   Hearts V8.
+- `wdata <model> <seed> <games> <output.csv>` plays whole games with the model in every seat and writes
+  each deal's starting scores, pass direction and the game's winner: the data for W, each seat's chance
+  of winning the game from the start of a deal. It plays in chunks of 1,000 games on at most one thread
+  per core: a single parallel loop over 100,000 games grew past 14 GB in 80 minutes.
+- `wfit <data.csv> <output.pt> <epochs>` fits W, a small network from the four game scores to a softmax
+  over the seats. On 100,000 games of the i005 model (2026-11-24) its validation loss was 1.0397 (a
+  uniform guess: 1.3863), well calibrated; the pass direction improved it by only 0.0001, so W leaves it
+  out.
 - `tune <seed> <games> [variation ...]` compares variations of Killer Hearts V8 (`Tune.variations`)
   against three V8. Confirm a winner on a fresh seed before adopting it.
 
