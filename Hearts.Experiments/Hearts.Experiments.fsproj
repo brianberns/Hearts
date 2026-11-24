@@ -13,6 +13,8 @@
     <Compile Include="Gpu.fs" />
     <Compile Include="Tune.fs" />
     <Compile Include="Benchmark.fs" />
+    <Compile Include="WData.fs" />
+    <Compile Include="WFit.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
