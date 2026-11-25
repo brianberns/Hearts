@@ -13,6 +13,23 @@ type PayoffLevel =
     | DealLevel
     | GameLevel
 
+/// What a store's samples add up to.
+type Stats =
+    {
+        NumPass : int64
+        NumGameScore : int64
+        NumRegrets : int64
+
+        /// Samples whose regrets don't sum to zero.
+        NumUnbalanced : int64
+
+        /// Regrets beyond ±2, which no game-level payoff can produce.
+        NumAboveTwo : int64
+
+        /// Counts of absolute regrets in bins a twentieth of a decade wide (see Program.bin).
+        Histogram : int64[]
+    }
+
 /// Count and first examples of one category of finding.
 type Tally =
     {
@@ -38,6 +55,25 @@ module Program =
         | DealLevel -> 52f
         | GameLevel -> 2.001f
 
+    /// Bins of the histogram of absolute regrets: 10^(k/20) for k from -120 (1e-6) to 60 (1,000).
+    let private minBin = -120
+    let private numBins = 181
+
+    /// The histogram bin of the given absolute regret.
+    let private bin (r : float32) =
+        let k = int (floor (20.0 * log10 (float r)))
+        (max minBin (min (minBin + numBins - 1) k)) - minBin
+
+    /// The median absolute regret in the given histogram: the lower edge of its bin.
+    let private median (histogram : int64[]) =
+        let total = Array.sum histogram
+        let k =
+            histogram
+                |> Array.scan (+) 0L
+                |> Array.tail
+                |> Array.findIndex (fun n -> 2L * n >= total)
+        10.0 ** (float (k + minBin) / 20.0)
+
     /// Checks the given number of samples starting at the current position of the given stream, and
     /// folds their results into the given state.
     let private checkChunk (layout : Layout) level (stream : Stream) firstIndex count (tallies, stats) =
@@ -47,7 +83,7 @@ module Program =
             Array.Parallel.init count (fun i ->
                 Check.check layout (regretBound level) buf (i * layout.SampleBytes))
         ((tallies, stats), Array.indexed results)
-            ||> Array.fold (fun (tallies : Map<string, Tally>, (nPass, nGame, nRegrets, maxAbs, sumAbs)) (i, r) ->
+            ||> Array.fold (fun (tallies : Map<string, Tally>, stats : Stats) (i, r) ->
                 let tallies =
                     (tallies, r.Findings |> List.distinctBy _.Category)   // count each sample once per category
                         ||> List.fold (fun tallies f ->
@@ -60,12 +96,16 @@ module Program =
                                     tally.Examples @ [ firstIndex + int64 i, f.Detail ]
                                 else tally.Examples
                             tallies |> Map.add f.Category { Count = tally.Count + 1L; Examples = examples })
+                for a in r.AbsRegrets do
+                    stats.Histogram[bin a] <- stats.Histogram[bin a] + 1L
                 let stats =
-                    (if r.IsPass then nPass + 1L else nPass),
-                    (if r.HasGameScore then nGame + 1L else nGame),
-                    nRegrets + int64 r.NumRegrets,
-                    max maxAbs r.MaxAbsRegret,
-                    sumAbs + r.SumAbsRegret
+                    { stats with
+                        NumPass = stats.NumPass + (if r.IsPass then 1L else 0L)
+                        NumGameScore = stats.NumGameScore + (if r.HasGameScore then 1L else 0L)
+                        NumRegrets = stats.NumRegrets + int64 r.AbsRegrets.Length
+                        NumUnbalanced = stats.NumUnbalanced + (if r.IsBalanced then 0L else 1L)
+                        NumAboveTwo =
+                            stats.NumAboveTwo + int64 (r.AbsRegrets |> Array.filter (fun a -> a > 2f) |> Array.length) }
                 tallies, stats)
 
     /// Counts the samples with findings among the first few, to choose between layouts.
@@ -174,31 +214,61 @@ module Program =
             printfn $"""   payoff: {(match level with GameLevel -> "game" | DealLevel -> "deal")} level; iteration {iteration}"""
 
                 // check every sample
-            let tallies, (nPass, nGame, nRegrets, maxAbs, sumAbs) =
+            let tallies, stats =
                 use stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1 <<< 20)
                 stream.Seek(int64 Layout.headerBytes, SeekOrigin.Begin) |> ignore
                 (seq { 0L .. int64 samplesPerChunk .. numSamples - 1L })
                     |> Seq.fold (fun state first ->
                         let count = int (min (int64 samplesPerChunk) (numSamples - first))
                         checkChunk layout level stream first count state)
-                        (Map.empty, (0L, 0L, 0L, 0f, 0.0))
+                        (Map.empty,
+                         { NumPass = 0L; NumGameScore = 0L; NumRegrets = 0L; NumUnbalanced = 0L
+                           NumAboveTwo = 0L; Histogram = Array.zeroCreate numBins })
             let percent n = if numSamples = 0L then 0.0 else 100.0 * float n / float numSamples
-            printfn $"   {numSamples:N0} samples: %.1f{percent nPass}%% passing, %.1f{percent (numSamples - nPass)}%% playing"
+            printfn $"   {numSamples:N0} samples: %.1f{percent stats.NumPass}%% passing, %.1f{percent (numSamples - stats.NumPass)}%% playing"
             if layout.GameScoreWidth > 0 then
-                printfn $"   game score other than 0-0-0-0 in %.1f{percent nGame}%% of samples"
-            if nRegrets > 0L then
-                printfn $"   regrets: %.2f{float nRegrets / float numSamples} per sample, mean |r| %.4f{sumAbs / float nRegrets}, max |r| %.4f{maxAbs}"
+                printfn $"   game score other than 0-0-0-0 in %.1f{percent stats.NumGameScore}%% of samples"
+
+                // regrets: their scale shows the payoff level
+            if stats.NumRegrets > 0L then
+                let med = median stats.Histogram
+                let aboveTwo = 100.0 * float stats.NumAboveTwo / float stats.NumRegrets
+                let scale = $"typical regret %.3g{med}, %.1f{aboveTwo}%% beyond ±2"
+                let looksLike =
+                    if stats.NumAboveTwo > 0L then Some DealLevel
+                    elif med < 0.5 then Some GameLevel
+                    else None
+                match looksLike with
+                    | Some DealLevel -> printfn $"   regrets look deal-level (in points): {scale}"
+                    | Some GameLevel -> printfn $"   regrets look game-level (in chances of winning): {scale}"
+                    | None -> printfn $"   regrets: {scale}"
+                match looksLike with
+                    | Some observed when observed <> level ->
+                        warnings.Add(
+                            match level with
+                                | DealLevel -> "the name says deal level, but the regrets look game-level"
+                                | GameLevel -> "the name says game level, but the regrets look deal-level")
+                    | None when numSamples >= 1000L ->
+                        warnings.Add("the regrets look neither deal-level nor game-level")
+                    | _ -> ()
+
+                // iteration 1 has no model: a uniform random strategy, whose regrets sum to zero
+            if iteration = 1 && numSamples > 0L then
+                if stats.NumUnbalanced = 0L then
+                    printfn "   iteration 1 strategy: uniform random (every sample's regrets sum to zero)"
+                else
+                    notes.Add(
+                        $"iteration 1, but %.1f{percent stats.NumUnbalanced}%% of samples' regrets don't sum to zero: "
+                            + "not from a uniform random strategy (before 1c7e20b, iteration 1 followed the heuristic player)")
 
                 // whole-store expectations
             if numSamples = 0L then
                 warnings.Add("no samples")
-            elif layout.GameScoreWidth > 0 && nGame = 0L then
+            elif layout.GameScoreWidth > 0 && stats.NumGameScore = 0L then
                 if level = GameLevel then
                     errors.Add("not game-aware: every game score is 0-0-0-0")
                 else
                     notes.Add("every game score is 0-0-0-0: the traversal didn't see the game score")
-            if level = DealLevel && numSamples >= 1000L && nRegrets > 0L && maxAbs <= 2f then
-                warnings.Add($"deal-level name, but no regret exceeds 2 (max %.4f{maxAbs}): game-level payoffs?")
 
                 // the trainer's reader must agree with the validator's
             if layout = Layout.v2 && layout.NumInputs = Hearts.Model.Model.inputSize

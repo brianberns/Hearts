@@ -118,7 +118,12 @@ samples against that reader. Beyond the header, file name (iteration, payoff lev
 decodes every sample into a deal state and checks it against the rules: cards in one place each, hand
 and trick sizes, passes, voids, deal and game scores, regrets only for legal actions and not all of
 one sign, and regrets within the payoff level's range (±52 for a deal, ±2 for a game). A game-level
-store must also have game scores other than 0-0-0-0. **A change to `Encoding.fs` needs a new layout
+store must also have game scores other than 0-0-0-0. The report says which payoff level the regrets look
+like: deal-level regrets are in points (typically about 3, most beyond ±2), game-level regrets are in
+chances of winning (all within ±2, typically well under 0.5). It warns when that disagrees with the name.
+At iteration 1, with no model, the strategy is uniform random, so every sample's regrets sum to zero.
+Before 1c7e20b (2026-03-17), iteration 1 followed the heuristic player instead: regret against the one
+card it chose, so many of those regrets were zero and went unstored. **A change to `Encoding.fs` needs a new layout
 in `Layout.fs`**; the program warns when the current encoding matches none. About 115,000 samples a
 second.
 

@@ -24,14 +24,12 @@ type SampleResult =
         /// Is the game score other than 0-0-0-0?
         HasGameScore : bool
 
-        /// Number of stored (non-zero) regrets.
-        NumRegrets : int
+        /// Absolute values of the stored (non-zero) regrets.
+        AbsRegrets : float32[]
 
-        /// Largest absolute regret.
-        MaxAbsRegret : float32
-
-        /// Sum of absolute regrets.
-        SumAbsRegret : float
+        /// Do the regrets sum to zero, as they must when the strategy that sampled the decision was
+        /// uniform?
+        IsBalanced : bool
     }
 
 /// Checks one stored sample: that it decodes, that it describes a state a deal can reach under the
@@ -140,14 +138,16 @@ module Check =
                     finding "duplicate regret card" $"card indexes {scoreText indexes}"
             ]
         let absRegrets = regrets |> Array.map (snd >> abs)
+        let isBalanced =
+            let scale = if absRegrets.Length = 0 then 1f else max 1f (Array.max absRegrets)
+            abs (regrets |> Array.sumBy snd) <= 1e-3f * scale
         let result findings isPass hasGameScore =
             {
                 Findings = findings
                 IsPass = isPass
                 HasGameScore = hasGameScore
-                NumRegrets = regrets.Length
-                MaxAbsRegret = if absRegrets.Length = 0 then 0f else Array.max absRegrets
-                SumAbsRegret = absRegrets |> Array.sumBy float
+                AbsRegrets = absRegrets
+                IsBalanced = isBalanced
             }
 
             // structure: the parts must decode before the state can be checked
