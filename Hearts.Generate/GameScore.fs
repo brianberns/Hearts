@@ -10,7 +10,8 @@ open Hearts
 /// Simulates the game scores of realistic games under the arena's
 /// rule that a shoot always increases opponents' scores. Constants
 /// were fitted to 100,000 games of the original deal-level production
-/// model (AdvantageModel-i005-e027) playing itself.
+/// model (AdvantageModel-i005-e027) playing itself. Written by
+/// Claude, with my changes.
 module GameScore =
 
     /// Chance that a deal is a shoot.

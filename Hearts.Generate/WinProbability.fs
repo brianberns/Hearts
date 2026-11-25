@@ -10,7 +10,8 @@ open Hearts.Model
 
 /// Each seat's chance of winning the game from the start of a
 /// deal, given the game score, as fitted by Hearts.Experiments'
-/// wfit mode. Proposed and originally written by Claude.
+/// wfit mode. Proposed and originally written by Claude, with
+/// my changes.
 module WinProbability =
 
     /// Loads trained model from the given file.
