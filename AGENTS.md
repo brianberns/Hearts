@@ -48,12 +48,12 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
 ## Players and tournaments
 
 - `Tournament.runSeeded rngSeed numGames makeChampion makeChallenger` plays whole games with duplicate
-  deals. Each rotation is one deal sequence played four times, with the challenger in each seat against
+  deals. Each cycle is one deal sequence played four times, with the challenger in each seat against
   three champions. It answers the challenger's game win rate (outright wins only, as the arena rates
-  them), so 0.25 is even. (The README's "2v2 tournament" predates this.) Rotations run in parallel; at
+  them), so 0.25 is even. (The README's "2v2 tournament" predates this.) Cycles run in parallel; at
   the start of each, `makeChampion` and `makeChallenger` are called with seeds of their own
   (`SplitMixRandom.GetChildSeed`, apart from the deal's stream), and the two players serve all four
-  games of the rotation, the champion in three seats at once. So a tournament repeats exactly for a
+  games of the cycle, the champion in three seats at once. So a tournament repeats exactly for a
   given `rngSeed`, and players need not be thread-safe, but must keep no state across games other than
   their random numbers. `Tournament.run` is the same for players that need no seed.
 - `Game.playGame` asserts (in Debug builds) that every action a player returns is legal. Run a Debug
