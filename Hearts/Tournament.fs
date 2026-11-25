@@ -108,7 +108,7 @@ type SplitMixRandom(seed : uint64) =
     /// Distinct, well-mixed seed for child i of the given seed,
     /// as for the players in a cycle. Children start far from
     /// the stream that SplitMixRandom(seed) itself produces, so
-    //// neither shares numbers.
+    /// neither shares numbers.
     static member GetChildSeed(seed : uint64, i : int) =
         let start = mix (seed ^^^ 0x5851F42D4C957F2DUL)   // leave seed's own stream
         mix (start + gamma * (uint64 (uint32 i) + 1UL))
@@ -132,10 +132,10 @@ module Tournament =
             |> Map
 
     /// Runs a cycle with the given player factories.
-    let private runCycle rngSeed makeChampion makeChallenger icycle =
+    let private runCycle rngSeed makeChampion makeChallenger iCycle =
 
             // make players
-        let cycleSeed = SplitMixRandom.GetSeed(rngSeed, icycle)
+        let cycleSeed = SplitMixRandom.GetSeed(rngSeed, iCycle)
         let champion = createPlayer cycleSeed 0 makeChampion
         let challenger = createPlayer cycleSeed 1 makeChallenger
 
@@ -157,17 +157,17 @@ module Tournament =
     let runSeeded rngSeed numGames makeChampion makeChallenger =
 
             // determine number of cycles needed
-        let numcycles = numGames / Seat.numSeats
-        assert(numcycles > 0)
+        let numCycles = numGames / Seat.numSeats
+        assert(numCycles > 0)
 
             // count number of times challenger wins
         let nWins =
-            Array.Parallel.init numcycles (
+            Array.Parallel.init numCycles (
                 runCycle rngSeed makeChampion makeChallenger)
                 |> Array.sum
 
             // compute challenger win rate
-        let numGames = numcycles * Seat.numSeats
+        let numGames = numCycles * Seat.numSeats
         float32 nWins / float32 numGames
 
     /// Runs a deterministic tournament between two players
