@@ -26,25 +26,22 @@ module Program =
             OpenDeal.fromDeck dealer dir deck)
 
     /// Plays the given number of deals in parallel.
-    let private playDeals
-        settings iteration winProbModelOpt numDeals =
+    let private playDeals settings state numDeals =
         let rng = Random()
         generate rng
             |> Seq.take numDeals
             |> Seq.toArray
             |> Array.Parallel.map (fun deal ->
                 let rng = Random()   // give each deal its own RNG
-                Traverse.traverse
-                    settings iteration winProbModelOpt deal rng)
+                Traverse.traverse settings state deal rng)
 
     /// Generates training data for the given iteration.
-    let private generateSamples
-        settings iteration state winProbModelOpt =
+    let private generateSamples settings state =
 
         /// TensorBoard logging.
         let log value step =
             settings.Writer.add_scalar(
-                $"advantage samples/iter%03d{iteration}",
+                $"advantage samples/iter%03d{state.SampleStore.Iteration}",
                 value, step)
 
             // start TensorBoard y-axis at 0
@@ -64,10 +61,10 @@ module Program =
 
                     // generate samples
                 let samples =
-                    playDeals settings iteration winProbModelOpt numDeals
+                    playDeals settings state numDeals
                         |> Inference.complete
                             settings.InferenceBatchSize
-                            state.ModelOpt
+                            state.AdvantageModelOpt
 
                     // save samples
                 AdvantageSampleStore.appendSamples
@@ -93,8 +90,9 @@ module Program =
                 Some modelPath, iter
             | _ -> failwith $"Invalid arguments: {argv}"
 
-    /// Generates samples for the given iteration using the given model.
-    let private run modelPathOpt iteration =
+    /// Generates samples for the given iteration using the given
+    /// advantage model.
+    let private run advModelPathOpt iteration =
 
             // get settings
         let settings =
@@ -117,9 +115,15 @@ module Program =
             printfn $"   Model input size: {Model.inputSize}"
             printfn $"   Model output size: {Model.outputSize}"
 
+            // initialize win probability model?
+        let winProbModelOpt =
+            if settings.GameLevelPayoff then
+                Some (WinProbability.load settings)
+            else None
+
             // initialize advantage model, if specified
-        let modelOpt =
-            modelPathOpt
+        let advModelOpt =
+            advModelPathOpt
                 |> Option.map (fun modelPath ->
                     let model =
                         new AdvantageModel(
@@ -149,18 +153,11 @@ module Program =
                 printfn $"Creating sample store: {path}"
             path
                 |> AdvantageSampleStore.create iteration
-                |> AdvantageState.create modelOpt
-
-            // initialize win probability model?
-        let winProbModelOpt =
-            if settings.GameLevelPayoff then
-                Some (WinProbability.load settings)
-            else None
+                |> AdvantageState.create winProbModelOpt advModelOpt
 
             // generate samples
         let stopwatch = Stopwatch.StartNew()
-        let numSamples =
-            generateSamples settings iteration state winProbModelOpt
+        let numSamples = generateSamples settings state
         if settings.Verbose then
             printfn $"{numSamples} samples generated in {stopwatch.Elapsed}"
 
@@ -168,6 +165,6 @@ module Program =
     [<EntryPoint>]
     let main argv =
         Console.OutputEncoding <- Encoding.UTF8
-        let modelPathOpt, iter = parse argv
-        run modelPathOpt (iter + 1)
+        let advModelPathOpt, iter = parse argv
+        run advModelPathOpt (iter + 1)
         0

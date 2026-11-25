@@ -87,7 +87,7 @@ module Traverse =
     let private rules = Rules.arena
 
     /// Evaluates the utility of the given deal.
-    let traverse settings iter winProbModelOpt deal (rng : Random) =
+    let traverse settings state deal (rng : Random) =
 
         /// Game- or deal-level payoffs.
         let tryGetPayoff =
@@ -160,7 +160,8 @@ module Traverse =
                         let idx = int infoSet.Player
                         (actionUtilities.Row(idx) - utility[idx])
                             |> Strategy.toWide legalActions
-                    AdvantageSample.create encoding wideRegrets iter
+                    AdvantageSample.create
+                        encoding wideRegrets state.SampleStore.Iteration
                 Node.complete
                     (utility.ToArray())
                     (Some sample)

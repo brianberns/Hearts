@@ -8,8 +8,11 @@ open Hearts.Model
 /// Advantage state.
 type AdvantageState =
     {
-        /// Current model, if any.
-        ModelOpt : Option<AdvantageModel>
+        /// Win probability model, if any.
+        WinProbabilityModelOpt : Option<Model>
+
+        /// Current advantage model, if any.
+        AdvantageModelOpt : Option<AdvantageModel>
 
         /// Stored training data.
         SampleStore : AdvantageSampleStore
@@ -17,7 +20,9 @@ type AdvantageState =
 
     /// Cleanup.
     member this.Dispose() =
-        this.ModelOpt
+        this.WinProbabilityModelOpt
+            |> Option.iter _.Dispose()
+        this.AdvantageModelOpt
             |> Option.iter _.Dispose()
         this.SampleStore.Dispose()
 
@@ -30,8 +35,9 @@ type AdvantageState =
 module AdvantageState =
 
     /// Creates an advantage state.
-    let create modelOpt sampleStore =
+    let create winProbabilityModelOpt advantageModelOpt sampleStore =
         {
-            ModelOpt = modelOpt
+            WinProbabilityModelOpt = winProbabilityModelOpt
+            AdvantageModelOpt = advantageModelOpt
             SampleStore = sampleStore
         }
