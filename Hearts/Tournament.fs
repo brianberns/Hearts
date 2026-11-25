@@ -50,22 +50,26 @@ type SplitMixRandom(seed : uint64) =
         float (nextU64 () >>> 11) * doubleUnit
 
     override _.Next(maxValue) =
-        ArgumentOutOfRangeException.ThrowIfNegative(maxValue, nameof maxValue)
+        ArgumentOutOfRangeException
+            .ThrowIfNegative(maxValue, nameof maxValue)
         int (nextBelow (uint64 maxValue))
 
     override _.Next(minValue, maxValue) =
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(minValue, maxValue, nameof minValue)
+        ArgumentOutOfRangeException
+            .ThrowIfGreaterThan(minValue, maxValue, nameof minValue)
         int (nextInRange (int64 minValue) (int64 maxValue))
 
     override _.Next() =
         int (nextBelow (uint64 Int32.MaxValue))
 
     override _.NextInt64(maxValue : int64) =
-        ArgumentOutOfRangeException.ThrowIfNegative(maxValue, nameof maxValue)
+        ArgumentOutOfRangeException
+            .ThrowIfNegative(maxValue, nameof maxValue)
         int64 (nextBelow (uint64 maxValue))
 
     override _.NextInt64(minValue : int64, maxValue : int64) =
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(minValue, maxValue, nameof minValue)
+        ArgumentOutOfRangeException
+            .ThrowIfGreaterThan(minValue, maxValue, nameof minValue)
         nextInRange minValue maxValue
 
     override _.NextInt64() =
@@ -101,9 +105,10 @@ type SplitMixRandom(seed : uint64) =
                 ||| uint64 (uint32 iOffset)
         mix (x + gamma)
 
-    /// Distinct, well-mixed seed for child i of the given seed, as for the
-    /// players in a rotation. Children start far from the stream that
-    /// SplitMixRandom(seed) itself produces, so neither shares numbers.
+    /// Distinct, well-mixed seed for child i of the given seed,
+    /// as for the players in a cycle. Children start far from
+    /// the stream that SplitMixRandom(seed) itself produces, so
+    //// neither shares numbers.
     static member GetChildSeed(seed : uint64, i : int) =
         let start = mix (seed ^^^ 0x5851F42D4C957F2DUL)   // leave seed's own stream
         mix (start + gamma * (uint64 (uint32 i) + 1UL))
@@ -111,9 +116,9 @@ type SplitMixRandom(seed : uint64) =
 module Tournament =
 
     /// Creates a player.
-    let private createPlayer rotationSeed offset makePlayer =
+    let private createPlayer cycleSeed offset makePlayer =
         let seed =
-            SplitMixRandom.GetChildSeed(rotationSeed, offset)
+            SplitMixRandom.GetChildSeed(cycleSeed, offset)
         makePlayer seed
 
     /// Puts challenger in the given seat.
@@ -126,22 +131,22 @@ module Tournament =
                 seat, player)
             |> Map
 
-    /// Runs a rotation with the given player factories.
-    let private runRotation rngSeed makeChampion makeChallenger iRotation =
+    /// Runs a cycle with the given player factories.
+    let private runCycle rngSeed makeChampion makeChallenger icycle =
 
             // make players
-        let rotationSeed = SplitMixRandom.GetSeed(rngSeed, iRotation)
-        let champion = createPlayer rotationSeed 0 makeChampion
-        let challenger = createPlayer rotationSeed 1 makeChallenger
+        let cycleSeed = SplitMixRandom.GetSeed(rngSeed, icycle)
+        let champion = createPlayer cycleSeed 0 makeChampion
+        let challenger = createPlayer cycleSeed 1 makeChallenger
 
-            // rotate challenger through each seat
+            // cycle challenger through each seat
         Seat.cycle Seat.South
             |> Seq.sumBy (fun challengerSeat ->
                 let playerMap =
                     createPlayerMap champion challenger challengerSeat
-                let rng = SplitMixRandom(rotationSeed)                   // restart RNG for duplicate deals
+                let rng = SplitMixRandom(cycleSeed)                      // restart RNG for duplicate deals
                 let isWinner =
-                    Game.playGame Rules.arena rng playerMap Seat.South   // players rotate seats, so first dealer can be constant
+                    Game.playGame Rules.arena rng playerMap Seat.South   // players cycle through seats, so first dealer can be constant
                         |> GameScore.findGameWinners Rules.arena.TieGame
                         |> Set.contains challengerSeat
                 if isWinner then 1 else 0)
@@ -151,18 +156,18 @@ module Tournament =
     /// win rate.
     let runSeeded rngSeed numGames makeChampion makeChallenger =
 
-            // determine number of rotations needed
-        let numRotations = numGames / Seat.numSeats
-        assert(numRotations > 0)
+            // determine number of cycles needed
+        let numcycles = numGames / Seat.numSeats
+        assert(numcycles > 0)
 
             // count number of times challenger wins
         let nWins =
-            Array.Parallel.init numRotations (
-                runRotation rngSeed makeChampion makeChallenger)
+            Array.Parallel.init numcycles (
+                runCycle rngSeed makeChampion makeChallenger)
                 |> Array.sum
 
             // compute challenger win rate
-        let numGames = numRotations * Seat.numSeats
+        let numGames = numcycles * Seat.numSeats
         float32 nWins / float32 numGames
 
     /// Runs a deterministic tournament between two players
