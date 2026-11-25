@@ -114,43 +114,67 @@ module Encoding =
                 flags[suitOffset + seatOffset] <- true   // use mutation for speed
         flags
 
-    /// Encodes the given score as a multi-hot vector in the
-    /// number of seats.
-    let encodeScore player score =
+    /// Encodes the given value as a "thermometer". If the value
+    /// exceeds the given size, all flags are set, but no error
+    /// occurs.
+    let encodeThermometer size value =
+        Array.init size (fun i -> value > i)
+
+    /// Encodes the given score as thermometers relative to
+    /// the given player.
+    let encodeScore size player score =
         assert(score.Points.Length = Seat.numSeats)
         [|
             for seat in Seat.cycle player do
-                score[seat] > 0
+                yield! encodeThermometer size score[seat]
         |]
+
+    /// Encodes the given deal score as thermometers relative
+    /// to the given player.
+    let encodeDealScore =
+        encodeScore ClosedDeal.numPointsPerDeal
+
+    /// The maximum number of points expected to occur in a game.
+    /// This is not a hard cap, but should rarely be exceeded.
+    let gameScoreCap =
+        GameScore.endThreshold + ClosedDeal.numPointsPerDeal
+
+    /// Encodes the given game score as thermometers relative
+    /// to the given player.
+    let encodeGameScore =
+        encodeScore gameScoreCap
 
     /// Total encoded length of an info set.
     let encodedLength =
-        Card.numCards                                       // current player's hand
-            + ExchangeDirection.numDirections               // exchange direction
-            + Card.numCards                                 // outgoing pass
-            + Card.numCards                                 // incoming pass
-            + Seat.numSeats * Card.numCards                 // cards previously played by each player
-            + (Seat.numSeats - 1) * Card.numCards           // current trick
-            + (Seat.numSeats - 1) * Suit.numSuits           // voids
-            + Seat.numSeats                                 // deal score
+        Card.numCards                                         // current player's hand
+            + ExchangeDirection.numDirections                 // exchange direction
+            + Card.numCards                                   // outgoing pass
+            + Card.numCards                                   // incoming pass
+            + Seat.numSeats * Card.numCards                   // cards previously played by each player
+            + (Seat.numSeats - 1) * Card.numCards             // current trick
+            + (Seat.numSeats - 1) * Suit.numSuits             // voids
+            + (Seat.numSeats * ClosedDeal.numPointsPerDeal)   // deal score
+            + (Seat.numSeats * gameScoreCap)                  // game score
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
         let flags =
             [|
-                yield! encodeCards infoSet.Hand             // current player's hand
-                yield! encodeExchangeDirection              // exchange direction
+                yield! encodeCards infoSet.Hand               // current player's hand
+                yield! encodeExchangeDirection                // exchange direction
                         infoSet.Deal.ExchangeDirection
-                yield! encodePass infoSet.OutgoingPassOpt   // outgoing pass
-                yield! encodePass infoSet.IncomingPassOpt   // incoming pass
-                yield! encodePlays                          // cards previously played by each player
+                yield! encodePass infoSet.OutgoingPassOpt     // outgoing pass
+                yield! encodePass infoSet.IncomingPassOpt     // incoming pass
+                yield! encodePlays                            // cards previously played by each player
                     infoSet.Player infoSet.Deal.CompletedTricks
-                yield! encodeTrick                          // current trick
+                yield! encodeTrick                            // current trick
                     infoSet.Deal.CurrentTrickOpt
-                yield! encodeVoids                          // voids
+                yield! encodeVoids                            // voids
                     infoSet.Player infoSet.Deal.Voids
-                yield! encodeScore                          // deal score
+                yield! encodeDealScore                        // deal score
                     infoSet.Player infoSet.Deal.Score
+                yield! encodeGameScore                        // game score
+                    infoSet.Player infoSet.GameScore
             |]
         assert(flags.Length = encodedLength)
         flags
