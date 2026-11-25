@@ -106,6 +106,7 @@ module Program =
             printfn $"   Deal batch size: {settings.DealBatchSize}"
             printfn $"   Inference batch size: {settings.InferenceBatchSize}"
             printfn $"   Sample branch rate: {settings.SampleBranchRate}"
+            printfn $"   Game level payoff: {settings.GameLevelPayoff}"
             printfn $"   Hidden size: {settings.HiddenSize}"
             printfn $"   # hidden layers: {settings.NumHiddenLayers}"
             printfn $"   Device: {settings.Device}"

@@ -25,6 +25,9 @@ type Settings =
         /// https://chatgpt.com/c/67b26aab-6504-8000-ba0e-0ae3c8a614ff
         SampleBranchRate : float
 
+        /// Whether to generate game- or deal-level payoffs.
+        GameLevelPayoff : bool
+
         /// Input and output size of a hidden layer within the neural
         /// network.
         HiddenSize : int
@@ -58,6 +61,7 @@ module Settings =
             DealBatchSize = 25
             InferenceBatchSize = 50_000
             SampleBranchRate = 0.23
+            GameLevelPayoff = false
             HiddenSize = 1080   // inherited from original deal-level model
             NumHiddenLayers = 4
             Device = torch.CUDA
@@ -81,6 +85,9 @@ module Settings =
         writer.add_text(
             $"settings/SampleBranchRate",
             string settings.SampleBranchRate, 0)
+        writer.add_text(
+            $"settings/GameLevelPayoff",
+            string settings.GameLevelPayoff, 0)
         writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)

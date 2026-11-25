@@ -89,9 +89,14 @@ module Traverse =
     /// Evaluates the utility of the given deal.
     let traverse settings iter deal (rng : Random) =
 
+        /// Game- or deal-level payoffs.
+        let tryGetPayoff =
+            if settings.GameLevelPayoff then DealScore.tryGetPayoff
+            else failwith "Not yet supported"
+
         /// Top-level loop.
         let rec loop deal depth =
-            match DealScore.tryGetPayoff deal with
+            match tryGetPayoff deal with
                 | Some payoff ->
                     Node.complete   // deal is over
                         payoff
