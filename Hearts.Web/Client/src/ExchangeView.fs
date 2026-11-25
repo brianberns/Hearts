@@ -8,7 +8,7 @@ module ExchangeView =
     /// Cards passed in the current exchange.
     /// ASSUMPTION: Only one exchange view per app.
     let private cardViewMap =
-        Enum.getValues<Seat>
+        Seat.allSeats
             |> Seq.map (fun seat ->
                 seat,   // from seat
                 ResizeArray<CardView>(Pass.numCards))   // MUTABLE

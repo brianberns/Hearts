@@ -71,7 +71,7 @@ module Game =
             // add points to non-shooters
         let game' =
             let dealScore =
-                Enum.getValues<Seat>
+                Seat.allSeats
                     |> Array.map (fun seat ->
                         if seat = shooter then 0
                         else ClosedDeal.numPointsPerDeal)
@@ -84,7 +84,7 @@ module Game =
             if leaders.Contains(shooter) then game'
             else
                 let dealScore =
-                    Enum.getValues<Seat>
+                    Seat.allSeats
                         |> Array.map (fun seat ->
                             if seat = shooter then
                                 -ClosedDeal.numPointsPerDeal

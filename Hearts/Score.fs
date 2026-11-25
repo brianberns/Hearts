@@ -18,7 +18,7 @@ type Score =
     static member (+) (scoreA : Score, scoreB : Score) =
         {
             Points =
-                Enum.getValues<Seat>
+                Seat.allSeats
                     |> Array.map (fun seat ->
                         scoreA[seat] + scoreB[seat])
         }

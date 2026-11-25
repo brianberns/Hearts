@@ -35,7 +35,7 @@ module Killer =
         let gameScore = infoSet.GameScore
         let final =
             let toOthers =
-                Enum.getValues<Seat>
+                Seat.allSeats
                     |> Array.map (fun seat ->
                         if seat = me then 0 else ClosedDeal.numPointsPerDeal)
                     |> Score.ofPoints

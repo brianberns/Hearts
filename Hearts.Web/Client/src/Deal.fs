@@ -109,7 +109,7 @@ module Deal =
 
     /// Displays game score for each player.
     let private displayGameScore (gameScore : Score) =
-        for seat in Enum.getValues<Seat> do
+        for seat in Seat.allSeats do
             gameScoreMap[seat].text($"{gameScore[seat]}")
 
     /// Handles the end of a deal.
@@ -137,7 +137,7 @@ module Deal =
 
     /// Displays games won for each player.
     let private displayGamesWon (gamesWon : Score) =
-        for seat in Enum.getValues<Seat> do
+        for seat in Seat.allSeats do
             gamesWonMap[seat].text($"{gamesWon[seat]}")
 
     /// Increments the number of games won by the given players.
@@ -240,7 +240,7 @@ module Deal =
                 | Some game ->
 
                         // display deal results
-                    for seat in Enum.getValues<Seat> do
+                    for seat in Seat.allSeats do
                         console.log(
                             $"{Seat.toString seat} takes {persState.Deal.ClosedDeal.Score[seat]} point(s)")
                     let shooterOpt =
@@ -249,7 +249,7 @@ module Deal =
                         |> Async.AwaitPromise
 
                         // update game score
-                    for seat in Enum.getValues<Seat> do
+                    for seat in Seat.allSeats do
                         console.log(
                             $"{Seat.toString seat} has {game.Score[seat]} point(s)")
                     displayGameScore game.Score

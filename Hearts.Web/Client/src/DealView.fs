@@ -197,7 +197,7 @@ module DealView =
     let displayStatus (deal : OpenDeal) =
 
             // current score for each player
-        for seat in Enum.getValues<Seat> do
+        for seat in Seat.allSeats do
             dealScoreElemMap[seat]
                 .text($"{deal.ClosedDeal.Score[seat]}")
 
@@ -222,7 +222,7 @@ module DealView =
         let voidView = ~~"#void"
         if isUserPlay then
             voidView.show()
-            for seat in Enum.getValues<Seat> do
+            for seat in Seat.allSeats do
                 if seat <> Seat.User then
                     for suit in Enum.getValues<Suit> do
                         let text =

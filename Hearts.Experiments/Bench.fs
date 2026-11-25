@@ -33,7 +33,7 @@ module Bench =
                 strategy |> Vector.sample rng |> Array.get infoSet.LegalActions
             { Act = act }
         let playerMap =
-            Enum.getValues<Seat>
+            Seat.allSeats
                 |> Seq.map (fun seat -> seat, (if seat = Seat.South then player else Killer.player))
                 |> Map
         let playOne iGame =

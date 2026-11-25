@@ -123,7 +123,7 @@ module Tournament =
 
     /// Puts challenger in the given seat.
     let private createPlayerMap champion challenger challengerSeat =
-        Enum.getValues<Seat>
+        Seat.allSeats
             |> Seq.map (fun seat ->
                 let player =
                     if seat = challengerSeat then challenger

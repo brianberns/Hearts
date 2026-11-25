@@ -204,7 +204,7 @@ module Exchange =
 
         let asyncPairs =
             Async.Parallel [|
-                for fromSeat in Enum.getValues<Seat> do
+                for fromSeat in Seat.allSeats do
 
                         // get target seat
                     let toSeat =
