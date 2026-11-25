@@ -112,13 +112,18 @@ A difference of 0.01 in win rate needs about 10,000 games to see, and 40,000 to 
 The model and Killer Hearts V8 play on Hearts Arena (<https://hearts-arena.snowfrog.dev>), whose games
 are public. The bots live in a separate repository, `HeartsArenaBot`, next to this one:
 
-- the model bot (Rust) at its root, with `tools/Reference`, which writes the F# engine's decisions for
-  its differential test;
+- the model bot (Rust) at its root, with `tools/Reference`, which plays deals of `Rules.arena` with the
+  model in the F# engine and writes its decisions for the bot's differential test (`tests/reference.rs`:
+  the inputs must match exactly). The bot follows the F# engine's inferences under the arena's rules,
+  such as the voids revealed by leading a heart before hearts are broken, even after the Q♠;
 - the Killer Hearts V8 bot in `khearts/`: Rust first generated from the VB6 source, plus `v8.rs`. Its
   `tools/Reference` plays whole arena games with Killer.fs and writes one seat's view as the arena would
   send it; `tests/reference.rs` replays them through the bot and must agree on every pass and play;
 - `scripts/local-games.sh`, which plays whole games on the arena's own runner through WSL (the kit lives
   at `~/hearts-arena/hearts-arena-kit` in WSL).
 
-Never print or commit the arena key (`HEARTS_ARENA_KEY`). The production model's weights are not on the
-arena: only a weakened model is.
+Never print or commit the arena key (`HEARTS_ARENA_KEY`), or model weights (`weights/` is ignored).
+Since 2026-11-24 the arena runs the production model (`AdvantageModel-i005-e027.pt`) as Deep-CFR; the
+weakened model it ran before (`AdvantageModel-i003-e024.pt`) is retired. The arena's ratings carry a
+margin: two bots whose ranges don't overlap are in that order at least 95% of the time
+(<https://hearts-arena.snowfrog.dev/guide/ratings>).
