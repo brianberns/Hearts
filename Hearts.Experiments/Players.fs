@@ -9,7 +9,7 @@ module Players =
 
     /// Loads an advantage model checkpoint for inference on the given device.
     let loadModelOn device (path : string) =
-        let model = new AdvantageModel(Encoding.encodedLength * 2, 4, 0.0, device)
+        let model = new AdvantageModel(1080, 4, 0.0, device)   // as Hearts.Train builds it
         model.load(path) |> ignore
         model.eval()
         model
