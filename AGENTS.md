@@ -93,7 +93,9 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
 - `phase0` compares the production and weakened models with each other and with Killer Hearts V8.
 - `gpu` stress-tests TorchSharp inference on the GPU from many threads.
 - `benchmark <model> <seed> <games>` runs the benchmark for model training: the model vs three Killer
-  Hearts V8.
+  Hearts V8. The target for game-aware models is the production model's 0.2708 (40,000 games, seed
+  20261125, built from bb2d763, the last commit whose encoding loads it). On 2026-11-23, before the
+  arena's hearts-break rule and Killer's readier trailing Shoot, it had measured 0.3020 (10,000 games).
 - `wdata <model> <seed> <games> <output.csv>` plays whole games with the model in every seat and writes
   each deal's starting scores, pass direction and the game's winner: the data for W, each seat's chance
   of winning the game from the start of a deal. It plays in chunks of 1,000 games on at most one thread
