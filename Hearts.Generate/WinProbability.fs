@@ -56,9 +56,9 @@ module WinProbability =
                         data[int viewer, Seat.getIndex seat viewer])
         |]
 
-    /// Each seat's chance of winning the game from the given
+    /// Gets each seat's chance of winning the game from the given
     /// game score.
-    let winChances rules model gameScore =
+    let getWinChances rules model gameScore =
         let winners =
             GameScore.findGameWinners rules.TieGame gameScore
         if winners.IsEmpty then
@@ -70,12 +70,12 @@ module WinProbability =
                     if winners.Contains(seat) then share
                     else 0.0f)
 
-    /// Each seat's payoff for a deal, indexed by seat: the change
-    /// in its chance of winning the game, from the game score
-    /// before the deal to the game score after it (which should
-    /// already include the shoot reward, if any). Each deal's
-    /// payoffs sum to zero.
-    let payoff rules model before after =
-        let pBefore = winChances rules model before
-        let pAfter = winChances rules model after
+    /// Gets each seat's payoff for a deal, indexed by seat: the
+    /// change in its chance of winning the game, from the game
+    /// score before the deal to the game score after it (which
+    /// should already include the shoot reward, if any). Each
+    /// deal's payoffs sum to zero.
+    let getPayoff rules model before after =
+        let pBefore = getWinChances rules model before
+        let pAfter = getWinChances rules model after
         Array.map2 (-) pAfter pBefore
