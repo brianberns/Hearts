@@ -122,7 +122,11 @@ are public. The bots live in a separate repository, `HeartsArenaBot`, next to th
   `tools/Reference` plays whole arena games with Killer.fs and writes one seat's view as the arena would
   send it; `tests/reference.rs` replays them through the bot and must agree on every pass and play;
 - `scripts/local-games.sh`, which plays whole games on the arena's own runner through WSL (the kit lives
-  at `~/hearts-arena/hearts-arena-kit` in WSL).
+  at `~/hearts-arena/hearts-arena-kit` in WSL);
+- `scripts/duel.py`, which plays two modules against each other on that runner with duplicate deals
+  (the challenger in each seat against three champions, like `Tournament.runSeeded`) and answers the
+  challenger's win rate. Each module carries its own encoding, so this is how to compare models whose
+  encodings differ, such as a game-aware model against production. About 400 model games a minute.
 
 Never print or commit the arena key (`HEARTS_ARENA_KEY`), or model weights (`weights/` is ignored).
 Since 2026-11-24 the arena runs the production model (`AdvantageModel-i005-e027.pt`) as Deep-CFR; the
