@@ -136,9 +136,12 @@ module Program =
                 let timespan = DateTime.Now - DateTime.Today
                 int timespan.TotalSeconds
             let path =
+                let level =
+                    if settings.GameLevelPayoff then "Game"
+                    else "Deal"
                 Path.Combine(
                     settings.ModelDirPath,
-                    $"AdvantageSamples-i%03d{iteration}-%05d{unique}.bin")
+                    $"AdvantageSamples-{level}-i%03d{iteration}-%05d{unique}.bin")
             if settings.Verbose then
                 printfn $"Creating sample store: {path}"
             path
