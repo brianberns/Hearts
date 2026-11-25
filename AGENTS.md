@@ -9,7 +9,7 @@ two disagree, the code is right, and this file should be fixed.
 - **Who owns what.** Brian writes the core code: `PlayingCards`, `Hearts`, `Hearts.Model`,
   `Hearts.Learn`, `Hearts.Generate`, `Hearts.Train`, `Hearts.PlayModel`, `Hearts.Web` and the README.
   Agents propose changes to these in chat rather than making them. Agents own `Hearts.Heuristic`'s
-  Killer.fs and KillerEngine, `Hearts.Experiments`, `SplitMixRandom`, the HeartsArenaBot repository
+  Killer.fs and KillerEngine, `Hearts.Experiments`, `Hearts.ValidateSamples`, `SplitMixRandom`, the HeartsArenaBot repository
   (see Hearts Arena, below), and this file, and keep them building against Brian's changes.
 - **Separate checkouts.** Brian develops in his own clone; code moves between him and an agent only
   through git. Pull before work that depends on his latest changes. Commit and push only when asked.
@@ -108,6 +108,19 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
   against three V8. Confirm a winner on a fresh seed before adopting it.
 
 A difference of 0.01 in win rate needs about 10,000 games to see, and 40,000 to trust.
+
+## Validating sample stores (`Hearts.ValidateSamples`)
+
+`Hearts.ValidateSamples <store.bin | folder> ...` checks Hearts.Generate's `AdvantageSamples-*.bin`
+stores. It reads them with its own description of each version of the encoding (`Layout.fs`: the 540
+inputs before ad5bebe and the 1,144 since), not with `AdvantageSampleStore`, then cross-checks a few
+samples against that reader. Beyond the header, file name (iteration, payoff level) and truncation, it
+decodes every sample into a deal state and checks it against the rules: cards in one place each, hand
+and trick sizes, passes, voids, deal and game scores, regrets only for legal actions and not all of
+one sign, and regrets within the payoff level's range (±52 for a deal, ±2 for a game). A game-level
+store must also have game scores other than 0-0-0-0. **A change to `Encoding.fs` needs a new layout
+in `Layout.fs`**; the program warns when the current encoding matches none. About 115,000 samples a
+second.
 
 ## Hearts Arena
 
