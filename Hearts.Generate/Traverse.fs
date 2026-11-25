@@ -87,7 +87,7 @@ module Traverse =
     let private rules = Rules.arena
 
     /// Evaluates the utility of the given deal.
-    let traverse settings state deal (rng : Random) =
+    let traverse settings state (rng : Random) deal =
 
         /// Game- or deal-level payoffs.
         let tryGetPayoff =

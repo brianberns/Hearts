@@ -33,7 +33,7 @@ module Program =
             |> Seq.toArray
             |> Array.Parallel.map (fun deal ->
                 let rng = Random()   // give each deal its own RNG
-                Traverse.traverse settings state deal rng)
+                Traverse.traverse settings state rng deal)
 
     /// Generates training data for the given iteration.
     let private generateSamples settings state =
