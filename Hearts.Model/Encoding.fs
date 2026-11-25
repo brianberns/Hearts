@@ -125,14 +125,14 @@ module Encoding =
 
     /// Total encoded length of an info set.
     let encodedLength =
-        Card.numCards                                         // current player's hand
-            + ExchangeDirection.numDirections                 // exchange direction
-            + Card.numCards                                   // outgoing pass
-            + Card.numCards                                   // incoming pass
-            + Seat.numSeats * Card.numCards                   // cards previously played by each player
-            + (Seat.numSeats - 1) * Card.numCards             // current trick
-            + (Seat.numSeats - 1) * Suit.numSuits             // voids
-            + Seat.numSeats                                   // deal score
+        Card.numCards                                       // current player's hand
+            + ExchangeDirection.numDirections               // exchange direction
+            + Card.numCards                                 // outgoing pass
+            + Card.numCards                                 // incoming pass
+            + Seat.numSeats * Card.numCards                 // cards previously played by each player
+            + (Seat.numSeats - 1) * Card.numCards           // current trick
+            + (Seat.numSeats - 1) * Suit.numSuits           // voids
+            + Seat.numSeats                                 // deal score
 
     /// Encodes the given info set as a vector.
     let encode infoSet : Encoding =
