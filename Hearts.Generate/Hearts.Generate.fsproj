@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <Compile Include="Settings.fs" />
-    <Compile Include="ZeroSum.fs" />
+    <Compile Include="DealScore.fs" />
     <Compile Include="GameScore.fs" />
     <Compile Include="WinProbability.fs" />
     <Compile Include="Traverse.fs" />

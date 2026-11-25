@@ -91,7 +91,7 @@ module Traverse =
 
         /// Top-level loop.
         let rec loop deal depth =
-            match ZeroSum.tryGetPayoff deal with
+            match DealScore.tryGetPayoff deal with
                 | Some payoff ->
                     Node.complete   // deal is over
                         payoff

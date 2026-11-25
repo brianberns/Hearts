@@ -2,8 +2,9 @@ namespace Hearts.Generate
 
 open Hearts
 
-/// Model Hearts as a zero-sum game.
-module ZeroSum =
+/// Models Hearts as a zero-sum, deal-level game. Game score
+/// is ignored.
+module DealScore =
 
     /// Gets the payoff for the given raw deal score from each
     /// player's point of view.
