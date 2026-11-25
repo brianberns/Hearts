@@ -75,7 +75,7 @@ module WinProbability =
     /// before the deal to the game score after it (which should
     /// already include the shoot reward, if any). Each deal's
     /// payoffs sum to zero.
-    let payoff rules net before after =
-        let pBefore = winChances rules net before
-        let pAfter = winChances rules net after
+    let payoff rules model before after =
+        let pBefore = winChances rules model before
+        let pAfter = winChances rules model after
         Array.map2 (-) pAfter pBefore
