@@ -48,7 +48,7 @@ module WinProbability =
         use probs = softmax(output, 1)
 
             // average each seat's probability
-        let data = probs.data<float32>().ToNDArray() :?> float32[,]  // row = viewer, column = seat relative to the viewer
+        let data = probs.data<float32>().ToNDArray() :?> float32[,]   // row = viewer, column = seat relative to the viewer
         [|
             for seat in Seat.allSeats do
                 Seat.allSeats
