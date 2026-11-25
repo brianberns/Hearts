@@ -62,7 +62,7 @@ module GameScore =
                 // how many hearts the Q♠ taker also takes 
             let nQueenHearts = pickWeighted rng queenHeartWeights
 
-               // number of hearts taken by other players, in playing order after the Q♠ taker
+                // number of hearts taken by other players, in playing order after the Q♠ taker
             let others =
                 (Array.zeroCreate (Seat.numSeats - 1),
                 seq { 1 .. numHearts - nQueenHearts })
