@@ -14,26 +14,35 @@ open Hearts.Model
 
 module Program =
 
-    /// Generates an infinite sequence of deals with rotating
+    /// Creates a deal for the given index.
+    let private createDeal rng iDeal =
+        let dealer =
+            enum<Seat> (iDeal % Seat.numSeats)
+        let dir =
+            enum<ExchangeDirection>
+                (iDeal % ExchangeDirection.numDirections)
+        let deck = Deck.shuffle rng
+        OpenDeal.fromDeck dealer dir deck
+
+    /// Generates an infinite sequence of game states with rotating
     /// dealers and exchange directions.
-    let private generate (rng : Random) =
-        Seq.initInfinite (fun iDeal ->
-            let dir =
-                enum<ExchangeDirection>
-                    (iDeal % ExchangeDirection.numDirections)
-            let deck = Deck.shuffle rng
-            let dealer = enum<Seat> (iDeal % Seat.numSeats)
-            OpenDeal.fromDeck dealer dir deck)
+    let private generate rules rng =
+        Seq.initInfinite (fun _ ->
+            GameScore.generate rules rng)   // infinite sequence of game scores
+            |> Seq.collect (
+                Seq.mapi (fun iDeal score ->
+                    let deal = createDeal rng iDeal
+                    Game.create deal score))
 
     /// Plays the given number of deals in parallel.
-    let private playDeals settings state numDeals =
+    let private playDeals (settings : Settings) state numDeals =
         let rng = Random()
-        generate rng
+        generate settings.Rules rng
             |> Seq.take numDeals
             |> Seq.toArray
-            |> Array.Parallel.map (fun deal ->
+            |> Array.Parallel.map (fun game ->
                 let rng = Random()   // give each deal its own RNG
-                Traverse.traverse settings state rng deal)
+                Traverse.traverse settings state rng game.Deal)
 
     /// Generates training data for the given iteration.
     let private generateSamples settings state =

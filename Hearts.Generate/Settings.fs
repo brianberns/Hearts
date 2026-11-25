@@ -2,11 +2,16 @@
 
 open System.IO
 open TorchSharp
+
+open Hearts
 open Hearts.Model
 
 /// Hyperparameters.
 type Settings =
     {
+        /// Rules to use for sample generation.
+        Rules : Rules
+
         /// Total number of deals to create when generating sample
         /// data at the start of each iteration.
         NumDealsPerIteration : int
@@ -53,6 +58,7 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
+            Rules = Rules.arena
 #if DEBUG
             NumDealsPerIteration = 50
 #else

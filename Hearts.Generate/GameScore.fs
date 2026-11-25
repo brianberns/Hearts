@@ -91,4 +91,3 @@ module GameScore =
             |> Seq.unfold (fun score ->
                 if GameScore.isOver rules.TieGame score then None
                 else Some (score, score + generateDealScore rng))
-            |> Seq.toArray
