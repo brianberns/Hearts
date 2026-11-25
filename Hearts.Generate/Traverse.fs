@@ -91,8 +91,9 @@ module Traverse =
 
         /// Game- or deal-level payoffs.
         let tryGetPayoff =
-            if settings.GameLevelPayoff then DealScore.tryGetPayoff
-            else failwith "Not yet supported"
+            if settings.GameLevelPayoff then
+                failwith "Not yet supported"
+            else DealScore.tryGetPayoff
 
         /// Top-level loop.
         let rec loop deal depth =
