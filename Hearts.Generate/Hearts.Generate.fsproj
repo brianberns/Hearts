@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="Settings.fs" />
     <Compile Include="ZeroSum.fs" />
+    <Compile Include="WinProbability.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Inference.fs" />
     <Compile Include="State.fs" />
