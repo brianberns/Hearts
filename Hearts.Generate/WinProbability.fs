@@ -1,5 +1,7 @@
 namespace Hearts.Generate
 
+open System.IO
+
 open TorchSharp
 open type torch.nn
 open type torch.nn.functional
@@ -14,8 +16,11 @@ open Hearts.Model
 /// my changes.
 module WinProbability =
 
-    /// Loads trained model from the given file.
-    let load (path : string) : Model =
+    /// Loads trained win probability model.
+    let load settings : Model =
+        assert(settings.GameLevelPayoff)
+
+            // create model
         let hiddenSize = 64
         let model =
             Sequential(
@@ -24,7 +29,12 @@ module WinProbability =
                 Linear(hiddenSize, hiddenSize),
                 ReLU(),
                 Linear(hiddenSize, Seat.numSeats))   // output: each seat's chance of winning the game
-        model.load(path) |> ignore
+
+            // load weights
+        Path.Combine(settings.ModelDirPath, "WinProbability.pt")
+            |> model.load
+            |> ignore
+
         model.eval()
         model
 

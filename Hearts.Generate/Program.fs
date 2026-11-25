@@ -26,17 +26,20 @@ module Program =
             OpenDeal.fromDeck dealer dir deck)
 
     /// Plays the given number of deals in parallel.
-    let private playDeals settings iteration numDeals =
+    let private playDeals
+        settings iteration winProbModelOpt numDeals =
         let rng = Random()
         generate rng
             |> Seq.take numDeals
             |> Seq.toArray
             |> Array.Parallel.map (fun deal ->
                 let rng = Random()   // give each deal its own RNG
-                Traverse.traverse settings iteration deal rng)
+                Traverse.traverse
+                    settings iteration winProbModelOpt deal rng)
 
     /// Generates training data for the given iteration.
-    let private generateSamples settings iteration state =
+    let private generateSamples
+        settings iteration state winProbModelOpt =
 
         /// TensorBoard logging.
         let log value step =
@@ -61,7 +64,7 @@ module Program =
 
                     // generate samples
                 let samples =
-                    playDeals settings iteration numDeals
+                    playDeals settings iteration winProbModelOpt numDeals
                         |> Inference.complete
                             settings.InferenceBatchSize
                             state.ModelOpt
@@ -114,7 +117,7 @@ module Program =
             printfn $"   Model input size: {Model.inputSize}"
             printfn $"   Model output size: {Model.outputSize}"
 
-            // initialize model, if specified
+            // initialize advantage model, if specified
         let modelOpt =
             modelPathOpt
                 |> Option.map (fun modelPath ->
@@ -148,9 +151,16 @@ module Program =
                 |> AdvantageSampleStore.create iteration
                 |> AdvantageState.create modelOpt
 
+            // initialize win probability model?
+        let winProbModelOpt =
+            if settings.GameLevelPayoff then
+                Some (WinProbability.load settings)
+            else None
+
             // generate samples
         let stopwatch = Stopwatch.StartNew()
-        let numSamples = generateSamples settings iteration state
+        let numSamples =
+            generateSamples settings iteration state winProbModelOpt
         if settings.Verbose then
             printfn $"{numSamples} samples generated in {stopwatch.Elapsed}"
 

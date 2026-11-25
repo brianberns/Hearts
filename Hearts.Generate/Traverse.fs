@@ -87,7 +87,7 @@ module Traverse =
     let private rules = Rules.arena
 
     /// Evaluates the utility of the given deal.
-    let traverse settings iter deal (rng : Random) =
+    let traverse settings iter winProbModelOpt deal (rng : Random) =
 
         /// Game- or deal-level payoffs.
         let tryGetPayoff =
