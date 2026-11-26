@@ -25,7 +25,9 @@ module Program =
         OpenDeal.fromDeck dealer dir deck
 
     /// Generates an infinite sequence of game states with rotating
-    /// dealers and exchange directions.
+    /// dealers and exchange directions. Each game state has a
+    /// current deal, so this is best thought of as a sequence of
+    /// deals within and across games.
     let private generate rules rng =
         Seq.initInfinite (fun _ ->
             GameScore.generate rules rng)   // infinite sequence of game scores
@@ -38,7 +40,7 @@ module Program =
     let private playDeals settings state games =
         games
             |> Array.Parallel.map (fun (game : Game) ->
-                let rng = Random()   // give each game its own RNG
+                let rng = Random()   // give each deal its own RNG
                 Traverse.traverse settings state rng game.Deal)
 
     /// Generates training data for the given iteration.
@@ -53,17 +55,17 @@ module Program =
             // start TensorBoard y-axis at 0
         log 0f 0
 
-            // divide games for this iteration into batches,
+            // divide deals for this iteration into batches,
             // including possible runt batch at the end
-        let gameBatches =
+        let dealBatches =
             let rng = Random()
             generate settings.Rules rng
-                |> Seq.take settings.NumGamesPerIteration
-                |> Seq.chunkBySize settings.GameBatchSize
+                |> Seq.take settings.NumDealsPerIteration
+                |> Seq.chunkBySize settings.DealBatchSize
 
             // generate samples for each batch
         Array.sum [|
-            for iBatch, games in Seq.indexed gameBatches do
+            for iBatch, games in Seq.indexed dealBatches do
 
                     // generate samples
                 let samples =
@@ -75,10 +77,10 @@ module Program =
                     // save samples
                 AdvantageSampleStore.appendSamples
                     samples state.SampleStore
-                let nGames = games.Length
+                let nDeals = games.Length                        // each game state has one current deal
                 log
-                    (float32 samples.Length / float32 nGames)    // average number of generated samples per game in this batch
-                    (iBatch * settings.GameBatchSize + nGames)   // total number of games so far
+                    (float32 samples.Length / float32 nDeals)    // average number of generated samples per deal in this batch
+                    (iBatch * settings.DealBatchSize + nDeals)   // total number of deals so far
 
                 samples.Length
         |]
@@ -110,8 +112,8 @@ module Program =
             printfn "Settings:"
             printfn $"   Server garbage collection: {GCSettings.IsServerGC}"
             printfn $"   Iteration: {iteration}"
-            printfn $"   # games to generate: {settings.NumGamesPerIteration}"
-            printfn $"   Game batch size: {settings.GameBatchSize}"
+            printfn $"   # deals to generate: {settings.NumDealsPerIteration}"
+            printfn $"   Deal batch size: {settings.DealBatchSize}"
             printfn $"   Inference batch size: {settings.InferenceBatchSize}"
             printfn $"   Sample branch rate: {settings.SampleBranchRate}"
             printfn $"   Game level payoff: {settings.GameLevelPayoff}"
