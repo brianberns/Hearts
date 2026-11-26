@@ -20,9 +20,11 @@ made since then.
   holds samples from every iteration, weighted by iteration t, so that each card's target is close to
   its cumulative regret. That history keeps good cards clearly positive even after the latest
   iteration's regrets have fallen to about 0. The plan is to use samples from every iteration,
-  including random Gen 1, taking each iteration in proportion to its weight (t, or √t) and giving
-  every sample a loss weight of 1. Weighting both the share of samples and the loss would count an
-  iteration t².
+  including random Gen 1, taking each iteration in proportion to its weight t and giving every
+  sample a loss weight of 1. The trainer already weights by t: `toWeights` returns √t, but it scales
+  both the outputs and the targets inside the MSE, so the loss counts (√t)² = t. So when samples are
+  taken in proportion to t, `toWeights` must return 1; weighting both the share of samples and the
+  loss would count an iteration t².
 
 ## Rules (`Rules.arena`, Hearts Arena's `std-1`)
 
