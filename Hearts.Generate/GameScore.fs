@@ -91,3 +91,52 @@ module GameScore =
             |> Seq.unfold (fun score ->
                 if GameScore.isOver rules.TieGame score then None
                 else Some (score, score + generateDealScore rng))
+
+    /// Every deal score that generateDealScore can produce, with
+    /// its probability: a moon shot by each seat, or the Q♠ to
+    /// each seat with each number of hearts, and each split of
+    /// the remaining hearts that the Pólya urn can make (whose
+    /// chance is the Dirichlet-multinomial's).
+    let dealOutcomes =
+
+            // x (x + 1) ... (x + n - 1)
+        let rising (x : float) n =
+            Seq.fold (fun acc k ->
+                acc * (x + float k)) 1.0 (seq { 0 .. n - 1 })
+        let factorial n = rising 1.0 n
+        let totalWeight = Array.sum queenHeartWeights
+
+        [|
+                // moon shot
+            for shooter in 0 .. Seat.numSeats - 1 do
+                let points =
+                    Array.init Seat.numSeats (fun iSeat ->
+                        if iSeat = shooter then 0
+                        else ClosedDeal.numPointsPerDeal)
+                yield points, shootRate / float Seat.numSeats
+
+                // not a moon shot
+            for queenSeat in 0 .. Seat.numSeats - 1 do
+                for nQueenHearts in 0 .. numHearts - 1 do
+                    let nOthers = numHearts - nQueenHearts
+                    for n1 in 0 .. nOthers do
+                        for n2 in 0 .. nOthers - n1 do
+                            let counts = [| n1; n2; nOthers - n1 - n2 |]   // the other players' hearts
+                            let split =
+                                factorial nOthers
+                                    / (counts |> Array.map factorial |> Array.reduce (*))
+                                    * (counts |> Array.map (rising alpha) |> Array.reduce (*))
+                                    / rising (3.0 * alpha) nOthers
+                            let points =
+                                Array.init Seat.numSeats (fun iSeat ->
+                                    let offset = (iSeat - queenSeat + Seat.numSeats) % Seat.numSeats
+                                    if offset = 0 then queenPoints + nQueenHearts
+                                    else counts[offset - 1])
+                            yield points,
+                                (1.0 - shootRate) / float Seat.numSeats
+                                    * queenHeartWeights[nQueenHearts] / totalWeight
+                                    * split
+        |]
+            |> Array.groupBy fst   // some deal scores arise more than one way
+            |> Array.map (fun (points, group) ->
+                points, Array.sumBy snd group)

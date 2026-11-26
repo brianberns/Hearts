@@ -91,19 +91,13 @@ module Traverse =
 
     /// Evaluates the utility of the current deal within the
     /// given game.
-    let traverse settings state (rng : Random) (game : Game) =
-        assert(
-            state.WinProbabilityModelOpt.IsSome
-                = settings.GameLevelPayoff)
+    let traverse
+        (settings : Settings) state (rng : Random) (game : Game) =
 
             // cache win chances by game score for speed
         let getWinChances =
-            match state.WinProbabilityModelOpt with
-                | Some winProbModel ->
-                    memoize (
-                        WinProbability.getWinChances
-                            settings.Rules winProbModel)
-                | None -> fun _ -> Array.empty   // not used
+            memoize (
+                WinChance.getWinChances settings.Rules)
 
             // each player's win probability at the start of the deal
         let beforeProbs = getWinChances game.Score

@@ -123,12 +123,6 @@ module Program =
             printfn $"   Model input size: {Model.inputSize}"
             printfn $"   Model output size: {Model.outputSize}"
 
-            // initialize win probability model?
-        let winProbModelOpt =
-            if settings.GameLevelPayoff then
-                Some (WinProbability.load settings)
-            else None
-
             // initialize advantage model, if specified
         let advModelOpt =
             advModelPathOpt
@@ -161,7 +155,7 @@ module Program =
                 printfn $"Creating sample store: {path}"
             path
                 |> AdvantageSampleStore.create iteration
-                |> AdvantageState.create winProbModelOpt advModelOpt
+                |> AdvantageState.create advModelOpt
 
             // generate samples
         let stopwatch = Stopwatch.StartNew()
