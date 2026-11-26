@@ -39,9 +39,8 @@ module Program =
     /// Plays the current deal in the given games in parallel.
     let private playDeals settings state games =
         games
-            |> Array.Parallel.map (fun (game : Game) ->
-                let rng = Random()   // give each deal its own RNG
-                Traverse.traverse settings state rng game.Deal)
+            |> Array.Parallel.map (
+                Traverse.traverse settings state (Random()))   // give each deal its own RNG
 
     /// Generates training data for the given iteration.
     let private generateSamples settings state =

@@ -84,13 +84,39 @@ module Node =
 module Traverse =
 
     /// Evaluates the utility of the given deal.
-    let traverse settings state (rng : Random) deal =
+    let traverse settings state (rng : Random) (game : Game) =
+        assert(
+            state.WinProbabilityModelOpt.IsSome
+                = settings.GameLevelPayoff)
+
+            // game score does not change within traversal of a deal
+        let gameScore =
+            if settings.GameLevelPayoff then game.Score
+            else Score.zero   // ignore incoming game score
+
+            // each player's win probability at the start of the deal
+        let beforeProbs =
+            match state.WinProbabilityModelOpt with
+                | Some winProbModel ->
+                    WinProbability.getWinChances
+                        settings.Rules
+                        winProbModel
+                        gameScore
+                | None -> Array.empty   // not used
 
         /// Game- or deal-level payoffs.
-        let tryGetPayoff =
-            if settings.GameLevelPayoff then
-                failwith "Not yet supported"
-            else DealScore.tryGetPayoff
+        let tryGetPayoff deal =
+            match state.WinProbabilityModelOpt with
+                | Some winProbModel ->
+                    Game.create deal gameScore
+                        |> Game.tryUpdateScore settings.Rules.MoonShotScoring
+                        |> Option.map (fun game ->
+                            let afterProbs =
+                                WinProbability.getWinChances
+                                    settings.Rules winProbModel game.Score
+                            Array.map2 (-) afterProbs beforeProbs)
+                | None ->
+                    DealScore.tryGetPayoff deal
 
         /// Top-level loop.
         let rec loop deal depth =
@@ -106,8 +132,7 @@ module Traverse =
         /// Recurses for non-terminal game state.
         and loopNonTerminal deal depth =
             let infoSet =
-                deal
-                    |> Game.createFirst                               // as if this is the first deal of a game
+                Game.create deal gameScore
                     |> Game.currentInfoSet settings.Rules
             let legalActions = infoSet.LegalActions
             if legalActions.Length = 1 then
@@ -179,4 +204,4 @@ module Traverse =
                 [| result |]
                 (Array.exactlyOne >> Complete)
 
-        loop deal 0
+        loop game.Deal 0
