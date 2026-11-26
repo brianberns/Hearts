@@ -15,6 +15,9 @@
 ///        the game's winner, the data for W (each seat's chance of winning the game from a deal's start)
 ///    wfit <data.csv> <output.pt> <epochs>
 ///        fits W to wdata's data from the four game scores, and reports its loss, calibration and some values
+///    wexact <data.csv> <gamescore | empirical> [output.bin]
+///        computes W exactly for independent deals (Hearts.Generate's GameScore model, or the data's own deals),
+///        and reports its loss, calibration and some values on the data's games, as wfit does
 ///    tune <seed> <games> [variation ...]
 ///        variations of Killer Hearts V8 (see Tune.variations), each vs three V8
 ///    duplicate <seed> <games>
@@ -34,11 +37,13 @@ let main argv =
         | [| "phase0"; production; weakened; games |] -> Phase0.run production weakened (int games); 0
         | [| "wdata"; model; seed; games; output |] -> WData.run model (int seed) (int games) output; 0
         | [| "wfit"; data; output; epochs |] -> WFit.run data output (int epochs); 0
+        | [| "wexact"; data; model |] -> WExact.run data model None; 0
+        | [| "wexact"; data; model; output |] -> WExact.run data model (Some output); 0
         | [| "benchmark"; model; seed; games |] -> Benchmark.run model (int seed) (int games); 0
         | args when args.Length >= 3 && args[0] = "tune" -> Tune.run (int args[1]) (int args[2]) (List.ofArray args[3..]); 0
         | [| "duplicate"; seed; games |] -> Duplicate.run (int seed) (int games); 0
         | [| "gpu"; model; games; rounds |] -> Gpu.run model (int games) (int rounds) false; 0
         | [| "gpu"; model; games; rounds; "scoped" |] -> Gpu.run model (int games) (int rounds) true; 0
         | _ ->
-            eprintfn "usage: Hearts.Experiments bench <model> <games> [torch threads] | phase0 <production model> <weakened model> <games> | gpu <model> <games> <rounds> [scoped] | benchmark <model> <seed> <games> | wdata <model> <seed> <games> <output.csv> | wfit <data.csv> <output.pt> <epochs> | tune <seed> <games> [variation ...] | duplicate <seed> <games>"
+            eprintfn "usage: Hearts.Experiments bench <model> <games> [torch threads] | phase0 <production model> <weakened model> <games> | gpu <model> <games> <rounds> [scoped] | benchmark <model> <seed> <games> | wdata <model> <seed> <games> <output.csv> | wfit <data.csv> <output.pt> <epochs> | wexact <data.csv> <gamescore | empirical> [output.bin] | tune <seed> <games> [variation ...] | duplicate <seed> <games>"
             1

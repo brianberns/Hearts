@@ -15,6 +15,7 @@
     <Compile Include="Benchmark.fs" />
     <Compile Include="WData.fs" />
     <Compile Include="WFit.fs" />
+    <Compile Include="WExact.fs" />
     <Compile Include="Duplicate.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

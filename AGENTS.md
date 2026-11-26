@@ -104,6 +104,12 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
   over the seats. On 100,000 games of the i005 model (2026-11-24) its validation loss was 1.0397 (a
   uniform guess: 1.3863), well calibrated; the pass direction improved it by only 0.0001, so W leaves it
   out.
+- `wexact <data.csv> <gamescore | empirical> [output.bin]` computes W exactly, for a game whose deals are
+  independent draws from one distribution: Hearts.Generate's `GameScore` model, or the data's own deals.
+  Every deal adds 26 or 78 points, so one pass down from the highest scores computes it, with no sampling.
+  On the i005 data (2026-11-26) its validation loss was 1.03765 (`gamescore`) and 1.03772 (`empirical`),
+  better than wfit's 1.0397, and well calibrated. It takes 15–50 minutes; the table holds W for each
+  sorted score under 100 (4,421,275 states, four float32 each).
 - `tune <seed> <games> [variation ...]` compares variations of Killer Hearts V8 (`Tune.variations`)
   against three V8. Confirm a winner on a fresh seed before adopting it.
 
