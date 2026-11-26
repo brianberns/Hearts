@@ -264,11 +264,16 @@ module Program =
                 // whole-store expectations
             if numSamples = 0L then
                 warnings.Add("no samples")
-            elif layout.GameScoreWidth > 0 && stats.NumGameScore = 0L then
-                if level = GameLevel then
-                    errors.Add("not game-aware: every game score is 0-0-0-0")
-                else
-                    notes.Add("every game score is 0-0-0-0: the traversal didn't see the game score")
+            elif layout.GameScoreWidth > 0 then
+                match level with
+                    | GameLevel when stats.NumGameScore = 0L ->
+                        errors.Add("not game-aware: every game score is 0-0-0-0")
+                    | DealLevel when stats.NumGameScore > 0L ->
+                            // a deal-level player ignores the game score, so it is always encoded as 0-0-0-0
+                        errors.Add(
+                            $"deal-level, but {stats.NumGameScore:N0} samples (%.1f{percent stats.NumGameScore}%%) have a game score "
+                                + "other than 0-0-0-0 (deal-level samples must encode it as 0-0-0-0)")
+                    | _ -> ()
 
                 // the trainer's reader must agree with the validator's
             if layout = Layout.v2 && layout.NumInputs = Hearts.Model.Model.inputSize
