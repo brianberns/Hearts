@@ -109,12 +109,10 @@ module Traverse =
             match state.WinProbabilityModelOpt with
                 | Some winProbModel ->
                     Game.create deal gameScore
-                        |> Game.tryUpdateScore settings.Rules.MoonShotScoring
-                        |> Option.map (fun game ->
-                            let afterProbs =
-                                WinProbability.getWinChances
-                                    settings.Rules winProbModel game.Score
-                            Array.map2 (-) afterProbs beforeProbs)
+                        |> GameScore.tryGetPayoff
+                            settings.Rules
+                            winProbModel
+                            beforeProbs
                 | None ->
                     DealScore.tryGetPayoff deal
 

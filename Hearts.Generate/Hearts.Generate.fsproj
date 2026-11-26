@@ -8,8 +8,8 @@
   <ItemGroup>
     <Compile Include="Settings.fs" />
     <Compile Include="DealScore.fs" />
-    <Compile Include="GameScore.fs" />
     <Compile Include="WinProbability.fs" />
+    <Compile Include="GameScore.fs" />
     <Compile Include="State.fs" />
     <Compile Include="Traverse.fs" />
     <Compile Include="Inference.fs" />

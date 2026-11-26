@@ -91,3 +91,14 @@ module GameScore =
             |> Seq.unfold (fun score ->
                 if GameScore.isOver rules.TieGame score then None
                 else Some (score, score + generateDealScore rng))
+
+    /// Computes the payoff for the given game's deal, if it is
+    /// inevitable.
+    let tryGetPayoff rules winProbModel beforeProbs game =
+        game
+            |> Game.tryUpdateScore rules.MoonShotScoring
+            |> Option.map (fun game ->
+                let afterProbs =
+                    WinProbability.getWinChances
+                        rules winProbModel game.Score
+                Array.map2 (-) afterProbs beforeProbs)
