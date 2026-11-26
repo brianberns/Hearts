@@ -13,6 +13,17 @@ made since then.
   cards it would receive before it chose its own pass. In the production run's Gen 1 stores, that
   affected about 9% of all samples.
 
+## Training data (planned)
+
+- **Samples from every iteration.** The production run trained each model on two iterations' samples:
+  iteration 1 with the latest, and at iteration 5 the latest two. Deep CFR trains on a buffer that
+  holds samples from every iteration, weighted by iteration t, so that each card's target is close to
+  its cumulative regret. That history keeps good cards clearly positive even after the latest
+  iteration's regrets have fallen to about 0. The plan is to use samples from every iteration,
+  including random Gen 1, taking each iteration in proportion to its weight (t, or √t) and giving
+  every sample a loss weight of 1. Weighting both the share of samples and the loss would count an
+  iteration t².
+
 ## Rules (`Rules.arena`, Hearts Arena's `std-1`)
 
 - **Only a heart breaks hearts** (10f0996, 2026-11-23). The Q♠ no longer does. Leading a heart before
