@@ -92,8 +92,11 @@ module GameScore =
                 if GameScore.isOver rules.TieGame score then None
                 else Some (score, score + generateDealScore rng))
 
-    /// Computes the payoff for the given game's deal, if it is
-    /// inevitable.
+    /// Computes player payoffs for the given game's deal, if
+    /// they are inevitable. Payoff is the change in a player's
+    /// chance of winning the game, from the game score before
+    /// the deal to the game score after it (which should already
+    /// include the shoot reward, if any). Payoffs sum to zero.
     let tryGetPayoff rules winProbModel beforeProbs game =
         game
             |> Game.tryUpdateScore rules.MoonShotScoring

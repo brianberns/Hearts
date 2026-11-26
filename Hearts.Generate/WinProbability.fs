@@ -80,13 +80,3 @@ module WinProbability =
                 |> Array.map (fun seat ->
                     if winners.Contains(seat) then share
                     else 0.0f)
-
-    /// Gets each seat's payoff for a deal, indexed by seat: the
-    /// change in its chance of winning the game, from the game
-    /// score before the deal to the game score after it (which
-    /// should already include the shoot reward, if any). Each
-    /// deal's payoffs sum to zero.
-    let getPayoff rules model before after =
-        let beforeProb = getWinChances rules model before
-        let afterProb = getWinChances rules model after
-        Array.map2 (-) afterProb beforeProb

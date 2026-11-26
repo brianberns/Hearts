@@ -20,7 +20,8 @@ module DealScore =
                 otherAvg - float32 pt
         |]
 
-    /// Computes the payoff for the given deal, if it is inevitable.
+    /// Computes player payoffs for the given deal, if they are
+    /// inevitable. 
     let tryGetPayoff deal =
         option {
             let! game =
