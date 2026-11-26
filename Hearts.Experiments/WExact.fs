@@ -15,7 +15,7 @@ open System.Threading.Tasks
 module WExact =
 
     /// One outcome of a deal: each seat's points, and its probability.
-    type private Outcome = { Points : int[]; Prob : float }
+    type Outcome = { Points : int[]; Prob : float }
 
     let private numSeats = 4
     let private threshold = 100
@@ -37,7 +37,7 @@ module WExact =
     /// The deal scores of Hearts.Generate/GameScore.fs, whose constants these copy: a moon shot 18.5% of
     /// the time; otherwise the Q♠ to a random seat, with some hearts, and the remaining hearts to the other
     /// three by a Pólya urn, whose chance of each split is the Dirichlet-multinomial's.
-    let private gameScoreOutcomes () =
+    let gameScoreOutcomes () =
         let shootRate = 0.185
         let queenHeartWeights =
             [| 118.0; 94.0; 84.0; 94.0; 91.0; 81.0; 74.0; 70.0; 69.0; 65.0; 56.0; 60.0; 42.0 |]
@@ -66,9 +66,9 @@ module WExact =
         |]
 
     /// One deal at its start, from WData.
-    type private Row = { Scores : int[]; Winner : int; Game : int }
+    type Row = { Scores : int[]; Winner : int; Game : int }
 
-    let private readRows (path : string) =
+    let readRows (path : string) =
         File.ReadLines(path)
             |> Seq.skip 1
             |> Seq.map (fun line ->
@@ -105,16 +105,16 @@ module WExact =
         |], deals.Length
 
     /// Binomial coefficients, for indexing sorted scores.
-    let private binom =
+    let binom =
         Array2D.init 110 5 (fun n k ->
             if k > n then 0
             else int (Seq.fold (fun acc i -> acc * int64 (n - i) / int64 (i + 1)) 1L (seq { 0 .. k - 1 })))
 
     /// The index of sorted scores a <= b <= c <= d < 100 (the combinatorial number system).
-    let inline private index a b c d =
+    let inline index a b c d =
         binom[a, 1] + binom[b + 1, 2] + binom[c + 2, 3] + binom[d + 3, 4]
 
-    let private numStates = binom[threshold + 3, 4]
+    let numStates = binom[threshold + 3, 4]
 
     /// Sorts four scores, answering the seats in order of their scores.
     let private sortSeats (t : int[]) =

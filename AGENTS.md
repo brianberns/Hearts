@@ -110,6 +110,11 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
   On the i005 data (2026-11-26) its validation loss was 1.03765 (`gamescore`) and 1.03772 (`empirical`),
   better than wfit's 1.0397, and well calibrated. It takes 15–50 minutes; the table holds W for each
   sorted score under 100 (4,421,275 states, four float32 each).
+- `wcurve <data.csv> <table.bin> <steps> [form ...]` fits closed forms to wexact's table. The best, a
+  softmax of −a·sᵢ/(b + D)^c with D the leader's distance from 100 (a = 0.542, b = 13.9, c = 0.531), scored
+  1.03962, no better than wfit's network; the misses are at the end of the game, where a moon shot or a
+  deal in which several players take no points decides it. The same form one deal ahead (the next deal's
+  outcomes from GameScore exactly, then the form) scored 1.03800, close to the exact 1.03765 (2026-11-26).
 - `tune <seed> <games> [variation ...]` compares variations of Killer Hearts V8 (`Tune.variations`)
   against three V8. Confirm a winner on a fresh seed before adopting it.
 
