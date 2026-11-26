@@ -83,7 +83,8 @@ module Node =
 
 module Traverse =
 
-    /// Evaluates the utility of the given deal.
+    /// Evaluates the utility of the current deal within the
+    /// given game.
     let traverse settings state (rng : Random) (game : Game) =
         assert(
             state.WinProbabilityModelOpt.IsSome
