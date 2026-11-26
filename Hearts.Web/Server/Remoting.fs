@@ -18,7 +18,7 @@ module AdvantageModel =
     let private connect dir =
         let model =
             new AdvantageModel(
-                hiddenSize = 1080,   // inherited from original deal-level model
+                AdvantageModel.standardHiddenSize,
                 numHiddenLayers = 4,
                 dropoutRate = 0.0,
                 device = TorchSharp.torch.CPU)

@@ -89,3 +89,6 @@ module AdvantageModel =
                     |> array2D
             tensor(encoded, device = model.Device)
         input --> model
+
+    /// Standard hidden size.
+    let standardHiddenSize = 1080   // inherited from original deal-level model

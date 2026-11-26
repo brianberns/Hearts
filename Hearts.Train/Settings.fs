@@ -50,7 +50,7 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
-            HiddenSize = 1080   // inherited from original deal-level model
+            HiddenSize = AdvantageModel.standardHiddenSize
             NumHiddenLayers = 4
             NumTrainingEpochs = 100
             TrainingBatchSize = 500_000
