@@ -85,8 +85,8 @@ module Node =
 module Traverse =
 
     /// Memoizes the given function.
-    let private memoize f =
-        let cache = ConcurrentDictionary<_, _>()
+    let private memoize (f : 'key -> 'value) =
+        let cache = ConcurrentDictionary<'key, 'value>()
         fun key -> cache.GetOrAdd(key, f)
 
     /// Evaluates the utility of the current deal within the
