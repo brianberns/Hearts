@@ -96,11 +96,6 @@ module Traverse =
             state.WinProbabilityModelOpt.IsSome
                 = settings.GameLevelPayoff)
 
-            // game score does not change within traversal of a deal
-        let gameScore =
-            if settings.GameLevelPayoff then game.Score
-            else Score.zero   // ignore incoming game score
-
             // cache win chances by game score for speed
         let getWinChances =
             match state.WinProbabilityModelOpt with
@@ -111,7 +106,7 @@ module Traverse =
                 | None -> fun _ -> Array.empty   // not used
 
             // each player's win probability at the start of the deal
-        let beforeProbs = getWinChances gameScore
+        let beforeProbs = getWinChances game.Score
 
         /// Computes player payoffs for the given game's deal, if
         /// they are inevitable. Game-level payoff is the change
@@ -220,4 +215,7 @@ module Traverse =
                 [| result |]
                 (Array.exactlyOne >> Complete)
 
+        let game =
+            if settings.GameLevelPayoff then game
+            else { game with Score = Score.zero }   // ignore incoming game score
         loop game 0
