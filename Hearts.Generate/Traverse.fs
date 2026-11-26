@@ -87,14 +87,7 @@ module Traverse =
     /// Memoizes the given function.
     let private memoize f =
         let cache = ConcurrentDictionary<_, _>()
-        fun key ->
-            match cache.TryGetValue(key) with
-                | true, value -> value
-                | false, _ ->
-                    let value = f key
-                    let flag = cache.TryAdd(key, value)
-                    assert(flag)
-                    value
+        fun key -> cache.GetOrAdd(key, f)
 
     /// Evaluates the utility of the current deal within the
     /// given game.
