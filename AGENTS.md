@@ -115,6 +115,10 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
   1.03962, no better than wfit's network; the misses are at the end of the game, where a moon shot or a
   deal in which several players take no points decides it. The same form one deal ahead (the next deal's
   outcomes from GameScore exactly, then the form) scored 1.03800, close to the exact 1.03765 (2026-11-26).
+  This is the W that Hearts.Generate uses for game-level payoffs (`WinChance`, with `GameScore.dealOutcomes`),
+  in place of wfit's network since 60ea475. It reads GameScore's constants, so it follows any change to
+  them; the constants in `WinChance` come from wcurve and would need refitting if GameScore changed much.
+  It takes about 100 µs per game score, cached per traversal.
 - `tune <seed> <games> [variation ...]` compares variations of Killer Hearts V8 (`Tune.variations`)
   against three V8. Confirm a winner on a fresh seed before adopting it.
 
