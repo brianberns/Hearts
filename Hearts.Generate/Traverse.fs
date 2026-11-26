@@ -1,6 +1,7 @@
 ﻿namespace Hearts.Generate
 
 open System
+open System.Collections.Concurrent
 
 open MathNet.Numerics.LinearAlgebra
 
@@ -83,6 +84,18 @@ module Node =
 
 module Traverse =
 
+    /// Memoizes the given function.
+    let private memoize f =
+        let cache = ConcurrentDictionary<_, _>()
+        fun key ->
+            match cache.TryGetValue(key) with
+                | true, value -> value
+                | false, _ ->
+                    let value = f key
+                    let flag = cache.TryAdd(key, value)
+                    assert(flag)
+                    value
+
     /// Evaluates the utility of the current deal within the
     /// given game.
     let traverse settings state (rng : Random) (game : Game) =
@@ -95,27 +108,39 @@ module Traverse =
             if settings.GameLevelPayoff then game.Score
             else Score.zero   // ignore incoming game score
 
-            // each player's win probability at the start of the deal
-        let beforeProbs =
+            // cache win chances by game score for speed
+        let getWinChances =
             match state.WinProbabilityModelOpt with
                 | Some winProbModel ->
-                    WinProbability.getWinChances
-                        settings.Rules
-                        winProbModel
-                        gameScore
-                | None -> Array.empty   // not used
+                    memoize (
+                        WinProbability.getWinChances
+                            settings.Rules winProbModel)
+                | None -> fun _ -> failwith "Unexpected"
+
+            // each player's win probability at the start of the deal
+        let beforeProbs = getWinChances gameScore
+
+        /// Computes player payoffs for the given game's deal, if
+        /// they are inevitable. Game-level payoff is the change
+        /// in a player's chance of winning the game, from the game
+        /// score before the deal to the game score after it.
+        /// Payoffs sum to zero.
+        let tryGetGamePayoff game =
+            option {
+                let! game =
+                    Game.tryUpdateScore
+                        settings.Rules.MoonShotScoring game
+                let afterProbs = getWinChances game.Score
+                return Array.map2 (-) afterProbs beforeProbs
+            }
 
         /// Game- or deal-level payoffs.
         let tryGetPayoff deal =
-            match state.WinProbabilityModelOpt with
-                | Some winProbModel ->
-                    Game.create deal gameScore
-                        |> GameScore.tryGetPayoff
-                            settings.Rules
-                            winProbModel
-                            beforeProbs
-                | None ->
-                    DealScore.tryGetPayoff deal
+            if settings.GameLevelPayoff then
+                Game.create deal gameScore
+                    |> tryGetGamePayoff
+            else
+                DealScore.tryGetPayoff deal
 
         /// Top-level loop.
         let rec loop deal depth =
