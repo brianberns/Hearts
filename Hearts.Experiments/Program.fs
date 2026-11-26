@@ -17,6 +17,9 @@
 ///        fits W to wdata's data from the four game scores, and reports its loss, calibration and some values
 ///    tune <seed> <games> [variation ...]
 ///        variations of Killer Hearts V8 (see Tune.variations), each vs three V8
+///    duplicate <seed> <games>
+///        how much duplicate deals narrow a win rate's error bar: Gemini and Killer Hearts V8, each vs three
+///        of the other
 module Hearts.Experiments.Program
 
 open System
@@ -33,8 +36,9 @@ let main argv =
         | [| "wfit"; data; output; epochs |] -> WFit.run data output (int epochs); 0
         | [| "benchmark"; model; seed; games |] -> Benchmark.run model (int seed) (int games); 0
         | args when args.Length >= 3 && args[0] = "tune" -> Tune.run (int args[1]) (int args[2]) (List.ofArray args[3..]); 0
+        | [| "duplicate"; seed; games |] -> Duplicate.run (int seed) (int games); 0
         | [| "gpu"; model; games; rounds |] -> Gpu.run model (int games) (int rounds) false; 0
         | [| "gpu"; model; games; rounds; "scoped" |] -> Gpu.run model (int games) (int rounds) true; 0
         | _ ->
-            eprintfn "usage: Hearts.Experiments bench <model> <games> [torch threads] | phase0 <production model> <weakened model> <games> | gpu <model> <games> <rounds> [scoped] | benchmark <model> <seed> <games> | wdata <model> <seed> <games> <output.csv> | wfit <data.csv> <output.pt> <epochs> | tune <seed> <games> [variation ...]"
+            eprintfn "usage: Hearts.Experiments bench <model> <games> [torch threads] | phase0 <production model> <weakened model> <games> | gpu <model> <games> <rounds> [scoped] | benchmark <model> <seed> <games> | wdata <model> <seed> <games> <output.csv> | wfit <data.csv> <output.pt> <epochs> | tune <seed> <games> [variation ...] | duplicate <seed> <games>"
             1

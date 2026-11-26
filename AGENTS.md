@@ -107,7 +107,14 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
 - `tune <seed> <games> [variation ...]` compares variations of Killer Hearts V8 (`Tune.variations`)
   against three V8. Confirm a winner on a fresh seed before adopting it.
 
-A difference of 0.01 in win rate needs about 10,000 games to see, and 40,000 to trust.
+- `duplicate <seed> <games>` measures how much duplicate deals narrow a win rate's error bar, compared
+  with independent games. For whole games between different players they barely help (2026-11-25):
+  Gemini vs Killer V8 ×0.97–1.00, and the production model vs Killer V8 ×0.98 on 8,000 games, measured
+  with a bb2d763 build. For near-identical players they help: Killer V8 with a Shoot shift of ±4 vs V8
+  ×0.64–0.69, as good as 2.1–2.4 times the games.
+
+A difference of 0.01 in win rate needs about 10,000 games to see, and 40,000 to trust. Duplicate deals
+don't change that unless the two players are nearly the same.
 
 ## Validating sample stores (`Hearts.ValidateSamples`)
 
