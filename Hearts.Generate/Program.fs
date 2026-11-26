@@ -34,14 +34,11 @@ module Program =
                     let deal = createDeal rng iDeal
                     Game.create deal score))
 
-    /// Plays the given number of deals in parallel.
-    let private playDeals (settings : Settings) state numDeals =
-        let rng = Random()
-        generate settings.Rules rng
-            |> Seq.take numDeals
-            |> Seq.toArray
-            |> Array.Parallel.map (fun game ->
-                let rng = Random()   // give each deal its own RNG
+    /// Plays the current deal in the given games in parallel.
+    let private playDeals settings state games =
+        games
+            |> Array.Parallel.map (fun (game : Game) ->
+                let rng = Random()   // give each game its own RNG
                 Traverse.traverse settings state rng game.Deal)
 
     /// Generates training data for the given iteration.
@@ -56,21 +53,21 @@ module Program =
             // start TensorBoard y-axis at 0
         log 0f 0
 
-            // divide deals for this iteration into batches,
+            // divide games for this iteration into batches,
             // including possible runt batch at the end
-        let batchSizes =
-            Seq.replicate settings.NumDealsPerIteration ()
-                |> Seq.chunkBySize settings.DealBatchSize
-                |> Seq.map _.Length
+        let gameBatches =
+            let rng = Random()
+            generate settings.Rules rng
+                |> Seq.take settings.NumGamesPerIteration
+                |> Seq.chunkBySize settings.GameBatchSize
 
             // generate samples for each batch
         Array.sum [|
-            for iBatch, numDeals in Seq.indexed batchSizes do
-                assert(numDeals <= settings.DealBatchSize)
+            for iBatch, games in Seq.indexed gameBatches do
 
                     // generate samples
                 let samples =
-                    playDeals settings state numDeals
+                    playDeals settings state games
                         |> Inference.complete
                             settings.InferenceBatchSize
                             state.AdvantageModelOpt
@@ -78,9 +75,10 @@ module Program =
                     // save samples
                 AdvantageSampleStore.appendSamples
                     samples state.SampleStore
+                let nGames = games.Length
                 log
-                    (float32 samples.Length / float32 numDeals)    // average number of generated samples per deal in this batch
-                    (iBatch * settings.DealBatchSize + numDeals)   // total number of deals so far
+                    (float32 samples.Length / float32 nGames)    // average number of generated samples per game in this batch
+                    (iBatch * settings.GameBatchSize + nGames)   // total number of games so far
 
                 samples.Length
         |]
@@ -112,8 +110,8 @@ module Program =
             printfn "Settings:"
             printfn $"   Server garbage collection: {GCSettings.IsServerGC}"
             printfn $"   Iteration: {iteration}"
-            printfn $"   # deals to generate: {settings.NumDealsPerIteration}"
-            printfn $"   Deal batch size: {settings.DealBatchSize}"
+            printfn $"   # games to generate: {settings.NumGamesPerIteration}"
+            printfn $"   Game batch size: {settings.GameBatchSize}"
             printfn $"   Inference batch size: {settings.InferenceBatchSize}"
             printfn $"   Sample branch rate: {settings.SampleBranchRate}"
             printfn $"   Game level payoff: {settings.GameLevelPayoff}"

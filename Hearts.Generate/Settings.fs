@@ -12,14 +12,14 @@ type Settings =
         /// Rules to use for sample generation.
         Rules : Rules
 
-        /// Total number of deals to create when generating sample
+        /// Total number of games to create when generating sample
         /// data at the start of each iteration.
-        NumDealsPerIteration : int
+        NumGamesPerIteration : int
 
-        /// Number of deals to create per batch when generating
-        /// sample data at the start of each iteration. E.g. 8000
-        /// deals at 200 deals/batch is 40 batches.
-        DealBatchSize : int
+        /// Number of games to create per batch when generating
+        /// sample data at the start of each iteration. E.g. 800
+        /// games at 20 games/batch is 40 batches.
+        GameBatchSize : int
 
         /// Number of information sets in an inference batch.
         InferenceBatchSize : int
@@ -60,11 +60,11 @@ module Settings =
         {
             Rules = Rules.arena
 #if DEBUG
-            NumDealsPerIteration = 50
+            NumDealsPerIteration = 5
 #else
-            NumDealsPerIteration = 20_000
+            NumGamesPerIteration = 2_000
 #endif
-            DealBatchSize = 25
+            GameBatchSize = 3
             InferenceBatchSize = 50_000
             SampleBranchRate = 0.23
             GameLevelPayoff = false
@@ -80,11 +80,11 @@ module Settings =
     let write settings =
         let writer = settings.Writer
         writer.add_text(
-            $"settings/NumDealsPerIteration",
-            string settings.NumDealsPerIteration, 0)
+            $"settings/NumGamesPerIteration",
+            string settings.NumGamesPerIteration, 0)
         writer.add_text(
-            $"settings/DealBatchSize",
-            string settings.DealBatchSize, 0)
+            $"settings/GameBatchSize",
+            string settings.GameBatchSize, 0)
         writer.add_text(
             $"settings/InferenceBatchSize",
             string settings.InferenceBatchSize, 0)
