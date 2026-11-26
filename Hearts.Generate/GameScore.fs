@@ -129,7 +129,8 @@ module GameScore =
                                     / rising (3.0 * alpha) nOthers
                             let points =
                                 Array.init Seat.numSeats (fun iSeat ->
-                                    let offset = (iSeat - queenSeat + Seat.numSeats) % Seat.numSeats
+                                    let offset =
+                                        (iSeat - queenSeat + Seat.numSeats) % Seat.numSeats
                                     if offset = 0 then queenPoints + nQueenHearts
                                     else counts[offset - 1])
                             yield points,

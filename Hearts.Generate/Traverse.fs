@@ -100,7 +100,10 @@ module Traverse =
                 WinChance.getWinChances settings.Rules)
 
             // each player's win probability at the start of the deal
-        let beforeProbs = getWinChances game.Score
+        let beforeProbs =
+            if settings.GameLevelPayoff then
+                getWinChances game.Score
+            else Array.empty   // not used
 
         /// Computes player payoffs for the given game's deal, if
         /// they are inevitable. Game-level payoff is the change
