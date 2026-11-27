@@ -40,6 +40,29 @@ made since then.
   seat's game score is added as 126 flags. The encoding grew from 540 inputs to 1,144.
 - **Whole games generated** (cfc3066, 741779d). Each deal's dealer and pass direction now follow from
   its place in its game.
-- **W, the win-probability model** (f382bb5, 5cd335a). W gives each seat's chance of winning the game
-  from the game score. It will provide game-level payoffs (`Settings.GameLevelPayoff`), which are not
-  yet implemented.
+- **W, the win-probability model** (f382bb5, 5cd335a; closed form since 60ea475, 2026-11-26). W gives
+  each seat's chance of winning the game from the game score. It was first a small network fitted to
+  the production model's games; it is now `WinChance`: the next deal's outcomes exactly, from
+  `GameScore`'s deal model, then a closed form fitted to W computed exactly for that model
+  (Hearts.Experiments' `wexact` and `wcurve`). Its validation loss on the production model's games is
+  1.03800, against the network's 1.0397 and the exact W's 1.03765. W still reflects how a player that
+  ignores the game score plays.
+- **Game-level payoffs** (b14d584, 2026-11-26). Each sample's regrets are now in changes of the chance
+  of winning the game, from W before the deal to W after it, instead of deal points. This is now the
+  default (`Settings.GameLevelPayoff`). A deal-level traversal ignores the game score.
+- **Models tagged game- or deal-level** (501b09c, ac8dff1). Each model saves the payoff level it was
+  trained on, and `load` rejects a file without it. A deal-level model's inputs always carry a game
+  score of 0-0-0-0, as its samples did. Hearts.Generate refuses a model of the other level, and
+  Hearts.Train reads only the stores of its level.
+
+## Training
+
+- **Samples reshuffled every epoch** (c615b11). They used to be shuffled once, so every epoch saw the
+  same batches in the same order.
+- **Loss logged as the mean over the epoch** (492ca3f). The trainer used to log only the last
+  sub-batch's loss, scaled to its share of the batch. It now logs the mean over every sample in the
+  epoch.
+- **Holdout loss** (a9affa2, 32d51cc). A random 1% of the samples is held out of training and scored
+  after every epoch, with dropout off. The epoch where it stops falling shows how many epochs to
+  train. Because dropout is off, it can sit below the training loss. Both losses carry the weight t
+  (above), so they are comparable within an iteration but not between iterations.
