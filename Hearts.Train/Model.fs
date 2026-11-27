@@ -139,13 +139,6 @@ module AdvantageModel =
     let private trainSubBatch
         settings model samples criterion =
 
-            // move to GPU
-        let inputs2d, targets2d, weights2d =
-            SubBatch.to2dArrays samples
-        use inputs = tensor(inputs2d, device = settings.Device)
-        use targets = tensor(targets2d, device = settings.Device)
-        use weights = tensor(weights2d, device = settings.Device)
-
             // compute loss for this sub-batch
         use rawLoss = getLoss settings.Device model samples criterion
 
@@ -182,6 +175,26 @@ module AdvantageModel =
 
         loss, nSamples
 
+    /// Mean loss on the given samples, with the model in evaluation mode.
+    let private getHoldoutLoss
+        settings (model : AdvantageModel) samples criterion =
+
+        model.eval()   // no dropout
+        use _ = torch.no_grad()
+
+        let loss, _ =
+            let subBatches =
+                Array.chunkBySize settings.TrainingSubBatchSize samples
+            weightedMean [|
+                for subBatch in subBatches do
+                    use loss =
+                        getLoss settings.Device model subBatch criterion
+                    loss.item<float32>(), subBatch.Length
+            |]
+
+        model.train()   // back to training
+        loss
+
     /// Trains the given model using the given samples.
     let train
         settings
@@ -190,7 +203,9 @@ module AdvantageModel =
 
             // index samples
         let holdoutPairs, trainingPairs =
-            let indexPairs = indexSamples sampleStores
+            let indexPairs =
+                indexSamples sampleStores
+                    |> Array.randomShuffle
             Array.splitAt (indexPairs.Length / 100) indexPairs
 
             // prepare holdout samples
@@ -228,10 +243,11 @@ module AdvantageModel =
                 loss, epoch)
 
                 // evaluate holdout samples
-            let loss = getLoss settings.Device model holdoutSamples criterion
+            let loss =
+                getHoldoutLoss settings model holdoutSamples criterion
             settings.Writer.add_scalar(
                 $"holdout loss/iter%03d{sampleStores.Iteration}",
-                loss.item<float32>(), epoch)
+                loss, epoch)
 
                 // save model
             let path =
