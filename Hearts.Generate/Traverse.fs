@@ -38,11 +38,8 @@ and Complete =
         /// Per-player utility of this node.
         Utilities : float32[]
 
-        /// Sample representing this node.
-        SampleOpt : Option<AdvantageSample>
-
-        /// Complete children.
-        Children : Complete[]
+        /// Samples from this node and its descendents.
+        Samples : AdvantageSample[]
     }
 
 /// Game state.
@@ -75,11 +72,10 @@ module Node =
         }
 
     /// Creates a node.
-    let complete utilities sampleOpt children =
+    let complete utilities samples =
         Complete {
             Utilities = utilities
-            SampleOpt = sampleOpt
-            Children = children
+            Samples = samples
         }
 
 module Traverse =
@@ -130,10 +126,7 @@ module Traverse =
         let rec loop game depth =
             match tryGetPayoff game with
                 | Some payoff ->
-                    Node.complete   // deal is over
-                        payoff
-                        None
-                        Array.empty
+                    Node.complete payoff Array.empty   // deal is over
                 | None ->
                     loopNonTerminal game depth
 
@@ -195,8 +188,11 @@ module Traverse =
                         encoding wideRegrets state.SampleStore.Iteration
                 Node.complete
                     (utility.ToArray())
-                    (Some sample)
-                    children
+                    [|
+                        yield sample
+                        for child in children do
+                            yield! child.Samples
+                    |]
 
             Node.getUtility infoSet results cont
 

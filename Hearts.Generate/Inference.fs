@@ -76,16 +76,6 @@ module Inference =
         | Complete comp -> comp
         | _ -> failwith "Unexpected"
 
-    /// Extract samples from the given complete node.
-    let rec private getSamples comp =
-        [|
-            match comp.SampleOpt with
-                | Some sample -> sample
-                | None -> ()
-            for child in comp.Children do
-                yield! getSamples child
-        |]
-
     /// Recursively drives the given nodes to completion.
     let complete chunkSize modelOpt (nodes : Node[]) =
 
@@ -124,4 +114,4 @@ module Inference =
 
         loop 0 [| nodes |]
             |> Array.exactlyOne
-            |> Array.collect (getComp >> getSamples)
+            |> Array.collect (getComp >> _.Samples)
