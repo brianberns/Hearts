@@ -54,9 +54,11 @@ Deep CFR is designed to work specifically for two-player zero-sum games. Each pl
 
 # Hearts and Deep CFR
 
-To my knowledge, there have been few attempts to create strong Hearts-playing programs, and most of those that do exist are based on heuristic rules, rather than rigorous algorithmic techniques. The website [Trickster](https://www.trickstercards.com/games/hearts/), for example, has written [such a program](https://github.com/TricksterCards/TricksterBots/blob/main/TricksterBots/Bots/Hearts/HeartsBot.cs), but it does not play Hearts at a high level. My father, Gerald Berns, also created a heuristic program called [*Killer Hearts*](https://mark.random-article.com/hearts/on_hearts.txt) that was, I believe, the best Hearts program in existence prior to this project.
+Until recently, there were few strong Hearts-playing programs, and the ones that I am aware of were based on heuristic rules, rather than rigorous algorithmic techniques. My father, Gerald Berns, created a heuristic program called [*Killer Hearts*](https://mark.random-article.com/hearts/on_hearts.txt) that was, I believe, the best Hearts program in existence prior to the beginning of this project.
 
-"Shooting the moon" makes Hearts particularly difficult to master for both computers and humans. A good Hearts player cannot focus on just minimizing points taken. They must also be able to shoot the moon when possible, and try to prevent other players from shooting the moon. Balancing these goals requires a great deal of acumen.
+There are several aspects of Hearts that make it particularly difficult to master for both computers and humans. A good Hearts player cannot focus on just minimizing points taken. They must also be able to "shoot the moon" when possible, and try to prevent other players from shooting the moon. Balancing these goals requires a great deal of acumen.
+
+Moreover, Hearts is a game that operates on two different levels at once: the deal level and the game level. Early in a game, one can concentrate mainly on the current deal, without much consideration of the score of the game. Towards the end of the game, however, the overal score takes on an overriding importance, and there are times when a good player should sacrifce deal-level performance for the sake of the game-level outcome. (For example, by deliberately taking points when not the low-scorer to prevent the high-scorer from going over 100 points, which would end the game.)
 
 Although Hearts is neither a two-player nor a zero-sum game, this project serves as a demonstration that it is nonetheless still a good candidate for Deep CFR, with some adaptations.
 
