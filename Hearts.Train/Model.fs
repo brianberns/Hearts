@@ -41,7 +41,7 @@ module AdvantageModel =
                 |> Array.map (
                     _.Iteration
                         >> float32
-                        >> sqrt
+                        >> sqrt   // MSE loss will square this, resulting in linear weight
                         >> Array.singleton)
                 |> array2D
 
