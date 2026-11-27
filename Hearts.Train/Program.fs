@@ -20,6 +20,7 @@ module Program =
         if settings.Verbose then
             printfn "Settings:"
             printfn $"   Server garbage collection: {GCSettings.IsServerGC}"
+            printfn $"   Game level payoff: {settings.GameLevelPayoff}"
             printfn $"   Hidden size: {settings.HiddenSize}"
             printfn $"   # hidden layers: {settings.NumHiddenLayers}"
             printfn $"   # training epochs: {settings.NumTrainingEpochs}"
