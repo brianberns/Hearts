@@ -33,7 +33,7 @@ module Program =
 
         printfn $"Server garbage collection: {GCSettings.IsServerGC}"
 
-        let numGames = 2000
+        let numGames = 20_000
 
         for path in paths do
             use model =
