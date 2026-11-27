@@ -1,5 +1,7 @@
 ﻿namespace Hearts.Model
 
+open System.Collections.Generic
+
 open TorchSharp
 open type torch
 open type torch.nn
@@ -30,6 +32,7 @@ type SkipConnection(inner : Model) as this =
 
 /// Model used for learning advantages.
 type AdvantageModel(
+    isGameLevel : bool,
     hiddenSize : int,
     numHiddenLayers : int,
     dropoutRate : float,
@@ -67,14 +70,38 @@ type AdvantageModel(
 
     do
         this.RegisterComponents()
+        this.register_buffer("isGameLevel", tensor(isGameLevel))   // metadata
         this.``to``(device) |> ignore
 
+    /// Device on which this model is stored.
     member _.Device = device
 
+    /// Indicates whether this model was trained on game-level
+    /// payoffs
+    member _.IsGameLevel =
+        this.get_buffer("isGameLevel").item<bool>()
+
+    /// Applies the given input to this model.
     override _.forward(input) = 
         sequential.forward(input)
 
 module AdvantageModel =
+
+    /// Standard hidden size.
+    let standardHiddenSize = 1080   // inherited from original deal-level model
+
+    /// Loads a model for inference.
+    let load hiddenSize numHiddenLayers device (path : string) =
+        let model =
+            new AdvantageModel(
+                false,   // will be set correctly below
+                hiddenSize,
+                numHiddenLayers,
+                0.0,
+                device)
+        model.load(path) |> ignore
+        model.eval()
+        model
 
     /// Gets advantages for the given info sets.
     let getAdvantages infoSets (model : AdvantageModel) =
@@ -89,6 +116,3 @@ module AdvantageModel =
                     |> array2D
             tensor(encoded, device = model.Device)
         input --> model
-
-    /// Standard hidden size.
-    let standardHiddenSize = 1080   // inherited from original deal-level model

@@ -15,7 +15,9 @@ module Trainer =
 
             // copy model to CPU for stability and performance
         use cpuModel =
+            assert(model.IsGameLevel = settings.GameLevelPayoff)
             new AdvantageModel(
+                settings.GameLevelPayoff,
                 settings.HiddenSize,
                 settings.NumHiddenLayers,
                 settings.DropoutRate,
@@ -46,6 +48,7 @@ module Trainer =
         let stopwatch = Stopwatch.StartNew()
         use model =
             new AdvantageModel(
+                settings.GameLevelPayoff,
                 settings.HiddenSize,
                 settings.NumHiddenLayers,
                 settings.DropoutRate,

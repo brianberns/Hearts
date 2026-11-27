@@ -16,16 +16,12 @@ module AdvantageModel =
 
     /// Connects to Hearts model.
     let private connect dir =
-        let model =
-            new AdvantageModel(
-                AdvantageModel.standardHiddenSize,
-                numHiddenLayers = 4,
-                dropoutRate = 0.0,
-                device = TorchSharp.torch.CPU)
         let path = Path.Combine(dir, "AdvantageModel.pt")
-        model.load(path) |> ignore
-        model.eval()
-        model
+        AdvantageModel.load
+            AdvantageModel.standardHiddenSize
+            4   // # hidden layers
+            TorchSharp.torch.CPU
+            path
 
     /// Hearts API.
     let heartsApi dir =

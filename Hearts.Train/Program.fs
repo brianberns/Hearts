@@ -35,8 +35,13 @@ module Program =
 
             // get training data
         let sampleStores =
+            let pattern =
+                let level =
+                    if settings.GameLevelPayoff then "Game"
+                    else "Deal"
+                $"AdvantageSamples-{level}-*.bin"
             DirectoryInfo(settings.ModelDirPath)
-                .GetFiles("*.bin")
+                .GetFiles(pattern)
                 |> Array.map (
                     _.FullName >> AdvantageSampleStore.openRead)
 

@@ -9,10 +9,7 @@ module Players =
 
     /// Loads an advantage model checkpoint for inference on the given device.
     let loadModelOn device (path : string) =
-        let model = new AdvantageModel(1080, 4, 0.0, device)   // as Hearts.Train builds it
-        model.load(path) |> ignore
-        model.eval()
-        model
+        AdvantageModel.load 1080 4 device path   // as Hearts.Train builds it
 
     /// Loads an advantage model checkpoint for inference on the CPU.
     let loadModel path = loadModelOn TorchSharp.torch.CPU path

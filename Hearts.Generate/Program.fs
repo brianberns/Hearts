@@ -127,17 +127,17 @@ module Program =
         let advModelOpt =
             advModelPathOpt
                 |> Option.map (fun modelPath ->
-                    let model =
-                        new AdvantageModel(
-                            settings.HiddenSize,
-                            settings.NumHiddenLayers,
-                            0.0,   // dropout not used during inference
-                            settings.Device)
                     if settings.Verbose then
                         printfn $"Loading model from {modelPath}"
-                    model.load(modelPath : string) |> ignore
-                    model.eval()
-                    model)
+                    let model =
+                        AdvantageModel.load
+                            settings.HiddenSize
+                            settings.NumHiddenLayers
+                            settings.Device
+                            modelPath
+                    if model.IsGameLevel = settings.GameLevelPayoff then
+                        model
+                    else failwith "Invalid model level")
 
             // initialize state
         use state =

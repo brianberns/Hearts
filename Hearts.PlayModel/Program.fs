@@ -35,16 +35,13 @@ module Program =
 
         let numGames = 2000
 
-        use model =
-            new AdvantageModel(
-                settings.HiddenSize,
-                settings.NumHiddenLayers,
-                0.0,
-                TorchSharp.torch.CPU)   // always run on CPU
-
         for path in paths do
-            model.load(path : string) |> ignore
-            model.eval()
+            use model =
+                AdvantageModel.load
+                    settings.HiddenSize
+                    settings.NumHiddenLayers
+                    TorchSharp.torch.CPU   // always run on CPU
+                    path
             let winRate =
                 Tournament.runSeeded
                     0

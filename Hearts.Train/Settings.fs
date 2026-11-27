@@ -7,6 +7,9 @@ open Hearts.Model
 /// Hyperparameters.
 type Settings =
     {
+        /// Whether samples contain game- or deal-level payoffs.
+        GameLevelPayoff : bool
+
         /// Input and output size of a hidden layer in the neural
         /// network.
         HiddenSize : int
@@ -50,6 +53,7 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
+            GameLevelPayoff = false
             HiddenSize = AdvantageModel.standardHiddenSize
             NumHiddenLayers = 4
             NumTrainingEpochs = 100
@@ -71,6 +75,9 @@ module Settings =
     /// Writes settings to Tensorboard.
     let write settings =
         let writer = settings.Writer
+        writer.add_text(
+            $"settings/GameLevelPayoff",
+            string settings.GameLevelPayoff, 0)
         writer.add_text(
             $"settings/HiddenSize",
             string settings.HiddenSize, 0)
