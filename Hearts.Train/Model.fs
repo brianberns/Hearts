@@ -117,10 +117,27 @@ module AdvantageModel =
                 pairs
         (total / float32 totalWeight), totalWeight
 
+    /// Computes loss for the given samples.
+    let private getLoss device model samples
+        (criterion : Loss<Tensor, Tensor, Tensor>) =
+
+            // move to GPU
+        let inputs2d, targets2d, weights2d =
+            SubBatch.to2dArrays samples
+        use inputs = tensor(inputs2d, device = device)
+        use targets = tensor(targets2d, device = device)
+        use weights = tensor(weights2d, device = device)
+
+            // compute loss
+        use outputs = inputs --> model
+        use outputs' = weights * outputs
+        use targets' = weights * targets
+        criterion.forward(outputs', targets')
+
     /// Trains the given model on the given sub-batch of data,
     /// and answers its mean loss.
-    let private trainSubBatch settings model samples
-        (criterion : Loss<Tensor, Tensor, Tensor>) =
+    let private trainSubBatch
+        settings model samples criterion =
 
             // move to GPU
         let inputs2d, targets2d, weights2d =
@@ -130,20 +147,16 @@ module AdvantageModel =
         use weights = tensor(weights2d, device = settings.Device)
 
             // compute loss for this sub-batch
-        use rawLoss =
-            use outputs = inputs --> model
-            use outputs' = weights * outputs
-            use targets' = weights * targets
-            criterion.forward(outputs', targets')
+        use rawLoss = getLoss settings.Device model samples criterion
 
             // scale loss to batch size
         let scale =
             float32 samples.Length
                 / float32 settings.TrainingBatchSize
-        use scaled = rawLoss * scale
+        use scaledLoss = rawLoss * scale
 
             // backward pass on scaled loss, so accumulated gradients are the batch's
-        scaled.backward()
+        scaledLoss.backward()
 
         rawLoss.item<float32>()
 
@@ -176,7 +189,15 @@ module AdvantageModel =
         (model : AdvantageModel) =
 
             // index samples
-        let indexPairs = indexSamples sampleStores
+        let holdoutPairs, trainingPairs =
+            let indexPairs = indexSamples sampleStores
+            Array.splitAt (indexPairs.Length / 100) indexPairs
+
+            // prepare holdout samples
+        let holdoutSamples =
+            holdoutPairs
+                |> Array.Parallel.map (fun struct (iStore, iSample) ->
+                    sampleStores[int iStore][int64 iSample])
 
             // train model
         use optimizer =
@@ -192,7 +213,7 @@ module AdvantageModel =
                 createBatches
                     settings.TrainingBatchSize
                     settings.TrainingSubBatchSize
-                    indexPairs
+                    trainingPairs
                     sampleStores
 
                 // train epoch
@@ -205,6 +226,12 @@ module AdvantageModel =
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{sampleStores.Iteration}",
                 loss, epoch)
+
+                // evaluate holdout samples
+            let loss = getLoss settings.Device model holdoutSamples criterion
+            settings.Writer.add_scalar(
+                $"holdout loss/iter%03d{sampleStores.Iteration}",
+                loss.item<float32>(), epoch)
 
                 // save model
             let path =
