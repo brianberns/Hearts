@@ -68,24 +68,26 @@ module AdvantageModel =
     /// large to fit on the GPU or in memory.
     type private Batch = seq<SubBatch>
 
+    /// Indexes every sample in the given stores, optimized for
+    /// space.
+    let private indexSamples (sampleStores : AdvantageSampleStoreGroup) =
+        [|
+            let storeCount = sampleStores.Count
+            assert(storeCount <= int32 Int16.MaxValue)
+
+            for iStore = 0s to int16 storeCount - 1s do
+
+                let sampleCount = sampleStores[int iStore].Count
+                assert(sampleCount <= int64 Int32.MaxValue)
+
+                for iSample = 0 to int sampleCount - 1 do
+                    struct (iStore, iSample)
+        |]
+
     /// Breaks the given samples into randomized batches.
     let private createBatches
-        batchSize subBatchSize (sampleStores : AdvantageSampleStoreGroup) =
-
-            // get every sample's index pair (optimized for space)
-        let indexPairs =
-            [|
-                let storeCount = sampleStores.Count
-                assert(storeCount <= int32 Int16.MaxValue)
-
-                for iStore = 0s to int16 storeCount - 1s do
-
-                    let sampleCount = sampleStores[int iStore].Count
-                    assert(sampleCount <= int64 Int32.MaxValue)
-
-                    for iSample = 0 to int sampleCount - 1 do
-                        struct (iStore, iSample)
-            |]
+        batchSize subBatchSize (indexPairs : _[])
+        (sampleStores : AdvantageSampleStoreGroup) =
 
             // randomize index pairs into batches and sub-batches
         let indexBatches =
@@ -102,7 +104,7 @@ module AdvantageModel =
                         indexSubBatch
                             |> Array.Parallel.map (fun iPair ->
                                 let struct (iStore, iSample) = indexPairs[iPair]
-                                sampleStores[int iStore][iSample])
+                                sampleStores[int iStore][int64 iSample])
                 } : Batch
         }
 
@@ -173,6 +175,9 @@ module AdvantageModel =
         (sampleStores : AdvantageSampleStoreGroup)
         (model : AdvantageModel) =
 
+            // index samples
+        let indexPairs = indexSamples sampleStores
+
             // train model
         use optimizer =
             Adam(
@@ -187,6 +192,7 @@ module AdvantageModel =
                 createBatches
                     settings.TrainingBatchSize
                     settings.TrainingSubBatchSize
+                    indexPairs
                     sampleStores
 
                 // train epoch
