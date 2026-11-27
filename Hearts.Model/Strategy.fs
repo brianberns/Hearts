@@ -89,13 +89,6 @@ module Strategy =
     let private createPlayerImpl (model : AdvantageModel) rng =
 
         let act infoSet =
-
-                // deal-level player doesn't see actual game score
-            let infoSet =
-                if model.IsGameLevel then infoSet
-                else { infoSet with GameScore = Score.zero }
-
-                // sample model's strategy for this info set
             getStrategy model infoSet
                 |> Vector.sample rng
                 |> Array.get infoSet.LegalActions

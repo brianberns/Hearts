@@ -1,12 +1,11 @@
 ﻿namespace Hearts.Model
 
-open System.Collections.Generic
-
 open TorchSharp
 open type torch
 open type torch.nn
 
 open PlayingCards
+open Hearts
 
 /// Neural network that maps an input tensor to an output
 /// tensor.
@@ -109,10 +108,15 @@ module AdvantageModel =
         use _ = torch.no_grad()
         use input =
             let encoded =
+                let isGameLevel = model.IsGameLevel
                 infoSets
-                    |> Array.map (
-                        Encoding.encode
-                            >> Encoding.toFloat32Array)
+                    |> Array.map (fun infoSet ->
+                        let infoSet =
+                            if isGameLevel then infoSet
+                            else { infoSet with GameScore = Score.zero }   // deal-level player doesn't see actual game score
+                        infoSet
+                            |> Encoding.encode
+                            |> Encoding.toFloat32Array)
                     |> array2D
             tensor(encoded, device = model.Device)
         input --> model
