@@ -26,7 +26,7 @@ module DealScore =
         option {
             let! game =
                 deal
-                    |> Game.createFirst      // as if this is the first deal of a game
-                    |> Game.tryUpdateScore AlwaysAddToOthers
-            return getPayoff game.Score      // game score is now raw deal score
+                    |> Game.createFirst                        // as if this is the first deal of a game
+                    |> Game.tryUpdateScore AlwaysAddToOthers   // either rule works, so use an arbitrary one
+            return getPayoff game.Score                        // game score is now raw deal score
         }
