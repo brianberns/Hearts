@@ -57,7 +57,10 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
   given `rngSeed`, and players need not be thread-safe, but must keep no state across games other than
   their random numbers. `Tournament.run` is the same for players that need no seed.
 - `Game.playGame` asserts (in Debug builds) that every action a player returns is legal. Run a Debug
-  build to check a new player for illegal plays; Release builds skip the check.
+  build to check a new player for illegal plays; Release builds skip the check. Debug also calls the
+  player on forced moves, to check it there too, so a sampling player draws extra random numbers: a
+  Debug tournament isn't the same games as a Release one with the same seed. Record results from
+  Release builds only.
 - `Strategy.createPlayerSeeded model seed` samples the model's strategy with a `SplitMixRandom`: use it
   in tournaments. `Strategy.createPlayer` samples with `Random.Shared`, so it is thread-safe but not
   repeatable: for the web app and other one-off play. Sampling beat a deterministic player (the most
