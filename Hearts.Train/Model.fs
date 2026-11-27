@@ -99,13 +99,16 @@ module AdvantageModel =
             // stream samples
         seq {
             for indexBatch in indexBatches do
-                seq {
-                    for indexSubBatch in indexBatch do
-                        indexSubBatch
-                            |> Array.Parallel.map (fun iPair ->
-                                let struct (iStore, iSample) = indexPairs[iPair]
-                                sampleStores[int iStore][int64 iSample])
-                } : Batch
+                let stopwatch = Stopwatch.StartNew()
+                let batch : Batch =
+                    seq {
+                        for indexSubBatch in indexBatch do
+                            indexSubBatch
+                                |> Array.Parallel.map (fun iPair ->
+                                    let struct (iStore, iSample) = indexPairs[iPair]
+                                    sampleStores[int iStore][int64 iSample])
+                    }
+                batch, stopwatch
         }
 
     /// Mean and total weight of the given (value, weight) pairs.
@@ -175,7 +178,8 @@ module AdvantageModel =
 
         loss, nSamples
 
-    /// Mean loss on the given samples, with the model in evaluation mode.
+    /// Computes mean loss on the given samples, with the model in
+    /// evaluation mode.
     let private getHoldoutLoss
         settings (model : AdvantageModel) samples criterion =
 
@@ -206,7 +210,7 @@ module AdvantageModel =
             let indexPairs =
                 indexSamples sampleStores
                     |> Array.randomShuffle
-            Array.splitAt (indexPairs.Length / 100) indexPairs
+            Array.splitAt (indexPairs.Length / 100) indexPairs   // hold out 1% of samples
 
             // prepare holdout samples
         let holdoutSamples =
@@ -234,9 +238,14 @@ module AdvantageModel =
                 // train epoch
             let loss, _ =
                 weightedMean [|
-                    for batch in batches do
+                    for iBatch, (batch, stopwatch) in Seq.indexed batches do
                         trainBatch
                             settings model batch criterion optimizer
+                        let seconds =
+                            float32 stopwatch.ElapsedMilliseconds / 1000f
+                        settings.Writer.add_scalar(
+                            $"advantage training time/iter%03d{sampleStores.Iteration}/epoch%03d{epoch}",
+                            seconds, iBatch)
                 |]
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{sampleStores.Iteration}",
