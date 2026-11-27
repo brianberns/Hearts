@@ -92,9 +92,9 @@ module Program =
                 let modelPath = argv[0]
                 let iter =
                     let chunks =
-                        Path.GetFileNameWithoutExtension(modelPath)   // e.g. "AdvantageModel-i001.pt"
+                        Path.GetFileNameWithoutExtension(modelPath)   // e.g. "AdvantageModel-Game-i001.pt"
                             .Split('-')
-                    Int32.Parse(chunks[1][1 ..])
+                    Int32.Parse(chunks[2][1 ..])
                 Some modelPath, iter
             | _ -> failwith $"Invalid arguments: {argv}"
 

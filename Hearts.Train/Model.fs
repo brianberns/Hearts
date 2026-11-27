@@ -251,9 +251,12 @@ module AdvantageModel =
 
                 // save model
             let path =
+                let level =
+                    if settings.GameLevelPayoff then "Game"
+                    else "Deal"
                 Path.Combine(
                     settings.ModelDirPath,
-                    $"AdvantageModel-i%03d{sampleStores.Iteration}-e%03d{epoch}.pt")
+                    $"AdvantageModel-{level}-i%03d{sampleStores.Iteration}-e%03d{epoch}.pt")
             model.save(path) |> ignore
 
         model.eval()
