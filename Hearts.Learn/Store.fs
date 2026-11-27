@@ -1,6 +1,7 @@
 namespace Hearts.Learn
 
 open System
+open System.Collections.Concurrent
 open System.IO
 
 open Microsoft.Win32.SafeHandles
@@ -15,6 +16,10 @@ type AdvantageSampleStore =
         /// Underlying file handle.
         Handle : SafeFileHandle
 
+        /// Extra handles for reading samples concurrently, since Windows
+        /// runs only one read at a time on a synchronous handle.
+        ReadHandles : ConcurrentBag<SafeFileHandle>
+
         /// Path of the underlying file.
         Path : string
 
@@ -25,6 +30,8 @@ type AdvantageSampleStore =
     /// Cleanup.
     member this.Dispose() =
         this.Handle.Dispose()
+        for handle in this.ReadHandles do
+            handle.Dispose()
 
     /// Cleanup.
     interface IDisposable with
@@ -191,6 +198,7 @@ module AdvantageSampleStore =
         let store =
             {
                 Handle = handle
+                ReadHandles = ConcurrentBag()
                 Path = path
                 Iteration = iteration
             }
@@ -212,6 +220,7 @@ module AdvantageSampleStore =
         let store =
             {
                 Handle = handle
+                ReadHandles = ConcurrentBag()
                 Path = path
                 Iteration = Header.read handle
             }
@@ -225,6 +234,21 @@ module AdvantageSampleStore =
             - int64 Header.packedSize)
                 / int64 packedSampleSize
 
+    /// Calls the given function with a read handle no
+    /// other thread is using.
+    let private withReadHandle store f =
+        let handle =
+            match store.ReadHandles.TryTake() with
+                | true, handle -> handle
+                | false, _ ->
+                    File.OpenHandle(
+                        store.Path,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read)
+        try f handle
+        finally store.ReadHandles.Add(handle)
+
     /// Reads the sample at the given index in the given store.
     let readSample (idx : int64) store =
         assert(isValid store)
@@ -234,12 +258,13 @@ module AdvantageSampleStore =
         let fileOffset =
             int64 Header.packedSize
                 + idx * int64 packedSampleSize
-        let encoding =
-            Encoding.read store.Handle fileOffset
-        let regrets =
-            Regrets.read store.Handle
-                (fileOffset + int64 Encoding.packedSize)
-        AdvantageSample.create encoding regrets store.Iteration
+        withReadHandle store (fun handle ->
+            let encoding =
+                Encoding.read handle fileOffset
+            let regrets =
+                Regrets.read handle
+                    (fileOffset + int64 Encoding.packedSize)
+            AdvantageSample.create encoding regrets store.Iteration)
 
     /// Appends the given samples to the end of the given store.
     let appendSamples samples store =
