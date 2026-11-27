@@ -53,7 +53,7 @@ module Settings =
     /// Creates default settings.
     let create writer =
         {
-            GameLevelPayoff = false
+            GameLevelPayoff = true
             HiddenSize = AdvantageModel.standardHiddenSize
             NumHiddenLayers = 4
             NumTrainingEpochs = 100
