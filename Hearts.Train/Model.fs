@@ -97,16 +97,13 @@ module AdvantageModel =
             // stream samples
         seq {
             for indexBatch in indexBatches do
-                let stopwatch = Stopwatch.StartNew()
-                let batch : Batch =
-                    seq {
-                        for indexSubBatch in indexBatch do
-                            indexSubBatch
-                                |> Array.Parallel.map (fun iPair ->
-                                    let struct (iStore, iSample) = indexPairs[iPair]
-                                    sampleStores[int iStore][iSample])
-                    }
-                batch, stopwatch
+                seq {
+                    for indexSubBatch in indexBatch do
+                        indexSubBatch
+                            |> Array.Parallel.map (fun iPair ->
+                                let struct (iStore, iSample) = indexPairs[iPair]
+                                sampleStores[int iStore][iSample])
+                } : Batch
         }
 
     /// Mean and total weight of the given (value, weight) pairs.
@@ -195,14 +192,9 @@ module AdvantageModel =
                 // train epoch
             let loss, _ =
                 weightedMean [|
-                    for iBatch, (batch, stopwatch) in Seq.indexed batches do
+                    for iBatch, batch in Seq.indexed batches do
                         trainBatch
                             settings model batch criterion optimizer
-                        let seconds =
-                            float32 stopwatch.ElapsedMilliseconds / 1000f
-                        settings.Writer.add_scalar(
-                            $"advantage loss/iter%03d{sampleStores.Iteration}/epoch%03d{epoch}",
-                            seconds, iBatch)
                 |]
             settings.Writer.add_scalar(
                 $"advantage loss/iter%03d{sampleStores.Iteration}",
