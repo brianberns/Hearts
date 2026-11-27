@@ -234,7 +234,7 @@ module AdvantageModel =
                 // train epoch
             let loss, _ =
                 weightedMean [|
-                    for iBatch, batch in Seq.indexed batches do
+                    for batch in batches do
                         trainBatch
                             settings model batch criterion optimizer
                 |]
