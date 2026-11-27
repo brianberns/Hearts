@@ -63,6 +63,10 @@ recorded before 2026-11-23 (commit 10f0996) used the Q♠-breaks-hearts rule eve
   repeatable: for the web app and other one-off play. Sampling beat a deterministic player (the most
   probable class of equivalent cards; removed in 2463804) by about a point: 0.2610 vs 0.2363 head to
   head, on 10,000 games each.
+- **Loading a model**: use `AdvantageModel.load`. Each model file carries an `isGameLevel` tag (since
+  501b09c), and the load is strict, so older files don't load; they no longer fit the encoding
+  anyway (ad5bebe). `getAdvantages` gives a deal-level model a game score of 0-0-0-0, so every caller
+  gets that right without doing anything.
 - **Model inference** on the CPU is thread-safe and gives identical results in parallel. Throughput
   stops improving at about 8 threads. The GPU also works from many threads (no crash, identical
   results), but holds about 3 GB more for the life of the process and is no faster for tournaments, so
