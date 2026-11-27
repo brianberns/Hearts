@@ -109,8 +109,17 @@ module AdvantageModel =
                 batch, stopwatch
         }
 
-    /// Trains the given model on the given sub-batch of
-    /// data.
+    /// Mean and total weight of the given (value, weight) pairs.
+    let private weightedMean pairs =
+        let totalWeight = Array.sumBy snd pairs
+        let total =
+            Array.sumBy (fun (value : float32, weight : int) ->
+                value * float32 weight)
+                pairs
+        (total / float32 totalWeight), totalWeight
+
+    /// Trains the given model on the given sub-batch of data,
+    /// and answers its mean loss.
     let private trainSubBatch settings model samples
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
@@ -121,26 +130,23 @@ module AdvantageModel =
         use targets = tensor(targets2d, device = settings.Device)
         use weights = tensor(weights2d, device = settings.Device)
 
-            // forward pass
-        use loss =
+            // compute loss for this sub-batch
+        use rawLoss =
+            use outputs = inputs --> model
+            use outputs' = weights * outputs
+            use targets' = weights * targets
+            criterion.forward(outputs', targets')
 
-                // compute loss for this sub-batch
-            use rawLoss =
-                use outputs = inputs --> model
-                use outputs' = weights * outputs
-                use targets' = weights * targets
-                criterion.forward(outputs', targets')
+            // scale loss to batch size
+        let scale =
+            float32 samples.Length
+                / float32 settings.TrainingBatchSize
+        use scaled = rawLoss * scale
 
-                // scale loss to batch size
-            let scale =
-                float32 (inputs2d.GetLength(0))
-                    / float32 settings.TrainingBatchSize
-            rawLoss * scale
+            // backward pass on scaled loss, so accumulated gradients are the batch's
+        scaled.backward()
 
-            // backward pass
-        loss.backward()
-
-        loss.item<float32>()
+        rawLoss.item<float32>()
 
     /// Trains the given model on the given batch of data
     /// using gradient accumulation.
@@ -152,16 +158,17 @@ module AdvantageModel =
         optimizer.zero_grad()
 
             // train sub-batches
-        let loss =
-            Array.last [|
+        let loss, nSamples =
+            weightedMean [|
                 for samples in batch do
-                    trainSubBatch settings model samples criterion
+                    trainSubBatch settings model samples criterion,
+                    samples.Length
             |]
 
             // optimize
         use _ = optimizer.step()
 
-        loss
+        loss, nSamples
 
     /// Trains the given model using the given samples.
     let train
@@ -186,8 +193,8 @@ module AdvantageModel =
                     sampleStores
 
                 // train epoch
-            let loss =
-                Array.last [|
+            let loss, _ =
+                weightedMean [|
                     for iBatch, (batch, stopwatch) in Seq.indexed batches do
                         trainBatch
                             settings model batch criterion optimizer
