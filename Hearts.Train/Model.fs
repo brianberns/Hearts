@@ -151,7 +151,7 @@ module AdvantageModel =
         use outputs = inputs --> model
         use scaled = targets * regretScale settings
         use outputs' = weights * outputs
-        use targets' = weights * targets
+        use targets' = weights * scaled
         criterion.forward(outputs', targets')
 
     /// Trains the given model on the given sub-batch of data,
