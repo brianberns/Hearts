@@ -7,6 +7,7 @@ open System.IO
 open Microsoft.Win32.SafeHandles
 
 open MathNet.Numerics.LinearAlgebra
+open TorchSharp
 
 open Hearts.Model
 
@@ -154,24 +155,34 @@ module AdvantageSampleStore =
                 |]
             RandomAccess.Write(handle, buf, fileOffset)
 
+        /// Reads regrets, starting at the given offset in the
+        /// given buffer, into the given row of the given array.
+        let readInto (buf : byte[]) offset (regrets : float32[]) iRow =
+            Array.Fill(
+                regrets, 0f, iRow * Model.outputSize, Model.outputSize)
+            for j = 0 to maxActionCount - 1 do
+                let pos = offset + j * entrySize
+                let i = buf[pos]
+                let regret = BitConverter.ToSingle(buf, pos + 1)
+                if regret = 0f then
+                    assert(i = Byte.MaxValue)
+                else
+                    regrets[iRow * Model.outputSize + int i] <- regret
+
         /// Reads regrets from the given file.
         let read (handle : SafeFileHandle) (fileOffset : int64) =
             let buf = Array.zeroCreate<byte> packedSize
             let nBytesRead =
                 RandomAccess.Read(handle, buf, fileOffset)
             assert(nBytesRead = packedSize)
-            seq {
-                for j = 0 to maxActionCount - 1 do
-                    let pos = j * entrySize
-                    let i = buf[pos]
-                    let regret = BitConverter.ToSingle(buf, pos + 1)
-                    if regret = 0f then
-                        assert(i = Byte.MaxValue)
-                    else
-                        int i, regret
-            }
-                |> SparseVector.ofSeqi Model.outputSize
-                |> CreateVector.DenseOfVector
+            let regrets =
+                Array.zeroCreate<float32> Model.outputSize
+            readInto buf 0 regrets 0
+            DenseVector.ofArray regrets
+
+    /// Number of bytes in a sample's packed encoding: one bit per
+    /// input, low bit first.
+    let packedEncodingSize = Encoding.packedSize
 
     /// Number of bytes in a serialized sample.
     let private packedSampleSize =
@@ -265,6 +276,47 @@ module AdvantageSampleStore =
                 Regrets.read handle
                     (fileOffset + int64 Encoding.packedSize)
             AdvantageSample.create encoding regrets store.Iteration)
+
+    /// Reads the sample at the given index in the given store, in
+    /// one read, into the given row of the given arrays: its packed
+    /// encoding as is (packedEncodingSize bytes per row), and its
+    /// regrets decoded (Model.outputSize per row). Faster than
+    /// readSample, for training.
+    let readPacked
+        (idx : int64) (encodings : byte[]) regrets iRow store =
+        assert(isValid store)
+        assert(idx >= 0)
+        assert(idx < getSampleCount store)
+
+        let fileOffset =
+            int64 Header.packedSize
+                + idx * int64 packedSampleSize
+        let buf = Array.zeroCreate<byte> packedSampleSize
+        withReadHandle store (fun handle ->
+            let nBytesRead =
+                RandomAccess.Read(handle, buf, fileOffset)
+            assert(nBytesRead = packedSampleSize))
+        Buffer.BlockCopy(
+            buf, 0,
+            encodings, iRow * Encoding.packedSize,
+            Encoding.packedSize)
+        Regrets.readInto buf Encoding.packedSize regrets iRow
+
+    /// Unpacks the given packed encodings (one row of
+    /// packedEncodingSize bytes per sample) into rows of 0s and
+    /// 1s, on the encodings' device.
+    let unpackEncodings (packed : torch.Tensor) =
+        let device = packed.device
+        use masks =   // bit i of each byte is input i of its 8
+            torch.tensor([| for i in 0 .. 7 -> 1uy <<< i |], device = device)
+                .reshape(1L, 1L, 8L)
+        use zero = torch.tensor(0uy, device = device)
+        use bytes = packed.unsqueeze(-1)
+        use bits = bytes.bitwise_and(masks)
+        use flags = bits.ne(zero)
+        use floats = flags.to_type(torch.ScalarType.Float32)
+        use rows = floats.reshape(packed.shape[0], -1L)
+        rows.narrow(1, 0L, int64 Model.inputSize)   // trim padding
 
     /// Appends the given samples to the end of the given store.
     let appendSamples samples store =

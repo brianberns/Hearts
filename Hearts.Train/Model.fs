@@ -16,53 +16,47 @@ open Hearts.Model
 module AdvantageModel =
 
     /// A chunk of training data that fits on the GPU and in
-    /// memory.
-    type private SubBatch = AdvantageSample[]
+    /// memory, packed as the sample stores hold it, one row per
+    /// sample.
+    type private SubBatch =
+        {
+            /// Packed encodings, AdvantageSampleStore.packedEncodingSize
+            /// bytes per row.
+            Encodings : byte[]
+
+            /// Regrets, Model.outputSize per row.
+            Regrets : float32[]
+
+            /// Weights, one per row.
+            Weights : float32[]
+        }
+
+        /// Number of samples in this sub-batch.
+        member this.Length = this.Weights.Length
 
     module private SubBatch =
 
-        /// Extracts inputs from a sub-batch.
-        let private toInputs (samples : SubBatch) =
-            samples
-                |> Array.map (
-                    _.Encoding
-                        >> Encoding.toFloat32Array)
-                |> array2D
-
-        /// Extracts targets from a sub-batch.
-        let private toTargets (samples : SubBatch) =
-            samples
-                |> Array.map _.Regrets
-                |> array2D
-
-        /// Extracts weights from a sub-batch.
-        let private toWeights (samples : SubBatch) =
-            samples
-                |> Array.map (
-                    _.Iteration
-                        >> float32
-                        >> sqrt   // MSE loss will square this, resulting in linear weight
-                        >> Array.singleton)
-                |> array2D
-
-        /// Extracts 2D arrays from a sub-batch.
-        let to2dArrays samples =
-            let arrays =
-                Array.Parallel.map (fun f -> f samples)
-                    [| toInputs; toTargets; toWeights |]
-            let inputs = arrays[0]
-            let targets = arrays[1]
-            let weights = arrays[2]
-            assert(
-                [
-                    inputs.GetLength(0)
-                    targets.GetLength(0)
-                    weights.GetLength(0)
-                ]
-                    |> Seq.distinct
-                    |> Seq.length = 1)
-            assert(weights.GetLength(1) = 1)
-            inputs, targets, weights
+        /// Reads the given samples into a sub-batch.
+        let read
+            (sampleStores : AdvantageSampleStoreGroup)
+            (indexPairs : _[]) =
+            let n = indexPairs.Length
+            let subBatch =
+                {
+                    Encodings =
+                        Array.zeroCreate
+                            (n * AdvantageSampleStore.packedEncodingSize)
+                    Regrets = Array.zeroCreate (n * Model.outputSize)
+                    Weights = Array.zeroCreate n
+                }
+            indexPairs
+                |> Array.Parallel.iteri (fun iRow (struct (iStore, iSample)) ->
+                    let store = sampleStores[int iStore]
+                    AdvantageSampleStore.readPacked (int64 iSample)
+                        subBatch.Encodings subBatch.Regrets iRow store
+                    subBatch.Weights[iRow] <-
+                        sqrt (float32 store.Iteration))   // MSE loss will square this, resulting in linear weight
+            subBatch
 
     /// A logical batch of training data that might be too
     /// large to fit on the GPU or in memory.
@@ -104,9 +98,8 @@ module AdvantageModel =
                     seq {
                         for indexSubBatch in indexBatch do
                             indexSubBatch
-                                |> Array.Parallel.map (fun iPair ->
-                                    let struct (iStore, iSample) = indexPairs[iPair]
-                                    sampleStores[int iStore][int64 iSample])
+                                |> Array.map (Array.get indexPairs)
+                                |> SubBatch.read sampleStores
                     }
                 batch, stopwatch
         }
@@ -121,15 +114,30 @@ module AdvantageModel =
         (total / float32 totalWeight), totalWeight
 
     /// Computes loss for the given samples.
-    let private getLoss device model samples
+    let private getLoss device model (samples : SubBatch)
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
-            // move to GPU
-        let inputs2d, targets2d, weights2d =
-            SubBatch.to2dArrays samples
-        use inputs = tensor(inputs2d, device = device)
-        use targets = tensor(targets2d, device = device)
-        use weights = tensor(weights2d, device = device)
+            // move to GPU, and unpack encodings there
+        let n = int64 samples.Length
+        use packed =
+            tensor(
+                samples.Encodings,
+                ReadOnlySpan [|
+                    n
+                    int64 AdvantageSampleStore.packedEncodingSize
+                |],
+                device = device)
+        use inputs = AdvantageSampleStore.unpackEncodings packed
+        use targets =
+            tensor(
+                samples.Regrets,
+                ReadOnlySpan [| n; int64 Model.outputSize |],
+                device = device)
+        use weights =
+            tensor(
+                samples.Weights,
+                ReadOnlySpan [| n; 1L |],
+                device = device)
 
             // compute loss
         use outputs = inputs --> model
@@ -178,17 +186,15 @@ module AdvantageModel =
 
         loss, nSamples
 
-    /// Computes mean loss on the given samples, with the model in
+    /// Computes mean loss on the given sub-batches, with the model in
     /// evaluation mode.
     let private getHoldoutLoss
-        settings (model : AdvantageModel) samples criterion =
+        settings (model : AdvantageModel) subBatches criterion =
 
         model.eval()   // no dropout
         use _ = torch.no_grad()
 
         let loss, _ =
-            let subBatches =
-                Array.chunkBySize settings.TrainingSubBatchSize samples
             weightedMean [|
                 for subBatch in subBatches do
                     use loss =
@@ -213,10 +219,10 @@ module AdvantageModel =
             Array.splitAt (indexPairs.Length / 100) indexPairs   // hold out 1% of samples
 
             // prepare holdout samples
-        let holdoutSamples =
+        let holdoutSubBatches =
             holdoutPairs
-                |> Array.Parallel.map (fun struct (iStore, iSample) ->
-                    sampleStores[int iStore][int64 iSample])
+                |> Array.chunkBySize settings.TrainingSubBatchSize
+                |> Array.map (SubBatch.read sampleStores)
 
             // train model
         use optimizer =
@@ -253,7 +259,7 @@ module AdvantageModel =
 
                 // evaluate holdout samples
             let loss =
-                getHoldoutLoss settings model holdoutSamples criterion
+                getHoldoutLoss settings model holdoutSubBatches criterion
             settings.Writer.add_scalar(
                 $"holdout loss/iter%03d{sampleStores.Iteration}",
                 loss, epoch)
