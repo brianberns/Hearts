@@ -113,8 +113,16 @@ module AdvantageModel =
                 pairs
         (total / float32 totalWeight), totalWeight
 
+    /// Game-level regrets are changes in a chance of winning, about
+    /// 1/80 the size of deal-level regrets in points. Scaling them
+    /// to percentage points suits the hyperparameters tuned for
+    /// deal level. Play is unaffected, because regret matching
+    /// ignores the scale of advantages.
+    let private regretScale settings =
+        if settings.GameLevelPayoff then 100f else 1f
+
     /// Computes loss for the given samples.
-    let private getLoss device model (samples : SubBatch)
+    let private getLoss settings model (samples : SubBatch)
         (criterion : Loss<Tensor, Tensor, Tensor>) =
 
             // move to GPU, and unpack encodings there
@@ -126,21 +134,22 @@ module AdvantageModel =
                     n
                     int64 AdvantageSampleStore.packedEncodingSize
                 |],
-                device = device)
+                device = settings.Device)
         use inputs = AdvantageSampleStore.unpackEncodings packed
         use targets =
             tensor(
                 samples.Regrets,
                 ReadOnlySpan [| n; int64 Model.outputSize |],
-                device = device)
+                device = settings.Device)
         use weights =
             tensor(
                 samples.Weights,
                 ReadOnlySpan [| n; 1L |],
-                device = device)
+                device = settings.Device)
 
             // compute loss
         use outputs = inputs --> model
+        use scaled = targets * regretScale settings
         use outputs' = weights * outputs
         use targets' = weights * targets
         criterion.forward(outputs', targets')
@@ -151,7 +160,7 @@ module AdvantageModel =
         settings model samples criterion =
 
             // compute loss for this sub-batch
-        use rawLoss = getLoss settings.Device model samples criterion
+        use rawLoss = getLoss settings model samples criterion
 
             // scale loss to batch size
         let scale =
@@ -198,7 +207,7 @@ module AdvantageModel =
             weightedMean [|
                 for subBatch in subBatches do
                     use loss =
-                        getLoss settings.Device model subBatch criterion
+                        getLoss settings model subBatch criterion
                     loss.item<float32>(), subBatch.Length
             |]
 
